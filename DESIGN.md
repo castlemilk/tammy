@@ -246,6 +246,20 @@ records use a restrained apricot tint. The written colour tokens remain canonica
 generated shadows/gradients and unsupported statuses are not copied.
 
 Board 02 is a creation reference, not the list target. There is no decorative art
-inside board 07's working list; none is added. Receipt balances remain in their
-verified detail view for this first fidelity block, rather than being guessed from
-invoice totals. Detail/editor composition needs its own subsequent visual review.
+inside board 07's working list; none is added. Receipt balances come from their
+verified accounting projection rather than being guessed from invoice totals.
+
+## Draft editor and local preview — board 02 (2026-10-23)
+
+The creation workspace uses a compact editor beside an ivory paper preview on wide
+desktop windows, stacking below 1280px. Both retain natural document height. The
+existing line-table owner provides a draft density variant: editable selling data
+is primary, and private estimates/source hints are grouped in its disclosure.
+Expense import and company defaults remain available beneath the main working area.
+
+The paper preview uses public draft fields, canonical rounded amounts, the actual
+saved seller identity/logo when known, soft serif identity and readable sans/tabular
+data. It is labelled On-screen preview; actual PDF export uses the saved draft.
+Saved/unsaved state is explicit and separate from lifecycle. Invalid amounts clear
+the preview totals. The concept's reminder, sending and Customer view controls are
+not supported and are omitted. No new art is added to the financial data.

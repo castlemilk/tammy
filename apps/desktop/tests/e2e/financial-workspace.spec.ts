@@ -69,6 +69,12 @@ test.describe("Soft Precision financial workspace", () => {
     await page.getByRole("button", { name: "Save draft", exact: true }).click();
     await expect(page.getByRole("alert").last()).toBeVisible();
     await expect(page.getByLabel("Unit price 1", { exact: true })).toHaveValue("1200.001");
+    if (draftPhase !== "before") {
+      await expect(page.getByTestId("invoice-total")).toContainText("—");
+      await expect(
+        page.getByRole("region", { name: "Draft invoice preview", exact: true }),
+      ).toContainText("Check the invoice details");
+    }
     await capture(page, "02-validation-preserves-edit");
 
     await page.getByLabel("Unit price 1", { exact: true }).fill("1200.00");
@@ -76,8 +82,29 @@ test.describe("Soft Precision financial workspace", () => {
     await page.getByRole("button", { name: "Save draft", exact: true }).dblclick();
     await expect(page.getByText("Draft saved.", { exact: true })).toBeVisible();
     expect((await readInvoiceAccounting(page, workspace, "INV-UI-001")).invoice.version).toBe(1n);
+    if (draftPhase !== "before") {
+      const preview = page.getByRole("region", { name: "Draft invoice preview", exact: true });
+      await expect(preview).toContainText("Merri Studio — synthetic");
+      await expect(preview).toContainText("$1,320.00");
+      await expect(preview).not.toContainText("$500.00");
+      const fields = await page
+        .getByRole("group", { name: "Invoice details", exact: true })
+        .boundingBox();
+      const paper = await preview.boundingBox();
+      expect(fields).not.toBeNull();
+      expect(paper).not.toBeNull();
+      if (!fields || !paper) throw new Error("DRAFT_COMPOSITION_BOUNDS_MISSING");
+      expect(paper.x).toBeGreaterThan(fields.x + fields.width);
+      await expect
+        .poll(() =>
+          page
+            .getByRole("region", { name: "Invoice line items table", exact: true })
+            .evaluate((element) => element.scrollWidth <= element.clientWidth),
+        )
+        .toBe(true);
+    }
     await capture(page, "03-saved-draft");
-    if (draftPhase) {
+    if (draftPhase || (!phase && !detailPhase)) {
       for (const width of [390, 320]) {
         await page.setViewportSize({ width, height: 900 });
         await expect
@@ -89,9 +116,65 @@ test.describe("Soft Precision financial workspace", () => {
           .toBe(true);
         await capture(page, `03c-draft-${width}`);
         const lines = page.getByRole("region", { name: "Invoice line items table", exact: true });
+        await lines.evaluate((element) => {
+          element.scrollLeft = 0;
+        });
         await lines.focus();
         await page.keyboard.press("ArrowRight");
         await expect.poll(() => lines.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
+        if (draftPhase !== "before") {
+          const url = page.url();
+          const view = page.getByRole("button", { name: "View preview", exact: true });
+          await view.focus();
+          await page.keyboard.press("Space");
+          const heading = page.getByRole("heading", { name: "Draft preview", exact: true });
+          await expect(heading).toBeFocused();
+          await expect(heading).toHaveCSS("outline-style", "solid");
+          expect(page.url()).toBe(url);
+          await capture(page, `04-preview-${width}`);
+          const previewLines = page.getByRole("region", {
+            name: "Draft preview line items",
+            exact: true,
+          });
+          await previewLines.evaluate((element) => {
+            element.scrollLeft = 0;
+          });
+          await previewLines.focus();
+          await page.keyboard.press("ArrowRight");
+          await expect
+            .poll(() => previewLines.evaluate((element) => element.scrollLeft))
+            .toBeGreaterThan(0);
+          await page.getByRole("button", { name: "Back to invoice fields", exact: true }).click();
+          await expect(
+            page.locator("legend").filter({ hasText: /^Invoice details$/ }),
+          ).toBeFocused();
+          if (width === 320) {
+            const customer = page.getByLabel("Customer name", { exact: true });
+            const price = page.getByLabel("Unit price 1", { exact: true });
+            const originalCustomer = await customer.inputValue();
+            const originalPrice = await price.inputValue();
+            await customer.fill(`Synthetic-${"x".repeat(120)}`);
+            await price.fill("1000000.00");
+            await view.focus();
+            await page.keyboard.press("Space");
+            await expect(page.getByTestId("invoice-total")).toContainText("$1,100,000.00");
+            await expect
+              .poll(() =>
+                page.evaluate(
+                  () =>
+                    document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+                ),
+              )
+              .toBe(true);
+            await capture(page, "04b-preview-large-320");
+            await customer.fill(originalCustomer);
+            await price.fill(originalPrice);
+            await expect(page.getByTestId("invoice-total")).toContainText("$1,320.00");
+            expect(
+              (await readInvoiceAccounting(page, workspace, "INV-UI-001")).invoice.version,
+            ).toBe(1n);
+          }
+        }
       }
       await page.setViewportSize({ width: 1440, height: 1100 });
     }
@@ -113,10 +196,23 @@ test.describe("Soft Precision financial workspace", () => {
     await expect(page.getByLabel("Template seller address", { exact: true })).toBeVisible();
     await capture(page, "04-template-editor");
     await page.getByRole("button", { name: "Close template editor", exact: true }).click();
-    await page.getByRole("button", { name: "Issue invoice", exact: true }).click();
+    if (draftPhase === "before")
+      await page.getByRole("button", { name: "Issue invoice", exact: true }).click();
+    else {
+      await page.getByRole("button", { name: "Issue invoice", exact: true }).focus();
+      await page.keyboard.press("Space");
+      await expect(page.getByRole("button", { name: "Keep as draft", exact: true })).toBeFocused();
+      await expect(page.getByRole("button", { name: "Keep as draft", exact: true })).toHaveCSS(
+        "outline-style",
+        "solid",
+      );
+    }
     await expect(page.getByRole("button", { name: "Confirm issue", exact: true })).toBeVisible();
     await capture(page, "05-issue-confirmation");
+    if (draftPhase !== "before") await capture(page, "05b-issue-confirmation-focused");
     await page.getByRole("button", { name: "Keep as draft", exact: true }).click();
+    if (draftPhase !== "before")
+      await expect(page.getByRole("button", { name: "Issue invoice", exact: true })).toBeFocused();
     expect((await readInvoiceAccounting(page, workspace, "INV-UI-001")).invoice.version).toBe(1n);
     await page.getByRole("button", { name: "Issue invoice", exact: true }).click();
     await page.getByRole("button", { name: "Confirm issue", exact: true }).click();
@@ -499,7 +595,11 @@ async function capture(page: Page, name: string) {
       "03b-unsaved-replacement",
       "03c-draft-390",
       "03c-draft-320",
+      "04-preview-390",
+      "04-preview-320",
+      "04b-preview-large-320",
       "05-issue-confirmation",
+      "05b-issue-confirmation-focused",
     ].includes(name)
   )
     return;
@@ -518,7 +618,15 @@ async function capture(page: Page, name: string) {
   )
     return;
   await expect(page.locator("h1")).toBeAttached();
-  if (detailPhase && name === "13-payment-320") {
+  if (draftPhase && name === "04b-preview-large-320") {
+    await page.getByTestId("invoice-total").scrollIntoViewIfNeeded();
+  } else if (draftPhase && name === "05b-issue-confirmation-focused") {
+    await page.getByRole("button", { name: "Keep as draft", exact: true }).scrollIntoViewIfNeeded();
+  } else if (draftPhase && name.startsWith("04-preview-")) {
+    await page
+      .getByRole("heading", { name: "Draft preview", exact: true })
+      .scrollIntoViewIfNeeded();
+  } else if (detailPhase && name === "13-payment-320") {
     await page.getByRole("form", { name: "Review payment", exact: true }).scrollIntoViewIfNeeded();
   } else if (detailPhase || draftPhase) {
     await page.locator("h1").scrollIntoViewIfNeeded();

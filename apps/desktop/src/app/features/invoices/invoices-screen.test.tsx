@@ -459,7 +459,8 @@ it("presents editable semantic tables with private costs and explicit GST column
   render(<InvoicesScreen api={fixture().api} />);
   await userEvent.click(screen.getByRole("button", { name: "New invoice" }));
   const table = screen.getByRole("table", { name: "Invoice line items" });
-  expect(within(table).getByRole("columnheader", { name: "Unit cost Private" })).toBeTruthy();
+  expect(within(table).queryByRole("columnheader", { name: "Unit cost Private" })).toBeNull();
+  expect(within(table).getByText("Private estimates · never on the PDF")).toBeTruthy();
   expect(within(table).getByRole("columnheader", { name: "Selling price Ex GST" })).toBeTruthy();
   expect(within(table).getByRole("columnheader", { name: "Line total Incl GST" })).toBeTruthy();
   expect(within(table).getByText("Manual line")).toBeTruthy();
@@ -622,13 +623,81 @@ it("updates inclusive row totals, private cost and profit while preserving parti
   expect(screen.getByTestId("invoice-margin").textContent).toContain("$48.82");
   fireEvent.change(screen.getByLabelText("Unit price 1"), { target: { value: "." } });
   expect((screen.getByLabelText("Unit price 1") as HTMLInputElement).value).toBe(".");
-  expect(
-    within(screen.getByRole("table", { name: "Invoice line items" })).getByText("—"),
-  ).toBeTruthy();
+  const body = screen.getByRole("table", { name: "Invoice line items" }).querySelector("tbody");
+  if (!body) throw new Error("Expected the editable invoice line rows");
+  expect(within(body).getByText("—")).toBeTruthy();
   expect(screen.getByTestId("invoice-total").textContent).toContain("—");
+  const preview = screen.getByRole("region", { name: "Draft invoice preview" });
+  expect(preview.textContent).not.toContain("$152.77");
+  expect(preview.textContent).toContain("Check the invoice details");
   await userEvent.click(screen.getByRole("button", { name: "Save draft" }));
   expect(screen.getByRole("alert").textContent).toContain("Unit price 1");
   expect(calls.saved).toEqual([]);
+});
+
+it("keeps typing focus when editing closes an unconfirmed issue review", async () => {
+  const record: InvoiceRecord = {
+    id: "review-draft",
+    version: 1,
+    state: "draft",
+    sellerName: "Synthetic studio",
+    sellerAbn: "51824753556",
+    draft: draft(),
+  };
+  const { api, calls } = fixture([record]);
+  render(<InvoicesScreen api={api} />);
+  await userEvent.click(await screen.findByRole("button", { name: "Open INV-100" }));
+  await userEvent.click(screen.getByRole("button", { name: "Issue invoice" }));
+  expect(document.activeElement).toBe(screen.getByRole("button", { name: "Keep as draft" }));
+  const customer = screen.getByLabelText("Customer name");
+  await userEvent.type(customer, " revised");
+  expect(document.activeElement).toBe(customer);
+  expect(customer).toHaveProperty("value", "Cambridge Services revised");
+  expect(screen.queryByRole("button", { name: "Confirm issue" })).toBeNull();
+  expect(calls.issued).toEqual([]);
+});
+
+it("updates the public preview without saving and retains it after a failed explicit save", async () => {
+  const record: InvoiceRecord = {
+    id: "preview-draft",
+    version: 1,
+    state: "draft",
+    sellerName: "Synthetic studio",
+    sellerAbn: "51824753556",
+    draft: draft(),
+  };
+  const { api, calls } = fixture([record]);
+  let attempts = 0;
+  render(
+    <InvoicesScreen
+      api={{
+        ...api,
+        save: async () => {
+          attempts += 1;
+          throw new Error("Unavailable");
+        },
+      }}
+    />,
+  );
+  await userEvent.click(await screen.findByRole("button", { name: "Open INV-100" }));
+  fireEvent.change(screen.getByLabelText("Customer name"), {
+    target: { value: "Changed synthetic customer" },
+  });
+  const preview = screen.getByRole("region", { name: "Draft invoice preview" });
+  expect(preview.textContent).toContain("Changed synthetic customer");
+  expect(attempts).toBe(0);
+  expect(screen.getByText("Not saved")).toBeTruthy();
+  expect(screen.getByRole("button", { name: "Export PDF" })).toHaveProperty("disabled", true);
+  await userEvent.click(screen.getByRole("button", { name: "Save draft" }));
+  await screen.findByText(/The draft could not be saved/);
+  expect(attempts).toBe(1);
+  expect(screen.getByLabelText("Customer name")).toHaveProperty(
+    "value",
+    "Changed synthetic customer",
+  );
+  expect(preview.textContent).toContain("Changed synthetic customer");
+  expect(screen.getByText("Not saved")).toBeTruthy();
+  expect(calls.issued).toEqual([]);
 });
 
 it("recognises a known zero cost and keeps profit unknown if another line is uncosted", async () => {

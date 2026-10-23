@@ -136,3 +136,23 @@ receipt contracts or export/issue confirmations change.
 - Company-default editing stays mounted independently of Items/Payments. PDF export
   remains explicit and cancellation saves nothing. Draft editing/issue confirmation,
   customer privacy and original PDF output contracts remain unchanged.
+
+### Draft editor and on-screen preview (2026-10-23)
+
+- `InvoiceLineTable` owns its draft density variant. Native date/select ownership,
+  labelled decimal input bindings, all private estimates, line limits and canonical
+  calculations remain. Private controls stay outside the primary amount columns.
+- `InvoiceDraftPreview` receives an explicit public projection from the same
+  calculation result. No private costs, margins, source IDs or editor JSON enter
+  that projection. It is a local view, with no customer-view route or sending API.
+- Editing updates this preview synchronously without saving or issuing. Invalid
+  entries clear stale monetary values. Save failure retains both input and preview;
+  saved state is displayed only for the current confirmed unchanged record.
+- Preview navigation changes only focus/scroll, preserving the route and draft.
+  Both editable and preview tables own labelled keyboard-operable horizontal scroll.
+  The editor and page retain natural height at 320/390px and with long content.
+- Save, explicit issue confirmation and PDF export retain the existing handlers,
+  validation, busy gates, optimistic version and privacy contracts. Opening issue
+  review focuses Keep as draft; explicit cancellation restores Issue focus. Editing
+  dismisses that review while retaining typing focus. Successful issue focuses the
+  immutable invoice heading. No automatic send, reminder or customer portal exists.

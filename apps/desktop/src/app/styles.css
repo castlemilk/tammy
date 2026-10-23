@@ -414,3 +414,21 @@
     background: color-mix(in srgb, var(--apricot) 28%, var(--surface));
   }
 }
+
+@layer utilities {
+  .invoice-draft-lines th,
+  .invoice-draft-lines td {
+    padding: 8px 6px;
+  }
+  .invoice-draft-lines th {
+    font-size: 12px;
+  }
+  .invoice-draft-lines th:first-child,
+  .invoice-draft-lines td:first-child {
+    padding-left: 0;
+  }
+  .invoice-draft-lines th:last-child,
+  .invoice-draft-lines td:last-child {
+    padding-right: 0;
+  }
+}

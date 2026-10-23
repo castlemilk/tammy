@@ -1,5 +1,6 @@
 import { formatAud, type InvoiceTotals } from "@tammy/invoices/model";
 import { Plus, Trash2 } from "lucide-react";
+import type { ReactNode } from "react";
 import { HorizontalScrollArea } from "../../components/horizontal-scroll-area";
 import { Button } from "../../components/ui/button";
 import { SurfaceHeading } from "../../components/workspace-primitives";
@@ -16,6 +17,8 @@ export function InvoiceLineTable({
   onEdit,
   onAdd,
   onRemove,
+  layout = "full",
+  privateSummary,
 }: {
   readonly lines: readonly EditorLine[];
   readonly totals: InvoiceTotals | undefined;
@@ -25,14 +28,18 @@ export function InvoiceLineTable({
   readonly onEdit: (key: string, value: Partial<EditorLine>) => void;
   readonly onAdd: () => void;
   readonly onRemove: (key: string) => void;
+  readonly layout?: "full" | "draft";
+  readonly privateSummary?: ReactNode;
 }) {
   const disabled = busy || readOnly;
+  const compact = layout === "draft";
   return (
     <section
-      className="work-surface grid min-w-0 gap-0 overflow-hidden"
+      className={compact ? "grid min-w-0 gap-0" : "work-surface grid min-w-0 gap-0 overflow-hidden"}
       aria-labelledby="invoice-lines-heading"
     >
       <SurfaceHeading
+        density={compact ? "compact" : "default"}
         title="Invoice line items"
         headingId="invoice-lines-heading"
         action={
@@ -51,19 +58,19 @@ export function InvoiceLineTable({
       />
       <HorizontalScrollArea
         label="Invoice line items table"
-        className="m-4 rounded-xl border border-border bg-background"
+        className={compact ? "min-w-0" : "m-4 rounded-xl border border-border bg-background"}
       >
         <table
-          className="w-full min-w-[1000px] table-fixed border-collapse text-[14px]"
+          className={`w-full table-fixed border-collapse text-[14px] ${compact ? "min-w-[680px] invoice-draft-lines" : "min-w-[1000px]"}`}
           aria-label="Invoice line items"
         >
           <colgroup>
-            <col className="w-[25%]" />
-            <col className="w-[10%]" />
-            <col className="w-[12%]" />
-            <col className="w-[12%]" />
-            <col className="w-[19%]" />
-            <col className="w-[16%]" />
+            <col className={compact ? "w-[26%]" : "w-[25%]"} />
+            <col className={compact ? "w-[9%]" : "w-[10%]"} />
+            {!compact ? <col className="w-[12%]" /> : null}
+            <col className={compact ? "w-[15%]" : "w-[12%]"} />
+            <col className={compact ? "w-[20%]" : "w-[19%]"} />
+            <col className={compact ? "w-[24%]" : "w-[16%]"} />
             {!readOnly ? <col className="w-[6%]" /> : null}
           </colgroup>
           <thead className="border-b border-border bg-muted/40 text-left text-[13px] text-muted-foreground">
@@ -74,9 +81,11 @@ export function InvoiceLineTable({
               <th className="px-3 py-4 text-right font-medium" scope="col">
                 Quantity
               </th>
-              <th className="px-3 py-4 text-right font-medium" scope="col">
-                Unit cost <span className="block text-[12px] font-normal">Private</span>
-              </th>
+              {!compact ? (
+                <th className="px-3 py-4 text-right font-medium" scope="col">
+                  Unit cost <span className="block text-[12px] font-normal">Private</span>
+                </th>
+              ) : null}
               <th className="px-3 py-4 text-right font-medium" scope="col">
                 Selling price <span className="block text-[12px] font-normal">Ex GST</span>
               </th>
@@ -105,11 +114,13 @@ export function InvoiceLineTable({
                     onChange={(event) => onEdit(line.key, { description: event.target.value })}
                     value={line.description}
                   />
-                  <p className="mt-2 text-[12px] leading-5 text-muted-foreground">
-                    {line.sourceDocumentId
-                      ? "Linked reviewed expense · internal only"
-                      : "Manual line"}
-                  </p>
+                  {!compact ? (
+                    <p className="mt-2 text-[12px] leading-5 text-muted-foreground">
+                      {line.sourceDocumentId
+                        ? "Linked reviewed expense · internal only"
+                        : "Manual line"}
+                    </p>
+                  ) : null}
                 </td>
                 <td className="px-3 py-4 align-top">
                   <input
@@ -121,16 +132,18 @@ export function InvoiceLineTable({
                     value={line.quantity}
                   />
                 </td>
-                <td className="px-3 py-4 align-top">
-                  <input
-                    aria-label={`Unit cost ${index + 1}`}
-                    className={`${invoiceFieldClass} text-right tabular-nums`}
-                    disabled={disabled}
-                    inputMode="decimal"
-                    onChange={(event) => onEdit(line.key, { unitCost: event.target.value })}
-                    value={line.unitCost}
-                  />
-                </td>
+                {!compact ? (
+                  <td className="px-3 py-4 align-top">
+                    <input
+                      aria-label={`Unit cost ${index + 1}`}
+                      className={`${invoiceFieldClass} text-right tabular-nums`}
+                      disabled={disabled}
+                      inputMode="decimal"
+                      onChange={(event) => onEdit(line.key, { unitCost: event.target.value })}
+                      value={line.unitCost}
+                    />
+                  </td>
+                ) : null}
                 <td className="px-3 py-4 align-top">
                   <input
                     aria-label={`Unit price ${index + 1}`}
@@ -183,6 +196,51 @@ export function InvoiceLineTable({
               </tr>
             ))}
           </tbody>
+          {compact ? (
+            <tfoot>
+              <tr>
+                <td colSpan={readOnly ? 5 : 6} className="border-t border-border py-3">
+                  <details open className="min-w-0 rounded-xl bg-background px-3">
+                    <summary className="focus-ring w-fit max-w-full cursor-pointer rounded-lg py-3 text-[13px] font-medium">
+                      Private estimates · never on the PDF
+                    </summary>
+                    <div className="grid min-w-0 gap-4 pb-3">
+                      <div className="grid grid-cols-2 gap-3">
+                        {lines.map((line, index) => (
+                          <label className="grid min-w-0 gap-1.5 text-[12px]" key={line.key}>
+                            <span>Unit cost {index + 1}</span>
+                            <input
+                              aria-label={`Unit cost ${index + 1}`}
+                              aria-describedby={`invoice-cost-description-${line.key}`}
+                              className={`${invoiceFieldClass} text-right tabular-nums`}
+                              disabled={disabled}
+                              inputMode="decimal"
+                              onChange={(event) =>
+                                onEdit(line.key, { unitCost: event.target.value })
+                              }
+                              value={line.unitCost}
+                            />
+                            <span
+                              id={`invoice-cost-description-${line.key}`}
+                              className="break-words text-muted-foreground"
+                            >
+                              {line.description || `Line ${index + 1}`}
+                            </span>
+                            <span className="text-muted-foreground">
+                              {line.sourceDocumentId
+                                ? "Linked reviewed expense · internal only"
+                                : "Manual line"}
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+                      {privateSummary}
+                    </div>
+                  </details>
+                </td>
+              </tr>
+            </tfoot>
+          ) : null}
         </table>
       </HorizontalScrollArea>
     </section>

@@ -49,14 +49,18 @@ export function SurfaceHeading({
   headingId,
   description,
   action,
+  density = "default",
 }: {
   readonly title: string;
   readonly headingId?: string;
   readonly description?: string;
   readonly action?: ReactNode;
+  readonly density?: "default" | "compact";
 }) {
   return (
-    <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border px-5 py-4">
+    <div
+      className={`flex flex-wrap justify-between gap-3 border-b border-border ${density === "compact" ? "items-center py-2" : "items-start px-5 py-4"}`}
+    >
       <div className="min-w-0">
         <h2 className="text-[16px] font-semibold leading-6 text-foreground" id={headingId}>
           {title}
