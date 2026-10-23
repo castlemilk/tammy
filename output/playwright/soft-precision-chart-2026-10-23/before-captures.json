@@ -1,0 +1,94 @@
+{
+  "schemaVersion": 1,
+  "phase": "before",
+  "reviewBase": "8cb09e34d16ebacbf610eead1cb8494546b2a13f",
+  "runtime": {
+    "sourceRevision": "ffc2fdaa7e8a74092d78025107df4a620516c369",
+    "appSha256": "3c845022c1149b26180f2adf325fb9d32fdb798687b06f77944482d8a448e799",
+    "coreSha256": "078811e551eb5cd0c5f505e3282d82bc8f50be578c12a9d92e7bafb70d67562c",
+    "helperSha256": "8dbfb2b0708d1c61ebc07cd8c8b5ee6a626d73dad490b90667b3794d61edb201",
+    "manifestSha256": "6b879922676625116022a514fc2c5abf1ec90f7889ed8207b2430bda2fdb839a",
+    "releaseKind": "ordinary-package",
+    "target": "darwin-arm64"
+  },
+  "harnessDirty": true,
+  "harness": {
+    "chartJourneySha256": "44d6569395aeb6ac00563e23fb0674e0138078c294e608f1dbf18f5c374fd5e6",
+    "financialWorkspaceSha256": "cf3251a0f3c860c8a7370b1ac4ccfc6b318c4f66a1144e32ada4f7090cbed0f3"
+  },
+  "sourceSha256": "806afdfba166c155c07e90813729bfab59e9fa9d146057221d698538b369e538",
+  "originalCreateHandlerSha256": "8db6325a3ce0c6e567fdd42d16e75e55297b631a48afda810888733906832a9d",
+  "nativeSeconds": 11.1,
+  "runnerSeconds": 12,
+  "retries": 0,
+  "consoleErrors": 0,
+  "pageErrors": 0,
+  "syntheticOnly": true,
+  "reference": {
+    "commit": "19533020422b6ea2f0c77dc3117a051483f9f9ce",
+    "sha256": "38de0e2dfb8397d95b1337d57ccb5e039298cbdd774d04824e0b9eba8ced76eb",
+    "generatedConcept": true
+  },
+  "frames": [
+    {
+      "file": "before/01-installed-chart.png",
+      "sha256": "c3df1f82b554ddbd551c1c0b04c9b19b94eb02438c7cd405da837bcf9a542235",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "file": "before/02-grouped-chart.png",
+      "sha256": "b12f6d7070f1bf924368c7d931a62424890f820b220cf6508fe2febc04d31606",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "file": "before/06-ordinary-account-entry.png",
+      "sha256": "07577e40c5e148cce49b27140fd44ccd5fffd0e4eb9f3442bcd1f0b573f81af5",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "file": "before/07-rejected-duplicate.png",
+      "sha256": "6fa34579a1fe76e535338a29d9c1127c831f1599d010ff6a5c16afb557373a10",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "file": "before/08-entry-focus-320.png",
+      "sha256": "87efb692416949dbddc66a4e8296a6b2caaffb722b8a20a3c0c73e62904a6ea3",
+      "width": 320,
+      "height": 1000
+    },
+    {
+      "file": "before/08-entry-focus-390.png",
+      "sha256": "518acbf5bb5de8580c3e14cfc766c59ecd0503e4890340fdc040ae1707715afe",
+      "width": 390,
+      "height": 1000
+    },
+    {
+      "file": "before/08-entry-focus-900.png",
+      "sha256": "edbbe40a1ee116cb35da2ffc3ff1a56170bb12f726422bd437514e5aca5704fb",
+      "width": 900,
+      "height": 1000
+    },
+    {
+      "file": "before/09-account-saved.png",
+      "sha256": "6a8e56b9e2d16299d5db8de8f7e0b06963ab2a719bca184e861414eaf002acc8",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "file": "before/10-table-focus-320.png",
+      "sha256": "0cd201310e3e177664fdf5b46db9f0e1f73b4369992611589edb28965b360a62",
+      "width": 320,
+      "height": 1000
+    },
+    {
+      "file": "before/10-table-focus-390.png",
+      "sha256": "780a573321429ec4239cc05edf5d98765278401dea2130bfb21b1113be5e9988",
+      "width": 390,
+      "height": 1000
+    }
+  ]
+}

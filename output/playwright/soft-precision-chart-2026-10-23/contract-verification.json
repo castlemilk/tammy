@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "base": "8cb09e34d16ebacbf610eead1cb8494546b2a13f",
+  "requestAndResponseValidationByteIdentical": true,
+  "requestSectionSha256": "def1d236f6855946c12d8da04778bace9365f4cd97779ee52318943c3c59e4bd",
+  "normalBalanceFunctionByteIdentical": true,
+  "strictAudit": {
+    "sameRuleFileFindings": true,
+    "total": 19
+  },
+  "oldHandlerRegression": {
+    "originalHandlerSha256": "8db6325a3ce0c6e567fdd42d16e75e55297b631a48afda810888733906832a9d",
+    "originalCalls": 2,
+    "correctedCalls": 1,
+    "changedSourceRestored": true
+  }
+}

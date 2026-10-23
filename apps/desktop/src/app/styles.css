@@ -424,6 +424,19 @@
   .compact-ledger-table td {
     height: 56px;
   }
+  .chart-accounts-table th,
+  .chart-accounts-table td {
+    padding: 4px 12px;
+  }
+  .chart-accounts-table thead th {
+    height: 38px;
+  }
+  .chart-accounts-table th[scope="rowgroup"] {
+    padding-block: 0;
+  }
+  .chart-accounts-table td {
+    height: 36px;
+  }
   .invoice-index-table th,
   .invoice-index-table td {
     padding: 6px 12px;

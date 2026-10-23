@@ -21,6 +21,18 @@ The data projections remain bounded by their existing API page sizes. This migra
 adds neither unbounded fetching nor new sort/filter persistence claims. A separate
 pagination design is needed before extending these projections to larger datasets.
 
+Chart of accounts groups the existing loaded types in statement order and sorts
+copied rows naturally by code. Code/name search and group disclosures are transient
+local state over up to 200 loaded accounts; changing search reveals matching groups.
+Protection (Control/System/Ordinary) is separate from Active/Archived lifecycle.
+Read-only rows expose no edit/archive capability. Account creation retains its
+original five type choices, command fields, native constraints and response checks.
+Cancel/Escape retain in-screen values and return focus; pending work disables
+fields/cancel and has a synchronous submit guard. Rejected inputs remain and error
+feedback receives focus. A confirmed save followed by refresh failure is labelled
+saved and blocks another creation until a successful read. No interrupted-response
+replay guarantee or persisted draft/search is added.
+
 | Operation | Pending | Existing product/API contract | Confirmed outcome | Failure/recovery |
 | --- | --- | --- | --- |
 | Create workspace | Submit disabled | Existing product/API contract | Recovery code shown once | Keep form, inline error |
@@ -28,7 +40,7 @@ pagination design is needed before extending these projections to larger dataset
 | Reopen | Unlock disabled | Existing product/API contract | New signed-in session, overview | Masked credentials, inline error |
 | Document import | Retaining disabled | Existing product/API contract | Source retained in local document list | File validation or retain error |
 | Document review | Saving disabled | Existing product/API contract | Reviewed status and disabled Review saved | Preserve edits, correct supplier length and retry |
-| Add account | Saving disabled | Existing product/API contract | Existing chart reload | Cancel without write; existing error path |
+| Add account | Native fields and cancel disabled; synchronous in-flight guard | Existing product/API contract | Named ordinary-account response, then chart reload | Retained cancelled/rejected inputs; confirmed-save refresh failures block another write until a successful read |
 | Journal | Posting disabled | Existing product/API contract | Posted read-only detail | Cancel without write; detail Back returns to list |
 | Statement | Import/match/reconcile disabled pending | Existing product/API contract | Explicit matched/reconciled state | Existing row/domain validation; no auto-match |
 | GST workpaper | Existing pending state | Existing product/API contract | Draft — not lodged, retained sources | Existing version/tax-period capability gates |
