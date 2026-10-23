@@ -70,3 +70,29 @@ representable and still stresses value width. This records, rather than repairs
 or conceals, the existing financial display limitation. Core values and handlers
 are unchanged. The separately recorded invalid-calendar-date acceptance also
 remains unresolved; neither finding is release-qualified by this visual block.
+
+## Corrected native verification
+
+The clean ordinary package at **`4ce093a93422121cf7e0492456a20a7b0dcf2344`**
+passes seven checks and one expected Windows-only skip; Core/helper hashes remain
+unchanged. The first focused native attempt passed the original no-wrap and new
+18px assertions, then failed the added outline assertion after programmatic
+focus (**22.5s**). This was a test-input mistake: the canonical focus ring follows
+`:focus-visible`. The test now enters the region with actual Shift+Tab/Tab before
+asserting visible focus; no application change or rebuild followed that correction.
+
+The same original packaged case then passed **13.8s / 14.6s including runner**.
+The Banking capture passed **12.8s / 13.8s**, and the connected invoice → Overview
+→ Documents → Banking case passed **15.8s / 16.8s**, with zero retries, page errors
+or console errors. The capture helper is unchanged from clean source `4ce093a9`;
+the exact current-workflow harness hash binds the subsequently committed two-key
+assertion correction in `after-money-fix-captures.json`.
+
+All **715 previously tracked output PNGs** verify byte-identical against the
+failed head; all 55 archived files verify unchanged. The strict configured audit
+still has the same **19 rule/file findings** (not a green audit). New evidence is
+15 Banking frames plus one 320px full-page original-regression capture. The latter
+visibly shows the complete `$123,456,679.01` amount on one line with keyboard focus;
+its 320 × 1000 viewport produces a 320 × 2162 full-page PNG. Earlier after sets,
+metadata and Library items are preserved. New original hosted outcomes remain a
+separate exact-head verification step after the normal push.

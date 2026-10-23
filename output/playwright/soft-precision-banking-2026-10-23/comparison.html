@@ -62,7 +62,7 @@
         </figure>
         <figure>
           <figcaption><strong>After · real app</strong>Compact list, adjacent non-modal review and actual reconciliation summary.</figcaption>
-          <a href="after/04-selected-match.png"><img src="after/04-selected-match.png" width="1440" height="1100" alt="Corrected Banking screen with six compact rows, review at the right and a pale forest reconciliation summary" /></a>
+          <a href="after-money-fix/04-selected-match.png"><img src="after-money-fix/04-selected-match.png" width="1440" height="1100" alt="Corrected Banking screen with six compact rows, review at the right and a pale forest reconciliation summary" /></a>
         </figure>
       </section>
       <section class="facts" aria-label="Measured rendered result">
@@ -73,16 +73,20 @@
         <summary>Statement list before selecting a line</summary>
         <div class="pair">
           <figure><figcaption><strong>Before</strong>Same imported lines and balance.</figcaption><a href="before/03-statement-list.png"><img loading="lazy" src="before/03-statement-list.png" width="1440" height="1100" alt="Original six-line statement list" /></a></figure>
-          <figure><figcaption><strong>After</strong>Compact rows and a quiet forest summary.</figcaption><a href="after/03-statement-list.png"><img loading="lazy" src="after/03-statement-list.png" width="1440" height="1100" alt="Corrected six-line statement list with returned balance and pending counts" /></a></figure>
+          <figure><figcaption><strong>After</strong>Compact rows and a quiet forest summary.</figcaption><a href="after-money-fix/03-statement-list.png"><img loading="lazy" src="after-money-fix/03-statement-list.png" width="1440" height="1100" alt="Corrected six-line statement list with returned balance and pending counts" /></a></figure>
         </div>
       </details>
       <details>
         <summary>320px · visible focus and natural page scrolling</summary>
         <div class="pair narrow">
           <figure><figcaption><strong>Before · reference field focus</strong>Real narrow baseline.</figcaption><a href="before/07-match-focus-320.png"><img loading="lazy" src="before/07-match-focus-320.png" width="320" height="1000" alt="Original narrow match review with focused reference" /></a></figure>
-          <figure><figcaption><strong>After · reference field focus</strong>Stacked review; full input retained.</figcaption><a href="after/07-match-focus-320.png"><img loading="lazy" src="after/07-match-focus-320.png" width="320" height="1000" alt="Corrected narrow match review with a visible forest focus outline and explicit confirmation" /></a></figure>
+          <figure><figcaption><strong>After · reference field focus</strong>Stacked review; full input retained.</figcaption><a href="after-money-fix/07-match-focus-320.png"><img loading="lazy" src="after-money-fix/07-match-focus-320.png" width="320" height="1000" alt="Corrected narrow match review with a visible forest focus outline and explicit confirmation" /></a></figure>
         </div>
-        <p><a href="after/06-statement-320.png">320px keyboard table scrolling</a> · <a href="after/06-statement-390.png">390px table</a> · <a href="after/06-statement-900.png">900px layout</a></p>
+        <p><a href="after-money-fix/06-statement-320.png">320px keyboard table scrolling</a> · <a href="after-money-fix/06-statement-390.png">390px table</a> · <a href="after-money-fix/06-statement-900.png">900px layout</a></p>
+      </details>
+      <details>
+        <summary>Large balance · original regression journey</summary>
+        <p><a href="money-nowrap-regression/19-320-banking-import.png">Real 320px full-page capture: complete $123,456,679.01 balance with keyboard focus</a>. The viewport is 320 × 1000; the full-page PNG is 320 × 2162. <a href="ci-balance-followup.md">Original CI failure, retained assertion and correction</a>.</p>
       </details>
       <details>
         <summary>Import, validation and confirmed states</summary>
@@ -90,19 +94,19 @@
           <table>
             <thead><tr><th>Journey milestone</th><th>Before</th><th>After</th></tr></thead>
             <tbody>
-              <tr><td>Malformed CSV; retained input</td><td><a href="before/01-import-error.png">Original</a></td><td><a href="after/01-import-error.png">Corrected layout</a></td></tr>
-              <tr><td>Explicit import review</td><td><a href="before/02-import-review.png">Original</a></td><td><a href="after/02-import-review.png">Corrected layout</a></td></tr>
-              <tr><td>Confirmed reviewed reference</td><td><a href="before/08-match-confirmed.png">Original</a></td><td><a href="after/08-match-confirmed.png">Corrected layout</a></td></tr>
-              <tr><td>No search results</td><td><a href="before/09-search-empty.png">Original</a></td><td><a href="after/09-search-empty.png">Corrected layout</a></td></tr>
-              <tr><td>All new lines matched</td><td><a href="before/10-ready-to-reconcile.png">Original</a></td><td><a href="after/10-ready-to-reconcile.png">Corrected layout</a></td></tr>
-              <tr><td>Reconciliation confirmed</td><td><a href="before/11-reconciled.png">Original</a></td><td><a href="after/11-reconciled.png">Corrected layout</a></td></tr>
+              <tr><td>Malformed CSV; retained input</td><td><a href="before/01-import-error.png">Original</a></td><td><a href="after-money-fix/01-import-error.png">Corrected layout</a></td></tr>
+              <tr><td>Explicit import review</td><td><a href="before/02-import-review.png">Original</a></td><td><a href="after-money-fix/02-import-review.png">Corrected layout</a></td></tr>
+              <tr><td>Confirmed reviewed reference</td><td><a href="before/08-match-confirmed.png">Original</a></td><td><a href="after-money-fix/08-match-confirmed.png">Corrected layout</a></td></tr>
+              <tr><td>No search results</td><td><a href="before/09-search-empty.png">Original</a></td><td><a href="after-money-fix/09-search-empty.png">Corrected layout</a></td></tr>
+              <tr><td>All new lines matched</td><td><a href="before/10-ready-to-reconcile.png">Original</a></td><td><a href="after-money-fix/10-ready-to-reconcile.png">Corrected layout</a></td></tr>
+              <tr><td>Reconciliation confirmed</td><td><a href="before/11-reconciled.png">Original</a></td><td><a href="after-money-fix/11-reconciled.png">Corrected layout</a></td></tr>
             </tbody>
           </table>
         </div>
       </details>
     </main>
     <footer>
-      <p>Corrected clean runtime: <code>220c5d77c607d67057922db09870c90fb1d797c5</code>. Prior frames and intermediate attempts remain unchanged. This report does not qualify MAS, Windows 11, official ATO submission or an application release. The existing calendar-validation gap and 19 supplementary audit findings are documented in README.md.</p>
+      <p>Corrected clean runtime: <code>4ce093a93422121cf7e0492456a20a7b0dcf2344</code>. Prior frames and intermediate attempts remain unchanged. The new after-money-fix set restores narrow balance no-wrap. This report does not qualify MAS, Windows 11, official ATO submission or an application release. The existing calendar-validation and extreme-value precision gaps and 19 supplementary audit findings are documented in README.md.</p>
     </footer>
   </body>
 </html>

@@ -1,6 +1,6 @@
 # Finite implemented-screen comparison inventory
 
-Snapshot of corrected runtime `220c5d77c607d67057922db09870c90fb1d797c5`.
+Snapshot of corrected runtime `4ce093a93422121cf7e0492456a20a7b0dcf2344`.
 The route renderer is unchanged from review base `724ac6fe`; this block changes
 Banking presentation and focus only. Approved boards remain pinned to design
 commit `19533020422b6ea2f0c77dc3117a051483f9f9ce`. Passing tests are separate
@@ -40,6 +40,6 @@ owner's checkout was clean at `2a75edc8` and preserved during this block.
 
 Remaining evidence limits: 19 strict configured audit findings, the existing local
 macOS 26.5.2 SBR startup and second-unlock discrepancies, and the newly observed
-existing invalid calendar-date statement import. These are not erased by hosted
+existing invalid calendar-date statement import and extreme-value display precision. These are not erased by hosted
 CI or screenshots. Draft, merge and publication holds remain; ordinary macOS 14
 and Windows Server smoke do not qualify MAS, Windows 11 or official ATO use.

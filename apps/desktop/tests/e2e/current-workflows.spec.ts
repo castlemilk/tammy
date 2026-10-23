@@ -1216,6 +1216,8 @@ async function interactionJourney(page: import("@playwright/test").Page) {
         });
         await expect(balanceRegion).toContainText("$123,456,679.01");
         await balanceRegion.focus();
+        await page.keyboard.press("Shift+Tab");
+        await page.keyboard.press("Tab");
         await expect(balanceRegion).toBeFocused();
         await expect(balanceRegion).toHaveCSS("outline-style", "solid");
         expect(

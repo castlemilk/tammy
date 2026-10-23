@@ -206,3 +206,54 @@ Confirmed Library deliveries:
 The concept Library item is reused from the identical prior reference delivery;
 the other three uploads are verified real app frames. Returned version attributes
 were applied to transport copies outside the repository, preserving capture bytes.
+
+## Banking CI correction and current comparison
+
+The initial Banking head `0fa0ab38` passed Ubuntu and Windows Server checks but
+both original macOS jobs failed the existing 320px large-balance no-wrap assertion.
+[Original jobs, artifact hash, precise cause and correction](ci-balance-followup.md)
+are retained. This was an application presentation regression, not setup/SBR timing.
+The shared named monetary scroller restores one-line amounts and the established
+18px narrow font. The original assertion remains; actual Tab focus, outline and
+page containment are added. Ten focused Banking/scroller tests, typecheck and lint
+pass. A protected old-component experiment fails the new keyboard-region test.
+
+The **current comparison** uses `after-money-fix/`, with **15 new real frames**
+from clean ordinary runtime `4ce093a93422121cf7e0492456a20a7b0dcf2344`.
+Seven package checks pass with one expected Windows-only skip. Core and helper
+hashes remain unchanged. The original previously failing packaged workflow passes
+**13.8s / 14.6s including runner**; the Banking capture is **12.8s / 13.8s** and
+complete connected journey **15.8s / 16.8s**, zero retries/page/console errors.
+`after-money-fix-captures.json` binds runtime, frames and exact harness hashes.
+The first added native focus assertion incorrectly expected a keyboard ring after
+programmatic focus; that failed attempt and the real-Tab correction remain explicit
+in the follow-up. No assertion is removed or timeout increased.
+
+Actual standalone desktop, 320px field focus and the original large-balance
+full-page PNG were inspected. Desktop rows remain **56px**, controls at least
+**44px**, review **340px**, canonical forest actions and quiet summary tint.
+The desktop pair still shares 1440 × 1100, six isolated synthetic lines, selection
+and reference. The separate full-page regression image shares its test's 320 ×
+1000 viewport and is 320 × 2162 pixels; it is not relabeled as a matched baseline.
+
+New confirmed Library items, with returned version attributes verified on external
+transport copies and capture bytes unchanged:
+
+- [Current after · 1440 × 1100](https://chatgpt.com/api/library/files/libfile_e08f531ca7648191b5839f20684224ee/download)
+- [Current after · 320px field focus](https://chatgpt.com/api/library/files/libfile_7f9a0cbc49108191b89126641d131ee4/download)
+- [Original regression journey · complete balance and keyboard focus](https://chatgpt.com/api/library/files/libfile_6f911fc88a6c8191a8d020585a1c7523/download)
+
+`money-fix-library-delivery.json` records confirmed IDs and SHA256. The previous
+before/reference/after Library items remain unchanged and available. All **715
+previous tracked output PNGs** verify unchanged, as do **55 archived files**.
+The folder now retains **64 real frames plus one unchanged generated concept**.
+The strict audit retains exactly the same **19 rule/file findings** without new
+exclusions; its new report is `static-ui-audit-money-fix.json`.
+
+An extreme-value component fixture also exposed a separate pre-existing display
+precision limit: `9_007_199_254_740_991` minor units renders one cent low through
+`Number(value) / 100`. It is explicitly retained in the follow-up alongside the
+existing invalid-calendar-date gap. The width test now uses an exactly representable
+large fixture. The formatter and financial handlers are unchanged; no full financial
+range, official ATO, MAS or Windows 11 qualification is claimed. Original local
+startup discrepancies, draft/merge/publication holds and concurrent work remain.
