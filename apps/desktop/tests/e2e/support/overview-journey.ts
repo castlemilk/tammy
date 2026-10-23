@@ -66,7 +66,9 @@ export async function runOverviewReviewJourney(page: Page, harness: ElectronHarn
   await csv.focus();
   await page.keyboard.press("Space");
   await expect(page.getByText("Income export cancelled.", { exact: true })).toBeVisible();
-  await expect(csv).toBeFocused();
+  // The unchanged baseline loses focus while disabling this button for export.
+  // Corrected source and normal CI must restore it after the native cancellation.
+  if (overviewCapturePhase !== "before") await expect(csv).toBeFocused();
   await capture(page, "04-export-cancelled");
 
   await page.emulateMedia({ reducedMotion: "reduce" });

@@ -50,7 +50,10 @@ An active separate owner is implementing offline AI and shared component changes
 on `issue/ato-approval-2026-10-23`; those unmerged changes are not included in this
 head's inventory. Their dirty BAS file and checkout are preserved. The selected
 Overview source files do not overlap that owner's current changes. This task will
-not edit shared tokens/controls, the app router or the other owner's checkout.
+not edit shared tokens/primitives, the app router or the other owner's checkout.
+The existing report-export action owner needs a narrow completion-focus fix:
+the real baseline loses keyboard focus when its button is disabled during a
+cancelled export. Its financial/authority/export contract is preserved.
 
 ## Verification limits retained
 
