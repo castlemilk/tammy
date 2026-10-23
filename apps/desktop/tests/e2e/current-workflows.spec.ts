@@ -257,10 +257,12 @@ test("covers workspace setup, recovery, accounting, and interaction journeys thr
   await page.getByLabel("Business legal name").fill("Tammy Business Pty Ltd");
   await page.getByLabel("Business display name").fill("Tammy Business");
   await page.getByLabel("ABN").fill("51824753556");
-  await page.getByLabel("Workspace passphrase").fill(WORKSPACE_PASSPHRASE);
-  await page.getByLabel("Confirm workspace passphrase").fill(WORKSPACE_PASSPHRASE);
-  await page.getByLabel("Administrator password").fill(ADMINISTRATOR_PASSWORD);
-  await page.getByLabel("Confirm administrator password").fill(ADMINISTRATOR_PASSWORD);
+  await page.getByLabel("Workspace passphrase", { exact: true }).fill(WORKSPACE_PASSPHRASE);
+  await page.getByLabel("Confirm workspace passphrase", { exact: true }).fill(WORKSPACE_PASSPHRASE);
+  await page.getByLabel("Administrator password", { exact: true }).fill(ADMINISTRATOR_PASSWORD);
+  await page
+    .getByLabel("Confirm administrator password", { exact: true })
+    .fill(ADMINISTRATOR_PASSWORD);
   await page.getByRole("button", { name: "Create local workspace" }).click();
   await expect(page.getByRole("heading", { name: "Save your recovery code" })).toBeVisible();
   await expect(page.getByText("One-time recovery code")).toBeVisible();
@@ -292,9 +294,9 @@ test("covers workspace setup, recovery, accounting, and interaction journeys thr
   await expect(page.getByRole("heading", { name: "Unlock your workspace" })).toBeVisible();
   await page.setViewportSize({ width: 1440, height: 1000 });
   await captureJourney(page, "03-unlock");
-  await page.getByLabel("Workspace passphrase").fill(WORKSPACE_PASSPHRASE);
+  await page.getByLabel("Workspace passphrase", { exact: true }).fill(WORKSPACE_PASSPHRASE);
   await page.getByLabel("Email or username").fill(USERNAME);
-  await page.getByLabel("Administrator password").fill(ADMINISTRATOR_PASSWORD);
+  await page.getByLabel("Administrator password", { exact: true }).fill(ADMINISTRATOR_PASSWORD);
   await page.getByRole("button", { name: "Unlock workspace" }).click();
   await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible();
 
@@ -1776,9 +1778,11 @@ async function resetTableHorizontalScroll(table: import("@playwright/test").Loca
 }
 
 async function unlockCurrentWorkflowWorkspace(page: import("@playwright/test").Page) {
-  await page.getByLabel("Workspace passphrase").fill(CURRENT_WORKFLOW_PASSPHRASE);
+  await page.getByLabel("Workspace passphrase", { exact: true }).fill(CURRENT_WORKFLOW_PASSPHRASE);
   await page.getByLabel("Email or username").fill(CURRENT_WORKFLOW_USERNAME);
-  await page.getByLabel("Administrator password").fill(CURRENT_WORKFLOW_ADMIN_PASSWORD);
+  await page
+    .getByLabel("Administrator password", { exact: true })
+    .fill(CURRENT_WORKFLOW_ADMIN_PASSWORD);
   await page.getByRole("button", { name: "Unlock workspace" }).click();
   await expect(page.getByRole("heading", { name: "Overview", exact: true })).toBeVisible();
 }

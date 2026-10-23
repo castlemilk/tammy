@@ -84,8 +84,14 @@ test("runs the packaged first-run journey offline and exits cleanly", async ({
   await expect(page.getByLabel("Business legal name")).toBeVisible();
   await expect(page.getByLabel("Business display name")).toBeVisible();
   await expect(page.getByLabel("ABN")).toBeVisible();
-  await expect(page.getByLabel("Workspace passphrase")).toHaveAttribute("type", "password");
-  await expect(page.getByLabel("Administrator password")).toHaveAttribute("type", "password");
+  await expect(page.getByLabel("Workspace passphrase", { exact: true })).toHaveAttribute(
+    "type",
+    "password",
+  );
+  await expect(page.getByLabel("Administrator password", { exact: true })).toHaveAttribute(
+    "type",
+    "password",
+  );
   await expect(
     page.getByText("Tammy supports a local invoice and reconciled purchase GST workpaper."),
   ).toBeVisible();
@@ -344,8 +350,10 @@ test("foundation/onboarding-feedback: validates the first-run form and captures 
     "auto",
   );
 
-  const workspacePassphrase = page.getByLabel("Workspace passphrase");
-  const workspacePassphraseConfirmation = page.getByLabel("Confirm workspace passphrase");
+  const workspacePassphrase = page.getByLabel("Workspace passphrase", { exact: true });
+  const workspacePassphraseConfirmation = page.getByLabel("Confirm workspace passphrase", {
+    exact: true,
+  });
   await page.getByRole("button", { name: "Show workspace passphrase" }).focus();
   await page.keyboard.press("Enter");
   await expect(workspacePassphrase).toHaveAttribute("type", "text");
@@ -430,10 +438,12 @@ test("foundation/onboarding-feedback: validates the first-run form and captures 
     await page.getByLabel("Email or username").fill("setup-owner@tammy.invalid");
     await page.getByLabel("Business legal name").fill("Tammy Example Pty Ltd");
     await page.getByLabel("Business display name").fill("Tammy Example");
-    await page.getByLabel("Workspace passphrase").fill("short");
-    await page.getByLabel("Confirm workspace passphrase").fill("different");
-    await page.getByLabel("Administrator password").fill("Local-admin-2026!");
-    await page.getByLabel("Confirm administrator password").fill("Local-admin-2026!");
+    await page.getByLabel("Workspace passphrase", { exact: true }).fill("short");
+    await page.getByLabel("Confirm workspace passphrase", { exact: true }).fill("different");
+    await page.getByLabel("Administrator password", { exact: true }).fill("Local-admin-2026!");
+    await page
+      .getByLabel("Confirm administrator password", { exact: true })
+      .fill("Local-admin-2026!");
     await page.getByLabel("ABN").fill("51824753556");
 
     const createButton = page.getByRole("button", { name: "Create local workspace" });
@@ -446,8 +456,8 @@ test("foundation/onboarding-feedback: validates the first-run form and captures 
     expect(await readAbnExternalCalls(application)).toEqual([]);
 
     const decomposedPassphrase = "e\u0301".repeat(15);
-    await page.getByLabel("Workspace passphrase").fill(decomposedPassphrase);
-    await page.getByLabel("Confirm workspace passphrase").fill("é".repeat(15));
+    await page.getByLabel("Workspace passphrase", { exact: true }).fill(decomposedPassphrase);
+    await page.getByLabel("Confirm workspace passphrase", { exact: true }).fill("é".repeat(15));
     await expect(page.getByText("Passwords match.").first()).toBeVisible();
     await expect(page.getByText("Format checks pass.").first()).toBeVisible();
     await expect(createButton).toBeEnabled();

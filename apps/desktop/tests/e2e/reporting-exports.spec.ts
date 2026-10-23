@@ -584,9 +584,11 @@ async function expectIncomeDates(page: Page) {
 }
 
 async function unlockWorkspace(page: Page) {
-  await page.getByLabel("Workspace passphrase").fill(CURRENT_WORKFLOW_PASSPHRASE);
+  await page.getByLabel("Workspace passphrase", { exact: true }).fill(CURRENT_WORKFLOW_PASSPHRASE);
   await page.getByLabel("Email or username").fill(CURRENT_WORKFLOW_USERNAME);
-  await page.getByLabel("Administrator password").fill(CURRENT_WORKFLOW_ADMIN_PASSWORD);
+  await page
+    .getByLabel("Administrator password", { exact: true })
+    .fill(CURRENT_WORKFLOW_ADMIN_PASSWORD);
   await page.getByRole("button", { name: "Unlock workspace", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Overview", exact: true })).toBeVisible();
 }

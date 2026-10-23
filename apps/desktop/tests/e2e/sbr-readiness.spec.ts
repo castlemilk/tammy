@@ -126,9 +126,11 @@ async function nextFreshCode(clock: TotpClock): Promise<string> {
 
 async function unlockPrimary(page: Page): Promise<void> {
   await navigate(page, "/unlock");
-  await page.getByLabel("Workspace passphrase").fill(CURRENT_WORKFLOW_PASSPHRASE);
+  await page.getByLabel("Workspace passphrase", { exact: true }).fill(CURRENT_WORKFLOW_PASSPHRASE);
   await page.getByLabel("Email or username").fill(CURRENT_WORKFLOW_USERNAME);
-  await page.getByLabel("Administrator password").fill(CURRENT_WORKFLOW_ADMIN_PASSWORD);
+  await page
+    .getByLabel("Administrator password", { exact: true })
+    .fill(CURRENT_WORKFLOW_ADMIN_PASSWORD);
   await page.getByRole("button", { name: "Unlock workspace" }).click();
   await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible();
 }
@@ -160,10 +162,18 @@ async function setupSecondaryWorkspace(page: Page) {
   await page.getByLabel("Business legal name").fill("Wattle & Co Test Pty Ltd");
   await page.getByLabel("Business display name").fill("Wattle & Co Test Pty Ltd");
   await page.getByLabel("ABN").fill("11000000560");
-  await page.getByLabel("Workspace passphrase").fill("secondary-workspace-passphrase");
-  await page.getByLabel("Confirm workspace passphrase").fill("secondary-workspace-passphrase");
-  await page.getByLabel("Administrator password").fill("secondary-administrator-password");
-  await page.getByLabel("Confirm administrator password").fill("secondary-administrator-password");
+  await page
+    .getByLabel("Workspace passphrase", { exact: true })
+    .fill("secondary-workspace-passphrase");
+  await page
+    .getByLabel("Confirm workspace passphrase", { exact: true })
+    .fill("secondary-workspace-passphrase");
+  await page
+    .getByLabel("Administrator password", { exact: true })
+    .fill("secondary-administrator-password");
+  await page
+    .getByLabel("Confirm administrator password", { exact: true })
+    .fill("secondary-administrator-password");
   await page.getByRole("button", { name: "Create local workspace" }).click();
   await expect(page.getByRole("heading", { name: "Save your recovery code" })).toBeVisible();
   await page.getByRole("button", { name: "I saved my recovery code" }).click();

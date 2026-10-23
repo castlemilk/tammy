@@ -112,9 +112,11 @@ test("invoices/income-payments-bas: cash receipts, mixed GST and balances persis
   await expect(page.getByRole("row", { name: /Invoice sales/ })).toContainText("$170.00");
   await expect(page.getByRole("row", { name: /Business bank/ })).toContainText("$180.00");
   page = await electronHarness.restart("accounting-workflow-restart");
-  await page.getByLabel("Workspace passphrase").fill(CURRENT_WORKFLOW_PASSPHRASE);
+  await page.getByLabel("Workspace passphrase", { exact: true }).fill(CURRENT_WORKFLOW_PASSPHRASE);
   await page.getByLabel("Email or username").fill(CURRENT_WORKFLOW_USERNAME);
-  await page.getByLabel("Administrator password").fill(CURRENT_WORKFLOW_ADMIN_PASSWORD);
+  await page
+    .getByLabel("Administrator password", { exact: true })
+    .fill(CURRENT_WORKFLOW_ADMIN_PASSWORD);
   await page.getByRole("button", { name: "Unlock workspace", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Overview", exact: true })).toBeVisible();
   await page.getByRole("link", { name: "Invoices", exact: true }).click();
