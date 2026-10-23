@@ -5,6 +5,11 @@ import type { Page } from "@playwright/test";
 import { expect, test } from "./fixtures";
 import { setupAndRunCurrentAccountingWorkflow } from "./support/current-accounting-workflow";
 import { readInvoiceAccounting } from "./support/invoice-income-workflow";
+import {
+  captureLocalOverview,
+  overviewCapturePhase,
+  runOverviewReviewJourney,
+} from "./support/overview-journey";
 
 const phase = process.env.TAMMY_FINANCIAL_UI_CAPTURE;
 const referencePhase = process.env.TAMMY_INVOICE_REFERENCE_CAPTURE;
@@ -37,6 +42,7 @@ test.describe("Soft Precision financial workspace", () => {
     );
     const page = electronHarness.currentPage();
     await page.setViewportSize({ width: 1440, height: 1100 });
+    if (overviewCapturePhase) await captureLocalOverview(page);
     await page.getByRole("link", { name: "Invoices", exact: true }).click();
     await expect(page.getByRole("heading", { name: "Invoices", exact: true })).toBeVisible();
     await expect(page.getByText("No saved invoices yet.", { exact: true })).toBeVisible();
@@ -265,6 +271,19 @@ test.describe("Soft Precision financial workspace", () => {
     expect(paid.accounting.outstandingMinor).toBe(82_000n);
     expect(paid.accounting.payments).toHaveLength(1);
     await capture(page, "08-recorded-receipt");
+
+    if (overviewCapturePhase || (!phase && !detailPhase && !draftPhase && !referencePhase)) {
+      await runOverviewReviewJourney(page, electronHarness);
+      const retained = await readInvoiceAccounting(page, workspace, "INV-UI-001");
+      expect(retained.accounting.receivedMinor).toBe(50_000n);
+      expect(retained.accounting.outstandingMinor).toBe(82_000n);
+      expect(retained.accounting.payments).toHaveLength(1);
+      if (overviewCapturePhase) {
+        expect(electronHarness.consoleErrors).toEqual([]);
+        expect(electronHarness.pageErrors).toEqual([]);
+        return;
+      }
+    }
 
     if (detailPhase) {
       await page.getByRole("button", { name: "Record payment", exact: true }).click();
