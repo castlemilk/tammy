@@ -1,0 +1,50 @@
+{
+  "schema": "tammy-macos-ci-budget-evidence-v1",
+  "subjectRevision": "2464afa6fa283c5a854e0899cc32e43824dfe7e8",
+  "comparisonRevision": "9551cfa4b6261554ec4579294b6596f9943c6cec",
+  "identicalTree": "3acc85f2109576154a69e856611254ebac995de3",
+  "runs": [
+    {
+      "event": "push",
+      "runId": 39984087065,
+      "jobId": 120518623043,
+      "createdAt": "2026-10-23T16:07:11Z",
+      "jobStartedAt": "2026-10-23T16:07:18Z",
+      "canonicalStartedAt": "2026-10-23T16:09:41Z",
+      "developmentStartedAt": "2026-10-23T16:11:50.241039Z",
+      "packageStartedAt": "2026-10-23T16:13:42.061970Z",
+      "packagedSuiteStartedAt": "2026-10-23T16:16:30.789203Z",
+      "ordinaryCasesCompletedAt": "2026-10-23T16:27:58.051421Z",
+      "sbrCompletedAt": "2026-10-23T16:33:01.598683Z",
+      "jobCompletedAt": "2026-10-23T16:33:09Z",
+      "ordinaryPassed": 19,
+      "sbrPassed": 1,
+      "conclusion": "success"
+    },
+    {
+      "event": "pull_request",
+      "runId": 39984093577,
+      "jobId": 120518646518,
+      "createdAt": "2026-10-23T16:07:14Z",
+      "jobStartedAt": "2026-10-23T16:07:17Z",
+      "canonicalStartedAt": "2026-10-23T16:09:52Z",
+      "developmentStartedAt": "2026-10-23T16:12:36.727373Z",
+      "packageStartedAt": "2026-10-23T16:15:15.919067Z",
+      "packagedSuiteStartedAt": "2026-10-23T16:18:49.441527Z",
+      "ordinaryCasesCompletedAt": "2026-10-23T16:33:11.201763Z",
+      "canonicalCancelledAt": "2026-10-23T16:37:31.960566Z",
+      "jobCompletedAt": "2026-10-23T16:37:47Z",
+      "ordinaryPassed": 19,
+      "sbrPassed": 0,
+      "conclusion": "cancelled"
+    }
+  ],
+  "retentionReserveSeconds": 120,
+  "maximumMacosJobMinutes": 40,
+  "notes": [
+    "Queue is createdAt to jobStartedAt and is excluded from the job execution envelope.",
+    "SBR was incomplete on cancellation; no finer internal phase or application assertion failure is available.",
+    "Core intentionally uses a fresh private build cache. Both development and packaged builds retain independent authentication.",
+    "Fresh TOTP-counter waits are intentional anti-replay qualification and must not be shortened or bypassed."
+  ]
+}

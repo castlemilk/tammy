@@ -169,7 +169,7 @@ test("retains runner provisioning, evidence classification, and artifacts around
     assert.match(workflow, /pnpm install --frozen-lockfile/);
   }
   assert.match(foundationWorkflow, /runs-on: ubuntu-24\.04[\s\S]*timeout-minutes: 30/);
-  assert.match(foundationWorkflow, /runs-on: macos-14[\s\S]*timeout-minutes: 30/);
+  assert.match(foundationWorkflow, /runs-on: macos-14\n\s*timeout-minutes: 40/);
   assert.match(foundationWorkflow, /runs-on: windows-2025[\s\S]*timeout-minutes: 30/);
   assert.match(foundationWorkflow, /name: Contracts and local foundation/);
   assert.match(foundationWorkflow, /name: macOS 14 arm64 packaged E2E/);
@@ -449,7 +449,7 @@ test("pins provisioning and evidence ownership independently for every CI job", 
   const macos = foundation.jobs["macos14-arm64-packaged"];
   assert.equal(macos.name, "macOS 14 arm64 packaged E2E");
   assert.equal(macos["runs-on"], "macos-14");
-  assert.equal(macos["timeout-minutes"], 30);
+  assert.equal(macos["timeout-minutes"], 40);
   assertSharedCiProvisioning(macos, "bash");
   assert.equal(
     requiredStep(macos, "Assert native Apple silicon").run,
@@ -521,6 +521,57 @@ test("pins provisioning and evidence ownership independently for every CI job", 
   );
   assert.equal(windowsArtifact.with["if-no-files-found"], "error");
   assert.equal(windowsArtifact.with["retention-days"], 30);
+});
+
+test("macOS outer budget preserves the final SBR deadline after the observed slow comparison", async () => {
+  const evidence = JSON.parse(
+    await readFile(
+      new URL("../docs/development/ci-evidence/macos-budget-2026-10-23.json", import.meta.url),
+      "utf8",
+    ),
+  );
+  const workflow = YAML.parse(
+    await readFile(new URL("../.github/workflows/foundation-ci.yml", import.meta.url), "utf8"),
+  );
+  const sbr = await readFile(
+    new URL("../apps/desktop/tests/e2e/sbr-readiness.spec.ts", import.meta.url),
+    "utf8",
+  );
+  const sbrDeadline = Number(/test\.setTimeout\(([\d_]+)\)/u.exec(sbr)?.[1]?.replaceAll("_", ""));
+  assert.equal(
+    sbrDeadline,
+    480_000,
+    "the application test deadline must remain bounded and unchanged",
+  );
+  const slow = evidence.runs.find((run) => run.event === "pull_request");
+  const push = evidence.runs.find((run) => run.event === "push");
+  assert.equal(slow.ordinaryPassed, 19);
+  assert.equal(push.ordinaryPassed + push.sbrPassed, 20);
+  const elapsed = Date.parse(slow.ordinaryCasesCompletedAt) - Date.parse(slow.jobStartedAt);
+  const required = elapsed + sbrDeadline + evidence.retentionReserveSeconds * 1000;
+  assert.ok(
+    30 * 60_000 < required,
+    "the original envelope must reproduce the recorded budget starvation",
+  );
+  const actual = workflow.jobs["macos14-arm64-packaged"]["timeout-minutes"] * 60_000;
+  assert.ok(
+    actual >= required,
+    "the final test and failure-artifact reserve must fit after measured setup and ordinary cases",
+  );
+  assert.equal(
+    actual,
+    Math.ceil(required / (5 * 60_000)) * 5 * 60_000,
+    "round the measured requirement to a finite five-minute envelope",
+  );
+  assert.ok(
+    actual <= evidence.maximumMacosJobMinutes * 60_000,
+    "the outer envelope must stay finite",
+  );
+  assert.equal(evidence.maximumMacosJobMinutes, 40);
+  // Queue delay is observable, but does not consume GitHub's per-job execution budget.
+  assert.ok(Date.parse(slow.jobStartedAt) >= Date.parse(slow.createdAt));
+  assert.equal(workflow.jobs.contracts["timeout-minutes"], 30);
+  assert.equal(workflow.jobs["windows-server-x64-package-smoke"]["timeout-minutes"], 30);
 });
 
 test("allows only ad-hoc signing for the ordinary macOS PR package check", async () => {

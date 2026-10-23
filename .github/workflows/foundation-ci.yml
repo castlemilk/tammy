@@ -66,8 +66,10 @@ jobs:
 
   macos14-arm64-packaged:
     name: macOS 14 arm64 packaged E2E
+    # Measured slow comparison needs ~36m for setup, 19 cases, the unchanged
+    # 8m SBR test deadline and 2m artifact reserve. See docs/development/ci-evidence.
     runs-on: macos-14
-    timeout-minutes: 30
+    timeout-minutes: 40
     steps:
       - name: Assert native Apple silicon
         run: test "$(uname -m)" = "arm64"
