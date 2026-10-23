@@ -23,7 +23,8 @@ export const documentsCapturePhase = process.env.TAMMY_DOCUMENTS_CAPTURE;
 if (
   documentsCapturePhase !== undefined &&
   documentsCapturePhase !== "before" &&
-  documentsCapturePhase !== "after"
+  documentsCapturePhase !== "after" &&
+  documentsCapturePhase !== "after-keyboard-fix"
 ) {
   throw new Error("DOCUMENTS_CAPTURE_PHASE_INVALID");
 }
@@ -169,6 +170,10 @@ export async function runDocumentsReviewJourney(
         node.scrollLeft = 0;
       });
       await scroll.focus();
+      await expect(scroll).toBeFocused();
+      await expect
+        .poll(() => scroll.evaluate((node) => node.scrollWidth > node.clientWidth))
+        .toBe(true);
       await page.keyboard.press("ArrowRight");
       await expect.poll(() => scroll.evaluate((node) => node.scrollLeft)).toBeGreaterThan(0);
       await expect(scroll).toHaveCSS("outline-style", "solid");
