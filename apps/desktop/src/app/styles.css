@@ -178,6 +178,9 @@
     outline: 2px solid var(--ring);
     outline-offset: 2px;
   }
+  .chart-accounts-scroll.focus-ring:focus-visible {
+    outline-offset: -2px;
+  }
 
   .focus-ring-rail:focus-visible {
     outline: 2px solid var(--ready-light);
@@ -436,9 +439,6 @@
   }
   .chart-accounts-table td {
     height: 36px;
-  }
-  .chart-accounts-scroll.focus-ring:focus-visible {
-    outline-offset: -2px;
   }
   .invoice-index-table th,
   .invoice-index-table td {

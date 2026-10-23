@@ -105,6 +105,27 @@ The expanded native assertions require all 18 known desktop fixture rows to be
 real keyboard horizontal scrolling at 390/320px. A second clean package is required
 for these source changes; initial images are not relabelled as corrected evidence.
 
+## Retained focus failure and cascade diagnosis
+
+Clean corrected source `6707b3b146d2a04e850b0b32e8f73958162047f0` passed seven
+package checks/one skip. Its capture passed the desktop **36px** fixture-row and
+**44px** control assertions, then failed in **21.3s** at the first 390px focus check:
+expected inset offset -2px, computed +2px. The assertion, ten-second expectation,
+zero retries and native test budget remain unchanged. The 13 partial/safe failure
+frames, measurements and provenance are retained in `after-focus-attempt/` and
+[focus-attempt-captures.json](focus-attempt-captures.json). The later narrow label
+proof and back/forward did not run on this attempt. No private logs, traces or
+accessibility setup records are committed.
+
+Inspection of the compiled CSS proves the Chart override was in `components`,
+while canonical focus is in the higher-priority `utilities` layer. Moving the
+existing three-line override beside that utility fixes layer precedence without
+altering other components. A bounded renderer build verifies both emitted rules
+are now in utilities and the Chart override follows canonical focus. Application
+code and financial handlers are unchanged from `6707b3b1`; a clean package/native
+pass is still required for this CSS correction. This is a diagnosed source fix,
+not a blind retry or assertion weakening.
+
 The preceding Journals head has terminal original first-attempt success in both
 [push run 40031390128](https://github.com/castlemilk/tammy/actions/runs/40031390128)
 and [PR run 40031395953](https://github.com/castlemilk/tammy/actions/runs/40031395953),
