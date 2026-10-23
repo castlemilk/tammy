@@ -3,40 +3,9 @@
     "width": 1440,
     "height": 1100
   },
-  "dataRowHeights": [
-    47,
-    47,
-    47,
-    47,
-    47,
-    36,
-    47,
-    47,
-    47,
-    47,
-    36,
-    47,
-    36,
-    47,
-    47,
-    36,
-    36,
-    36
-  ],
-  "groupControlHeights": [
-    44,
-    44,
-    44,
-    44,
-    44
-  ],
+  "dataRowHeights": [47, 47, 47, 47, 47, 36, 47, 47, 47, 47, 36, 47, 36, 47, 47, 36, 36, 36],
+  "groupControlHeights": [44, 44, 44, 44, 44],
   "headerHeight": 38,
-  "groups": [
-    "Assets (6)",
-    "Liabilities (5)",
-    "Equity (4)",
-    "Income (1)",
-    "Expenses (2)"
-  ],
+  "groups": ["Assets (6)", "Liabilities (5)", "Equity (4)", "Income (1)", "Expenses (2)"],
   "pageContainsHorizontalOverflow": false
 }

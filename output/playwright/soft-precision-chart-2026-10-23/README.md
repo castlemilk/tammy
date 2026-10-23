@@ -135,6 +135,58 @@ skipped. Standalone before/after setup still uses its original available codes.
 This is a test-only follow-up; the verified `9bf430a7` application package is reused
 with its separately identified clean harness rather than rebuilt for that fixture.
 
+## Final rendered comparison and local verification
+
+The final **16 real frames** in `after/` bind clean ordinary application source
+`9bf430a77f2783dc07084f03b550b5857b3800e4` and clean test-only harness
+`4f202e7368c1e85e1debb5c3494b63c307499bf6`. See
+[the matched before/reference/after](comparison.html) and exact
+[after provenance](after-captures.json). The primary installed-chart pair shares
+**14 records at 1440 × 1100**. The companion seeded pair shares 18 records;
+creation fields and narrow form states also have matched before/after captures.
+The board stays separate as an unchanged generated concept.
+
+Original-size installed/seeded chart, ordinary form, narrow form and protection
+pixels were inspected. All **18 desktop fixture rows are 36px**, header 38px and
+group controls 44px. Protection labels remain on one line; saved confirmation is
+quiet beside Add account. The actual 320px table has a complete visible inset
+forest border, and real keyboard movement brings the full protected label into
+view. Natural narrow row growth preserves longer names. No page overflow is
+observed at 900/390/320px; tables keep their labelled horizontal scroll region.
+
+The final package passes **seven checks /one expected Windows-only skip**. Core
+and helper hashes are unchanged. Final capture passes **11.4s /12.2s including
+runner**, full invoice → Overview → Documents → Banking → Journals → Chart
+**16.5s /17.2s**, and both original connected workflows pass **14.0s** and
+**20.8s**, **35.6s including their shared runner**. All use zero retries; successful
+native cases assert no page/console errors. The earlier focus failure remains a
+failed original attempt, not relabelled as one uninterrupted pass.
+
+The final component/scroller block passes **11/11 in 3.24s**, and stable source
+typecheck passes. Final repository lint passes **683 files**, with the existing
+**135 warnings /12 infos**, and verifies all **55 archives**. The repository
+formatter normalises the two intermediate measurement JSON files; their parsed
+numeric values are verified identical and every capture PNG remains byte-identical.
+Strict audit retains the same 19 findings. Native date/select
+and security/financial constraints are preserved. Composition has component-event
+coverage; real OS IME and open native-popup pixel geometry are not qualified.
+
+Library's supported prepared-save helper reports that preparation is unavailable
+in this desktop session. No new save was confirmed, and no alternate write/retry
+was attempted. [Delivery metadata](delivery.json) binds the four selected PNGs
+for delivery through their exact pushed GitHub paths. The existing board 09
+Library identity is unchanged. Raw helper/runtime output and private setup records
+are not included.
+
+All **825 PNGs tracked before this final set**, including every original **787**
+predecessor, remain byte-identical; adding these 16 gives **841** globally tracked
+output PNGs. This folder retains **53 real frames plus one unchanged concept**:
+ten before, 14 initial after, 13 partial/safe failure and 16 corrected after.
+All 55 archives remain unchanged. Current exact-head hosted results must be
+verified after the normal scoped push and recorded in draft PR #11. This is a
+representative Chart improvement, not app-wide acceptance. Remaining after Chart:
+workspace/recovery, Trial balance, GST/BAS, Audit and Settings/Organisation.
+
 The preceding Journals head has terminal original first-attempt success in both
 [push run 40031390128](https://github.com/castlemilk/tammy/actions/runs/40031390128)
 and [PR run 40031395953](https://github.com/castlemilk/tammy/actions/runs/40031395953),

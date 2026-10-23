@@ -1,7 +1,7 @@
 # Finite implemented-screen comparison inventory
 
 Chart block from review base `8cb09e34d16ebacbf610eead1cb8494546b2a13f`.
-Before runtime: `ffc2fdaa7e8a74092d78025107df4a620516c369`, whose Chart source is identical to that base. Final rendered Chart verification is pending in this initial implementation commit. Approved boards remain pinned to design
+Before runtime: `ffc2fdaa7e8a74092d78025107df4a620516c369`, whose Chart source is identical to that base. Final application runtime is `9bf430a7`, clean test harness `4f202e73`; frames and checks are bound in this folder. Approved boards remain pinned to design
 commit `19533020422b6ea2f0c77dc3117a051483f9f9ce`. Passing tests are separate
 from visual comparison, and representative comparisons do not imply every
 concept detail or workflow state is complete.
@@ -13,7 +13,7 @@ concept detail or workflow state is complete.
 | Documents / embedded purchase review | Source retention, extracted/manual review, separate existing purchase controls | 08, parts 10/12 | Representative list/source/review comparison and keyboard follow-up retained. No original-file viewer contract. |
 | Invoices | Saved list, Draft/Issued lifecycle, editable/public preview, explicit issue, receipts, PDF/template | 02, 07 | Representative list, issued Items/Payments and draft/preview comparisons retained. |
 | Banking | Explicit local CSV, reviewed reference strings and reconciliation completion | 08, format cautions 13 | Representative before/reference/after comparison retained in the Banking folder. Wide review adjacency, narrow focus/table scrolling and confirmed outcomes captured. Hosted results belong to their exact head in draft PR #11. |
-| Chart of accounts | Ordinary account creation and protected/system account display | 09 | Current block: native baseline retained; grouped rows, local search and explicit protection implemented. Rendered after comparison and exact-head CI remain pending. |
+| Chart of accounts | Ordinary account creation and protected/system account display | 09 | Representative comparison verified locally: grouped rows, explicit protection, ordinary creation and 320px keyboard access. Exact-head hosted qualification is recorded separately in draft PR #11. |
 | Journals | List/detail and existing balanced two-sided posting | 09, list/detail 08 | Representative comparison retained. Both original hosted macOS runs passed 20/20 at `8cb09e34`; see the original run links in README.md. |
 | Trial balance | Actual as-of account balances | 09 | Dedicated reference comparison remains open. |
 | GST & BAS | Reviewed draft workpaper and preparation/review/freeze/export lifecycle | 09, 14 | Connected reporting journeys exist; dedicated visual acceptance remains open. No production ATO submission. |
