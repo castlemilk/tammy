@@ -113,6 +113,17 @@ export async function runBankingReviewJourney(
   const reference = page.getByLabel("Reviewed source reference", { exact: true });
   await expect(reference).toBeFocused();
   await expect(reference).toHaveCSS("outline-style", "solid");
+  if (bankingCapturePhase !== "before") {
+    const listBounds = await table.boundingBox();
+    const reviewBounds = await page
+      .getByRole("form", { name: "Match review", exact: true })
+      .boundingBox();
+    if (!listBounds || !reviewBounds) throw new Error("BANKING_REVIEW_LAYOUT_MISSING");
+    expect(reviewBounds.x).toBeGreaterThanOrEqual(listBounds.x + listBounds.width);
+    await expect(
+      page.getByRole("region", { name: "Reconciliation summary", exact: true }),
+    ).toHaveCSS("background-color", "rgb(231, 237, 226)");
+  }
   await reference.fill("Cancelled synthetic reference");
   if (bankingCapturePhase !== "before") {
     await firstMatch.click();
@@ -147,6 +158,9 @@ export async function runBankingReviewJourney(
       .toBe(true);
     if (bankingCapturePhase !== "before") {
       const scroll = page.getByRole("region", { name: "Scrollable statement lines", exact: true });
+      await scroll.evaluate((node) => {
+        node.scrollLeft = 0;
+      });
       await scroll.focus();
       await expect(scroll).toBeFocused();
       await expect(scroll).toHaveCSS("outline-style", "solid");
@@ -287,7 +301,11 @@ async function capture(
   );
   await mkdir(directory, { recursive: true });
   if (anchor === "page")
-    await page.getByRole("heading", { name: "Banking", exact: true }).scrollIntoViewIfNeeded();
+    await page.getByRole("heading", { name: "Banking", exact: true }).evaluate((heading) => {
+      for (let node = heading.parentElement; node; node = node.parentElement)
+        node.scrollTo({ top: 0, left: 0, behavior: "instant" });
+      document.scrollingElement?.scrollTo({ top: 0, left: 0, behavior: "instant" });
+    });
   if (anchor === "import" || anchor === "match")
     await page
       .getByRole("form", {
@@ -300,4 +318,43 @@ async function capture(
     await page.screenshot({ animations: "disabled" }),
     { flag: "wx" },
   );
+  if (name === "04-selected-match") {
+    const measurements = await page.evaluate(() => {
+      const table = document.querySelector('table[aria-label="Statement lines"]');
+      const review = document.querySelector('form[aria-label="Match review"]');
+      const workspace = document.querySelector('section[aria-label="Statement workspace"]');
+      const rectangle = (element: Element | null) => {
+        if (!element) return null;
+        const { x, y, width, height } = element.getBoundingClientRect();
+        return { x, y, width, height };
+      };
+      const controls = [
+        ...(workspace?.querySelectorAll("button, input") ?? []),
+        ...(review?.querySelectorAll("button, input") ?? []),
+      ]
+        .map((node) => node.getBoundingClientRect())
+        .filter((r) => r.width > 0 && r.height > 0);
+      const primary = review?.querySelector('button[type="submit"]');
+      const summary = workspace?.querySelector('section[aria-label="Reconciliation summary"]');
+      return {
+        viewport: { width: innerWidth, height: innerHeight },
+        table: rectangle(table),
+        review: rectangle(review),
+        rowHeights: [...(table?.querySelectorAll("tbody tr") ?? [])].map(
+          (row) => row.getBoundingClientRect().height,
+        ),
+        minimumControlHeight: Math.min(...controls.map((control) => control.height)),
+        primaryBackground: primary ? getComputedStyle(primary).backgroundColor : null,
+        summaryBackground: summary ? getComputedStyle(summary).backgroundColor : null,
+        summary: [
+          ...document.querySelectorAll('section[aria-label="Reconciliation summary"] dd'),
+        ].map((node) => node.textContent),
+      };
+    });
+    await writeFile(
+      path.join(directory, "measurements-1440.json"),
+      `${JSON.stringify(measurements, null, 2)}\n`,
+      { flag: "wx" },
+    );
+  }
 }

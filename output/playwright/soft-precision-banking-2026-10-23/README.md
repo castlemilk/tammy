@@ -146,3 +146,28 @@ Draft, merge and publication holds remain. Representative Banking fidelity does
 not complete the remaining screen inventory. The original local macOS 26.5.2
 SBR startup and second-unlock discrepancies remain; ordinary macOS 14/Windows
 Server smoke do not establish MAS, Windows 11 or official ATO qualification.
+
+## Initial after review and finite presentation correction
+
+Clean ordinary runtime `790103164191f18b6ae95cc5499488dec8d2637c` passed seven
+package checks with one expected Windows-only skip; Core/helper hashes were
+unchanged. Its first Banking capture journey passed in 12.4s (13.2s including
+runner) and the complete connected invoice/Overview/Documents/Banking journey
+passed in 14.4s (15.0s including runner), with zero retries or console/page errors.
+All **15 original after frames** and their measurements are retained in
+`after-attempt-1/`; `initial-after-captures.json` records the exact runtime hashes.
+
+Actual pixel inspection found the non-modal composition materially closer to the
+reference, but its summary alpha utility was unsupported: `forest-soft` is an
+existing custom CSS class rather than a composable Tailwind colour utility. The
+summary now reuses the plain canonical class, with an actual-colour native
+assertion. Local table padding follows the 4px spacing step while preserving
+44px controls and 56px target rows. No financial behavior changes.
+
+The list screenshot also retained a different page scroll position after success
+focus. Capture anchoring now explicitly resets the heading's scrolling ancestors
+to the page origin, preserving the table's internal horizontal position. That is
+capture setup, not a product scroll/focus change. The existing shared scroller is
+reset before each arrow assertion so movement cannot pass on a stale offset.
+The final after set must come from the corrected clean package; the first set
+is retained as an intermediate result, not silently relabeled.

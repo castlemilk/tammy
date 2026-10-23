@@ -733,7 +733,7 @@ export function BankingScreen({
           </p>
           <section
             aria-label="Reconciliation summary"
-            className="border-t border-border bg-forest-soft/60 p-4"
+            className="border-t border-border bg-forest-soft p-4"
           >
             <h3 className="text-[14px] font-semibold text-forest">Reconciliation summary</h3>
             <dl className="mt-3 flex min-w-0 flex-wrap gap-x-8 gap-y-3">
