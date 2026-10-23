@@ -271,7 +271,11 @@ function Metric({
       className={prominent ? "col-span-full border-b border-border pb-4" : "min-w-0"}
       data-testid={testId}
     >
-      <dt className="text-[12px] leading-5 text-muted-foreground">{label}</dt>
+      <dt
+        className={`text-[12px] leading-5 text-muted-foreground ${prominent ? "" : "min-[700px]:min-h-10"}`}
+      >
+        {label}
+      </dt>
       <dd
         className={`mt-1 break-words font-semibold tabular-nums text-foreground ${prominent ? "text-[36px] leading-[44px] max-[460px]:text-[28px] max-[460px]:leading-9" : "text-[22px] leading-7"}`}
       >

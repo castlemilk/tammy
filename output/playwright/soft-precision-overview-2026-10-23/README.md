@@ -86,3 +86,23 @@ passed 20 cases at c1bf895d; they do not validate this new source or erase local
 discrepancies. No app-wide visual acceptance, MAS, Windows 11 or official ATO
 qualification is claimed. No ready/merge/release, credentials, security permissions,
 cache cleanup or other owner's checkout changes are part of this block.
+
+## First after render and the visual correction
+
+The first clean package at **a3e4b3cd** passes seven package checks with one expected
+skip. Its capture journey passes in 14.6 seconds. Actual pixels confirm the new
+side-by-side composition, wrapped narrow fields, cleared invalid-period amounts
+and restored export focus. Nine frames remain in `attempt-1-after/`.
+
+At 1100px, pixel review found one supporting metric label wrapping to two lines
+and lowering its amount relative to the other two. Passing tests did not constitute
+visual acceptance. A CSS-only label-height adjustment keeps the three amount
+baselines aligned; a native bounding-box assertion now checks this at 1100/900px.
+The focused 38-case run passes again after that correction.
+
+Before this CSS-only adjustment, three distinct native connected cases also pass:
+BAS lifecycle (15.2s), the complete invoice/Overview/PDF/navigation case (12.7s),
+and cash mixed-GST receipts/BAS restart (16.3s), 45.0s total. The earlier local
+second-unlock failure is not retried or declared resolved by these different cases.
+`first-after-attempt.json` records exact source, frames and outcomes. Corrected
+rendered evidence follows after rebuilding the small visual change.

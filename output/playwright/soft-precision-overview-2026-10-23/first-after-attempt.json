@@ -1,0 +1,89 @@
+{
+  "runtimeSource": "a3e4b3cd0490e4d27802b4b681963c2be67a0b23",
+  "runtimeSourceDirty": false,
+  "appSha256": "a12882e23b6bf431a3c3ec5b32b7d3c9960a30d60539cf3afa776a3e698b4c34",
+  "manifestSha256": "769188566b33cf32a35bc4cf359de8a88beab86e855ac008ba65a46b48b49c3e",
+  "journey": {
+    "passed": 1,
+    "seconds": 14.6,
+    "testBodySeconds": 13.6,
+    "retries": 0,
+    "pageErrors": 0,
+    "consoleErrors": 0
+  },
+  "visualReview": "Wide, narrow and invalid-period pixels inspected. At 1100px one two-line metric label lowers its amount relative to neighbouring amounts. Retained these passing-test frames; a CSS-only label-height correction and native geometry assertion follow.",
+  "connectedCasesBeforeCssCorrection": [
+    {
+      "name": "BAS lifecycle",
+      "passed": 1,
+      "testBodySeconds": 15.2
+    },
+    {
+      "name": "complete financial visual/invoice journey",
+      "passed": 1,
+      "testBodySeconds": 12.7
+    },
+    {
+      "name": "cash mixed-GST receipts and restart",
+      "passed": 1,
+      "testBodySeconds": 16.3
+    }
+  ],
+  "connectedSuiteSeconds": 45.0,
+  "frames": [
+    {
+      "path": "attempt-1-after/01-local-summary.png",
+      "sha256": "29cb97dcdb05975793609d663e0a87815ec1d820211262a71c932cffa0162e25",
+      "bytes": 158710,
+      "viewport": [1440, 1100]
+    },
+    {
+      "path": "attempt-1-after/02-income-and-attention.png",
+      "sha256": "1ba23de0dd8752cf4e28bd7fd2c8cc8072d38b624b1b50df60b2a6de0f8e5cef",
+      "bytes": 163649,
+      "viewport": [1440, 1100]
+    },
+    {
+      "path": "attempt-1-after/03-invalid-period.png",
+      "sha256": "98ce0486259203f2a14cc73098466e1dc05fc4701e59fdea632f8940b83c5f55",
+      "bytes": 142270,
+      "viewport": [1440, 1100]
+    },
+    {
+      "path": "attempt-1-after/04-export-cancelled.png",
+      "sha256": "2d5677b4fab28c4a15aadfb0ae9a07e69c3bbaa332c044fa035d7a921e76aedd",
+      "bytes": 164936,
+      "viewport": [1440, 1100]
+    },
+    {
+      "path": "attempt-1-after/05-income-focus-320.png",
+      "sha256": "4db085eee907491cbbd2287c572f4716d6c981e7adfdd879fee104bc06add498",
+      "bytes": 54928,
+      "viewport": [320, 900]
+    },
+    {
+      "path": "attempt-1-after/05-income-focus-390.png",
+      "sha256": "698e7aa392051219b8c68f8a0dc2fc017ce060009b2a0868801418d530537b34",
+      "bytes": 59486,
+      "viewport": [390, 900]
+    },
+    {
+      "path": "attempt-1-after/06-exact-bas-focus.png",
+      "sha256": "c12f7ba89f0de21ae2730b687d2861e62403684d056da8c121241b79929ae735",
+      "bytes": 164945,
+      "viewport": [1440, 1100]
+    },
+    {
+      "path": "attempt-1-after/07-income-1100.png",
+      "sha256": "00657c8fa32aa7f8dd89c8e73fcc932e5f9da4ea6bd8d4c7b0a3441c5a1ce18c",
+      "bytes": 164724,
+      "viewport": [1100, 1100]
+    },
+    {
+      "path": "attempt-1-after/07-income-900.png",
+      "sha256": "d2fd86a83222a85adc7db41993c6fa653d50d174e4f8410085ccd38c016e4f4f",
+      "bytes": 139842,
+      "viewport": [900, 1100]
+    }
+  ]
+}

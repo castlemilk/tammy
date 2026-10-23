@@ -87,6 +87,14 @@ export async function runOverviewReviewJourney(page: Page, harness: ElectronHarn
       const date = await start.boundingBox();
       if (!date) throw new Error("INCOME_DATE_BOUNDS_MISSING");
       expect(date.width).toBeGreaterThanOrEqual(140);
+      const amounts = await Promise.all(
+        ["business-invoice-income", "business-payments-received", "business-outstanding"].map(
+          (id) => page.getByTestId(id).locator("dd").boundingBox(),
+        ),
+      );
+      if (amounts.some((bounds) => !bounds)) throw new Error("INCOME_AMOUNT_BOUNDS_MISSING");
+      const tops = amounts.map((bounds) => bounds?.y ?? 0);
+      expect(Math.max(...tops) - Math.min(...tops)).toBeLessThan(2);
       await expect
         .poll(() =>
           page.evaluate(
