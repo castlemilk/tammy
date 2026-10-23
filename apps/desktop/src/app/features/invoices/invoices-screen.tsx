@@ -541,7 +541,7 @@ export function InvoicesScreen({ api }: { readonly api: InvoicesApi }) {
       ) : null}
       {notice ? <WorkNotice success>{notice}</WorkNotice> : null}
 
-      <div hidden={showEditor} ref={listRef}>
+      <div className="min-w-0" hidden={showEditor} ref={listRef}>
         <InvoiceRecordList
           records={records}
           currentId={current?.id}

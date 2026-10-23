@@ -275,6 +275,34 @@ async function captureReferenceList(page: Page) {
     referencePhase as string,
   );
   await mkdir(directory, { recursive: true });
+  if (referencePhase === "after") {
+    await expect(
+      page
+        .getByRole("group", { name: "Invoice status", exact: true })
+        .getByRole("button", { name: /^All/ }),
+    ).toHaveCSS("background-color", "rgb(35, 92, 75)");
+    const measurements = await page
+      .getByRole("table", { name: "Saved invoices", exact: true })
+      .locator("tbody tr")
+      .evaluateAll((elements) =>
+        elements.map((element) => {
+          const bounds = element.getBoundingClientRect();
+          return { height: bounds.height, bottom: bounds.bottom };
+        }),
+      );
+    expect(measurements).toHaveLength(8);
+    for (const row of measurements) {
+      expect(row.height).toBeGreaterThanOrEqual(44);
+      expect(row.height).toBeLessThanOrEqual(60);
+      expect(row.bottom).toBeLessThanOrEqual(1100);
+    }
+    await writeFile(
+      path.join(directory, "measurements-1440.json"),
+      JSON.stringify({ viewport: { width: 1440, height: 1100 }, rows: measurements }, null, 2) +
+        "\n",
+      { flag: "wx" },
+    );
+  }
   await writeFile(
     path.join(directory, "01-invoice-list-1440.png"),
     await page.screenshot({ animations: "disabled" }),
@@ -319,6 +347,9 @@ async function captureReferenceList(page: Page) {
     for (const width of [390, 320]) {
       await page.setViewportSize({ width, height: 900 });
       const region = page.getByRole("region", { name: "Scrollable saved invoices", exact: true });
+      await expect
+        .poll(() => region.evaluate((node) => node.clientWidth < node.scrollWidth))
+        .toBe(true);
       await region.focus();
       await page.keyboard.press("ArrowRight");
       await expect.poll(() => region.evaluate((node) => node.scrollLeft)).toBeGreaterThan(0);

@@ -59,8 +59,9 @@ export function InvoiceRecordList({
       ) : null}
       {records.length ? (
         <div className="grid gap-3 pb-5">
-          <div className="invoice-status-filters">
+          <div>
             <WorkFilters<Filter>
+              variant="solid"
               label="Invoice status"
               onChange={(value) => {
                 setFilter(value);

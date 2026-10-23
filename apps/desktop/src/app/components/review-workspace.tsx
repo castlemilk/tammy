@@ -124,6 +124,7 @@ export function WorkFilters<T extends string>({
   options,
   value,
   onChange,
+  variant = "quiet",
 }: {
   readonly label: string;
   readonly options: readonly {
@@ -133,6 +134,7 @@ export function WorkFilters<T extends string>({
   }[];
   readonly value: T;
   readonly onChange: (value: T) => void;
+  readonly variant?: "quiet" | "solid";
 }) {
   return (
     <fieldset aria-label={label} className="flex min-w-0 flex-wrap gap-1">
@@ -142,10 +144,12 @@ export function WorkFilters<T extends string>({
           key={option.value}
           aria-pressed={value === option.value}
           onClick={() => onChange(option.value)}
-          className={`focus-ring flex min-h-11 items-center gap-2 rounded-xl px-3 text-[13px] font-semibold transition-colors ${value === option.value ? "bg-forest-soft text-forest" : "text-muted-foreground hover:bg-muted"}`}
+          className={`focus-ring flex min-h-11 items-center gap-2 rounded-xl px-3 text-[13px] font-semibold transition-colors ${variant === "solid" ? "border border-border" : ""} ${value === option.value ? (variant === "solid" ? "bg-primary text-primary-foreground" : "bg-forest-soft text-forest") : "text-muted-foreground hover:bg-muted"}`}
         >
           {option.label}
-          <span className="rounded-md bg-surface px-1.5 py-0.5 text-[12px] tabular-nums">
+          <span
+            className={`rounded-md px-1.5 py-0.5 text-[12px] tabular-nums ${variant === "solid" && value === option.value ? "bg-transparent" : "bg-surface"}`}
+          >
             {option.count}
           </span>
         </button>

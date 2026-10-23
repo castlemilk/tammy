@@ -29,3 +29,12 @@ explicit New invoice path. New regressions verify preserved filtered-list focus
 and unsaved-back Keep editing/Discard behavior without writes. A regression also
 protects late defaults for an untouched explicitly opened new invoice. TypeScript
 and lint pass (135 existing warnings and two informational diagnostics).
+
+
+The first after package (3a4dcfa4) passes all seven applicable integrity checks.
+Its capture journey fails at 390px: the new grid child wrapper lacks min-w-0,
+expanding the document instead of making the table region scroll. The original
+wide/filtered/overflow screenshots are retained in attempt-1-after. Pixel review
+also finds the solid selected-filter rule overridden by utilities. The corrections
+constrain that wrapper and add a solid variant to the canonical WorkFilters owner;
+no deadline/assertion is relaxed. A new clean package is required to validate them.

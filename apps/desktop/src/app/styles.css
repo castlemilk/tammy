@@ -413,14 +413,4 @@
   .invoice-index-table tr[data-selected] {
     background: color-mix(in srgb, var(--apricot) 28%, var(--surface));
   }
-  .invoice-status-filters button {
-    border: 1px solid var(--border);
-  }
-  .invoice-status-filters button[aria-pressed="true"] {
-    background: var(--primary);
-    color: var(--primary-foreground);
-  }
-  .invoice-status-filters button[aria-pressed="true"] span {
-    background: transparent;
-  }
 }
