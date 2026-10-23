@@ -16,8 +16,9 @@ export function AppShell({
   onNavigate,
   organisationDisplayName,
 }: AppShellProps) {
+  const navigationPath = activePath.split("?", 1)[0] ?? activePath;
   const current = PRIMARY_NAVIGATION.find(
-    (item) => activePath === item.href || activePath.startsWith(`${item.href}/`),
+    (item) => navigationPath === item.href || navigationPath.startsWith(`${item.href}/`),
   );
   return (
     <div className="grid min-h-dvh grid-cols-[216px_minmax(0,1fr)] bg-background max-[900px]:grid-cols-[64px_minmax(0,1fr)]">

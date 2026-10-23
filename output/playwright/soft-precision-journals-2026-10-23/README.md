@@ -107,3 +107,30 @@ and real OS IME qualification are not claimed.
 
 The app and app-shell regression suites also pass **26/26 in 3.84s**. The final
 pre-package lint run covers 657 files with the same 135 warnings and 12 infos.
+
+## First rendered after and bounded breadcrumb correction
+
+Clean runtime `4abab3e0c3c1f18479b64eb5f1f312c0971e30f9` passed seven package
+checks with one expected skip. The first after journey passed **10.7s /11.4s**;
+the complete invoice → Overview → Documents → Banking → Journals case passed
+**14.8s /15.5s**, zero retries/page/console errors. All **13 initial after frames**
+and measured geometry are retained in `after-initial/`, bound by
+`initial-after-captures.json`. Actual editor, detail and 320px pixels were inspected.
+The editor is 1120 × 459.5 at viewport 1440 × 1100; minimum controls are **44px**
+and totals use canonical `rgb(231, 237, 226)`.
+
+The detail PNG exposed the pre-existing shell breadcrumb fallback to Workspace for
+`/accounting/journals?journal=…`. Navigation already strips the query for its active
+state; AppShell did not do so for its label. The correction aligns the shell's
+label comparison with that existing rule. Route validation, queries, journal IDs,
+financial/security handlers and navigation destinations are untouched.
+
+The new standalone shell test initially omitted the canonical Conveyor test-fixture
+setup, then corrected that harness requirement. In a protected experiment against
+the exact original shell, the real regression fails because the Journals breadcrumb
+is missing while its navigation link is active. The corrected shell was restored
+byte-identically (SHA256
+`54adb169f0bddad2def440bc12e48b99f8f688954e872122d881f62416714b02`).
+The final app/app-shell/router block passes **36 tests**. A new native assertion
+requires the posted detail's actual breadcrumb to read Journals. Corrected captures
+will come from the next clean package; no initial image is silently relabeled.

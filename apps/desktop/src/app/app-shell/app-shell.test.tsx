@@ -5,6 +5,7 @@ import { afterEach, expect, it } from "vitest";
 import type { SystemDiagnostics } from "../../shared/conveyor-contract";
 import { App as ActualApp } from "../app";
 import { createConveyorFixture, renderWithConveyor as render } from "../test/conveyor-fixtures";
+import { AppShell } from "./app-shell";
 
 const diagnostics: SystemDiagnostics = {
   apiVersion: "tammy.v1",
@@ -41,6 +42,25 @@ afterEach(() => {
   window.history.replaceState(null, "", "/");
   window.sessionStorage.clear();
   window.localStorage.clear();
+});
+
+it("keeps the Journals breadcrumb aligned with query-based journal navigation", () => {
+  installConveyorFixture();
+  render(
+    <AppShell
+      activePath="/accounting/journals?journal=018f0000-0000-7000-8000-000000000210"
+      onNavigate={() => {}}
+      organisationDisplayName="Synthetic Studio"
+    >
+      <p>Retained journal</p>
+    </AppShell>,
+  );
+  expect(within(screen.getByRole("banner")).getByText("Journals", { exact: true })).toBeTruthy();
+  expect(
+    within(screen.getByRole("navigation", { name: "Primary" }))
+      .getByRole("link", { name: "Journals" })
+      .getAttribute("aria-current"),
+  ).toBe("page");
 });
 
 it("renders the walkthrough app shell", async () => {

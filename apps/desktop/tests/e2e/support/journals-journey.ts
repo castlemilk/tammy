@@ -150,6 +150,8 @@ export async function runJournalsJourney(page: Page, workspace: AuthenticatedAcc
   expect(response.journal?.totalDebits?.minorUnits).toBe(20000n);
   expect(response.journal?.totalCredits?.minorUnits).toBe(20000n);
   await expect(page.getByRole("button", { name: "Post journal", exact: true })).toHaveCount(0);
+  if (journalsCapturePhase !== "before")
+    await expect(page.getByRole("banner").getByText("Journals", { exact: true })).toBeVisible();
   await capture(page, "06-posted-detail");
   for (const width of [390, 320]) {
     await page.setViewportSize({ width, height: 1000 });
