@@ -263,3 +263,25 @@ data. It is labelled On-screen preview; actual PDF export uses the saved draft.
 Saved/unsaved state is explicit and separate from lifecycle. Invalid amounts clear
 the preview totals. The concept's reminder, sending and Customer view controls are
 not supported and are omitted. No new art is added to the financial data.
+
+## Overview composition — board 01 (2026-10-23)
+
+Overview uses the Today board's compact financial summary beside an attention
+queue. Its actual contract is posted business income, invoice income, receipts
+and owing balances with explicit reporting/as-of dates. It is not a cash-position
+chart, bank-feed status, forecast or automatic matching surface. Document/bank
+counts remain separate from BAS lifecycle status and the returned attention list;
+an empty additional-item list never declares BAS complete.
+
+The income section and 340px attention column align at wide desktop sizes and
+stack below 1100px. The primary income figure uses sans/tabular numerals, with
+smaller receipt and balance values below. Existing date inputs, refresh, identity
+and export actions remain visible. The arrival header uses the current civil date,
+serif display and existing paper-loop art outside the financial work area. No new
+shared tokens, primitive variants, dependencies or routes are introduced.
+
+The existing report-export owner restores focus to the initiating action after a
+completed/cancelled export only when focus fell back to the page. It preserves
+another focused control and clears the target on authority changes. Native BAS
+navigation uses the shared forest focus ring. These changes do not alter amounts,
+authority checks, expected financial revisions, export arguments or file behavior.

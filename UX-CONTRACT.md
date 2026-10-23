@@ -6,6 +6,7 @@ sources of financial and security policy. Scope: Soft Precision styling, not a w
 
 | Capability | Canonical owner | Source of truth | Allowed variants | Verification |
 | --- | --- | --- | --- | --- |
+| Overview projections | features/overview/OverviewScreen, BusinessIncomePanel; reporting/ReportExportActions | Existing typed attention/income responses and report identity/version contract | Posted income beside attention; explicit civil dates; completion focus only if focus was lost | Overview/income/export tests and financial-workspace.spec.ts native journey |
 | Navigation | AppShell, Navigation, app-shell/router.ts | Existing product/API contract | Existing protected local routes | app.test.tsx, packaged current-workflows.spec.ts |
 | Controls | components/ui/Button, Card, Badge; styles.css | Existing product/API contract | Solid, outline, ghost; native labelled fields | Renderer tests and real screenshots |
 | Select/Listbox | Existing native select fields | Existing product/API contract | Operating-system popup and keyboard model | Renderer/journal tests, packaged journey |

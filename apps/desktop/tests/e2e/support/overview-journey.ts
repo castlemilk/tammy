@@ -29,6 +29,17 @@ export async function runOverviewReviewJourney(page: Page, harness: ElectronHarn
   await expect(page.getByTestId("business-invoice-income")).toContainText("$1,200.00");
   await expect(page.getByTestId("business-payments-received")).toContainText("$500.00");
   await expect(page.getByTestId("business-outstanding")).toContainText("$820.00");
+  if (overviewCapturePhase !== "before") {
+    const income = await page
+      .getByRole("region", { name: "Business income", exact: true })
+      .boundingBox();
+    const attention = await page
+      .getByRole("region", { name: "Local attention", exact: true })
+      .boundingBox();
+    if (!income || !attention) throw new Error("OVERVIEW_WORKSPACE_BOUNDS_MISSING");
+    expect(attention.x).toBeGreaterThan(income.x + income.width);
+    expect(Math.abs(income.y - attention.y)).toBeLessThan(2);
+  }
   await capture(page, "02-income-and-attention");
 
   const start = page.getByLabel("Income period start", { exact: true });
@@ -70,6 +81,22 @@ export async function runOverviewReviewJourney(page: Page, harness: ElectronHarn
   await capture(page, "04-export-cancelled");
 
   await page.emulateMedia({ reducedMotion: "reduce" });
+  if (overviewCapturePhase !== "before") {
+    for (const width of [1100, 900]) {
+      await page.setViewportSize({ width, height: 1100 });
+      const date = await start.boundingBox();
+      if (!date) throw new Error("INCOME_DATE_BOUNDS_MISSING");
+      expect(date.width).toBeGreaterThanOrEqual(140);
+      await expect
+        .poll(() =>
+          page.evaluate(
+            () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+          ),
+        )
+        .toBe(true);
+      await capture(page, `07-income-${width}`);
+    }
+  }
   for (const width of [390, 320]) {
     await page.setViewportSize({ width, height: 900 });
     await expect

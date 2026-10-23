@@ -673,7 +673,10 @@ describe("App", () => {
     expect(screen.getByRole("navigation", { name: "Primary" })).toBeTruthy();
     expect(screen.getByRole("main")).toBeTruthy();
     expect(screen.getByRole("heading", { level: 1, name: "Overview" })).toBeTruthy();
-    expect(screen.getByRole("heading", { level: 2, name: "Documents" })).toBeTruthy();
+    expect(screen.getByRole("heading", { level: 2, name: "Needs review" })).toBeTruthy();
+    expect(screen.getByRole("region", { name: "Local attention" }).textContent).toContain(
+      "Documents",
+    );
 
     await screen.findByRole("button", { name: "Retry local engine" });
     await user.tab();

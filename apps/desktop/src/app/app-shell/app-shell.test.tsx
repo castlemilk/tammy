@@ -73,9 +73,11 @@ it("renders the walkthrough app shell", async () => {
 
   expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
   expect(screen.getByRole("heading", { level: 1, name: "Overview" })).toBeTruthy();
-  expect(screen.getByRole("heading", { level: 2, name: "Documents" })).toBeTruthy();
-  expect(screen.getByRole("heading", { level: 2, name: "Banking" })).toBeTruthy();
-  expect(screen.getByRole("heading", { level: 2, name: "GST & BAS" })).toBeTruthy();
+  expect(screen.getByRole("heading", { level: 2, name: "Needs review" })).toBeTruthy();
+  const attention = within(screen.getByRole("region", { name: "Local attention" }));
+  expect(attention.getByText("Documents", { exact: true })).toBeTruthy();
+  expect(attention.getByText("Banking", { exact: true })).toBeTruthy();
+  expect(attention.getByRole("heading", { level: 3, name: "GST & BAS" })).toBeTruthy();
   expect(screen.queryByText("Workspace setup comes next")).toBeNull();
 
   await user.click(within(navigation).getByRole("link", { name: "Settings" }));

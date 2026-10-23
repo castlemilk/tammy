@@ -1,0 +1,10 @@
+{
+  "baseCommit": "c1bf895d57d5f59ad7f979864f77f02659761624",
+  "priorTrackedOutputPngs": 582,
+  "priorPngByteChanges": 0,
+  "aggregateSha256": "2be28bc6f75b2e02b2dcba0939c4212238ec70bfbbb972a93aa80252d6f986dd",
+  "aggregateInput": "Sorted tracked output PNG paths, NUL, SHA256 of bytes, newline; every working file compared with its base Git blob.",
+  "retainedArchives": 55,
+  "archiveByteChanges": 0,
+  "trackedCacheChanges": 0
+}
