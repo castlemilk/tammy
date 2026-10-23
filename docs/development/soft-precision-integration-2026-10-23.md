@@ -14,6 +14,14 @@ Desktop TypeScript and lint pass; lint retains the existing 135 warnings and two
 
 These results are local validation of the combined working source, not reuse of an earlier hosted result. Packaged journeys and fresh rendered evidence remain outstanding at this checkpoint. The financial journey's explicit `integration` capture phase writes to a new directory and exclusively creates image files, so captures cannot overwrite the original evidence. Biome validates the capture helper, and Playwright lists all **20 connected journeys in ten files** with the existing zero-retry configuration. Descriptor bytes are unchanged; provenance will be rebound to the clean integration commit before hosted validation.
 
+## Packaged checkpoint
+
+The clean ordinary package at `7aa28d4e243a1bde1006234f013e3c468469ae2c` passes all seven applicable signature/resource/integrity checks. Its source manifest records `source_dirty=false`. The full local packaged run completes **19/20**, zero retries, in 11.2 minutes. Its invoice visual journey passes in 18.3 seconds and produces 17 new real captures; all 111 prior captures and 55 archives remain byte-identical. The final SBR case fails at initial Core startup (`LOCAL_ENGINE_CORE_SPAWN_FAILED`). Original failure artifacts are preserved privately outside Git.
+
+Bounded ordinary/simulator Core startup probes verify exact binary bytes and live path/device/inode, receive a startup line, and close cleanly. A long synthetic root also passes. These experiments do not identify the cause of the original Electron startup failure and are not substituted for the failed SBR journey. No production startup, identity, signature, profile or deadline check is changed. The draft integration must retain this local qualification limit alongside fresh exact-head hosted results.
+
+See the [new evidence and image comparisons](../../output/playwright/soft-precision-integration-2026-10-23/README.md). Screenshots remain bound to their actual clean packaged source rather than a later documentation commit.
+
 ## Preserved boundaries
 
 The merged reporting policy and public-site receipt are retained. The parent separately deployed landing version 5; this integration does not publish a site. No financial calculations, authentication contracts, signing inputs, permissions or release-scope decisions are changed. No pull request is merged, marked ready, closed or submitted by this integration. App Store and Windows 11 qualification remain separate from ordinary local packaging and Windows Server smoke.

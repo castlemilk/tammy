@@ -1,0 +1,52 @@
+{
+  "sourceRevision": "7aa28d4e243a1bde1006234f013e3c468469ae2c",
+  "target": "darwin-arm64",
+  "releaseKind": "ordinary-package",
+  "syntheticFixturesOnly": true,
+  "packagedRun": {
+    "total": 20,
+    "passed": 19,
+    "failed": 1,
+    "skipped": 0,
+    "retries": 0,
+    "durationMinutes": 11.2
+  },
+  "financialVisualJourney": {
+    "passed": true,
+    "durationSeconds": 18.3,
+    "screenshots": 17,
+    "invoiceTotalMinor": 132000,
+    "receivedMinor": 50000,
+    "outstandingMinor": 82000,
+    "persistedPaymentCount": 1,
+    "cancelledPaymentCount": 0,
+    "initialSavedVersion": 1,
+    "invalidPricePreservesEdit": true,
+    "unsavedKeepAndDiscard": true,
+    "issueCancelAndConfirm": true,
+    "issuedFieldsReadOnly": true,
+    "pdfCancelAndPrivateExport": true,
+    "backForwardPersistence": true,
+    "searchClearRestoresFocus": true,
+    "reducedMotion": true,
+    "responsiveWidths": [390, 320],
+    "keyboardHorizontalScroll": true,
+    "rootOverflow": false,
+    "pageErrors": 0,
+    "consoleErrors": 0
+  },
+  "failedCase": {
+    "name": "SBR readiness uses local RAM credential and deterministic simulator only",
+    "stage": "CORE_START",
+    "marker": "LOCAL_ENGINE_CORE_SPAWN_FAILED",
+    "originalArtifactsRetainedPrivately": true,
+    "causeEstablished": false
+  },
+  "boundedStartupProbes": {
+    "ordinary": "live identity matched; startup line observed; clean close",
+    "simulator": "live identity matched; startup line observed; clean close",
+    "simulatorLongRoot": "202-byte data root; live identity matched; startup line observed; clean close",
+    "rpcOrCredentialRequests": 0,
+    "qualifiesFailedJourney": false
+  }
+}
