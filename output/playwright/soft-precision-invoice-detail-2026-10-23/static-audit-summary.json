@@ -1,0 +1,18 @@
+{
+  "result": "strict-non-green",
+  "summary": {
+    "errors": 19,
+    "total": 19,
+    "unresolved": 0,
+    "violations": 19,
+    "warnings": 0
+  },
+  "rules": {
+    "affordance.actionless-button": 4,
+    "form.novalidate-missing": 14,
+    "form.textarea-resize-missing": 1
+  },
+  "sameFileRuleMessageAsPriorAudit": true,
+  "config": "../soft-precision-financial-2026-10-23/static-ui-audit-config.json",
+  "exclusionsAdded": 0
+}

@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en-AU">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Tammy · issued invoice detail comparison</title>
+    <style>
+      body { margin: 0; padding: 32px; color: #302a25; background: #f7f3ea; font: 15px/1.6 system-ui, sans-serif; }
+      main { max-width: 1800px; margin: auto; }
+      h1 { margin-bottom: 8px; font: 32px/1.2 Georgia, serif; }
+      h2 { margin-top: 40px; font-size: 22px; }
+      p { max-width: 1000px; }
+      figure { margin: 0; min-width: 0; }
+      img { display: block; width: 100%; height: auto; border: 1px solid #dcd3c5; border-radius: 12px; background: #fffcf6; }
+      figcaption { padding: 12px 0; }
+      .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+      .reference { max-width: 1400px; }
+      a { color: #235c4b; }
+      @media (width < 900px) { body { padding: 16px; } .pair { grid-template-columns: 1fr; } }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Issued invoice detail &amp; receipts</h1>
+      <p>Board 07 is the approved visual reference. Before and after application frames use the same 1440 × 1100 viewport, fixed clock and isolated synthetic invoice. They are scaled uniformly for this viewer; open an image to inspect its original pixels.</p>
+      <figure class="reference">
+        <a href="../soft-precision-fidelity-2026-10-23/reference/07-sales-item-tracking.png"><img src="../soft-precision-fidelity-2026-10-23/reference/07-sales-item-tracking.png" alt="Approved generated board 07: invoice list, issued items and receipt review concepts" /></a>
+        <figcaption>Unchanged concept reference, design commit 19533020. Its middle and right panels guide this block. Unsupported credit notes, lifecycle states, attachments and history controls are excluded from the application.</figcaption>
+      </figure>
+      <h2>Issued items · one confirmed receipt</h2>
+      <div class="pair">
+        <figure><a href="before/10-issued-items-with-receipt.png"><img src="before/10-issued-items-with-receipt.png" alt="Real app before: accounting card and disabled fields above the issued items" /></a><figcaption>Before · $1,320 total, $500 received, $820 outstanding.</figcaption></figure>
+        <figure><a href="after/10-issued-items-with-receipt.png"><img src="after/10-issued-items-with-receipt.png" alt="Real app after: issued items and confirmed amounts" /></a><figcaption>After · same invoice, receipt and viewport. See README for actual source and validation.</figcaption></figure>
+      </div>
+      <h2>Payment review · existing $500 receipt, another $200 proposed</h2>
+      <div class="pair">
+        <figure><a href="before/09-review-existing-receipt.png"><img src="before/09-review-existing-receipt.png" alt="Real app before: a second receipt review above confirmed receipt history" /></a><figcaption>Before · the additional $200 review is cancelled without a write.</figcaption></figure>
+        <figure><a href="after/09-review-existing-receipt.png"><img src="after/09-review-existing-receipt.png" alt="Real app after: confirmed receipt history and a separate payment review" /></a><figcaption>After · the same review is cancelled; native balances remain unchanged.</figcaption></figure>
+      </div>
+      <p><a href="README.md">Capture provenance, concrete gaps and validation</a>. This viewer is visual evidence, not MAS, Windows 11 or production ATO qualification.</p>
+    </main>
+  </body>
+</html>

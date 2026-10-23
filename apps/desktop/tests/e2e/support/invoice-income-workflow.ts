@@ -171,6 +171,7 @@ export async function recordInvoiceReceipt(
   const back = page.getByRole("button", { name: "Back to invoices", exact: true });
   if (await back.isVisible()) await back.click();
   await page.getByRole("button", { name: `Open ${number}`, exact: true }).click();
+  await page.getByRole("button", { name: "Payments", exact: true }).click();
   await page.getByRole("button", { name: "Record payment", exact: true }).click();
   await page.getByLabel("Payment date", { exact: true }).fill(paymentDate);
   await page.getByLabel("Amount received (AUD)", { exact: true }).fill(amount);

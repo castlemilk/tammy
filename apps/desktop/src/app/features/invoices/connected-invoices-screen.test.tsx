@@ -190,6 +190,7 @@ it("opens older invoices across pages and reads the full bounded Unicode payment
     expect.stringContaining("$2.01"),
   );
   expect(screen.getByTestId("invoice-outstanding").textContent).toContain("$107.99");
+  await userEvent.click(screen.getByRole("button", { name: "Payments" }));
   expect(screen.getByText(/Showing 200 of 201 receipts/)).toBeTruthy();
   expect(
     within(screen.getByRole("table", { name: "Recorded invoice payments" })).getAllByRole("row"),

@@ -357,19 +357,25 @@ it("leaves issued invoices immutable while allowing company defaults to be manag
   setRecords([savedInvoice("issued")]);
   render(<InvoicesScreen api={api} />);
   await userEvent.click(await screen.findByRole("button", { name: "Open INV-ORIGINAL" }));
+  await userEvent.click(screen.getByText("Company defaults for new invoices"));
   const panel = await manageTemplate();
   expect(within(panel).getByRole("button", { name: "Apply saved template" })).toHaveProperty(
     "disabled",
     true,
   );
-  expect(screen.getByLabelText("Payment instructions").matches(":disabled")).toBe(true);
+  expect(screen.queryByLabelText("Payment instructions")).toBeNull();
+  await userEvent.click(screen.getByText("Invoice information & private estimates"));
+  const issuedItems = screen.getByRole("region", { name: "Issued invoice items" });
+  expect(issuedItems.querySelector("input, select, textarea")).toBeNull();
+  expect(issuedItems.textContent).toContain("Original bank");
   expect(screen.queryByRole("button", { name: "Remove invoice logo" })).toBeNull();
   fireEvent.change(within(panel).getByLabelText("Default payment instructions"), {
     target: { value: "Future bank" },
   });
   await userEvent.click(within(panel).getByRole("button", { name: "Save template" }));
   await within(panel).findByText("Company template saved.");
-  expect(screen.getByLabelText("Payment instructions")).toHaveProperty("value", "Original bank");
+  expect(issuedItems.textContent).toContain("Original bank");
+  expect(issuedItems.textContent).not.toContain("Future bank");
 });
 
 it("retries a failed defaults load without replacing edits made before retry", async () => {

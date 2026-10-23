@@ -39,6 +39,14 @@ all screenshot bytes are unchanged. No exclusion or test timeout is modified.
 
 The verified ordinary application is unchanged from clean package source 08802fca.
 No new package build or visual acceptance is claimed by this test-only correction.
-Fresh hosted CI must be assessed at its new exact pushed head before starting the
-invoice detail/payment implementation. The SBR diagnostic and release boundaries
+Fresh hosted CI completed successfully before the next detail/payment implementation:
+all six jobs passed across [PR run 39937029880](https://github.com/castlemilk/tammy/actions/runs/39937029880)
+and [push run 39937023803](https://github.com/castlemilk/tammy/actions/runs/39937023803)
+for pushed head `07599f6415f10b325f2b1577930fff060e5817a8`. Each macOS job completed
+all 20 packaged journeys, in 14.8 and 15.8 minutes respectively, without retries.
+The PR job tests GitHub's comparison merge; the push job tests the exact branch head.
+Ubuntu desktop qualification is 1,293 passed; Windows Server is 1,292 passed/one
+platform skip. Windows Server remains smoke rather than Windows 11 qualification.
+The next visual block has its own source, checks and captures. The original local
+macOS 26.5.2 startup diagnostic remains unexplained and paused, and release boundaries
 remain held. Original failures, first-attempt images and all prior captures remain.

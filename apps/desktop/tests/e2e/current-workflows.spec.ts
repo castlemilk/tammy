@@ -1668,13 +1668,15 @@ test("runs invoice, purchase, and BAS workflows through the packaged app", async
   await page.getByRole("button", { name: "Issue invoice", exact: true }).click();
   await page.getByRole("button", { name: "Confirm issue", exact: true }).click();
   await expect(page.getByText("Invoice issued.", { exact: true })).toBeVisible();
-  await expect(page.getByLabel("Customer name", { exact: true })).toBeDisabled();
-  await expect(lineTable.getByLabel(`Unit price ${expenseLine}`, { exact: true })).toBeDisabled();
-  await expect(page.getByRole("textbox", { name: "Seller address", exact: true })).toBeDisabled();
-  await expect(page.getByRole("textbox", { name: "Notes", exact: true })).toBeDisabled();
-  await expect(
-    page.getByRole("textbox", { name: "Payment instructions", exact: true }),
-  ).toBeDisabled();
+  const issuedItems = page.getByRole("region", { name: "Issued invoice items", exact: true });
+  await expect(issuedItems).toBeVisible();
+  await expect(page.getByLabel("Customer name", { exact: true })).toHaveCount(0);
+  await expect(issuedItems.locator("input, select, textarea")).toHaveCount(0);
+  await expect(lineTable.getByRole("row").nth(expenseLine)).toContainText("$375.25");
+  await page.getByText("Invoice information & private estimates", { exact: true }).click();
+  await expect(issuedItems).toContainText(ORIGINAL_COMPANY_TEMPLATE.sellerAddress);
+  await expect(issuedItems).toContainText(ORIGINAL_COMPANY_TEMPLATE.notes);
+  await expect(issuedItems).toContainText(ORIGINAL_COMPANY_TEMPLATE.paymentInstructions);
   await expect(page.getByRole("button", { name: "Remove invoice logo", exact: true })).toHaveCount(
     0,
   );
@@ -1748,16 +1750,20 @@ test("runs invoice, purchase, and BAS workflows through the packaged app", async
   await unlockCurrentWorkflowWorkspace(restarted);
   await restarted.getByRole("link", { name: "Invoices", exact: true }).click();
   await restarted.getByRole("button", { name: "Open INV-MCP-001" }).click();
-  await expect(restarted.getByLabel("Customer name", { exact: true })).toHaveValue(
-    "Reviewed invoice customer",
-  );
-  await expect(restarted.getByLabel("Customer name", { exact: true })).toBeDisabled();
-  await expect(restarted.getByLabel(`Unit price ${expenseLine}`, { exact: true })).toHaveValue(
-    "375.25",
-  );
-  await expect(restarted.getByLabel(`Unit price ${trainingLine}`, { exact: true })).toHaveValue(
-    "75.00",
-  );
+  const retainedItems = restarted.getByRole("region", {
+    name: "Issued invoice items",
+    exact: true,
+  });
+  await expect(restarted.getByRole("heading", { name: "INV-MCP-001", exact: true })).toBeVisible();
+  await expect(retainedItems.locator("input, select, textarea")).toHaveCount(0);
+  await expect(
+    restarted.getByText("Reviewed invoice customer", { exact: true }).first(),
+  ).toBeVisible();
+  const retainedRows = retainedItems
+    .getByRole("table", { name: "Invoice line items", exact: true })
+    .getByRole("row");
+  await expect(retainedRows.nth(expenseLine)).toContainText("$375.25");
+  await expect(retainedRows.nth(trainingLine)).toContainText("$75.00");
   await expect(restarted.getByTestId("invoice-total")).toContainText("$660.37");
   await expect(restarted.getByTestId("invoice-received")).toContainText("$330.18");
   await expect(restarted.getByTestId("invoice-outstanding")).toContainText("$330.19");

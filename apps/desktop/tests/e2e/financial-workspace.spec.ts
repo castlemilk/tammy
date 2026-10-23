@@ -8,6 +8,10 @@ import { readInvoiceAccounting } from "./support/invoice-income-workflow";
 
 const phase = process.env.TAMMY_FINANCIAL_UI_CAPTURE;
 const referencePhase = process.env.TAMMY_INVOICE_REFERENCE_CAPTURE;
+const detailPhase = process.env.TAMMY_INVOICE_DETAIL_CAPTURE;
+if (detailPhase !== undefined && detailPhase !== "before" && detailPhase !== "after") {
+  throw new Error("INVOICE_DETAIL_CAPTURE_PHASE_INVALID");
+}
 if (referencePhase !== undefined && referencePhase !== "before" && referencePhase !== "after") {
   throw new Error("INVOICE_REFERENCE_CAPTURE_PHASE_INVALID");
 }
@@ -94,11 +98,20 @@ test.describe("Soft Precision financial workspace", () => {
     await page.getByRole("button", { name: "Issue invoice", exact: true }).click();
     await page.getByRole("button", { name: "Confirm issue", exact: true }).click();
     await expect(page.getByText("Invoice issued.", { exact: true })).toBeVisible();
-    await expect(page.getByLabel("Customer name", { exact: true })).toBeDisabled();
+    await expect(
+      page.getByRole("region", { name: "Issued invoice items", exact: true }),
+    ).toBeVisible();
+    await expect(page.getByLabel("Customer name", { exact: true })).toHaveCount(0);
     await expect(page.getByTestId("invoice-outstanding")).toContainText("$1,320.00");
     await capture(page, "06-issued-read-only");
 
+    const paymentView = page.getByRole("button", { name: "Payments", exact: true });
+    await paymentView.focus();
+    await page.keyboard.press("Space");
+    await expect(paymentView).toHaveAttribute("aria-pressed", "true");
+    await expect(paymentView).toHaveCSS("outline-style", "solid");
     await page.getByRole("button", { name: "Record payment", exact: true }).click();
+    await expect(page.getByLabel("Payment date", { exact: true })).toBeFocused();
     await page
       .getByRole("combobox", { name: "Bank account", exact: true })
       .selectOption({ label: "1000 · Business bank" });
@@ -106,8 +119,16 @@ test.describe("Soft Precision financial workspace", () => {
     await page
       .getByLabel("Payment reference (optional)", { exact: true })
       .fill("SYNTHETIC-RECEIPT");
+    await page.getByRole("button", { name: "Items", exact: true }).click();
+    await expect(page.getByRole("button", { name: "Save payment", exact: true })).toBeHidden();
+    await paymentView.click();
+    await expect(page.getByLabel("Amount received (AUD)", { exact: true })).toHaveValue("500.00");
+    await expect(page.getByLabel("Payment reference (optional)", { exact: true })).toHaveValue(
+      "SYNTHETIC-RECEIPT",
+    );
     await capture(page, "07-payment-review");
     await page.getByRole("button", { name: "Cancel payment", exact: true }).click();
+    await expect(page.getByRole("button", { name: "Record payment", exact: true })).toBeFocused();
     expect(
       (await readInvoiceAccounting(page, workspace, "INV-UI-001")).accounting.payments,
     ).toHaveLength(0);
@@ -120,6 +141,25 @@ test.describe("Soft Precision financial workspace", () => {
     expect(paid.accounting.outstandingMinor).toBe(82_000n);
     expect(paid.accounting.payments).toHaveLength(1);
     await capture(page, "08-recorded-receipt");
+
+    if (detailPhase) {
+      await page.getByRole("button", { name: "Record payment", exact: true }).click();
+      await page.getByLabel("Amount received (AUD)", { exact: true }).fill("200.00");
+      await page
+        .getByLabel("Payment reference (optional)", { exact: true })
+        .fill("SYNTHETIC-REVIEW-ONLY");
+      await capture(page, "09-review-existing-receipt");
+      await page.getByRole("button", { name: "Cancel payment", exact: true }).click();
+      const unchanged = await readInvoiceAccounting(page, workspace, "INV-UI-001");
+      expect(unchanged.accounting.payments).toHaveLength(1);
+      expect(unchanged.accounting.receivedMinor).toBe(50_000n);
+      expect(unchanged.accounting.outstandingMinor).toBe(82_000n);
+      if (detailPhase === "after")
+        await page.getByRole("button", { name: "Items", exact: true }).click();
+      await capture(page, "10-issued-items-with-receipt");
+    }
+
+    await page.getByRole("button", { name: "Items", exact: true }).click();
 
     await electronHarness.application.evaluate(({ dialog }) => {
       dialog.showSaveDialog = async () => ({ canceled: true, filePath: "" });
@@ -148,7 +188,11 @@ test.describe("Soft Precision financial workspace", () => {
     await page.getByRole("button", { name: "Back to invoices", exact: true }).click();
     await page.getByRole("button", { name: "Open INV-UI-001", exact: true }).click();
     await expect(page.getByTestId("invoice-outstanding")).toContainText("$820.00");
-    await expect(page.getByLabel("Customer name", { exact: true })).toBeDisabled();
+    await page.getByRole("button", { name: "Items", exact: true }).click();
+    await expect(
+      page.getByRole("region", { name: "Issued invoice items", exact: true }),
+    ).toBeVisible();
+    await expect(page.getByLabel("Customer name", { exact: true })).toHaveCount(0);
 
     if (phase !== "before") {
       await page.getByRole("button", { name: "Back to invoices", exact: true }).click();
@@ -171,11 +215,11 @@ test.describe("Soft Precision financial workspace", () => {
         .toBe("solid");
       await capture(page, "10-keyboard-focus");
       await page.getByRole("button", { name: "Open INV-UI-001", exact: true }).click();
-      await expect(page.getByRole("textbox", { name: /^Notes/ })).toHaveCSS("resize", "none");
-      await expect(page.getByRole("textbox", { name: /^Notes/ })).toHaveCSS(
-        "field-sizing",
-        "content",
-      );
+      const issuedItems = page.getByRole("region", { name: "Issued invoice items", exact: true });
+      await expect(issuedItems.locator("input, textarea, select")).toHaveCount(0);
+      await expect(
+        issuedItems.getByRole("table", { name: "Invoice line items", exact: true }),
+      ).toContainText("Studio strategy workshop");
     }
     await page.emulateMedia({ reducedMotion: "reduce" });
     await expect(page.getByRole("button", { name: "New invoice", exact: true })).toHaveCSS(
@@ -203,6 +247,7 @@ test.describe("Soft Precision financial workspace", () => {
         .poll(() => savedScroll.evaluate((element) => element.scrollLeft))
         .toBeGreaterThan(0);
       await page.getByRole("button", { name: "Open INV-UI-001", exact: true }).click();
+      await capture(page, `11-detail-${width}`);
       await page
         .getByRole("table", { name: "Invoice line items", exact: true })
         .scrollIntoViewIfNeeded();
@@ -387,9 +432,24 @@ async function captureReferenceList(page: Page) {
 }
 
 async function capture(page: Page, name: string) {
-  if (!phase) return;
+  if (!phase && !detailPhase) return;
+  if (
+    detailPhase &&
+    ![
+      "06-issued-read-only",
+      "07-payment-review",
+      "08-recorded-receipt",
+      "09-review-existing-receipt",
+      "10-issued-items-with-receipt",
+      "11-detail-390",
+      "11-detail-320",
+    ].includes(name)
+  )
+    return;
   await expect(page.locator("h1")).toBeAttached();
-  if (/^0[1239]|^10/.test(name)) {
+  if (detailPhase) {
+    await page.locator("h1").scrollIntoViewIfNeeded();
+  } else if (/^0[1239]|^10/.test(name)) {
     await page.locator("h1").scrollIntoViewIfNeeded();
   } else if (name.startsWith("04")) {
     await page.getByLabel("Template seller address", { exact: true }).scrollIntoViewIfNeeded();
@@ -402,10 +462,12 @@ async function capture(page: Page, name: string) {
   }
   const directory = path.resolve(
     path.dirname(fileURLToPath(import.meta.url)),
-    phase === "integration"
-      ? "../../../../output/playwright/soft-precision-integration-2026-10-23"
-      : "../../../../output/playwright/soft-precision-financial-2026-10-23",
-    phase === "integration" ? "after" : phase,
+    detailPhase
+      ? "../../../../output/playwright/soft-precision-invoice-detail-2026-10-23"
+      : phase === "integration"
+        ? "../../../../output/playwright/soft-precision-integration-2026-10-23"
+        : "../../../../output/playwright/soft-precision-financial-2026-10-23",
+    detailPhase ?? (phase === "integration" ? "after" : (phase as string)),
   );
   await mkdir(directory, { recursive: true });
   const bytes = await page.screenshot({

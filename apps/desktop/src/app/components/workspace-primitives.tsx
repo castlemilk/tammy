@@ -7,6 +7,7 @@ export function ScreenHeading({
   action,
   variant = "display",
   headingRef,
+  status,
 }: {
   readonly area: string;
   readonly title: string;
@@ -14,22 +15,28 @@ export function ScreenHeading({
   readonly action?: ReactNode;
   readonly variant?: "display" | "workspace";
   readonly headingRef?: Ref<HTMLHeadingElement>;
+  readonly status?: ReactNode;
 }) {
   return (
-    <header className="flex flex-wrap items-end justify-between gap-4">
+    <header
+      className={`flex flex-wrap ${status ? "items-start" : "items-end"} justify-between gap-4`}
+    >
       <div className="max-w-[720px]">
         <p className={variant === "workspace" ? "sr-only" : "work-eyebrow mb-2"}>{area}</p>
-        <h1
-          className={
-            variant === "workspace"
-              ? "text-[26px] font-semibold leading-8 tracking-[-0.025em] outline-none"
-              : "page-title"
-          }
-          ref={headingRef}
-          tabIndex={-1}
-        >
-          {title}
-        </h1>
+        <div className="flex flex-wrap items-center gap-3">
+          <h1
+            className={
+              variant === "workspace"
+                ? "text-[26px] font-semibold leading-8 tracking-[-0.025em] outline-none"
+                : "page-title"
+            }
+            ref={headingRef}
+            tabIndex={-1}
+          >
+            {title}
+          </h1>
+          {status}
+        </div>
         <p className="mt-2 text-[14px] leading-6 text-muted-foreground">{description}</p>
       </div>
       {action ? <div className="flex flex-wrap items-center gap-2">{action}</div> : null}

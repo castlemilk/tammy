@@ -113,3 +113,26 @@ changes and continue confirmation before returning; cancellation writes nothing.
 The editor remains mounted while the list is shown. Payment mutation pending state
 disables the new back/new actions. No lifecycle statuses, financial calculations,
 receipt contracts or export/issue confirmations change.
+
+### Issued Items/Payments views (2026-10-23)
+
+- An issued record opens on Items, using immutable draft values and the existing
+  invoice calculation model. This is a display table rather than disabled editor
+  fields. Addresses, notes, payment instructions, private costs and source IDs
+  remain available under disclosure. Customer-facing amounts exclude private costs.
+- A named native fieldset groups Items/Payments buttons with explicit pressed
+  state. Standard Tab, Enter and Space operate them; these are view controls rather
+  than an incomplete ARIA tab widget. View changes perform no accounting command.
+- The existing accounting controller and payment form stay mounted across view
+  changes. An unfinished receipt review is retained. The existing version, validation,
+  unchanged retry identity and begin-new-receipt behavior remain authoritative.
+- Confirmed receipt history precedes payment review. Cancel writes nothing and
+  restores Record payment focus. Opening review focuses Payment date; errors focus
+  their alert. Pending mutation disables view changes, back/new and cancellation.
+  Successful receipt feedback follows its confirmed native response.
+- Legacy issued invoices still require the explicit duplicate/manual-entry review
+  before Add to accounts. Loading/error does not manufacture zero received or an
+  outstanding balance. Native GST-basis explanation and partial-history counts remain.
+- Company-default editing stays mounted independently of Items/Payments. PDF export
+  remains explicit and cancellation saves nothing. Draft editing/issue confirmation,
+  customer privacy and original PDF output contracts remain unchanged.

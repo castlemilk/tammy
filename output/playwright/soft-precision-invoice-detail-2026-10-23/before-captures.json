@@ -1,0 +1,53 @@
+{
+  "syntheticOnly": true,
+  "runtimePackageSourceDirty": false,
+  "testHead": "07599f6415f10b325f2b1577930fff060e5817a8",
+  "subsequentLocalCaptureInstrumentation": true,
+  "passed": 1,
+  "retries": 0,
+  "seconds": 13.2,
+  "pageErrors": 0,
+  "consoleErrors": 0,
+  "frames": [
+    {
+      "path": "before/06-issued-read-only.png",
+      "sha256": "402aa93e80b368fc25f584e6b2ea47c2c35cdb9025ec08f900d345b4a4ccc8ee",
+      "bytes": 131308,
+      "width": 1440,
+      "height": 1100,
+      "runtimeSource": "08802fcaf66ed2a21955bf2148d0e5dff26d0d1f"
+    },
+    {
+      "path": "before/07-payment-review.png",
+      "sha256": "84561230ce0b7e2364295ea03f9eea2751b7bb2958d8f5628a76d6b3569c3136",
+      "bytes": 136531,
+      "width": 1440,
+      "height": 1100,
+      "runtimeSource": "08802fcaf66ed2a21955bf2148d0e5dff26d0d1f"
+    },
+    {
+      "path": "before/08-recorded-receipt.png",
+      "sha256": "5ec9b9de86ff9077dd6b33f4493ca87917523dab7893a04e1d593b99d0c4c900",
+      "bytes": 134139,
+      "width": 1440,
+      "height": 1100,
+      "runtimeSource": "08802fcaf66ed2a21955bf2148d0e5dff26d0d1f"
+    },
+    {
+      "path": "before/09-review-existing-receipt.png",
+      "sha256": "9570423b3591bd363a90a2977b3ef9438aac8322e58101a05565d2c659fda729",
+      "bytes": 135166,
+      "width": 1440,
+      "height": 1100,
+      "runtimeSource": "08802fcaf66ed2a21955bf2148d0e5dff26d0d1f"
+    },
+    {
+      "path": "before/10-issued-items-with-receipt.png",
+      "sha256": "e3cc9fe59402ec40413ef3596362eb8c018f7284e4364fe74828300ed5ba74bb",
+      "bytes": 135227,
+      "width": 1440,
+      "height": 1100,
+      "runtimeSource": "08802fcaf66ed2a21955bf2148d0e5dff26d0d1f"
+    }
+  ]
+}

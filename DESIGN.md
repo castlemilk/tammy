@@ -183,7 +183,7 @@ The forest selected item and route context use the same shell at every route.
 The compact rail retains accessible link names. Tables scroll horizontally inside
 their surface at narrow widths; forms stack and retain full values.
 
-## Completion of the approved screens (2026-10-23)
+## Shared styling across connected screens (2026-10-23)
 
 The October 22 pack remains the visual reference for connected features. Shared
 `ScreenHeading` and `SurfaceHeading` components give working screens a consistent
@@ -209,6 +209,23 @@ from the same generated policy content as the public site. Settings uses a conci
 summary and an in-app route to the full document. The ABN browser lookup is explicit
 and uses the official register; checksum feedback is separate from registry evidence.
 These interactions do not change financial, approval or SBR production capabilities.
+
+## Issued invoice composition — board 07 (2026-10-23)
+
+Issued invoices use the board's middle/right composition: a compact invoice ID,
+actual Issued badge, customer and civil dates, followed by Items/Payments view
+controls. Customer-facing line values are plain read-only cells with tabular
+amounts. Invoice totals and confirmed received/outstanding values share a compact
+summary; private estimates and source references remain under explicit disclosure.
+Company defaults retain their own mounted editor, separate from immutable invoices.
+
+Payments use three compact amount surfaces, a filled forest Record payment action,
+confirmed receipt history and a quiet tinted review form. Outstanding uses a soft
+butter surface. Only actual Draft/Issued lifecycle states are shown. Credit notes,
+evidence attachments and History/Documents controls in the generated concept are
+not supported by this screen and are not copied. No illustration belongs behind
+these financial tables. Visual acceptance requires the real matched captures;
+shared token adoption and passing tests alone do not establish reference fidelity.
 
 
 ## Invoice reference fidelity — board 07 (2026-10-23)

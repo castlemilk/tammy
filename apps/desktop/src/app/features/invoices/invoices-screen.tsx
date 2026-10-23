@@ -15,6 +15,7 @@ import type {
   InvoiceTemplateDefaults,
 } from "../../../shared/invoice-template";
 import { WorkNotice } from "../../components/review-workspace";
+import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { ScreenHeading } from "../../components/workspace-primitives";
 import { type InvoiceAccountingApi, InvoiceAccountingPanel } from "./invoice-accounting-panel";
@@ -28,6 +29,7 @@ import {
   type InvoiceExpense,
   toEditor,
 } from "./invoice-editor";
+import { InvoiceIssuedItems } from "./invoice-issued-items";
 import { InvoiceLineTable, invoiceFieldClass } from "./invoice-line-table";
 import { InvoiceLogo } from "./invoice-logo";
 import { InvoiceRecordList } from "./invoice-record-list";
@@ -450,8 +452,24 @@ export function InvoicesScreen({ api }: { readonly api: InvoicesApi }) {
     }
   }
 
+  const templatePanel = (
+    <InvoiceTemplatePanel
+      api={api}
+      canApply={!issued}
+      disabled={busy || accountingBusy}
+      error={templateError}
+      loading={templateLoading}
+      onApply={applyTemplate}
+      onRetry={() => setTemplateAttempt((value) => value + 1)}
+      onSaved={setTemplate}
+      template={template}
+    />
+  );
+
   return (
-    <div className="mx-auto grid w-full min-w-0 max-w-[1120px] gap-6">
+    <div
+      className={`mx-auto grid w-full min-w-0 max-w-[1120px] ${showEditor && issued ? "gap-4" : "gap-6"}`}
+    >
       {showEditor ? (
         <Button
           className="justify-self-start px-0"
@@ -469,27 +487,52 @@ export function InvoicesScreen({ api }: { readonly api: InvoicesApi }) {
         headingRef={headingRef}
         title={showEditor ? current?.draft.number || "New invoice" : "Invoices"}
         description={
-          showEditor
-            ? issued
-              ? "Issued invoice · read only. Record actual receipts separately."
-              : "Review the details and save your draft before issuing."
-            : "Create, view and manage your invoices."
+          showEditor ? (
+            issued ? (
+              <>
+                <span className="font-medium text-foreground">{current.draft.customerName}</span>
+                <br />
+                <span className="text-[12px]">
+                  Issued {displayInvoiceDate(current.draft.issueDate)} · Due{" "}
+                  {displayInvoiceDate(current.draft.dueDate)}
+                </span>
+              </>
+            ) : (
+              "Review the details and save your draft before issuing."
+            )
+          ) : (
+            "Create, view and manage your invoices."
+          )
         }
+        status={showEditor && issued ? <Badge variant="offline">Issued</Badge> : undefined}
         action={
           <div className="flex flex-wrap gap-2">
-            <Button
-              className="h-11 text-[13px]"
-              disabled={busy || accountingBusy}
-              onClick={loadProposal}
-              type="button"
-              variant="ghost"
-            >
-              Use MCP draft
-            </Button>
+            {showEditor && issued ? (
+              <Button
+                disabled={busy || accountingBusy}
+                onClick={exportPdf}
+                type="button"
+                variant="outline"
+              >
+                <Download aria-hidden="true" className="size-4" /> Export PDF
+              </Button>
+            ) : null}
+            {!showEditor || !issued ? (
+              <Button
+                className="h-11 text-[13px]"
+                disabled={busy || accountingBusy}
+                onClick={loadProposal}
+                type="button"
+                variant="ghost"
+              >
+                Use MCP draft
+              </Button>
+            ) : null}
             <Button
               className="h-11 text-[13px]"
               disabled={busy || accountingBusy}
               ref={newButtonRef}
+              variant={showEditor && issued ? "ghost" : "default"}
               onClick={() =>
                 requestReplacement({
                   awaitTemplate: templateLoading && !templateError,
@@ -539,7 +582,15 @@ export function InvoicesScreen({ api }: { readonly api: InvoicesApi }) {
           <WorkNotice>{error}</WorkNotice>
         </div>
       ) : null}
-      {notice ? <WorkNotice success>{notice}</WorkNotice> : null}
+      {notice ? (
+        showEditor && issued ? (
+          <p className="text-[13px] text-forest" role="status">
+            {notice}
+          </p>
+        ) : (
+          <WorkNotice success>{notice}</WorkNotice>
+        )
+      ) : null}
 
       <div className="min-w-0" hidden={showEditor} ref={listRef}>
         <InvoiceRecordList
@@ -554,319 +605,337 @@ export function InvoicesScreen({ api }: { readonly api: InvoicesApi }) {
       </div>
       <div className={showEditor ? "grid min-w-0 gap-6" : "hidden"} hidden={!showEditor}>
         <div className="grid min-w-0 content-start gap-5">
-          {issued && current && api.accounting && totals ? (
-            <InvoiceAccountingPanel
-              api={api.accounting}
-              onBusyChange={setAccountingBusy}
-              gstMinor={totals.gstMinor}
-              incomeMinor={totals.subtotalMinor}
-              invoiceId={current.id}
-              invoiceVersion={current.version}
-              issueDate={current.draft.issueDate}
-              key={current.id}
-            />
-          ) : null}
-          <form className="grid min-w-0 gap-5" onSubmit={save}>
-            <fieldset className="work-surface grid min-w-0 gap-5 p-5" disabled={busy || issued}>
-              <legend className="px-1 text-[16px] font-semibold text-foreground">
-                {issued ? "Issued invoice · read only" : "Invoice details"}
-              </legend>
-              {current ? (
-                <p className="text-[13px] leading-5 text-muted-foreground">
-                  Seller: {current.sellerName} · ABN {current.sellerAbn}
-                </p>
+          {issued && current && totals ? (
+            <>
+              <p className="rounded-xl border border-ready-border bg-ready-soft px-4 py-3 text-[13px] leading-5 text-ready-foreground">
+                Issued invoice · read only. Record actual receipts separately; nothing is sent
+                automatically.
+              </p>
+              {api.accounting ? (
+                <InvoiceAccountingPanel
+                  api={api.accounting}
+                  onBusyChange={setAccountingBusy}
+                  gstMinor={totals.gstMinor}
+                  incomeMinor={totals.subtotalMinor}
+                  invoiceId={current.id}
+                  invoiceVersion={current.version}
+                  issueDate={current.draft.issueDate}
+                  key={current.id}
+                  items={(accounting) => (
+                    <InvoiceIssuedItems record={current} totals={totals} accounting={accounting}>
+                      {logoAssetId ? (
+                        <InvoiceLogo api={api} id={logoAssetId} label="Invoice logo" />
+                      ) : null}
+                    </InvoiceIssuedItems>
+                  )}
+                />
               ) : (
-                <p className="text-[13px] leading-5 text-muted-foreground">
-                  Seller name and ABN come from your signed-in organisation when you save.
-                </p>
+                <InvoiceIssuedItems record={current} totals={totals}>
+                  {logoAssetId ? (
+                    <InvoiceLogo api={api} id={logoAssetId} label="Invoice logo" />
+                  ) : null}
+                </InvoiceIssuedItems>
               )}
-              {logoAssetId ? (
-                <div className="flex flex-wrap items-center gap-4">
-                  <InvoiceLogo api={api} id={logoAssetId} label="Invoice logo" />
-                  {!issued ? (
+              <details className="min-w-0 border-t border-border pt-3 text-[13px]">
+                <summary className="focus-ring w-fit max-w-full cursor-pointer rounded-lg py-3 font-medium">
+                  Company defaults for new invoices
+                </summary>
+                <div className="pt-3">{templatePanel}</div>
+              </details>
+            </>
+          ) : (
+            <form className="grid min-w-0 gap-5" onSubmit={save}>
+              <fieldset className="work-surface grid min-w-0 gap-5 p-5" disabled={busy || issued}>
+                <legend className="px-1 text-[16px] font-semibold text-foreground">
+                  {issued ? "Issued invoice · read only" : "Invoice details"}
+                </legend>
+                {current ? (
+                  <p className="text-[13px] leading-5 text-muted-foreground">
+                    Seller: {current.sellerName} · ABN {current.sellerAbn}
+                  </p>
+                ) : (
+                  <p className="text-[13px] leading-5 text-muted-foreground">
+                    Seller name and ABN come from your signed-in organisation when you save.
+                  </p>
+                )}
+                {logoAssetId ? (
+                  <div className="flex flex-wrap items-center gap-4">
+                    <InvoiceLogo api={api} id={logoAssetId} label="Invoice logo" />
+                    {!issued ? (
+                      <Button
+                        onClick={() => {
+                          untouchedInitialDraft.current = false;
+                          setLogoAssetId(undefined);
+                          setConfirmIssue(false);
+                          setNotice(undefined);
+                        }}
+                        type="button"
+                        variant="outline"
+                      >
+                        Remove invoice logo
+                      </Button>
+                    ) : null}
+                  </div>
+                ) : null}
+                <div className="grid grid-cols-3 gap-4 max-[760px]:grid-cols-1">
+                  <label className={labelClass}>
+                    Invoice number
+                    <input
+                      className={fieldClass}
+                      maxLength={40}
+                      onChange={(event) => edit({ number: event.target.value })}
+                      value={editor.number}
+                    />
+                  </label>
+                  <label className={labelClass}>
+                    Issue date
+                    <input
+                      className={fieldClass}
+                      onChange={(event) => edit({ issueDate: event.target.value })}
+                      type="date"
+                      value={editor.issueDate}
+                    />
+                  </label>
+                  <label className={labelClass}>
+                    Due date
+                    <input
+                      className={fieldClass}
+                      onChange={(event) => edit({ dueDate: event.target.value })}
+                      type="date"
+                      value={editor.dueDate}
+                    />
+                  </label>
+                </div>
+                <div className="grid grid-cols-2 gap-4 max-[760px]:grid-cols-1">
+                  <label className={labelClass}>
+                    Customer name
+                    <input
+                      className={fieldClass}
+                      maxLength={200}
+                      onChange={(event) => edit({ customerName: event.target.value })}
+                      value={editor.customerName}
+                    />
+                  </label>
+                  <label className={labelClass}>
+                    Customer ABN (optional)
+                    <input
+                      className={fieldClass}
+                      inputMode="numeric"
+                      onChange={(event) =>
+                        edit({ customerAbn: normalizeAbnInput(event.target.value) })
+                      }
+                      value={editor.customerAbn ?? ""}
+                    />
+                  </label>
+                  <label className={labelClass}>
+                    Customer address
+                    <textarea
+                      className={`${fieldClass} min-h-24 max-h-80 field-sizing-content resize-none py-3`}
+                      maxLength={1000}
+                      onChange={(event) => edit({ customerAddress: event.target.value })}
+                      value={editor.customerAddress}
+                    />
+                  </label>
+                  <label className={labelClass}>
+                    Seller address
+                    <textarea
+                      className={`${fieldClass} min-h-24 max-h-80 field-sizing-content resize-none py-3`}
+                      maxLength={1000}
+                      onChange={(event) => edit({ sellerAddress: event.target.value })}
+                      value={editor.sellerAddress}
+                    />
+                  </label>
+                </div>
+                <label className="flex min-h-11 items-center gap-3 text-[14px] text-foreground">
+                  <input
+                    checked={editor.gstRegistered}
+                    className="focus-ring size-4 accent-primary"
+                    onChange={(event) =>
+                      edit({
+                        gstRegistered: event.target.checked,
+                        lines: editor.lines.map((line) =>
+                          !event.target.checked && line.taxTreatment === "taxable"
+                            ? { ...line, taxTreatment: "out-of-scope" }
+                            : line,
+                        ),
+                      })
+                    }
+                    type="checkbox"
+                  />{" "}
+                  Registered for GST
+                </label>
+                <p className="text-[13px] leading-6 text-muted-foreground">
+                  Only enable GST if this business is registered. Selling prices are exclusive of
+                  GST; review the treatment on each line.
+                </p>
+              </fieldset>
+
+              <InvoiceLineTable
+                busy={busy}
+                gstRegistered={editor.gstRegistered}
+                lines={editor.lines}
+                onAdd={() => edit({ lines: [...editor.lines, blankLine(editor.gstRegistered)] })}
+                onEdit={editLine}
+                onRemove={(key) => edit({ lines: editor.lines.filter((line) => line.key !== key) })}
+                readOnly={Boolean(issued)}
+                totals={totals}
+              />
+              {!issued ? (
+                <ReviewedExpenseTable
+                  busy={busy}
+                  error={expensesError}
+                  expenses={expenses}
+                  linkedIds={linkedExpenseIds}
+                  loading={expensesLoading}
+                  markup={markup}
+                  onAdd={addExpenses}
+                  onMarkup={setMarkup}
+                  onRefresh={refreshExpenses}
+                  onSelect={(id, selected) =>
+                    setSelectedExpenseIds((previous) =>
+                      selected
+                        ? [...previous.filter((value) => value !== id), id]
+                        : previous.filter((value) => value !== id),
+                    )
+                  }
+                  selectedIds={selectedExpenseIds}
+                />
+              ) : null}
+              <p className="text-[13px] leading-6 text-muted-foreground">
+                Unit costs are private invoice estimates. Import uses the expense’s net cost; markup
+                changes your selling price. Editing a cost leaves the original reviewed document and
+                ledger unchanged.
+              </p>
+
+              {templatePanel}
+
+              <fieldset
+                className="grid grid-cols-2 gap-4 max-[760px]:grid-cols-1"
+                disabled={busy || issued}
+              >
+                <label className={labelClass}>
+                  Notes
+                  <textarea
+                    className={`${fieldClass} min-h-24 max-h-80 field-sizing-content resize-none py-3`}
+                    maxLength={2000}
+                    onChange={(event) => edit({ notes: event.target.value })}
+                    value={editor.notes}
+                  />
+                </label>
+                <label className={labelClass}>
+                  Payment instructions
+                  <textarea
+                    className={`${fieldClass} min-h-24 max-h-80 field-sizing-content resize-none py-3`}
+                    maxLength={1000}
+                    onChange={(event) => edit({ paymentInstructions: event.target.value })}
+                    value={editor.paymentInstructions}
+                  />
+                </label>
+              </fieldset>
+
+              <section
+                className="grid gap-6 border-t border-border pt-6 md:grid-cols-2"
+                aria-label="Invoice totals"
+              >
+                <div className="grid content-start gap-3 rounded-2xl bg-muted/40 p-4">
+                  <h2 className="text-[14px] font-semibold">Internal · never on the PDF</h2>
+                  <MoneyRow
+                    label={fullyCosted ? "Private cost" : "Known private cost"}
+                    minor={totals?.costMinor}
+                    testId="invoice-cost"
+                  />
+                  <MoneyRow
+                    label="Profit (ex GST)"
+                    minor={fullyCosted ? totals?.marginMinor : undefined}
+                    testId="invoice-margin"
+                  />
+                  {!fullyCosted ? (
+                    <p className="text-[13px] leading-5 text-muted-foreground">
+                      Add a cost to every line to calculate profit. Enter 0 only for a known zero
+                      cost.
+                    </p>
+                  ) : null}
+                </div>
+                <div className="grid content-start gap-3 p-4">
+                  <h2 className="text-[14px] font-semibold">Invoice totals · AUD</h2>
+                  <MoneyRow
+                    label="Subtotal"
+                    minor={totals?.subtotalMinor}
+                    testId="invoice-subtotal"
+                  />
+                  <MoneyRow label="GST" minor={totals?.gstMinor} testId="invoice-gst" />
+                  <div className="border-t border-border pt-3">
+                    <MoneyRow
+                      label="Invoice total"
+                      minor={totals?.totalMinor}
+                      strong
+                      testId="invoice-total"
+                    />
+                  </div>
+                  {!totals ? (
+                    <p className="text-[13px] leading-5 text-muted-foreground">
+                      Enter valid quantities and amounts to calculate totals.
+                    </p>
+                  ) : null}
+                </div>
+              </section>
+
+              {confirmIssue ? (
+                <div className="work-surface grid gap-4 p-5 text-[14px]" role="alert">
+                  <p>
+                    Issuing locks this invoice, removes the draft watermark and records sales, GST
+                    and the amount owing in the business ledger. Record actual receipts separately.
+                    Your customer does not receive it automatically.
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <Button disabled={busy} onClick={issue} type="button">
+                      Confirm issue
+                    </Button>
                     <Button
-                      onClick={() => {
-                        untouchedInitialDraft.current = false;
-                        setLogoAssetId(undefined);
-                        setConfirmIssue(false);
-                        setNotice(undefined);
-                      }}
+                      disabled={busy}
+                      onClick={() => setConfirmIssue(false)}
                       type="button"
                       variant="outline"
                     >
-                      Remove invoice logo
+                      Keep as draft
                     </Button>
-                  ) : null}
+                  </div>
                 </div>
               ) : null}
-              <div className="grid grid-cols-3 gap-4 max-[760px]:grid-cols-1">
-                <label className={labelClass}>
-                  Invoice number
-                  <input
-                    className={fieldClass}
-                    maxLength={40}
-                    onChange={(event) => edit({ number: event.target.value })}
-                    value={editor.number}
-                  />
-                </label>
-                <label className={labelClass}>
-                  Issue date
-                  <input
-                    className={fieldClass}
-                    onChange={(event) => edit({ issueDate: event.target.value })}
-                    type="date"
-                    value={editor.issueDate}
-                  />
-                </label>
-                <label className={labelClass}>
-                  Due date
-                  <input
-                    className={fieldClass}
-                    onChange={(event) => edit({ dueDate: event.target.value })}
-                    type="date"
-                    value={editor.dueDate}
-                  />
-                </label>
-              </div>
-              <div className="grid grid-cols-2 gap-4 max-[760px]:grid-cols-1">
-                <label className={labelClass}>
-                  Customer name
-                  <input
-                    className={fieldClass}
-                    maxLength={200}
-                    onChange={(event) => edit({ customerName: event.target.value })}
-                    value={editor.customerName}
-                  />
-                </label>
-                <label className={labelClass}>
-                  Customer ABN (optional)
-                  <input
-                    className={fieldClass}
-                    inputMode="numeric"
-                    onChange={(event) =>
-                      edit({ customerAbn: normalizeAbnInput(event.target.value) })
-                    }
-                    value={editor.customerAbn ?? ""}
-                  />
-                </label>
-                <label className={labelClass}>
-                  Customer address
-                  <textarea
-                    className={`${fieldClass} min-h-24 max-h-80 field-sizing-content resize-none py-3`}
-                    maxLength={1000}
-                    onChange={(event) => edit({ customerAddress: event.target.value })}
-                    value={editor.customerAddress}
-                  />
-                </label>
-                <label className={labelClass}>
-                  Seller address
-                  <textarea
-                    className={`${fieldClass} min-h-24 max-h-80 field-sizing-content resize-none py-3`}
-                    maxLength={1000}
-                    onChange={(event) => edit({ sellerAddress: event.target.value })}
-                    value={editor.sellerAddress}
-                  />
-                </label>
-              </div>
-              <label className="flex min-h-11 items-center gap-3 text-[14px] text-foreground">
-                <input
-                  checked={editor.gstRegistered}
-                  className="focus-ring size-4 accent-primary"
-                  onChange={(event) =>
-                    edit({
-                      gstRegistered: event.target.checked,
-                      lines: editor.lines.map((line) =>
-                        !event.target.checked && line.taxTreatment === "taxable"
-                          ? { ...line, taxTreatment: "out-of-scope" }
-                          : line,
-                      ),
-                    })
-                  }
-                  type="checkbox"
-                />{" "}
-                Registered for GST
-              </label>
-              <p className="text-[13px] leading-6 text-muted-foreground">
-                Only enable GST if this business is registered. Selling prices are exclusive of GST;
-                review the treatment on each line.
-              </p>
-            </fieldset>
-
-            <InvoiceLineTable
-              busy={busy}
-              gstRegistered={editor.gstRegistered}
-              lines={editor.lines}
-              onAdd={() => edit({ lines: [...editor.lines, blankLine(editor.gstRegistered)] })}
-              onEdit={editLine}
-              onRemove={(key) => edit({ lines: editor.lines.filter((line) => line.key !== key) })}
-              readOnly={Boolean(issued)}
-              totals={totals}
-            />
-            {!issued ? (
-              <ReviewedExpenseTable
-                busy={busy}
-                error={expensesError}
-                expenses={expenses}
-                linkedIds={linkedExpenseIds}
-                loading={expensesLoading}
-                markup={markup}
-                onAdd={addExpenses}
-                onMarkup={setMarkup}
-                onRefresh={refreshExpenses}
-                onSelect={(id, selected) =>
-                  setSelectedExpenseIds((previous) =>
-                    selected
-                      ? [...previous.filter((value) => value !== id), id]
-                      : previous.filter((value) => value !== id),
-                  )
-                }
-                selectedIds={selectedExpenseIds}
-              />
-            ) : null}
-            <p className="text-[13px] leading-6 text-muted-foreground">
-              Unit costs are private invoice estimates. Import uses the expense’s net cost; markup
-              changes your selling price. Editing a cost leaves the original reviewed document and
-              ledger unchanged.
-            </p>
-
-            <InvoiceTemplatePanel
-              api={api}
-              canApply={!issued}
-              disabled={busy}
-              error={templateError}
-              loading={templateLoading}
-              onApply={applyTemplate}
-              onRetry={() => setTemplateAttempt((value) => value + 1)}
-              onSaved={setTemplate}
-              template={template}
-            />
-
-            <fieldset
-              className="grid grid-cols-2 gap-4 max-[760px]:grid-cols-1"
-              disabled={busy || issued}
-            >
-              <label className={labelClass}>
-                Notes
-                <textarea
-                  className={`${fieldClass} min-h-24 max-h-80 field-sizing-content resize-none py-3`}
-                  maxLength={2000}
-                  onChange={(event) => edit({ notes: event.target.value })}
-                  value={editor.notes}
-                />
-              </label>
-              <label className={labelClass}>
-                Payment instructions
-                <textarea
-                  className={`${fieldClass} min-h-24 max-h-80 field-sizing-content resize-none py-3`}
-                  maxLength={1000}
-                  onChange={(event) => edit({ paymentInstructions: event.target.value })}
-                  value={editor.paymentInstructions}
-                />
-              </label>
-            </fieldset>
-
-            <section
-              className="grid gap-6 border-t border-border pt-6 md:grid-cols-2"
-              aria-label="Invoice totals"
-            >
-              <div className="grid content-start gap-3 rounded-2xl bg-muted/40 p-4">
-                <h2 className="text-[14px] font-semibold">Internal · never on the PDF</h2>
-                <MoneyRow
-                  label={fullyCosted ? "Private cost" : "Known private cost"}
-                  minor={totals?.costMinor}
-                  testId="invoice-cost"
-                />
-                <MoneyRow
-                  label="Profit (ex GST)"
-                  minor={fullyCosted ? totals?.marginMinor : undefined}
-                  testId="invoice-margin"
-                />
-                {!fullyCosted ? (
-                  <p className="text-[13px] leading-5 text-muted-foreground">
-                    Add a cost to every line to calculate profit. Enter 0 only for a known zero
-                    cost.
-                  </p>
-                ) : null}
-              </div>
-              <div className="grid content-start gap-3 p-4">
-                <h2 className="text-[14px] font-semibold">Invoice totals · AUD</h2>
-                <MoneyRow
-                  label="Subtotal"
-                  minor={totals?.subtotalMinor}
-                  testId="invoice-subtotal"
-                />
-                <MoneyRow label="GST" minor={totals?.gstMinor} testId="invoice-gst" />
-                <div className="border-t border-border pt-3">
-                  <MoneyRow
-                    label="Invoice total"
-                    minor={totals?.totalMinor}
-                    strong
-                    testId="invoice-total"
-                  />
-                </div>
-                {!totals ? (
-                  <p className="text-[13px] leading-5 text-muted-foreground">
-                    Enter valid quantities and amounts to calculate totals.
-                  </p>
-                ) : null}
-              </div>
-            </section>
-
-            {confirmIssue ? (
-              <div className="work-surface grid gap-4 p-5 text-[14px]" role="alert">
-                <p>
-                  Issuing locks this invoice, removes the draft watermark and records sales, GST and
-                  the amount owing in the business ledger. Record actual receipts separately. Your
-                  customer does not receive it automatically.
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  <Button disabled={busy} onClick={issue} type="button">
-                    Confirm issue
+              <div className="flex flex-wrap items-center gap-2 border-t border-border pt-4">
+                {!issued ? (
+                  <Button disabled={busy} type="submit">
+                    {busy ? "Working…" : "Save draft"}
                   </Button>
-                  <Button
-                    disabled={busy}
-                    onClick={() => setConfirmIssue(false)}
-                    type="button"
-                    variant="outline"
-                  >
-                    Keep as draft
-                  </Button>
-                </div>
-              </div>
-            ) : null}
-            <div className="flex flex-wrap items-center gap-2 border-t border-border pt-4">
-              {!issued ? (
-                <Button disabled={busy} type="submit">
-                  {busy ? "Working…" : "Save draft"}
-                </Button>
-              ) : null}
-              <Button
-                disabled={!current || dirty || busy}
-                onClick={exportPdf}
-                type="button"
-                variant="outline"
-              >
-                <Download aria-hidden="true" className="size-3" /> Export PDF
-              </Button>
-              {!issued ? (
+                ) : null}
                 <Button
                   disabled={!current || dirty || busy}
-                  onClick={requestIssue}
+                  onClick={exportPdf}
                   type="button"
                   variant="outline"
                 >
-                  Issue invoice
+                  <Download aria-hidden="true" className="size-3" /> Export PDF
                 </Button>
-              ) : null}
-              <p className="text-[13px] text-muted-foreground">
-                {dirty && current
-                  ? "Save changes before exporting or issuing."
-                  : issued
-                    ? "Issued invoice · immutable"
-                    : "Draft PDFs are watermarked DRAFT."}
-              </p>
-            </div>
-          </form>
+                {!issued ? (
+                  <Button
+                    disabled={!current || dirty || busy}
+                    onClick={requestIssue}
+                    type="button"
+                    variant="outline"
+                  >
+                    Issue invoice
+                  </Button>
+                ) : null}
+                <p className="text-[13px] text-muted-foreground">
+                  {dirty && current
+                    ? "Save changes before exporting or issuing."
+                    : issued
+                      ? "Issued invoice · immutable"
+                      : "Draft PDFs are watermarked DRAFT."}
+                </p>
+              </div>
+            </form>
+          )}
         </div>
       </div>
     </div>
@@ -923,4 +992,13 @@ function newEditor(): EditorDraft {
 
 function snapshot(editor: EditorDraft, logoAssetId?: string): string {
   return JSON.stringify({ editor, logoAssetId });
+}
+
+function displayInvoiceDate(value: string): string {
+  return new Intl.DateTimeFormat("en-AU", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(new Date(`${value}T00:00:00Z`));
 }

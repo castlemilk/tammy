@@ -268,9 +268,11 @@ it("requires an explicit issue confirmation and keeps issued invoices immutable"
   await userEvent.click(screen.getByRole("button", { name: "Confirm issue" }));
   await screen.findByText("Invoice issued.");
   expect(calls.issued).toEqual(["saved-1"]);
-  expect(screen.getByLabelText("Customer name").matches(":disabled")).toBe(true);
-  await userEvent.type(screen.getByLabelText("Customer name"), "cannot change");
-  expect(screen.getByDisplayValue("Cambridge Services")).toBeTruthy();
+  expect(screen.queryByLabelText("Customer name")).toBeNull();
+  const detail = screen.getByRole("region", { name: "Issued invoice items" });
+  expect(detail.querySelector("input, select, textarea")).toBeNull();
+  expect(detail.textContent).toContain("Cambridge Services");
+  expect(calls.saved).toEqual([]);
   expect(screen.queryByRole("button", { name: "Save draft" })).toBeNull();
   expect((screen.getByRole("button", { name: "Export PDF" }) as HTMLButtonElement).disabled).toBe(
     false,
@@ -749,7 +751,7 @@ it("shows initial expense loading and failure without claiming a successfully em
   expect(screen.getByRole("button", { name: "Retry expenses" })).toBeTruthy();
 });
 
-it("uses the same read-only line table for issued invoices and offers no expense import", async () => {
+it("shows issued line values without editor fields or expense import", async () => {
   const record: InvoiceRecord = {
     id: "issued-1",
     version: 2,
@@ -761,15 +763,11 @@ it("uses the same read-only line table for issued invoices and offers no expense
   render(<InvoicesScreen api={fixture([record]).api} />);
   await userEvent.click(await screen.findByRole("button", { name: "Open INV-100" }));
   const table = screen.getByRole("table", { name: "Invoice line items" });
-  for (const name of [
-    "Description 1",
-    "Quantity 1",
-    "Unit cost 1",
-    "Unit price 1",
-    "GST treatment 1",
-  ]) {
-    expect(within(table).getByLabelText(name).matches(":disabled")).toBe(true);
-  }
+  expect(table.querySelector("input, select, textarea")).toBeNull();
+  expect(table.textContent).toContain("Consulting");
+  expect(table.textContent).toContain("$100.00");
+  expect(table.textContent).toContain("$10.00");
+  expect(table.textContent).toContain("$110.00");
   expect(screen.queryByRole("button", { name: "Add line item" })).toBeNull();
   expect(screen.queryByRole("button", { name: "Remove line 1" })).toBeNull();
   expect(screen.queryByRole("table", { name: "Reviewed expenses" })).toBeNull();
