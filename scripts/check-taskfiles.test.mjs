@@ -920,24 +920,38 @@ test("local Task front door preserves the safe development contract", async () =
   const actualSbrTarget = `${process.platform}/${process.arch}`;
   const sbrOutputDirectory = await mkdtemp(path.join("/private/tmp", "tammy-sbr-task-output-"));
   try {
-    const registration = await runTask("sbr:registration:check", {
-      TAMMY_SBR_EVIDENCE_DIR: sbrOutputDirectory,
-    });
-    if (actualSbrTarget === "darwin/arm64") {
-      assert.notEqual(registration.code, 0);
-      const report = JSON.parse(stripVTControlCharacters(registration.stdout));
-      assert.equal(report.status, "BLOCKED");
-      assert.equal(report.code, "EVTE_SIGNED_INPUTS_REQUIRED");
-      assert.equal(
-        registration.stderr,
-        'task: [sbr:run-registration-check] mise exec -- node scripts/check-sbr-registration.mjs\ntask: Failed to run task "sbr:registration:check": task: Failed to run task "sbr:run-registration-check": exit status 1\n',
-      );
-    } else {
-      assert.notEqual(registration.code, 0);
-      assert.match(
-        `${registration.stdout}${registration.stderr}`,
-        new RegExp(`UNSUPPORTED_SBR_TARGET:${actualSbrTarget}`),
-      );
+    for (const githubActions of ["", "true"]) {
+      const registration = await runTask("sbr:registration:check", {
+        GITHUB_ACTIONS: githubActions,
+        TAMMY_SBR_EVIDENCE_DIR: sbrOutputDirectory,
+      });
+      if (actualSbrTarget === "darwin/arm64") {
+        assert.notEqual(registration.code, 0);
+        let reportText = stripVTControlCharacters(registration.stdout);
+        if (githubActions === "true") {
+          const annotation =
+            "::error title=Task 'sbr:registration:check' failed::task: Failed to run task \"sbr:run-registration-check\": exit status 1\n";
+          assert.equal(
+            reportText.endsWith(annotation),
+            true,
+            "Task retains the exact expected failure annotation",
+          );
+          reportText = reportText.slice(0, -annotation.length);
+        }
+        const report = JSON.parse(reportText);
+        assert.equal(report.status, "BLOCKED");
+        assert.equal(report.code, "EVTE_SIGNED_INPUTS_REQUIRED");
+        assert.equal(
+          registration.stderr,
+          'task: [sbr:run-registration-check] mise exec -- node scripts/check-sbr-registration.mjs\ntask: Failed to run task "sbr:registration:check": task: Failed to run task "sbr:run-registration-check": exit status 1\n',
+        );
+      } else {
+        assert.notEqual(registration.code, 0);
+        assert.match(
+          `${registration.stdout}${registration.stderr}`,
+          new RegExp(`UNSUPPORTED_SBR_TARGET:${actualSbrTarget}`),
+        );
+      }
     }
 
     const evte = await runTask("dev:sbr:evte", {
