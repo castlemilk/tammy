@@ -778,6 +778,7 @@ test("covers workspace setup, recovery, accounting, and interaction journeys thr
     ["Trial balance", "/accounting/trial-balance", "Trial balance", "37-320-trial-balance"],
   ] as const) {
     await assertRoute(page, link, route, heading);
+    await expect(page.getByRole("table").first()).toBeVisible();
     expect(
       await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
     ).toBe(true);

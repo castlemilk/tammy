@@ -34,9 +34,7 @@ describe("Tammy public routes", () => {
     expect(screen.getByText(/Relationship Authorisation Manager, or RAM/)).toBeTruthy();
     expect(screen.getByText(/synthetic, network-disabled simulator/)).toBeTruthy();
     expect(
-      screen.getByText(
-        /hosting provider may process technical request information/i,
-      ),
+      screen.getByText(/hosting provider may process technical request information/i),
     ).toBeTruthy();
     expect(screen.getByText(/Google processes it as the email service provider/i)).toBeTruthy();
     expect(screen.getByRole("link", { name: "ABN Lookup page" }).getAttribute("href")).toBe(
