@@ -9,6 +9,10 @@ import { readInvoiceAccounting } from "./support/invoice-income-workflow";
 const phase = process.env.TAMMY_FINANCIAL_UI_CAPTURE;
 const referencePhase = process.env.TAMMY_INVOICE_REFERENCE_CAPTURE;
 const detailPhase = process.env.TAMMY_INVOICE_DETAIL_CAPTURE;
+const draftPhase = process.env.TAMMY_INVOICE_DRAFT_CAPTURE;
+if (draftPhase !== undefined && draftPhase !== "before" && draftPhase !== "after") {
+  throw new Error("INVOICE_DRAFT_CAPTURE_PHASE_INVALID");
+}
 if (detailPhase !== undefined && detailPhase !== "before" && detailPhase !== "after") {
   throw new Error("INVOICE_DETAIL_CAPTURE_PHASE_INVALID");
 }
@@ -44,6 +48,7 @@ test.describe("Soft Precision financial workspace", () => {
     }
     await capture(page, "01-new-invoice");
     await page.getByRole("button", { name: "New invoice", exact: true }).click();
+    await capture(page, "01-draft-editor-empty");
 
     await page.getByLabel("Invoice number", { exact: true }).fill("INV-UI-001");
     await page.getByLabel("Issue date", { exact: true }).fill("2026-09-30");
@@ -72,6 +77,24 @@ test.describe("Soft Precision financial workspace", () => {
     await expect(page.getByText("Draft saved.", { exact: true })).toBeVisible();
     expect((await readInvoiceAccounting(page, workspace, "INV-UI-001")).invoice.version).toBe(1n);
     await capture(page, "03-saved-draft");
+    if (draftPhase) {
+      for (const width of [390, 320]) {
+        await page.setViewportSize({ width, height: 900 });
+        await expect
+          .poll(() =>
+            page.evaluate(
+              () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+            ),
+          )
+          .toBe(true);
+        await capture(page, `03c-draft-${width}`);
+        const lines = page.getByRole("region", { name: "Invoice line items table", exact: true });
+        await lines.focus();
+        await page.keyboard.press("ArrowRight");
+        await expect.poll(() => lines.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
+      }
+      await page.setViewportSize({ width: 1440, height: 1100 });
+    }
 
     await page.getByRole("textbox", { name: /^Notes/ }).fill("Unsaved synthetic note");
     await page.getByRole("button", { name: "New invoice", exact: true }).click();
@@ -466,7 +489,20 @@ async function captureReferenceList(page: Page) {
 }
 
 async function capture(page: Page, name: string) {
-  if (!phase && !detailPhase) return;
+  if (!phase && !detailPhase && !draftPhase) return;
+  if (
+    draftPhase &&
+    ![
+      "01-draft-editor-empty",
+      "02-validation-preserves-edit",
+      "03-saved-draft",
+      "03b-unsaved-replacement",
+      "03c-draft-390",
+      "03c-draft-320",
+      "05-issue-confirmation",
+    ].includes(name)
+  )
+    return;
   if (
     detailPhase &&
     ![
@@ -484,7 +520,7 @@ async function capture(page: Page, name: string) {
   await expect(page.locator("h1")).toBeAttached();
   if (detailPhase && name === "13-payment-320") {
     await page.getByRole("form", { name: "Review payment", exact: true }).scrollIntoViewIfNeeded();
-  } else if (detailPhase) {
+  } else if (detailPhase || draftPhase) {
     await page.locator("h1").scrollIntoViewIfNeeded();
   } else if (/^0[1239]|^10/.test(name)) {
     await page.locator("h1").scrollIntoViewIfNeeded();
@@ -499,12 +535,14 @@ async function capture(page: Page, name: string) {
   }
   const directory = path.resolve(
     path.dirname(fileURLToPath(import.meta.url)),
-    detailPhase
-      ? "../../../../output/playwright/soft-precision-invoice-detail-2026-10-23"
-      : phase === "integration"
-        ? "../../../../output/playwright/soft-precision-integration-2026-10-23"
-        : "../../../../output/playwright/soft-precision-financial-2026-10-23",
-    detailPhase ?? (phase === "integration" ? "after" : (phase as string)),
+    draftPhase
+      ? "../../../../output/playwright/soft-precision-invoice-draft-2026-10-23"
+      : detailPhase
+        ? "../../../../output/playwright/soft-precision-invoice-detail-2026-10-23"
+        : phase === "integration"
+          ? "../../../../output/playwright/soft-precision-integration-2026-10-23"
+          : "../../../../output/playwright/soft-precision-financial-2026-10-23",
+    draftPhase ?? detailPhase ?? (phase === "integration" ? "after" : (phase as string)),
   );
   await mkdir(directory, { recursive: true });
   const bytes = await page.screenshot({
