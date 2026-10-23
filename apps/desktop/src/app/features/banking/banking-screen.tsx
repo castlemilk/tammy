@@ -737,12 +737,19 @@ export function BankingScreen({
           >
             <h3 className="text-[14px] font-semibold text-forest">Reconciliation summary</h3>
             <dl className="mt-3 flex min-w-0 flex-wrap gap-x-8 gap-y-3">
-              <div className="min-w-0">
+              <div className="min-w-0 max-w-full">
                 <dt className="text-[12px] text-muted-foreground">Latest import balance · AUD</dt>
-                <dd className="mt-1 break-all text-[22px] font-semibold leading-7 tabular-nums">
-                  {summary?.latestClosingBalance
-                    ? formatMoney(summary.latestClosingBalance.minorUnits)
-                    : "—"}
+                <dd className="mt-1 text-[22px] font-semibold leading-7 tabular-nums max-[700px]:text-[18px]">
+                  <HorizontalScrollArea
+                    label="Latest imported statement balance"
+                    className="whitespace-nowrap"
+                  >
+                    <span>
+                      {summary?.latestClosingBalance
+                        ? formatMoney(summary.latestClosingBalance.minorUnits)
+                        : "—"}
+                    </span>
+                  </HorizontalScrollArea>
                 </dd>
               </div>
               <div>

@@ -22,7 +22,8 @@ export const bankingCapturePhase = process.env.TAMMY_BANKING_CAPTURE;
 if (
   bankingCapturePhase !== undefined &&
   bankingCapturePhase !== "before" &&
-  bankingCapturePhase !== "after"
+  bankingCapturePhase !== "after" &&
+  bankingCapturePhase !== "after-money-fix"
 ) {
   throw new Error("BANKING_CAPTURE_PHASE_INVALID");
 }
@@ -157,6 +158,13 @@ export async function runBankingReviewJourney(
       )
       .toBe(true);
     if (bankingCapturePhase !== "before") {
+      const balance = page.getByRole("region", {
+        name: "Latest imported statement balance",
+        exact: true,
+      });
+      await expect(balance).toHaveText("$1,678.10");
+      await expect(balance).toHaveCSS("white-space", "nowrap");
+      if (width <= 390) await expect(balance).toHaveCSS("font-size", "18px");
       const scroll = page.getByRole("region", { name: "Scrollable statement lines", exact: true });
       await scroll.evaluate((node) => {
         node.scrollLeft = 0;

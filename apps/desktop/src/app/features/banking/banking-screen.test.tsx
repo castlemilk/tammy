@@ -123,6 +123,36 @@ function fixture() {
   return fixture;
 }
 
+it("keeps the complete large balance in a named keyboard-accessible region", async () => {
+  const testFixture = fixture();
+  testFixture.procedures.banking.getBankingSummary.mockResolvedValue(
+    summaryCodec.encodeResponse(
+      create(GetBankingSummaryResponseSchema, {
+        importedLineCount: 1,
+        unmatchedLineCount: 1,
+        unreconciledLineCount: 1,
+        latestClosingBalance: create(MoneySchema, {
+          currencyCode: "AUD",
+          minorUnits: 9_000_000_000_000_000n,
+        }),
+      }),
+    ),
+  );
+  const user = userEvent.setup();
+  render(<BankingScreen api={testFixture.conveyor.banking} workspace={workspace} />);
+  const balance = await screen.findByRole("region", {
+    name: "Latest imported statement balance",
+  });
+  await within(balance).findByText("$90,000,000,000,000.00", { exact: true });
+  balance.focus();
+  expect(document.activeElement).toBe(balance);
+  await user.tab();
+  expect(document.activeElement).not.toBe(balance);
+  expect(testFixture.procedures.banking.importBankStatement).not.toHaveBeenCalled();
+  expect(testFixture.procedures.banking.matchBankStatementLine).not.toHaveBeenCalled();
+  expect(testFixture.procedures.banking.completeBankReconciliation).not.toHaveBeenCalled();
+});
+
 it("requires an explicit reviewed reference and keeps matching distinct from reconciliation", async () => {
   const testFixture = fixture();
   const user = userEvent.setup();

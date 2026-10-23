@@ -1209,6 +1209,18 @@ async function interactionJourney(page: import("@playwright/test").Page) {
         ).toBe(true);
         const balance = page.getByText("$123,456,679.01", { exact: true });
         await expect(balance).toHaveCSS("white-space", "nowrap");
+        await expect(balance).toHaveCSS("font-size", "18px");
+        const balanceRegion = page.getByRole("region", {
+          name: "Latest imported statement balance",
+          exact: true,
+        });
+        await expect(balanceRegion).toContainText("$123,456,679.01");
+        await balanceRegion.focus();
+        await expect(balanceRegion).toBeFocused();
+        await expect(balanceRegion).toHaveCSS("outline-style", "solid");
+        expect(
+          await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+        ).toBe(true);
         await captureJourney(page, "19-320-banking-import");
         await page.getByRole("button", { name: "Cancel import" }).click();
       }
