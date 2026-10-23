@@ -205,3 +205,7 @@ amount, required-field and select behavior remain platform-owned.
 
 Existing strict supplementary audit exceptions and financial/platform release
 boundaries remain. No native validation is removed for this composition.
+
+Editing a Journals draft clears feedback from the previous attempt without
+posting or replaying a command. Other entered values remain. The next explicit
+Post journal still follows native validation and the existing Core command.

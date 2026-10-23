@@ -134,3 +134,24 @@ byte-identically (SHA256
 The final app/app-shell/router block passes **36 tests**. A new native assertion
 requires the posted detail's actual breadcrumb to read Journals. Corrected captures
 will come from the next clean package; no initial image is silently relabeled.
+
+## Narrow recovery feedback correction
+
+Clean breadcrumb runtime `4b2f65c58cd99fe468dd4f7377b458063dbbf3ce`, with
+clean test-only harness `010a61d68da340d71425a0e9a4bae297647723d5`, passed
+seven package checks/one expected skip and the expanded native journey in
+**10.7s /11.4s**, zero retries/page/console errors. Its **14 real frames** are
+retained in `after-breadcrumb/`, with exact provenance in
+`breadcrumb-after-captures.json`. The native case verifies the actual Journals
+breadcrumb, manual/posted/version-1 response and reachable Tab-focused posting
+action at 320px.
+
+The inspected narrow footer image revealed a stale same-account validation alert
+after correcting that account selection. Field edits now clear previous form
+feedback while retaining all other draft values. No command is sent by editing;
+the post handler, financial calculations and retry identity remain unchanged.
+The focused regression fails on the prior source because the alert remains;
+the corrected case requires no alert after correction and zero posting calls.
+The native journey now asserts that same recovery before its narrow captures.
+Earlier images are retained; a final clean package/capture will verify the actual
+corrected state rather than hiding that observed defect.

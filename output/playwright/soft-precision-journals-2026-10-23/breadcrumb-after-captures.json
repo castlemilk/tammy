@@ -1,0 +1,106 @@
+{
+  "schemaVersion": 1,
+  "phase": "after-breadcrumb",
+  "runtime": {
+    "sourceRevision": "4b2f65c58cd99fe468dd4f7377b458063dbbf3ce",
+    "sourceDirty": false,
+    "appSha256": "b5f6cea57887bba8dfde25da07b6de5a7c61fc52982564131c2ae0ca57368a05",
+    "coreSha256": "078811e551eb5cd0c5f505e3282d82bc8f50be578c12a9d92e7bafb70d67562c",
+    "manifestSha256": "ccbf0907e515121e91271243479ee5306668db970ccee6ec44b455f6fac91cee"
+  },
+  "harnessSourceRevision": "010a61d68da340d71425a0e9a4bae297647723d5",
+  "harnessSha256": "350f0e94e0659097bf0fface9ddd3a2a22229163b067c587245b4a60741b563a",
+  "applicationSourceMatchesHarnessCommit": true,
+  "nativeSeconds": 10.7,
+  "runnerSeconds": 11.4,
+  "retries": 0,
+  "pageErrors": 0,
+  "consoleErrors": 0,
+  "finding": "Actual 320px footer PNG shows a stale same-account validation message after the selection was corrected. This is retained evidence; a targeted field-edit feedback correction follows without changing posting semantics.",
+  "frames": [
+    {
+      "file": "after-breadcrumb/01-initial-list.png",
+      "sha256": "076ffe8d4ba5f37c6ee9c68e752e126d788528325a03b29d41beedc87476ab4c",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "file": "after-breadcrumb/02-loaded-history.png",
+      "sha256": "e2b2ebdd0a084a61880faf7a7f1593134b7efa3b3b092fe2322dc174edd57081",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "file": "after-breadcrumb/03-entry-review.png",
+      "sha256": "e7d632440ae7e66b9b77b9263480dd4e389163c17ef73e8afea68f8df9c2094a",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "file": "after-breadcrumb/04-invalid-accounts.png",
+      "sha256": "445e8f34a12cc6a192373b24282313d7b4b05028e8bbc3632af747e03e8cfa29",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "file": "after-breadcrumb/05-entry-focus-320.png",
+      "sha256": "5e87e778365256aa358e451404843390ca112d1a95febc19925a754f54deb2b4",
+      "width": 320,
+      "height": 1000
+    },
+    {
+      "file": "after-breadcrumb/05-entry-focus-390.png",
+      "sha256": "48d13d339944e49aa07f4812335a997c8f48047e4eb9617696a3f070580a0937",
+      "width": 390,
+      "height": 1000
+    },
+    {
+      "file": "after-breadcrumb/05-entry-focus-900.png",
+      "sha256": "b6c76f86d578b43dd621580ae261e8ac76ea4336429fb81409553e254b5d8688",
+      "width": 900,
+      "height": 1000
+    },
+    {
+      "file": "after-breadcrumb/06-posted-detail.png",
+      "sha256": "7f24c6e385d7a2ceea4d5a34435b8d0b1b1c432fbe231a5aa4a746d774bf39e1",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "file": "after-breadcrumb/07-detail-scroll-320.png",
+      "sha256": "df55c9456d109b1aae5f3101edb597956b77828f9da85da5e13cea70426a0c84",
+      "width": 320,
+      "height": 1000
+    },
+    {
+      "file": "after-breadcrumb/07-detail-scroll-390.png",
+      "sha256": "f918e2b2efdcb1377aa3fce8e872ca404170e04a2139a156d0b1c871cb440528",
+      "width": 390,
+      "height": 1000
+    },
+    {
+      "file": "after-breadcrumb/08-returned-history.png",
+      "sha256": "6da03bb9805a7aaadcc4a36e368986618f545276b1ddd7a36dc21dd551cdf280",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "file": "after-breadcrumb/09-retained-search.png",
+      "sha256": "d1f70ea914b32d81d8b52375db5cdd44df1df5fd6cd42c9bed454066119903c3",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "file": "after-breadcrumb/10-no-results.png",
+      "sha256": "f6b9aed3d3b268132e20dc34d247aba5f57219815484e01d3196469a645451e1",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "file": "after-breadcrumb/11-post-action-320.png",
+      "sha256": "3da19c302d6ea346acd266f8339520fda67056d218a6722f91695e104ffe9e00",
+      "width": 320,
+      "height": 1000
+    }
+  ]
+}

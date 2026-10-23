@@ -378,12 +378,27 @@ export function JournalsScreen({
           error={error}
           errorRegion={errorRegion}
           memo={memo}
-          onAmount={setAmount}
+          onAmount={(value) => {
+            setAmount(value);
+            setError(undefined);
+          }}
           onCancel={closeEntry}
-          onCredit={setCreditAccount}
-          onDate={setDate}
-          onDebit={setDebitAccount}
-          onMemo={setMemo}
+          onCredit={(value) => {
+            setCreditAccount(value);
+            setError(undefined);
+          }}
+          onDate={(value) => {
+            setDate(value);
+            setError(undefined);
+          }}
+          onDebit={(value) => {
+            setDebitAccount(value);
+            setError(undefined);
+          }}
+          onMemo={(value) => {
+            setMemo(value);
+            setError(undefined);
+          }}
           onSubmit={postJournal}
           posting={posting}
         />

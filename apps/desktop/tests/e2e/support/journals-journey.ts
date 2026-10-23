@@ -98,6 +98,7 @@ export async function runJournalsJourney(page: Page, workspace: AuthenticatedAcc
   await page
     .getByRole("combobox", { name: "Debit account", exact: true })
     .selectOption({ label: "6100 — Office expenses" });
+  if (journalsCapturePhase !== "before") await expect(page.getByRole("alert")).toHaveCount(0);
   await page.emulateMedia({ reducedMotion: "reduce" });
   for (const width of [900, 390, 320]) {
     await page.setViewportSize({ width, height: 1000 });

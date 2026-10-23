@@ -453,3 +453,19 @@ it("retains exact large posted amounts in the read-only detail", async () => {
   expect(within(region).getAllByText("$90,071,992,547,409.91")).toHaveLength(4);
   expect(screen.queryByRole("button", { name: "Post journal" })).toBeNull();
 });
+
+it("clears stale validation feedback after correcting the draft without posting", async () => {
+  const f = journalFixture();
+  const user = userEvent.setup();
+  render(f.element());
+  await fillDraft(user, f.credit.id, f.credit.id);
+  await user.click(screen.getByRole("button", { name: "Post journal" }));
+  expect(await screen.findByRole("alert")).toHaveProperty(
+    "textContent",
+    expect.stringContaining("Choose two different accounts"),
+  );
+  await user.selectOptions(screen.getByRole("combobox", { name: "Debit account" }), f.debit.id);
+  expect(screen.queryByRole("alert")).toBeNull();
+  expect((screen.getByLabelText("Amount (AUD)") as HTMLInputElement).valueAsNumber).toBe(15.5);
+  expect(f.fixture.procedures.accounting.postManualJournal).not.toHaveBeenCalled();
+});
