@@ -1,0 +1,94 @@
+{
+  "syntheticOnly": true,
+  "retries": 0,
+  "before": {
+    "passed": 1,
+    "failed": 0,
+    "seconds": 12.0,
+    "records": 8,
+    "draft": 4,
+    "issued": 4
+  },
+  "firstAfterAttempt": {
+    "passed": 0,
+    "failed": 1,
+    "seconds": 22.9,
+    "retained": "attempt-1-after/result.json"
+  },
+  "correctedAfter": {
+    "passed": 1,
+    "failed": 0,
+    "seconds": 12.7,
+    "recordCounts": {
+      "draft": 4,
+      "issued": 4
+    },
+    "viewports": [
+      [
+        1440,
+        1100
+      ],
+      [
+        390,
+        900
+      ],
+      [
+        320,
+        900
+      ]
+    ],
+    "verified": [
+      "solid forest selected filter",
+      "eight rows within viewport",
+      "56.5\u201357 px actual rows",
+      "editor absent from list",
+      "filter and row focus restored on Back",
+      "Keep editing retains changes",
+      "explicit discard writes nothing",
+      "Issued filter returns four records",
+      "clear restores search focus",
+      "reduced motion",
+      "named keyboard region scrolls horizontally",
+      "document fits available width"
+    ],
+    "pageErrors": 0,
+    "consoleErrors": 0
+  },
+  "financialRegression": {
+    "passed": 1,
+    "failed": 0,
+    "seconds": 12.2,
+    "invoiceTotalMinor": 132000,
+    "receivedMinor": 50000,
+    "outstandingMinor": 82000,
+    "verified": [
+      "invalid price preserves input",
+      "double save creates one version",
+      "explicit issue/cancel",
+      "issued fields immutable",
+      "payment cancellation writes nothing",
+      "repeated receipt creates one payment",
+      "PDF cancel and private file export",
+      "back/forward",
+      "narrow amount access"
+    ],
+    "initialFullJourneySeconds": 11.0,
+    "retainedCiChecks": [
+      "forest selected filter",
+      "saved-invoice keyboard scrolling at 390px and 320px"
+    ]
+  },
+  "focusedTests": {
+    "passed": 75,
+    "failed": 0,
+    "files": 9
+  },
+  "typecheck": "passed",
+  "lint": {
+    "errors": 0,
+    "warnings": 135,
+    "infos": 2
+  },
+  "fullSuiteRerun": false,
+  "sbrDiagnostic": "paused as requested; original local startup failure retained"
+}

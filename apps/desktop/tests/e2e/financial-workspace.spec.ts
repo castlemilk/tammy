@@ -161,6 +161,11 @@ test.describe("Soft Precision financial workspace", () => {
       await expect(
         page.getByRole("button", { name: "Open INV-UI-001", exact: true }),
       ).toBeVisible();
+      await expect(
+        page
+          .getByRole("group", { name: "Invoice status", exact: true })
+          .getByRole("button", { name: /^All/ }),
+      ).toHaveCSS("background-color", "rgb(35, 92, 75)");
       await expect
         .poll(() => search.evaluate((input) => getComputedStyle(input).outlineStyle))
         .toBe("solid");
@@ -185,6 +190,18 @@ test.describe("Soft Precision financial workspace", () => {
         .toBe(true);
       await page.locator("h1").scrollIntoViewIfNeeded();
       await capture(page, `11-invoices-${width}`);
+      const savedScroll = page.getByRole("region", {
+        name: "Scrollable saved invoices",
+        exact: true,
+      });
+      await savedScroll.evaluate((element) => {
+        element.scrollLeft = 0;
+      });
+      await savedScroll.focus();
+      await page.keyboard.press("ArrowRight");
+      await expect
+        .poll(() => savedScroll.evaluate((element) => element.scrollLeft))
+        .toBeGreaterThan(0);
       await page.getByRole("button", { name: "Open INV-UI-001", exact: true }).click();
       await page
         .getByRole("table", { name: "Invoice line items", exact: true })

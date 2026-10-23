@@ -38,3 +38,19 @@ wide/filtered/overflow screenshots are retained in attempt-1-after. Pixel review
 also finds the solid selected-filter rule overridden by utilities. The corrections
 constrain that wrapper and add a solid variant to the canonical WorkFilters owner;
 no deadline/assertion is relaxed. A new clean package is required to validate them.
+
+
+The corrected clean package at 08802fca passes seven applicable integrity checks.
+Its reference capture passes 1/1 (12.7s) with the same fixtures/viewport, forest
+selection, measured 56.5–57px rows, all eight visible records, filter/back/discard
+focus recovery and real keyboard scrolling at 390/320px. Pixel review verifies
+the flatter compact list, forest primary/branding, separated columns and dedicated
+editor path. A separate complete financial journey passes 1/1 (12.2s), preserving
+$1,320 total / $500 receipt / $820 outstanding, cancellation, repeated actions,
+immutable issue, private PDF export and back/forward. The final focused block
+passes 75 tests in nine files, TypeScript and lint (existing warnings only).
+
+[Reviewable comparison and provenance](../../output/playwright/soft-precision-fidelity-2026-10-23/README.md)
+include real before/after and the clearly labelled concept. This is list-level
+fidelity validation; editor/detail and other screens are not declared visually
+accepted. All 128 earlier screenshots and 55 archived files are preserved.
