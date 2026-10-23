@@ -7,6 +7,10 @@ import { setupAndRunCurrentAccountingWorkflow } from "./support/current-accounti
 import { readInvoiceAccounting } from "./support/invoice-income-workflow";
 
 const phase = process.env.TAMMY_FINANCIAL_UI_CAPTURE;
+const referencePhase = process.env.TAMMY_INVOICE_REFERENCE_CAPTURE;
+if (referencePhase !== undefined && referencePhase !== "before" && referencePhase !== "after") {
+  throw new Error("INVOICE_REFERENCE_CAPTURE_PHASE_INVALID");
+}
 if (phase !== undefined && phase !== "before" && phase !== "after" && phase !== "integration") {
   throw new Error("FINANCIAL_UI_CAPTURE_PHASE_INVALID");
 }
@@ -28,7 +32,14 @@ test.describe("Soft Precision financial workspace", () => {
     await page.getByRole("link", { name: "Invoices", exact: true }).click();
     await expect(page.getByRole("heading", { name: "Invoices", exact: true })).toBeVisible();
     await expect(page.getByText("No saved invoices yet.", { exact: true })).toBeVisible();
+    if (referencePhase) {
+      await captureReferenceList(page);
+      expect(electronHarness.consoleErrors).toEqual([]);
+      expect(electronHarness.pageErrors).toEqual([]);
+      return;
+    }
     await capture(page, "01-new-invoice");
+    await page.getByRole("button", { name: "New invoice", exact: true }).click();
 
     await page.getByLabel("Invoice number", { exact: true }).fill("INV-UI-001");
     await page.getByLabel("Issue date", { exact: true }).fill("2026-09-30");
@@ -66,8 +77,9 @@ test.describe("Soft Precision financial workspace", () => {
     await expect(page.getByRole("textbox", { name: /^Notes/ })).toHaveValue(
       "Unsaved synthetic note",
     );
-    await page.getByRole("button", { name: "Open INV-UI-001", exact: true }).click();
+    await page.getByRole("button", { name: "Back to invoices", exact: true }).click();
     await page.getByRole("button", { name: "Discard changes and continue", exact: true }).click();
+    await page.getByRole("button", { name: "Open INV-UI-001", exact: true }).click();
     await expect(page.getByRole("textbox", { name: /^Notes/ })).toHaveValue("");
 
     await page.getByRole("button", { name: "Manage invoice template", exact: true }).click();
@@ -133,11 +145,13 @@ test.describe("Soft Precision financial workspace", () => {
     await page.goBack();
     await expect(page.getByRole("heading", { name: "Overview", exact: true })).toBeVisible();
     await page.goForward();
+    await page.getByRole("button", { name: "Back to invoices", exact: true }).click();
     await page.getByRole("button", { name: "Open INV-UI-001", exact: true }).click();
     await expect(page.getByTestId("invoice-outstanding")).toContainText("$820.00");
     await expect(page.getByLabel("Customer name", { exact: true })).toBeDisabled();
 
     if (phase !== "before") {
+      await page.getByRole("button", { name: "Back to invoices", exact: true }).click();
       const search = page.getByLabel("Search saved invoices", { exact: true });
       await search.fill("no-match-synthetic");
       await expect(page.getByText("No matching invoices", { exact: true })).toBeVisible();
@@ -151,6 +165,7 @@ test.describe("Soft Precision financial workspace", () => {
         .poll(() => search.evaluate((input) => getComputedStyle(input).outlineStyle))
         .toBe("solid");
       await capture(page, "10-keyboard-focus");
+      await page.getByRole("button", { name: "Open INV-UI-001", exact: true }).click();
       await expect(page.getByRole("textbox", { name: /^Notes/ })).toHaveCSS("resize", "none");
       await expect(page.getByRole("textbox", { name: /^Notes/ })).toHaveCSS(
         "field-sizing",
@@ -164,11 +179,13 @@ test.describe("Soft Precision financial workspace", () => {
     );
     for (const width of [390, 320]) {
       await page.setViewportSize({ width, height: 900 });
+      await page.getByRole("button", { name: "Back to invoices", exact: true }).click();
       await expect
         .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth))
         .toBe(true);
-      await page.getByRole("heading", { name: "Invoices", exact: true }).scrollIntoViewIfNeeded();
+      await page.locator("h1").scrollIntoViewIfNeeded();
       await capture(page, `11-invoices-${width}`);
+      await page.getByRole("button", { name: "Open INV-UI-001", exact: true }).click();
       await page
         .getByRole("table", { name: "Invoice line items", exact: true })
         .scrollIntoViewIfNeeded();
@@ -205,11 +222,127 @@ test.describe("Soft Precision financial workspace", () => {
   });
 });
 
+async function captureReferenceList(page: Page) {
+  const customers = [
+    "Grove Design",
+    "Wattle Studio",
+    "Bower Co",
+    "Elm & Oak",
+    "Kin Studio",
+    "Maple House",
+    "Larkin & Co",
+    "Field Notes",
+  ];
+  const prices = [400, 1200, 600, 900, 500, 2000, 700, 350];
+  for (const [index, customer] of customers.entries()) {
+    if (index > 0 || !(await page.getByLabel("Invoice number", { exact: true }).isVisible())) {
+      await page.getByRole("button", { name: "New invoice", exact: true }).click();
+    }
+    await page.getByLabel("Invoice number", { exact: true }).fill(`INV-SYN-${1043 - index}`);
+    await page.getByLabel("Issue date", { exact: true }).fill("2026-09-30");
+    await page
+      .getByLabel("Due date", { exact: true })
+      .fill(`2026-10-${String(21 - index).padStart(2, "0")}`);
+    await page.getByLabel("Customer name", { exact: true }).fill(customer);
+    await page
+      .getByLabel("Customer address", { exact: true })
+      .fill("1 Example Lane — synthetic fixture");
+    await page
+      .getByLabel("Seller address", { exact: true })
+      .fill("2 Example Road — synthetic fixture");
+    await page.getByLabel("Registered for GST", { exact: true }).check();
+    await page.getByLabel("Description 1", { exact: true }).fill("Synthetic design services");
+    await page.getByLabel("Quantity 1", { exact: true }).fill("1");
+    await page.getByLabel("Unit price 1", { exact: true }).fill(String(prices[index]));
+    await page.getByLabel("GST treatment 1", { exact: true }).selectOption("taxable");
+    await page.getByRole("button", { name: "Save draft", exact: true }).click();
+    await expect(page.getByText("Draft saved.", { exact: true })).toBeVisible();
+    if (index % 2 === 0) {
+      await page.getByRole("button", { name: "Issue invoice", exact: true }).click();
+      await page.getByRole("button", { name: "Confirm issue", exact: true }).click();
+      await expect(page.getByText("Invoice issued.", { exact: true })).toBeVisible();
+    }
+  }
+  const back = page.getByRole("button", { name: "Back to invoices", exact: true });
+  if (await back.isVisible()) await back.click();
+  await page.getByRole("heading", { name: "Invoices", exact: true }).scrollIntoViewIfNeeded();
+  await expect(
+    page.getByRole("table", { name: "Saved invoices", exact: true }).getByRole("row"),
+  ).toHaveCount(9);
+  const directory = path.resolve(
+    import.meta.dirname,
+    "../../../../output/playwright/soft-precision-fidelity-2026-10-23",
+    referencePhase as string,
+  );
+  await mkdir(directory, { recursive: true });
+  await writeFile(
+    path.join(directory, "01-invoice-list-1440.png"),
+    await page.screenshot({ animations: "disabled" }),
+    { flag: "wx" },
+  );
+  if (referencePhase === "after") {
+    await expect(page.getByRole("button", { name: "Save draft", exact: true })).toHaveCount(0);
+    const search = page.getByLabel("Search saved invoices", { exact: true });
+    await search.fill("Wattle");
+    await page.getByRole("button", { name: "Open INV-SYN-1042", exact: true }).click();
+    await page.getByLabel("Customer name", { exact: true }).fill("Unsaved synthetic customer");
+    await page.getByRole("button", { name: "Back to invoices", exact: true }).click();
+    await page.getByRole("button", { name: "Keep editing", exact: true }).click();
+    await expect(page.getByLabel("Customer name", { exact: true })).toHaveValue(
+      "Unsaved synthetic customer",
+    );
+    await page.getByRole("button", { name: "Back to invoices", exact: true }).click();
+    await page.getByRole("button", { name: "Discard changes and continue", exact: true }).click();
+    await expect(search).toHaveValue("Wattle");
+    await expect(
+      page.getByRole("button", { name: "Open INV-SYN-1042", exact: true }),
+    ).toBeFocused();
+    await writeFile(
+      path.join(directory, "02-filtered-return-1440.png"),
+      await page.screenshot({ animations: "disabled" }),
+      { flag: "wx" },
+    );
+    await page.getByRole("button", { name: "Clear invoice search", exact: true }).click();
+    await expect(search).toBeFocused();
+    await page
+      .getByRole("group", { name: "Invoice status", exact: true })
+      .getByRole("button", { name: /^Issued/ })
+      .click();
+    await expect(
+      page.getByRole("table", { name: "Saved invoices", exact: true }).getByRole("row"),
+    ).toHaveCount(5);
+    await page
+      .getByRole("group", { name: "Invoice status", exact: true })
+      .getByRole("button", { name: /^All/ })
+      .click();
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    for (const width of [390, 320]) {
+      await page.setViewportSize({ width, height: 900 });
+      const region = page.getByRole("region", { name: "Scrollable saved invoices", exact: true });
+      await region.focus();
+      await page.keyboard.press("ArrowRight");
+      await expect.poll(() => region.evaluate((node) => node.scrollLeft)).toBeGreaterThan(0);
+      await expect
+        .poll(() =>
+          page.evaluate(
+            () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+          ),
+        )
+        .toBe(true);
+      await writeFile(
+        path.join(directory, `03-invoice-list-${width}.png`),
+        await page.screenshot({ animations: "disabled" }),
+        { flag: "wx" },
+      );
+    }
+  }
+}
+
 async function capture(page: Page, name: string) {
   if (!phase) return;
-  await expect(page.getByRole("heading", { name: "Invoices", exact: true })).toBeAttached();
+  await expect(page.locator("h1")).toBeAttached();
   if (/^0[1239]|^10/.test(name)) {
-    await page.getByRole("heading", { name: "Invoices", exact: true }).scrollIntoViewIfNeeded();
+    await page.locator("h1").scrollIntoViewIfNeeded();
   } else if (name.startsWith("04")) {
     await page.getByLabel("Template seller address", { exact: true }).scrollIntoViewIfNeeded();
   } else if (name.startsWith("05")) {

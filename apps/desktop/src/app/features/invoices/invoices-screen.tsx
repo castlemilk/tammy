@@ -6,7 +6,7 @@ import {
   validateInvoiceForIssue,
 } from "@tammy/invoices/model";
 import { assertInvoicePdfReady } from "@tammy/invoices/pdf-policy";
-import { Download, Plus } from "lucide-react";
+import { ArrowLeft, Download, Plus } from "lucide-react";
 import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { normalizeAbnInput } from "../../../shared/abn";
 import type {
@@ -72,6 +72,7 @@ type Replacement = {
   readonly editor: EditorDraft;
   readonly record?: InvoiceRecord;
   readonly logoAssetId?: string;
+  readonly awaitTemplate?: boolean;
 };
 
 const fieldClass = invoiceFieldClass;
@@ -101,6 +102,15 @@ export function InvoicesScreen({ api }: { readonly api: InvoicesApi }) {
   const [markup, setMarkup] = useState("0");
   const [replacement, setReplacement] = useState<Replacement>();
   const [confirmIssue, setConfirmIssue] = useState(false);
+  const [showEditor, setShowEditor] = useState(false);
+  const [returnToList, setReturnToList] = useState(false);
+  const [accountingBusy, setAccountingBusy] = useState(false);
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+  const newButtonRef = useRef<HTMLButtonElement>(null);
+  const confirmationRef = useRef<HTMLButtonElement>(null);
+  const confirmationOrigin = useRef<HTMLElement | null>(null);
+  const wasEditing = useRef(false);
   const dirty = snapshot(editor, logoAssetId) !== baseline;
   const issued = current?.state === "issued";
   const fullyCosted = editor.lines.every((line) => line.unitCost.trim().length > 0);
@@ -122,6 +132,21 @@ export function InvoicesScreen({ api }: { readonly api: InvoicesApi }) {
   useEffect(() => {
     if (error) errorRef.current?.focus();
   }, [error]);
+
+  useEffect(() => {
+    if (replacement || returnToList) confirmationRef.current?.focus();
+  }, [replacement, returnToList]);
+
+  useEffect(() => {
+    if (showEditor) headingRef.current?.focus();
+    else if (wasEditing.current) {
+      const opener = Array.from(
+        listRef.current?.querySelectorAll<HTMLButtonElement>("[data-invoice-id]") ?? [],
+      ).find((button) => button.dataset.invoiceId === current?.id);
+      (opener ?? newButtonRef.current)?.focus();
+    }
+    wasEditing.current = showEditor;
+  }, [showEditor, current?.id]);
 
   useEffect(() => {
     let active = true;
@@ -217,7 +242,9 @@ export function InvoicesScreen({ api }: { readonly api: InvoicesApi }) {
   }
 
   function replace(next: Replacement) {
-    untouchedInitialDraft.current = false;
+    setShowEditor(true);
+    setReturnToList(false);
+    untouchedInitialDraft.current = Boolean(next.awaitTemplate);
     setEditor(next.editor);
     setLogoAssetId(next.logoAssetId ?? next.record?.logoAssetId);
     setCurrent(next.record);
@@ -230,8 +257,36 @@ export function InvoicesScreen({ api }: { readonly api: InvoicesApi }) {
   }
 
   function requestReplacement(next: Replacement) {
-    if (dirty) setReplacement(next);
-    else replace(next);
+    if (dirty) {
+      confirmationOrigin.current =
+        document.activeElement instanceof HTMLElement ? document.activeElement : null;
+      setReplacement(next);
+    } else replace(next);
+  }
+
+  function backToList() {
+    if (busy || accountingBusy) return;
+    if (dirty) {
+      confirmationOrigin.current =
+        document.activeElement instanceof HTMLElement ? document.activeElement : null;
+      setReturnToList(true);
+    } else {
+      setShowEditor(false);
+      setNotice(undefined);
+      setError(undefined);
+      setConfirmIssue(false);
+    }
+  }
+
+  function discardAndContinue() {
+    if (returnToList) {
+      replace({
+        editor: current ? toEditor(current.draft) : newEditor(),
+        ...(current ? { record: current } : {}),
+      });
+      setShowEditor(false);
+      setNotice(undefined);
+    } else if (replacement) replace(replacement);
   }
 
   async function loadProposal() {
@@ -397,26 +452,47 @@ export function InvoicesScreen({ api }: { readonly api: InvoicesApi }) {
 
   return (
     <div className="mx-auto grid w-full min-w-0 max-w-[1120px] gap-6">
+      {showEditor ? (
+        <Button
+          className="justify-self-start px-0"
+          disabled={busy || accountingBusy}
+          onClick={backToList}
+          type="button"
+          variant="ghost"
+        >
+          <ArrowLeft aria-hidden="true" className="size-4" /> Back to invoices
+        </Button>
+      ) : null}
       <ScreenHeading
         area="Sales · Invoices"
-        title="Invoices"
-        description="Bring your work into a clear invoice. Review the details, issue it, then record receipts as they arrive."
+        variant="workspace"
+        headingRef={headingRef}
+        title={showEditor ? current?.draft.number || "New invoice" : "Invoices"}
+        description={
+          showEditor
+            ? issued
+              ? "Issued invoice · read only. Record actual receipts separately."
+              : "Review the details and save your draft before issuing."
+            : "Create, view and manage your invoices."
+        }
         action={
           <div className="flex flex-wrap gap-2">
             <Button
               className="h-11 text-[13px]"
-              disabled={busy}
+              disabled={busy || accountingBusy}
               onClick={loadProposal}
               type="button"
-              variant="outline"
+              variant="ghost"
             >
               Use MCP draft
             </Button>
             <Button
               className="h-11 text-[13px]"
-              disabled={busy}
+              disabled={busy || accountingBusy}
+              ref={newButtonRef}
               onClick={() =>
                 requestReplacement({
+                  awaitTemplate: templateLoading && !templateError,
                   editor: template
                     ? applyInvoiceTemplate(newEditor(), template.defaults)
                     : newEditor(),
@@ -426,7 +502,6 @@ export function InvoicesScreen({ api }: { readonly api: InvoicesApi }) {
                 })
               }
               type="button"
-              variant="outline"
             >
               <Plus aria-hidden="true" className="size-4" /> New invoice
             </Button>
@@ -434,7 +509,7 @@ export function InvoicesScreen({ api }: { readonly api: InvoicesApi }) {
         }
       />
 
-      {replacement ? (
+      {replacement || returnToList ? (
         <div
           className="work-surface flex flex-wrap items-center gap-4 p-4 text-[14px]"
           role="alert"
@@ -442,10 +517,19 @@ export function InvoicesScreen({ api }: { readonly api: InvoicesApi }) {
           <p className="mr-auto">
             Replace unsaved changes? Your current edits have not been saved.
           </p>
-          <Button onClick={() => setReplacement(undefined)} type="button" variant="outline">
+          <Button
+            ref={confirmationRef}
+            onClick={() => {
+              setReplacement(undefined);
+              setReturnToList(false);
+              confirmationOrigin.current?.focus();
+            }}
+            type="button"
+            variant="outline"
+          >
             Keep editing
           </Button>
-          <Button onClick={() => replace(replacement)} type="button">
+          <Button onClick={discardAndContinue} type="button">
             Discard changes and continue
           </Button>
         </div>
@@ -457,20 +541,23 @@ export function InvoicesScreen({ api }: { readonly api: InvoicesApi }) {
       ) : null}
       {notice ? <WorkNotice success>{notice}</WorkNotice> : null}
 
-      <InvoiceRecordList
-        records={records}
-        currentId={current?.id}
-        loading={loading}
-        error={recordsError}
-        busy={busy}
-        onRefresh={refresh}
-        onOpen={(record) => requestReplacement({ editor: toEditor(record.draft), record })}
-      />
-      <div className="grid min-w-0 gap-6">
+      <div hidden={showEditor} ref={listRef}>
+        <InvoiceRecordList
+          records={records}
+          currentId={current?.id}
+          loading={loading}
+          error={recordsError}
+          busy={busy}
+          onRefresh={refresh}
+          onOpen={(record) => requestReplacement({ editor: toEditor(record.draft), record })}
+        />
+      </div>
+      <div className={showEditor ? "grid min-w-0 gap-6" : "hidden"} hidden={!showEditor}>
         <div className="grid min-w-0 content-start gap-5">
           {issued && current && api.accounting && totals ? (
             <InvoiceAccountingPanel
               api={api.accounting}
+              onBusyChange={setAccountingBusy}
               gstMinor={totals.gstMinor}
               incomeMinor={totals.subtotalMinor}
               invoiceId={current.id}

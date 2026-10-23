@@ -1,5 +1,5 @@
 import { calculateInvoice, formatAud } from "@tammy/invoices/model";
-import { ArrowRight, ChevronLeft, ChevronRight, RefreshCw } from "lucide-react";
+import { ChevronLeft, ChevronRight, RefreshCw } from "lucide-react";
 import { useRef, useState } from "react";
 import { HorizontalScrollArea } from "../../components/horizontal-scroll-area";
 import { WorkFilters, WorkNotice, WorkSearch, WorkState } from "../../components/review-workspace";
@@ -51,65 +51,60 @@ export function InvoiceRecordList({
   }
 
   return (
-    <section
-      className="work-surface min-w-0 overflow-hidden"
-      aria-label="Saved invoices"
-      aria-busy={loading}
-    >
-      <div className="flex flex-wrap items-start justify-between gap-4 px-5 py-5 sm:px-6">
-        <div>
-          <h2 className="text-[16px] font-semibold">Saved invoices</h2>
-          <p className="mt-1 text-[13px] leading-5 text-muted-foreground">
-            Revisit a draft or open an issued invoice to review receipts.
-          </p>
-        </div>
-        <Button disabled={busy || loading} onClick={onRefresh} type="button" variant="ghost">
-          <RefreshCw aria-hidden="true" className="size-4" />
-          <span>Refresh saved invoices</span>
-        </Button>
-      </div>
+    <section className="invoice-index min-w-0" aria-label="Saved invoices" aria-busy={loading}>
       {error ? (
-        <div className="px-5 pb-4 sm:px-6">
+        <div className="pb-4">
           <WorkNotice>{error}</WorkNotice>
         </div>
       ) : null}
       {records.length ? (
-        <div className="flex flex-wrap items-center gap-3 border-y border-border px-5 py-3 sm:px-6">
-          <WorkFilters<Filter>
-            label="Invoice status"
-            onChange={(value) => {
-              setFilter(value);
-              setPage(0);
-            }}
-            options={[
-              { value: "all", label: "All invoices", count: records.length },
-              {
-                value: "draft",
-                label: "Draft",
-                count: records.filter((r) => r.state === "draft").length,
-              },
-              {
-                value: "issued",
-                label: "Issued",
-                count: records.filter((r) => r.state === "issued").length,
-              },
-            ]}
-            value={filter}
-          />
-          <div className="flex min-w-0 flex-1 items-center gap-2 sm:min-w-[260px]">
-            <WorkSearch
-              clearLabel="Clear invoice search"
-              inputRef={searchRef}
-              label="Search saved invoices"
+        <div className="grid gap-3 pb-5">
+          <div className="invoice-status-filters">
+            <WorkFilters<Filter>
+              label="Invoice status"
               onChange={(value) => {
-                setSearch(value);
+                setFilter(value);
                 setPage(0);
               }}
-              value={search}
+              options={[
+                { value: "all", label: "All", count: records.length },
+                {
+                  value: "draft",
+                  label: "Draft",
+                  count: records.filter((r) => r.state === "draft").length,
+                },
+                {
+                  value: "issued",
+                  label: "Issued",
+                  count: records.filter((r) => r.state === "issued").length,
+                },
+              ]}
+              value={filter}
             />
           </div>
+          <div className="flex min-w-0 flex-wrap items-center gap-3">
+            <div className="min-w-0 flex-1 basis-full min-[700px]:max-w-[560px] min-[700px]:basis-auto">
+              <WorkSearch
+                clearLabel="Clear invoice search"
+                inputRef={searchRef}
+                label="Search saved invoices"
+                onChange={(value) => {
+                  setSearch(value);
+                  setPage(0);
+                }}
+                value={search}
+              />
+            </div>
+            <Button disabled={busy || loading} onClick={onRefresh} type="button" variant="outline">
+              <RefreshCw aria-hidden="true" className="size-4" /> Refresh saved invoices
+            </Button>
+          </div>
         </div>
-      ) : null}
+      ) : (
+        <Button disabled={busy || loading} onClick={onRefresh} type="button" variant="ghost">
+          <RefreshCw aria-hidden="true" className="size-4" /> Refresh saved invoices
+        </Button>
+      )}
       {loading ? (
         <WorkState
           loading
@@ -124,7 +119,7 @@ export function InvoiceRecordList({
       ) : !records.length ? (
         <WorkState
           title="No saved invoices yet."
-          description="Start with the draft below. Your saved invoice will appear here, ready to revisit."
+          description="Choose New invoice to start a draft. Saved invoices will appear here."
         />
       ) : !filtered.length ? (
         <WorkState
@@ -147,18 +142,18 @@ export function InvoiceRecordList({
         <>
           <HorizontalScrollArea label="Scrollable saved invoices">
             <table
-              className="work-table min-w-[850px] text-[14px] [&_th]:text-[12px]"
+              className="work-table invoice-index-table min-w-[760px] text-[14px] [&_th]:text-[12px]"
               aria-label="Saved invoices"
             >
               <thead>
                 <tr>
-                  <th scope="col">Invoice / customer</th>
-                  <th scope="col">Status</th>
-                  <th scope="col">Issue date</th>
+                  <th scope="col">Number</th>
+                  <th scope="col">Customer</th>
                   <th scope="col">Due</th>
                   <th className="text-right" scope="col">
                     Invoice total · AUD
                   </th>
+                  <th scope="col">Status</th>
                   <th scope="col">
                     <span className="sr-only">Open invoice</span>
                   </th>
@@ -166,25 +161,12 @@ export function InvoiceRecordList({
               </thead>
               <tbody>
                 {visible.map((record) => (
-                  <tr
-                    className={record.id === currentId ? "bg-forest-soft/60" : ""}
-                    key={record.id}
-                  >
+                  <tr data-selected={record.id === currentId || undefined} key={record.id}>
                     <td>
-                      <span className="block font-semibold">
-                        {record.draft.number || "Unnumbered"}
-                      </span>
-                      <span className="mt-1 block text-[13px] text-muted-foreground">
-                        {record.draft.customerName || "Customer not set"}
-                      </span>
+                      <span className="font-semibold">{record.draft.number || "Unnumbered"}</span>
                     </td>
                     <td>
-                      <Badge variant={record.state === "issued" ? "offline" : "outline"}>
-                        {record.state === "issued" ? "Issued" : "Draft"}
-                      </Badge>
-                    </td>
-                    <td className="whitespace-nowrap tabular-nums">
-                      {displayDate(record.draft.issueDate)}
+                      <span>{record.draft.customerName || "Customer not set"}</span>
                     </td>
                     <td className="whitespace-nowrap tabular-nums">
                       {displayDate(record.draft.dueDate)}
@@ -193,16 +175,25 @@ export function InvoiceRecordList({
                       {invoiceTotal(record)}
                     </td>
                     <td>
+                      <Badge
+                        className="rounded-md border-transparent px-3 py-1"
+                        variant={record.state === "issued" ? "offline" : "outline"}
+                      >
+                        {record.state === "issued" ? "Issued" : "Draft"}
+                      </Badge>
+                    </td>
+                    <td>
                       <Button
                         aria-label={`Open ${record.draft.number || "unnumbered invoice"}`}
                         aria-pressed={record.id === currentId}
+                        data-invoice-id={record.id}
+                        className="size-11 p-0"
                         disabled={busy}
                         onClick={() => onOpen(record)}
                         type="button"
                         variant="ghost"
                       >
-                        {record.id === currentId ? "Open now" : "Open"}
-                        <ArrowRight aria-hidden="true" className="size-4" />
+                        <ChevronRight aria-hidden="true" className="size-4" />
                       </Button>
                     </td>
                   </tr>
@@ -210,7 +201,7 @@ export function InvoiceRecordList({
               </tbody>
             </table>
           </HorizontalScrollArea>
-          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-5 py-3 text-[13px] text-muted-foreground sm:px-6">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border py-3 text-[13px] text-muted-foreground">
             <p aria-live="polite">
               {start + 1}–{Math.min(start + pageSize, filtered.length)} of {filtered.length}{" "}
               invoices

@@ -555,7 +555,7 @@ async function createAndIssueInvoice(
 ) {
   await page.getByRole("link", { name: "Invoices", exact: true }).click();
   const invoiceNumber = page.getByLabel("Invoice number", { exact: true });
-  if (await invoiceNumber.isDisabled()) {
+  if (!(await invoiceNumber.isVisible()) || (await invoiceNumber.isDisabled())) {
     await page.getByRole("button", { name: "New invoice", exact: true }).click();
   }
   await expect(invoiceNumber).toBeEnabled();

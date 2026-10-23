@@ -1,21 +1,35 @@
-import type { ReactNode } from "react";
+import type { ReactNode, Ref } from "react";
 
 export function ScreenHeading({
   area,
   title,
   description,
   action,
+  variant = "display",
+  headingRef,
 }: {
   readonly area: string;
   readonly title: string;
   readonly description: ReactNode;
   readonly action?: ReactNode;
+  readonly variant?: "display" | "workspace";
+  readonly headingRef?: Ref<HTMLHeadingElement>;
 }) {
   return (
     <header className="flex flex-wrap items-end justify-between gap-4">
       <div className="max-w-[720px]">
-        <p className="work-eyebrow mb-2">{area}</p>
-        <h1 className="page-title">{title}</h1>
+        <p className={variant === "workspace" ? "sr-only" : "work-eyebrow mb-2"}>{area}</p>
+        <h1
+          className={
+            variant === "workspace"
+              ? "text-[26px] font-semibold leading-8 tracking-[-0.025em] outline-none"
+              : "page-title"
+          }
+          ref={headingRef}
+          tabIndex={-1}
+        >
+          {title}
+        </h1>
         <p className="mt-2 text-[14px] leading-6 text-muted-foreground">{description}</p>
       </div>
       {action ? <div className="flex flex-wrap items-center gap-2">{action}</div> : null}

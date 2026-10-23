@@ -32,6 +32,7 @@ export function InvoiceAccountingPanel({
   issueDate,
   incomeMinor,
   gstMinor,
+  onBusyChange,
 }: {
   readonly api: InvoiceAccountingApi;
   readonly invoiceId: string;
@@ -39,6 +40,7 @@ export function InvoiceAccountingPanel({
   readonly issueDate: string;
   readonly incomeMinor: number;
   readonly gstMinor: number;
+  readonly onBusyChange?: (busy: boolean) => void;
 }) {
   const [accounting, setAccounting] = useState<InvoiceAccountingRecord>();
   const [loading, setLoading] = useState(true);
@@ -57,6 +59,11 @@ export function InvoiceAccountingPanel({
     [],
   );
   const [banksLoading, setBanksLoading] = useState(false);
+
+  useEffect(() => {
+    onBusyChange?.(busy);
+    return () => onBusyChange?.(false);
+  }, [busy, onBusyChange]);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: The retry counter reloads failed accounting reads.
   useEffect(() => {

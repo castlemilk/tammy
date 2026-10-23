@@ -33,6 +33,7 @@ test("invoices/income-payments-bas: cash receipts, mixed GST and balances persis
   );
   let page = electronHarness.currentPage();
   await page.getByRole("link", { name: "Invoices", exact: true }).click();
+  await page.getByRole("button", { name: "New invoice", exact: true }).click();
   await page.getByLabel("Invoice number", { exact: true }).fill("CASH-2026-001");
   await page.getByLabel("Issue date", { exact: true }).fill("2026-09-30");
   await page.getByLabel("Due date", { exact: true }).fill("2026-10-14");

@@ -209,3 +209,26 @@ from the same generated policy content as the public site. Settings uses a conci
 summary and an in-app route to the full document. The ABN browser lookup is explicit
 and uses the official register; checksum feedback is separate from registry evidence.
 These interactions do not change financial, approval or SBR production capabilities.
+
+
+## Invoice reference fidelity — board 07 (2026-10-23)
+
+Board 07 is the canonical invoice-list composition. The list is the arrival view;
+new/edit/issued work occupies a separate view with an explicit Back to invoices
+control. Saved-record filters, search and paging remain mounted and recover focus
+on return. The editor is not stacked below the list.
+
+Working invoice headings use the shared ScreenHeading workspace variant: 26px
+semibold humanist sans with a short description and no visible eyebrow. Serif
+remains the wordmark/arrival/display face. The shared wordmark uses forest; the
+invoice workspace uses ivory paper. New invoice is forest solid. The status rail
+uses a solid forest selected control, quiet borders and actual Draft/Issued counts.
+The table separates number, customer, due date, total and status into single-line
+columns with 56px rows. It has no redundant Saved invoices card header. Selected
+records use a restrained apricot tint. The written colour tokens remain canonical;
+generated shadows/gradients and unsupported statuses are not copied.
+
+Board 02 is a creation reference, not the list target. There is no decorative art
+inside board 07's working list; none is added. Receipt balances remain in their
+verified detail view for this first fidelity block, rather than being guessed from
+invoice totals. Detail/editor composition needs its own subsequent visual review.

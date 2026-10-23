@@ -97,3 +97,15 @@ also contains eight native-validation forms and four literal test mock buttons
 flagged by that scanner. This pass resolves seven invoice textarea geometry
 findings; it preserves financial/security validation and records the remaining
 findings in the new evidence report without exclusions.
+
+
+### Invoice list/detail navigation (2026-10-23)
+
+The invoice route opens on the saved-record list. New invoice and Open explicitly
+enter the editor/detail view. Saving stays with the confirmed invoice. Back returns
+to the preserved search, status and page and restores the originating row control
+(or New invoice). Unsaved invoice edits use the existing Keep editing / Discard
+changes and continue confirmation before returning; cancellation writes nothing.
+The editor remains mounted while the list is shown. Payment mutation pending state
+disables the new back/new actions. No lifecycle statuses, financial calculations,
+receipt contracts or export/issue confirmations change.

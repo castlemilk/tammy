@@ -775,7 +775,7 @@ test("covers workspace setup, recovery, accounting, and interaction journeys thr
   ] as const) {
     await assertRoute(page, link, route, heading);
     if (route === "/invoices")
-      await expect(page.getByLabel("Invoice number", { exact: true })).toBeVisible();
+      await expect(page.getByRole("button", { name: "New invoice", exact: true })).toBeVisible();
     if (route === "/audit")
       await expect(page.getByRole("main").getByRole("list").first()).toBeVisible();
     if (route === "/settings/organisation")

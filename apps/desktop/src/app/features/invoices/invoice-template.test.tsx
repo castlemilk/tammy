@@ -109,6 +109,7 @@ async function manageTemplate() {
 
 it("loads company defaults into an untouched new invoice using calendar days", async () => {
   render(<InvoicesScreen api={fixture().api} />);
+  await userEvent.click(screen.getByRole("button", { name: "New invoice" }));
   await waitFor(() =>
     expect(screen.getByLabelText("Seller address")).toHaveProperty("value", defaults.sellerAddress),
   );
@@ -141,6 +142,7 @@ it("does not overwrite any draft edit when the template arrives late", async () 
       }}
     />,
   );
+  await userEvent.click(screen.getByRole("button", { name: "New invoice" }));
   fireEvent.change(screen.getByLabelText("Customer name"), {
     target: { value: "Current customer" },
   });
@@ -165,6 +167,7 @@ it("does not overwrite any draft edit when the template arrives late", async () 
 
 it("saves company defaults separately from current edits and uses them for subsequent invoices", async () => {
   render(<InvoicesScreen api={fixture().api} />);
+  await userEvent.click(screen.getByRole("button", { name: "New invoice" }));
   await waitFor(() =>
     expect(screen.getByLabelText("Payment instructions")).toHaveProperty(
       "value",
@@ -199,6 +202,7 @@ it("saves company defaults separately from current edits and uses them for subse
 it("preserves template entries after a conflict and reloads its version for retry", async () => {
   const { api, setTemplate } = fixture();
   render(<InvoicesScreen api={api} />);
+  await userEvent.click(screen.getByRole("button", { name: "New invoice" }));
   const panel = await manageTemplate();
   await waitFor(() =>
     expect(within(panel).getByLabelText("Default payment instructions")).toHaveProperty(
@@ -233,6 +237,7 @@ it("preserves template entries after a conflict and reloads its version for retr
 it("rejects unsupported and oversized logo files before uploading", async () => {
   const { api, calls } = fixture();
   render(<InvoicesScreen api={api} />);
+  await userEvent.click(screen.getByRole("button", { name: "New invoice" }));
   const panel = await manageTemplate();
   const input = within(panel).getByLabelText("Company logo");
   fireEvent.change(input, {
@@ -255,6 +260,7 @@ it("rejects unsupported and oversized logo files before uploading", async () => 
 it("uploads a valid logo and explicitly clears its draft metadata when removed from the template", async () => {
   const { api, calls } = fixture();
   render(<InvoicesScreen api={api} />);
+  await userEvent.click(screen.getByRole("button", { name: "New invoice" }));
   const panel = await manageTemplate();
   await within(panel).findByRole("img", { name: "Company logo preview" });
   fireEvent.change(within(panel).getByLabelText("Company logo"), {
@@ -280,6 +286,7 @@ it("uploads a valid logo and explicitly clears its draft metadata when removed f
 it("retains saved invoice branding across a restart and changing company defaults", async () => {
   const { api, calls, setTemplate } = fixture();
   const first = render(<InvoicesScreen api={api} />);
+  await userEvent.click(screen.getByRole("button", { name: "New invoice" }));
   await screen.findByRole("img", { name: "Invoice logo" });
   fireEvent.change(screen.getByLabelText("Description 1"), { target: { value: "Consulting" } });
   fireEvent.change(screen.getByLabelText("Invoice number"), { target: { value: "INV-SNAPSHOT" } });
@@ -379,6 +386,7 @@ it("retries a failed defaults load without replacing edits made before retry", a
       }}
     />,
   );
+  await userEvent.click(screen.getByRole("button", { name: "New invoice" }));
   await screen.findByText(
     "Company defaults could not be loaded. Your invoice edits are unchanged.",
   );
@@ -411,6 +419,7 @@ it("preserves template edits and original logo after a failed upload then allows
       }}
     />,
   );
+  await userEvent.click(screen.getByRole("button", { name: "New invoice" }));
   const panel = await manageTemplate();
   await within(panel).findByRole("img", { name: "Company logo preview" });
   fireEvent.change(within(panel).getByLabelText("Default notes"), {
@@ -440,6 +449,7 @@ it.each(["", "-1", "1.5", "366"])(
   "rejects invalid payment terms %j without losing entries",
   async (value) => {
     render(<InvoicesScreen api={fixture().api} />);
+    await userEvent.click(screen.getByRole("button", { name: "New invoice" }));
     const panel = await manageTemplate();
     await waitFor(() =>
       expect(within(panel).getByLabelText("Payment terms (days)")).toHaveProperty("value", "30"),
@@ -498,4 +508,27 @@ it("retries a failed logo preview", async () => {
   await userEvent.click(await screen.findByRole("button", { name: "Retry invoice logo" }));
   expect(await screen.findByRole("img", { name: "Invoice logo" })).toBeTruthy();
   expect(attempts).toBe(2);
+});
+
+it("applies late defaults to an untouched explicitly opened new invoice", async () => {
+  const { api } = fixture();
+  let resolveTemplate: ((value: Awaited<ReturnType<typeof api.getTemplate>>) => void) | undefined;
+  render(
+    <InvoicesScreen
+      api={{
+        ...api,
+        getTemplate: () =>
+          new Promise((resolve) => {
+            resolveTemplate = resolve;
+          }),
+      }}
+    />,
+  );
+  await userEvent.click(screen.getByRole("button", { name: "New invoice" }));
+  await act(async () => resolveTemplate?.(await api.getTemplate()));
+  expect(screen.getByLabelText("Seller address")).toHaveProperty("value", defaults.sellerAddress);
+  expect(screen.getByLabelText("Payment instructions")).toHaveProperty(
+    "value",
+    defaults.paymentInstructions,
+  );
 });

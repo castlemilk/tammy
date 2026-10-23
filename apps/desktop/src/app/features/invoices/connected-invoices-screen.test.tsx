@@ -259,6 +259,7 @@ it("loads and saves company defaults with organisation, authentication and optim
     },
   } as unknown as TammyConveyor;
   render(<ConnectedInvoicesScreen conveyor={conveyor} workspace={workspace} />);
+  await userEvent.click(screen.getByRole("button", { name: "New invoice" }));
   await waitFor(() => expect(calls.reads).toBe(1));
   await userEvent.click(screen.getByRole("button", { name: "Manage invoice template" }));
   const panel = screen.getByRole("region", { name: "Company invoice template" });
@@ -360,6 +361,7 @@ it("uploads local logo bytes, fetches the saved asset and explicitly removes inv
     },
   } as unknown as TammyConveyor;
   render(<ConnectedInvoicesScreen conveyor={conveyor} workspace={workspace} />);
+  await userEvent.click(screen.getByRole("button", { name: "New invoice" }));
   await userEvent.click(screen.getByRole("button", { name: "Manage invoice template" }));
   const panel = screen.getByRole("region", { name: "Company invoice template" });
   await waitFor(() =>
