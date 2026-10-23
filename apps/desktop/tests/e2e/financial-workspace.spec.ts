@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import type { Page } from "@playwright/test";
 import { expect, test } from "./fixtures";
 import { setupAndRunCurrentAccountingWorkflow } from "./support/current-accounting-workflow";
+import { documentsCapturePhase, runDocumentsReviewJourney } from "./support/documents-journey";
 import { readInvoiceAccounting } from "./support/invoice-income-workflow";
 import {
   captureLocalOverview,
@@ -42,6 +43,12 @@ test.describe("Soft Precision financial workspace", () => {
     );
     const page = electronHarness.currentPage();
     await page.setViewportSize({ width: 1440, height: 1100 });
+    if (documentsCapturePhase) {
+      await runDocumentsReviewJourney(page, workspace);
+      expect(electronHarness.consoleErrors).toEqual([]);
+      expect(electronHarness.pageErrors).toEqual([]);
+      return;
+    }
     if (overviewCapturePhase) await captureLocalOverview(page);
     await page.getByRole("link", { name: "Invoices", exact: true }).click();
     await expect(page.getByRole("heading", { name: "Invoices", exact: true })).toBeVisible();
