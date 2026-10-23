@@ -4,5 +4,5 @@
   "sha256": "ee6f472b6d047fc4e2f997f9c04421c29d7b06565c04c879b456ab7e983a1a66",
   "bufVersion": "1.72.0",
   "module": "buf.build/tammyapp/tammy",
-  "gitRevision": "4b41427bfe39075dbe334a99381318531d1f4e32"
+  "gitRevision": "3f1524a3436e05ee82618b1c1a58d1c8c45efd6d"
 }
