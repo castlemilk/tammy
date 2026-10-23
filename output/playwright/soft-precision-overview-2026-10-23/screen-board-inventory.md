@@ -22,7 +22,8 @@ implementation evidence. Board references are pinned to
 | SBR readiness | Local registration checks and supported deterministic simulator/readiness controls | 14, shared states 03/13 | Functional work and qualification have a separate active owner. Not an official ATO approval or production submission surface. |
 | Privacy and support | Complete in-app policy content and navigation | No matching dedicated board; shared typography 03 | Earlier readable captures exist. In-app source is not proof of publication of expanded public-site policies. |
 
-The 12 authenticated accounting/settings families above exclude entry/privacy.
+The 12 authenticated accounting/settings routes above are grouped into 11 families
+and exclude entry/privacy; Settings and Organisation share one family here.
 Subpanels such as company templates and purchase payments belong to their parent
 screen family; they are not silently counted as standalone navigation screens.
 

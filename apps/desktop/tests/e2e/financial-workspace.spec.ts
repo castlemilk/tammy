@@ -264,6 +264,8 @@ test.describe("Soft Precision financial workspace", () => {
     ).toHaveLength(0);
     await page.getByRole("button", { name: "Record payment", exact: true }).click();
     await page.getByLabel("Amount received (AUD)", { exact: true }).fill("500.00");
+    if (overviewCapturePhase || (!phase && !detailPhase && !draftPhase && !referencePhase))
+      await page.getByLabel("Payment date", { exact: true }).fill("2026-09-30");
     await page.getByRole("button", { name: "Save payment", exact: true }).dblclick();
     await expect(page.getByText("Payment recorded.", { exact: true })).toBeVisible();
     const paid = await readInvoiceAccounting(page, workspace, "INV-UI-001");

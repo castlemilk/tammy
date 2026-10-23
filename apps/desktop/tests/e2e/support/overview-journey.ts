@@ -23,6 +23,11 @@ export async function captureLocalOverview(page: Page) {
 export async function runOverviewReviewJourney(page: Page, harness: ElectronHarness) {
   await page.getByRole("link", { name: "Overview", exact: true }).click();
   await page.setViewportSize({ width: 1440, height: 1100 });
+  // The existing workspace renderer clock is May 2024; this invoice fixture is Sep 2026.
+  // Select its actual reporting window rather than changing application calculations.
+  await page.getByLabel("Income period start", { exact: true }).fill("2026-07-01");
+  await page.getByLabel("Income period end", { exact: true }).fill("2026-09-30");
+  await page.getByLabel("Balances as of", { exact: true }).fill("2026-09-30");
   await expect(page.getByTestId("business-invoice-income")).toContainText("$1,200.00");
   await expect(page.getByTestId("business-payments-received")).toContainText("$500.00");
   await expect(page.getByTestId("business-outstanding")).toContainText("$820.00");
