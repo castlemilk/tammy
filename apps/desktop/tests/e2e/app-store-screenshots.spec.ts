@@ -61,7 +61,7 @@ test("captures one serial five-image real packaged UI journey", async ({ electro
   await mkdir(contract.captureDirectory, { mode: 0o700 });
 
   const targets = [
-    { heading: "Overview", link: "Overview", ready: "Nothing needs review" },
+    { heading: "Overview", link: "Overview", ready: "No additional review items" },
     {
       heading: "Documents",
       link: "Documents",

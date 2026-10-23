@@ -1261,7 +1261,7 @@ test("runs invoice, purchase, and BAS workflows through the packaged app", async
   );
   await mkdir(incomeEvidenceDirectory, { recursive: true });
   const targets = [
-    { heading: "Overview", link: "Overview", ready: "Nothing needs review" },
+    { heading: "Overview", link: "Overview", ready: "No additional review items" },
     {
       heading: "Documents",
       link: "Documents",
@@ -1321,16 +1321,26 @@ test("runs invoice, purchase, and BAS workflows through the packaged app", async
       contentType: "image/png",
     });
     switch (target.heading) {
-      case "Overview":
+      case "Overview": {
+        const attention = page.getByRole("region", { name: "Local attention", exact: true });
         await expect(
           page.getByRole("heading", { name: "Needs review", exact: true }),
         ).toBeVisible();
-        await expect(page.getByText("Nothing needs review", { exact: true })).toBeVisible();
         await expect(
-          page.getByText("Your retained local workflows are up to date.", { exact: true }),
+          attention.getByText("No additional review items", { exact: true }),
+        ).toBeVisible();
+        await expect(
+          attention.getByText(
+            "Document and bank counts are shown above. Check the separate BAS status before continuing.",
+            { exact: true },
+          ),
+        ).toBeVisible();
+        await expect(
+          attention.getByText("Action needed · review this exact BAS preparation", { exact: true }),
         ).toBeVisible();
         await expect(page.getByText("1 reviewed this quarter", { exact: true })).toBeVisible();
         break;
+      }
       case "Documents": {
         const retainedDocuments = page.getByRole("table", {
           name: "Retained documents",
