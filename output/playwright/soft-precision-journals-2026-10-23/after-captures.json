@@ -1,0 +1,112 @@
+{
+  "schemaVersion": 1,
+  "phase": "after",
+  "runtime": {
+    "sourceRevision": "ffc2fdaa7e8a74092d78025107df4a620516c369",
+    "sourceDirty": false,
+    "releaseKind": "ordinary-package",
+    "target": "darwin-arm64",
+    "appSha256": "3c845022c1149b26180f2adf325fb9d32fdb798687b06f77944482d8a448e799",
+    "coreSha256": "078811e551eb5cd0c5f505e3282d82bc8f50be578c12a9d92e7bafb70d67562c",
+    "helperSha256": "8dbfb2b0708d1c61ebc07cd8c8b5ee6a626d73dad490b90667b3794d61edb201",
+    "manifestSha256": "6b879922676625116022a514fc2c5abf1ec90f7889ed8207b2430bda2fdb839a"
+  },
+  "harnessSourceRevision": "ffc2fdaa7e8a74092d78025107df4a620516c369",
+  "harnessSha256": "c2c18c688c3f815e99790614ee62b6e0f887309c12ac83542672e7adbe94389a",
+  "nativeSeconds": 11.3,
+  "runnerSeconds": 12.1,
+  "connectedSeconds": 15.1,
+  "connectedRunnerSeconds": 15.8,
+  "originalWorkflowSeconds": 13.3,
+  "originalWorkflowRunnerSeconds": 14.1,
+  "retries": 0,
+  "pageErrors": 0,
+  "consoleErrors": 0,
+  "measurements": "after/measurements-1440.json",
+  "frames": [
+    {
+      "file": "after/01-initial-list.png",
+      "sha256": "076ffe8d4ba5f37c6ee9c68e752e126d788528325a03b29d41beedc87476ab4c",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "file": "after/02-loaded-history.png",
+      "sha256": "e2b2ebdd0a084a61880faf7a7f1593134b7efa3b3b092fe2322dc174edd57081",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "file": "after/03-entry-review.png",
+      "sha256": "e7d632440ae7e66b9b77b9263480dd4e389163c17ef73e8afea68f8df9c2094a",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "file": "after/04-invalid-accounts.png",
+      "sha256": "445e8f34a12cc6a192373b24282313d7b4b05028e8bbc3632af747e03e8cfa29",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "file": "after/05-entry-focus-320.png",
+      "sha256": "5e87e778365256aa358e451404843390ca112d1a95febc19925a754f54deb2b4",
+      "width": 320,
+      "height": 1000
+    },
+    {
+      "file": "after/05-entry-focus-390.png",
+      "sha256": "48d13d339944e49aa07f4812335a997c8f48047e4eb9617696a3f070580a0937",
+      "width": 390,
+      "height": 1000
+    },
+    {
+      "file": "after/05-entry-focus-900.png",
+      "sha256": "b01a1af9f4219753827cc42904036ca3f706680b3b4967df5ce3384a22237d30",
+      "width": 900,
+      "height": 1000
+    },
+    {
+      "file": "after/06-posted-detail.png",
+      "sha256": "7f24c6e385d7a2ceea4d5a34435b8d0b1b1c432fbe231a5aa4a746d774bf39e1",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "file": "after/07-detail-scroll-320.png",
+      "sha256": "df55c9456d109b1aae5f3101edb597956b77828f9da85da5e13cea70426a0c84",
+      "width": 320,
+      "height": 1000
+    },
+    {
+      "file": "after/07-detail-scroll-390.png",
+      "sha256": "f918e2b2efdcb1377aa3fce8e872ca404170e04a2139a156d0b1c871cb440528",
+      "width": 390,
+      "height": 1000
+    },
+    {
+      "file": "after/08-returned-history.png",
+      "sha256": "6da03bb9805a7aaadcc4a36e368986618f545276b1ddd7a36dc21dd551cdf280",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "file": "after/09-retained-search.png",
+      "sha256": "d1f70ea914b32d81d8b52375db5cdd44df1df5fd6cd42c9bed454066119903c3",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "file": "after/10-no-results.png",
+      "sha256": "f6b9aed3d3b268132e20dc34d247aba5f57219815484e01d3196469a645451e1",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "file": "after/11-post-action-320.png",
+      "sha256": "4ae78668a3f12d14c53bfdf8e31f21f7022b89e60c6fdd75cf9e7ee40e6158d1",
+      "width": 320,
+      "height": 1000
+    }
+  ]
+}

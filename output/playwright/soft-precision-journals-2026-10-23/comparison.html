@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+<meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Tammy Journals · before, reference, after</title>
+<style>
+:root{color-scheme:light;font-family:"Avenir Next","Segoe UI",sans-serif;color:#302a25;background:#f7f3ea}*{box-sizing:border-box}body{max-width:1900px;margin:auto;padding:32px}h1,h2{font-family:"Iowan Old Style",Georgia,serif;font-weight:500}h1{font-size:clamp(30px,4vw,46px);margin:0 0 12px}h2{margin:0 0 12px;font-size:26px}p{max-width:1050px;line-height:1.6}a{color:#235c4b;text-underline-offset:3px}a:hover{text-decoration-thickness:2px}:focus-visible{outline:2px solid #235c4b;outline-offset:4px}.eyebrow{color:#235c4b;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}.comparison{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin:24px 0}.pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}figure{min-width:0;margin:0;padding:12px;border:1px solid #dcd3c5;border-radius:20px;background:#fffcf6}figcaption{min-height:60px;font-size:13px;line-height:1.5}figcaption strong{display:block;color:#235c4b;font-size:15px}img{display:block;width:100%;height:auto;border-radius:10px}.concept{background:#eee8dc}.facts{padding:16px 20px;border-radius:20px;background:#e7ede2}details{margin:20px 0;padding:16px;border:1px solid #dcd3c5;border-radius:20px;background:#fffcf6}summary{cursor:pointer;min-height:44px;padding:8px 0;font-weight:600}summary:hover{color:#235c4b}.narrow img{max-width:390px;margin:auto}table{width:100%;border-collapse:collapse;text-align:left;font-size:14px}td,th{padding:12px 8px;border-bottom:1px solid #dcd3c5}.scroll{overflow-x:auto}code{overflow-wrap:anywhere;font-size:12px}footer{margin-top:32px;font-size:13px;color:#6c6258}@media(max-width:900px){body{padding:16px}.comparison,.pair{grid-template-columns:1fr}}@media(forced-colors:active){a{color:LinkText}:focus-visible{outline-color:Highlight}}
+</style>
+</head>
+<body>
+<header><p class="eyebrow">Tammy · Soft Precision · Journals</p><h1>Keep both sides in view.</h1>
+<p>The editor pair shares a 1440 × 1100 viewport, four loaded synthetic journals and the same AUD 200 draft. The unchanged board 09 is a generated reference; Journals is its upper-right panel. Every before/after frame is a real local Electron render. Open any image for full pixels.</p>
+<p><a href="README.md">Journey, provenance, checks and limits</a> · <a href="screen-board-inventory.md">Remaining screen inventory</a></p></header>
+<main>
+<section class="comparison" aria-label="Matched before, reference and after">
+<figure><figcaption><strong>Before · real app</strong>Loose fields above a competing history panel.</figcaption><a href="before/03-entry-review.png"><img src="before/03-entry-review.png" width="1440" height="1100" alt="Original Journals editor stacked above a four-row history" /></a></figure>
+<figure class="concept"><figcaption><strong>Reference · generated concept</strong>Board 09; aligned entry lines and a quiet totals strip. Not app evidence.</figcaption><a href="reference/09-accounting-core.png"><img src="reference/09-accounting-core.png" width="1536" height="1024" alt="Approved accounting-core concept with Journals at upper right" /></a></figure>
+<figure><figcaption><strong>After · real app</strong>One active editor, two supported ordinary-account lines and exact totals.</figcaption><a href="after/03-entry-review.png"><img src="after/03-entry-review.png" width="1440" height="1100" alt="Corrected Journals editor with aligned debit and credit rows and forest totals" /></a></figure>
+</section>
+<div class="facts"><p>Existing direct <strong>Post journal</strong> semantics remain. No generated reference numbering, Add line, approval stage, reversal, stored draft or automatic posting is invented. The local history search explicitly covers loaded rows, up to 200.</p></div>
+<details open><summary>Posted detail · read-only, exact and balanced</summary><div class="pair">
+<figure><figcaption><strong>Before</strong>Original two-line retained journal.</figcaption><a href="before/06-posted-detail.png"><img loading="lazy" src="before/06-posted-detail.png" width="1440" height="1100" alt="Original posted journal detail" /></a></figure>
+<figure><figcaption><strong>After</strong>Aligned tabular amounts, restrained totals and correct Journals breadcrumb.</figcaption><a href="after/06-posted-detail.png"><img loading="lazy" src="after/06-posted-detail.png" width="1440" height="1100" alt="Corrected read-only posted journal with equal AUD 200 totals" /></a></figure>
+</div></details>
+<details><summary>History · compact search beside the real loaded data</summary><div class="pair">
+<figure><figcaption><strong>Before</strong>Same four synthetic records.</figcaption><a href="before/02-loaded-history.png"><img loading="lazy" src="before/02-loaded-history.png" width="1440" height="1100" alt="Original four-record journal history" /></a></figure>
+<figure><figcaption><strong>After</strong>Semantic journal actions and a quiet attached search/refresh rail.</figcaption><a href="after/02-loaded-history.png"><img loading="lazy" src="after/02-loaded-history.png" width="1440" height="1100" alt="Corrected four-record journal history with local search" /></a></figure>
+</div></details>
+<details><summary>320px · field focus, natural scrolling and reachable posting</summary><div class="pair narrow">
+<figure><figcaption><strong>Before · field focus</strong>Original narrow draft after correcting the account choice.</figcaption><a href="before/05-entry-focus-320.png"><img loading="lazy" src="before/05-entry-focus-320.png" width="320" height="1000" alt="Original narrow journal form with focused description" /></a></figure>
+<figure><figcaption><strong>After · field focus</strong>Stacked fields retain the same values and visible keyboard focus.</figcaption><a href="after/05-entry-focus-320.png"><img loading="lazy" src="after/05-entry-focus-320.png" width="320" height="1000" alt="Corrected narrow form with explicit debit and credit accounts" /></a></figure>
+</div><p><a href="after/11-post-action-320.png">320px bottom-of-form Tab focus and reachable Post journal</a> · <a href="after/07-detail-scroll-320.png">320px actual keyboard table scrolling</a> · <a href="after/05-entry-focus-900.png">900px layout</a></p></details>
+<details><summary>Recovery and retained outcomes</summary><section class="scroll" aria-label="Journey milestones"><table><thead><tr><th>Milestone</th><th>Before</th><th>After</th></tr></thead><tbody>
+<tr><td>Invalid same-account request; no write</td><td><a href="before/04-invalid-accounts.png">Original</a></td><td><a href="after/04-invalid-accounts.png">Focused persistent feedback</a></td></tr>
+<tr><td>Return after one confirmed posting</td><td><a href="before/08-returned-history.png">Original</a></td><td><a href="after/08-returned-history.png">Retained history</a></td></tr>
+<tr><td>Search retained through detail/back</td><td>Search not previously present</td><td><a href="after/09-retained-search.png">Real retained query and focus</a></td></tr>
+<tr><td>No matching description; clear recovery</td><td>Search not previously present</td><td><a href="after/10-no-results.png">Explicit no-results state</a></td></tr>
+</tbody></table></section></details>
+</main>
+<footer><p>Final clean ordinary runtime: <code>ffc2fdaa7e8a74092d78025107df4a620516c369</code>. Original attempts and intermediate after sets remain unchanged. App-wide fidelity and MAS, Windows 11, ATO or release qualification are not claimed. See README for financial/audit/platform limits and exact hosted results.</p></footer>
+</body></html>

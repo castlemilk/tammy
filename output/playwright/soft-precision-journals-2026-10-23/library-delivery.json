@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 1,
+  "runtimeSourceRevision": "ffc2fdaa7e8a74092d78025107df4a620516c369",
+  "images": [
+    {
+      "role": "before-editor",
+      "file": "before/03-entry-review.png",
+      "library_file_id": "libfile_fac0d627bfc88191a6d43cb1b2273145",
+      "sha256": "9180cc6bb09cdbfa248d403ea869aca8320e16a30523bf29596766f2c25da8a2",
+      "bytes": 114736,
+      "confirmed": true,
+      "version": 0,
+      "xattrsVerifiedOnTransportCopy": true,
+      "kind": "Real local Electron render with isolated synthetic data"
+    },
+    {
+      "role": "reference-concept",
+      "file": "reference/09-accounting-core.png",
+      "library_file_id": "libfile_d5b9bb9901ec8191867a34509b32c2bf",
+      "sha256": "38de0e2dfb8397d95b1337d57ccb5e039298cbdd774d04824e0b9eba8ced76eb",
+      "bytes": 1724149,
+      "confirmed": true,
+      "version": 0,
+      "xattrsVerifiedOnTransportCopy": true,
+      "kind": "Unchanged generated concept; not app evidence"
+    },
+    {
+      "role": "after-editor",
+      "file": "after/03-entry-review.png",
+      "library_file_id": "libfile_92db7db190e48191a5464031ec7ead51",
+      "sha256": "e7d632440ae7e66b9b77b9263480dd4e389163c17ef73e8afea68f8df9c2094a",
+      "bytes": 97345,
+      "confirmed": true,
+      "version": 0,
+      "xattrsVerifiedOnTransportCopy": true,
+      "kind": "Real local Electron render with isolated synthetic data"
+    },
+    {
+      "role": "posted-detail",
+      "file": "after/06-posted-detail.png",
+      "library_file_id": "libfile_14774322cd508191a4fdb61a98f3054e",
+      "sha256": "7f24c6e385d7a2ceea4d5a34435b8d0b1b1c432fbe231a5aa4a746d774bf39e1",
+      "bytes": 89165,
+      "confirmed": true,
+      "version": 0,
+      "xattrsVerifiedOnTransportCopy": true,
+      "kind": "Real local Electron render with isolated synthetic data"
+    },
+    {
+      "role": "keyboard-320",
+      "file": "after/11-post-action-320.png",
+      "library_file_id": "libfile_daccc6f6bfe48191843bb9418f6cfb38",
+      "sha256": "4ae78668a3f12d14c53bfdf8e31f21f7022b89e60c6fdd75cf9e7ee40e6158d1",
+      "bytes": 53878,
+      "confirmed": true,
+      "version": 0,
+      "xattrsVerifiedOnTransportCopy": true,
+      "kind": "Real local Electron render with isolated synthetic data"
+    }
+  ],
+  "captureBytesUnchanged": true,
+  "transportCopiesOutsideRepository": true
+}

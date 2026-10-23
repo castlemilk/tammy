@@ -1,7 +1,7 @@
 # Finite implemented-screen comparison inventory
 
 Snapshot for the Journals block from review base `22a97dc6a0c3790a0b404775196ae342f8e3d311`.
-The clean after runtime and exact captures are bound in this folder after actual verification. Approved boards remain pinned to design
+Final clean after runtime: `ffc2fdaa7e8a74092d78025107df4a620516c369`; exact frames and checks are bound in this folder. Approved boards remain pinned to design
 commit `19533020422b6ea2f0c77dc3117a051483f9f9ce`. Passing tests are separate
 from visual comparison, and representative comparisons do not imply every
 concept detail or workflow state is complete.
@@ -14,7 +14,7 @@ concept detail or workflow state is complete.
 | Invoices | Saved list, Draft/Issued lifecycle, editable/public preview, explicit issue, receipts, PDF/template | 02, 07 | Representative list, issued Items/Payments and draft/preview comparisons retained. |
 | Banking | Explicit local CSV, reviewed reference strings and reconciliation completion | 08, format cautions 13 | Representative before/reference/after comparison retained in the Banking folder. Wide review adjacency, narrow focus/table scrolling and confirmed outcomes captured. Hosted results belong to their exact head in draft PR #11. |
 | Chart of accounts | Ordinary account creation and protected/system account display | 09 | Dedicated reference comparison remains open. |
-| Journals | List/detail and existing balanced two-sided posting | 09, list/detail 08 | **Current single-screen block.** Baseline complete; focused implementation checks pass. Real after/keyboard/narrow/hosted verification remains explicit until completed. |
+| Journals | List/detail and existing balanced two-sided posting | 09, list/detail 08 | **Current representative comparison complete locally.** Two-sided entry, history/detail, exact amounts, recovery, narrow keyboard access and real before/after verified. Hosted outcomes remain tied to their exact head in draft PR #11. |
 | Trial balance | Actual as-of account balances | 09 | Dedicated reference comparison remains open. |
 | GST & BAS | Reviewed draft workpaper and preparation/review/freeze/export lifecycle | 09, 14 | Connected reporting journeys exist; dedicated visual acceptance remains open. No production ATO submission. |
 | Audit trail / local activity | Consolidated local activity projection | 08 | Dedicated reference comparison remains open; no audit-chain verification claim. |

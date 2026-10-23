@@ -6,6 +6,13 @@ The actual unchanged board 09 comes from approved design commit
 `19533020422b6ea2f0c77dc3117a051483f9f9ce`; it is a generated concept, never app
 evidence. Board 08's list/detail pattern is the companion history reference.
 
+## Current verified comparison
+
+The final `after/` set is **14 real frames** from clean ordinary runtime
+`ffc2fdaa7e8a74092d78025107df4a620516c369`. [Open the matched comparison](comparison.html)
+for the identical 1440 × 1100 editor pair, unchanged reference, posted detail and
+narrow keyboard states. All earlier attempts/intermediate sets remain unchanged.
+
 ## Actual comparison and contract
 
 The inspected baseline stacks a loose form above a separate history panel; it
@@ -82,8 +89,8 @@ expectations passed nine before the three additional state/range cases passed.
 Typecheck caught an exact-optional prop, unavailable Badge variant names and a
 Testing Library-only unsupported `exact` option; those are corrected. Final
 Typecheck and lint pass, with the unchanged **135 warnings /12 infos**. All 55
-archived files verify. After/native package and exact-head hosted evidence remain
-pending the actual clean build; test counts are not visual acceptance.
+archived files verify. The initial package/after verification and later visual corrections are retained
+below; exact-head hosted evidence is separate from local checks and visual review.
 
 ## Scope and remaining work
 
@@ -155,3 +162,52 @@ the corrected case requires no alert after correction and zero posting calls.
 The native journey now asserts that same recovery before its narrow captures.
 Earlier images are retained; a final clean package/capture will verify the actual
 corrected state rather than hiding that observed defect.
+
+## Final local verification and delivery
+
+Final clean ordinary source **`ffc2fdaa7e8a74092d78025107df4a620516c369`**
+passes seven package checks, one expected Windows-only skip; Core/helper hashes
+remain unchanged. Final capture journey **11.3s /12.1s including runner**, full
+connected invoice → Overview → Documents → Banking → Journals **15.1s /15.8s**,
+and the original workspace/recovery/accounting/interaction case **13.3s /14.1s**.
+All use zero retries, page errors and console errors. Actual original-size editor,
+posted-detail and 320px footer pixels were inspected, including the correct
+breadcrumb, clear feedback after correction and fully visible Tab-focused posting
+action. Passing checks are separate from representative visual comparison.
+
+The final focused suite passes **13/13 in 2.35s**; the app/app-shell/router block
+passes **36/36 in 4.16s**. Typecheck and lint pass, with the existing 135 warnings
+and 12 infos. The final strict audit retains the identical **19 rule/file findings**
+without new exclusions. Old/new guard, breadcrumb and stale-feedback regressions
+are documented above; the financial post handler is unchanged except its in-flight
+guard. Descriptor bytes and coverage will remain unchanged when source provenance
+is rebound before the scoped push.
+
+Confirmed Library deliveries:
+
+- [Before editor · real 1440 × 1100](https://chatgpt.com/api/library/files/libfile_fac0d627bfc88191a6d43cb1b2273145/download)
+- [Approved board 09 · unchanged generated concept](https://chatgpt.com/api/library/files/libfile_d5b9bb9901ec8191867a34509b32c2bf/download)
+- [After editor · real 1440 × 1100](https://chatgpt.com/api/library/files/libfile_92db7db190e48191a5464031ec7ead51/download)
+- [Posted detail · real 1440 × 1100](https://chatgpt.com/api/library/files/libfile_14774322cd508191a4fdb61a98f3054e/download)
+- [320px keyboard posting · real](https://chatgpt.com/api/library/files/libfile_daccc6f6bfe48191843bb9418f6cfb38/download)
+
+`library-delivery.json` records confirmed IDs, bytes and SHA256; returned version
+attributes were applied and verified only on transport copies outside the repository.
+Capture bytes remain unchanged. `after-captures.json` binds the final runtime and
+clean harness; `final-preservation.json` verifies all **772 PNGs tracked before
+this final set**, including every original **731** predecessor. All **55 archives**
+also verify. Final total: **786 tracked output PNGs** once committed; this folder
+contains **54 real frames plus one unchanged concept**.
+
+The old first/intermediate sources and failed assertions are not relabeled as final
+passes. The narrow footer is fully visible in the inspected original 320 × 1000 PNG;
+compressed previews are not used to infer clipping. This block adds no new CI job,
+worker, retry, timeout or authority. Existing exact-head push/PR CI must be verified
+independently after the normal push; terminal outcomes belong to the draft PR record.
+Draft/merge/publication holds, concurrent owner work and all previously stated
+financial/audit/platform limits remain.
+
+The final evidence lint initially found two semantic-markup issues in the comparison
+report's scroll wrapper. Using a named section with its existing keyboard-accessible
+links resolves both; no app source, screenshots, validation rule or lint exclusion
+changed. The corrected evidence-only check and repository lint pass.
