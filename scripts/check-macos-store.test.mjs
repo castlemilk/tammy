@@ -935,6 +935,15 @@ test("decoded Apple profiles retain validation fields without converting certifi
       ExpirationDate: "2027-05-13T11:58:20Z",
       TeamIdentifier: ["WFTX6CN23F"],
     });
+    const source = await readFile(profile, "utf8");
+    await writeFile(
+      profile,
+      source.replace("<date>2027-05-13T11:58:20Z</date>", "<string>2027-05-13T11:58:20Z</string>"),
+    );
+    await assert.rejects(
+      readMacOSProvisioningProfilePlist(profile),
+      /MACOS_RELEASE_PROVISIONING_PROFILE_INVALID/,
+    );
   } finally {
     await rm(temporaryRoot, { force: true, recursive: true });
   }

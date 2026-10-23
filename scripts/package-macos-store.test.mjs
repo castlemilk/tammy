@@ -20,10 +20,11 @@ import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 
 import plist from "plist";
-
+import { BUILD_MANIFEST_VERSION_KEYS } from "./build-manifest-schema.mjs";
 import * as packageMacOSStore from "./package-macos-store.mjs";
 import { SBR_BUILD_LOCK_ENV } from "./sbr-build-lock.mjs";
 import { canonicalizeSbrProfile } from "./sbr-profile-schema.mjs";
+import { createBuildManifest } from "./write-build-manifest.mjs";
 
 const execFileAsync = promisify(execFile);
 const {
@@ -657,16 +658,27 @@ test("mode-bound build and SBR manifests authenticate the exact packaged signed 
     writeFile(profilePath, profileBytes),
     writeFile(signaturePath, signatureBytes),
   ]);
-  const build = JSON.parse(
-    await readFile(path.join(root, "apps/desktop/resources/build/build-manifest.json"), "utf8"),
-  );
-  build.source_dirty = false;
-  build.source_revision = manifest.productSourceCommit;
-  build.core_sha256 = hash(coreBytes);
-  build.sqlcipher.library_sha256 = hash(sqlcipherBytes);
-  build.sbr.helper_sha256 = hash(helperBytes);
-  build.sbr.profile_sha256 = hash(profileBytes);
-  build.sbr.profile_signature_sha256 = hash(signatureBytes);
+  const build = createBuildManifest({
+    ciMode: true,
+    coreSha256: hash(coreBytes),
+    lockfiles: { "pnpm-lock.yaml": "b".repeat(64), "services/core/go.sum": "c".repeat(64) },
+    protobufTreeSha256: "d".repeat(64),
+    sourceDirty: false,
+    sourceRevision: manifest.productSourceCommit,
+    target: "darwin-arm64",
+    versions: Object.fromEntries(BUILD_MANIFEST_VERSION_KEYS.map((key) => [key, "1.0.0"])),
+    sqlcipher: {
+      librarySha256: hash(sqlcipherBytes),
+      runtimeVersion: "4.15.0 community",
+      version: "4.15.0",
+    },
+    sbr: {
+      helper_sha256: hash(helperBytes),
+      profile_sha256: hash(profileBytes),
+      profile_signature_sha256: hash(signatureBytes),
+      source_tree_sha256: "e".repeat(64),
+    },
+  });
   await writeFile(
     path.join(resources, "build/build-manifest.json"),
     `${JSON.stringify(build, null, 2)}\n`,

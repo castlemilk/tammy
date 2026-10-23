@@ -23,11 +23,11 @@ const INSTALLED_FILES = [
 
 function run(arguments_ = []) {
   return new Promise((resolve, reject) => {
-    const child = spawn(
-      "mise",
-      ["exec", "--", "node", "scripts/check-sbr-registration.mjs", ...arguments_],
-      { cwd: repositoryRoot, shell: false, stdio: ["ignore", "pipe", "pipe"] },
-    );
+    const child = spawn(process.execPath, ["scripts/check-sbr-registration.mjs", ...arguments_], {
+      cwd: repositoryRoot,
+      shell: false,
+      stdio: ["ignore", "pipe", "pipe"],
+    });
     let stdout = "";
     let stderr = "";
     child.stdout.on("data", (chunk) => (stdout += chunk));

@@ -16,6 +16,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { isDeepStrictEqual, promisify } from "node:util";
 
 import Ajv2020 from "ajv/dist/2020.js";
+import plist from "plist";
 import { parse as parseYaml } from "yaml";
 
 import {
@@ -312,6 +313,13 @@ export function validateMacOSProvisioningProfile(profile, { mode, teamID, now = 
 
 async function extractProvisioningProfileValue(file, key, format) {
   const { stdout } = await execFile("/usr/bin/plutil", ["-extract", key, format, "-o", "-", file]);
+  if (format === "xml1") {
+    const value = plist.parse(stdout);
+    if (!(value instanceof Date) || !Number.isFinite(value.getTime())) {
+      fail("MACOS_RELEASE_PROVISIONING_PROFILE_INVALID");
+    }
+    return value.toISOString().replace(/\.000Z$/, "Z");
+  }
   return format === "json" ? JSON.parse(stdout) : stdout.trim();
 }
 
@@ -321,7 +329,7 @@ export async function readMacOSProvisioningProfilePlist(file) {
       await Promise.all([
         extractProvisioningProfileValue(file, "ApplicationIdentifierPrefix", "json"),
         extractProvisioningProfileValue(file, "Entitlements", "json"),
-        extractProvisioningProfileValue(file, "ExpirationDate", "raw"),
+        extractProvisioningProfileValue(file, "ExpirationDate", "xml1"),
         extractProvisioningProfileValue(file, "TeamIdentifier", "json"),
       ]);
     const profile = { ApplicationIdentifierPrefix, Entitlements, ExpirationDate, TeamIdentifier };
