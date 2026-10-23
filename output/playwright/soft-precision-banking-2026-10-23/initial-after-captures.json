@@ -14,7 +14,7 @@
   "retries": 0,
   "pageErrors": 0,
   "consoleErrors": 0,
-  "reasonForFollowUp": "Actual pixels showed an unsupported alpha variant on the existing custom forest-soft utility and a list capture with retained scroll position. Financial handlers/Core remain unchanged.",
+  "reasonForFollowUp": "Actual pixels showed unsupported alpha styling on the existing custom forest-soft utility; corrected to the plain canonical class and exact 56px rows.",
   "frames": [
     {
       "file": "after-attempt-1/01-import-error.png",
@@ -106,5 +106,6 @@
       "width": 1440,
       "height": 1100
     }
-  ]
+  ],
+  "captureOriginClarification": "Standalone inspection confirms the original header was intact. The earlier apparent crop was a multi-image-preview interpretation; explicit origin reset is preventive capture setup, not a claimed product scroll fix."
 }

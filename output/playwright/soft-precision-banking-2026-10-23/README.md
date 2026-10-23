@@ -164,10 +164,45 @@ summary now reuses the plain canonical class, with an actual-colour native
 assertion. Local table padding follows the 4px spacing step while preserving
 44px controls and 56px target rows. No financial behavior changes.
 
-The list screenshot also retained a different page scroll position after success
-focus. Capture anchoring now explicitly resets the heading's scrolling ancestors
-to the page origin, preserving the table's internal horizontal position. That is
-capture setup, not a product scroll/focus change. The existing shared scroller is
+The multi-image preview appeared to crop the list header. Later standalone
+inspection of the original PNG confirms its header was intact; no product scroll
+defect is claimed. Capture anchoring now explicitly resets the heading's scrolling
+ancestors to the page origin as a preventive comparison measure, preserving the
+table's internal horizontal position. That is capture setup, not a product
+scroll/focus change. The existing shared scroller is
 reset before each arrow assertion so movement cannot pass on a stale offset.
 The final after set must come from the corrected clean package; the first set
 is retained as an intermediate result, not silently relabeled.
+
+## Corrected rendered comparison
+
+The final `after/` set contains **15 real frames** from clean ordinary source
+`220c5d77c607d67057922db09870c90fb1d797c5`. It passes seven package checks with
+one expected Windows-only skip. Core/helper hashes remain unchanged. The capture
+journey passed in **11.7s / 12.4s including runner**; the complete connected case
+passed in **14.0s / 14.7s including runner**, both with zero retries, page errors
+and console errors. `after-captures.json` binds frame hashes and runtime provenance.
+
+Actual standalone desktop, 900px and 320px images were inspected against the
+unchanged board. At 1440 × 1100, the review is beside the entire statement list
+and the summary remains visible. Measured rows are **56px**, the smallest visible
+control is **44px**, the primary action is `rgb(35, 92, 75)` and the summary is
+`rgb(231, 237, 226)`. The after native case asserts both the adjacent composition
+and actual tint, alongside keyboard movement from a reset scroll offset.
+
+The matched desktop pair uses `before/04-selected-match.png` and
+`after/04-selected-match.png`, with identical viewport, synthetic records,
+selection and draft reference. `comparison.html` brings them alongside the
+unchanged reference and links the remaining journey states. This is representative
+Banking fidelity, not completion of the whole application or every concept feature.
+
+Confirmed Library deliveries:
+
+- [Before · 1440 × 1100](https://chatgpt.com/api/library/files/libfile_881684f82bac8191851ddd03199252cb/download)
+- [Approved board 08 concept](https://chatgpt.com/api/library/files/libfile_10ac0000a4f881919121867d18df7719/download)
+- [After · 1440 × 1100](https://chatgpt.com/api/library/files/libfile_7385edb449f88191b9dba500cfb0a26e/download)
+- [After · 320px keyboard focus](https://chatgpt.com/api/library/files/libfile_e635246e42388191aaec1c5a91250815/download)
+
+The concept Library item is reused from the identical prior reference delivery;
+the other three uploads are verified real app frames. Returned version attributes
+were applied to transport copies outside the repository, preserving capture bytes.
