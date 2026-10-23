@@ -942,7 +942,7 @@ test("local Task front door preserves the safe development contract", async () =
         assert.equal(report.status, "BLOCKED");
         assert.equal(report.code, "EVTE_SIGNED_INPUTS_REQUIRED");
         assert.equal(
-          registration.stderr,
+          stripVTControlCharacters(registration.stderr),
           'task: [sbr:run-registration-check] mise exec -- node scripts/check-sbr-registration.mjs\ntask: Failed to run task "sbr:registration:check": task: Failed to run task "sbr:run-registration-check": exit status 1\n',
         );
       } else {
