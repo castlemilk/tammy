@@ -903,7 +903,7 @@ test("provisioning profiles bind the team, app identifier, mode, and expiry", ()
   }
 });
 
-test("decoded Apple profiles retain validation fields without converting certificate data", async () => {
+test("decoded Apple profiles retain validation fields without converting certificate data", async (context) => {
   const temporaryRoot = await mkdtemp(path.join(tmpdir(), "tammy-profile-test-"));
   const profile = path.join(temporaryRoot, "profile.plist");
   try {
@@ -925,7 +925,52 @@ test("decoded Apple profiles retain validation fields without converting certifi
       { mode: 0o600 },
     );
 
-    assert.deepEqual(await readMacOSProvisioningProfilePlist(profile), {
+    let decoded;
+    try {
+      decoded = await readMacOSProvisioningProfilePlist(profile);
+    } catch (error) {
+      // Report only tool capabilities for this synthetic fixture; never profile payloads.
+      for (const field of [
+        "ApplicationIdentifierPrefix",
+        "Entitlements",
+        "ExpirationDate",
+        "TeamIdentifier",
+      ]) {
+        for (const format of ["json", "xml1"]) {
+          try {
+            const { stdout } = await execFile("/usr/bin/plutil", [
+              "-extract",
+              field,
+              format,
+              "-o",
+              "-",
+              profile,
+            ]);
+            context.diagnostic(
+              JSON.stringify({
+                field,
+                format,
+                ok: true,
+                bytes: Buffer.byteLength(stdout),
+                xmlRoot: stdout.match(/<plist[^>]*>\s*<([a-z]+)/)?.[1],
+              }),
+            );
+          } catch (toolError) {
+            context.diagnostic(
+              JSON.stringify({
+                field,
+                format,
+                ok: false,
+                code: toolError.code,
+                error: String(toolError.stderr).trim().slice(0, 512),
+              }),
+            );
+          }
+        }
+      }
+      throw error;
+    }
+    assert.deepEqual(decoded, {
       ApplicationIdentifierPrefix: ["WFTX6CN23F"],
       Entitlements: {
         "com.apple.application-identifier": "WFTX6CN23F.com.tammy.desktop",

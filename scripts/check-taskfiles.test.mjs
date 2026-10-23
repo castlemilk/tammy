@@ -6,6 +6,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
+import { stripVTControlCharacters } from "node:util";
 
 import YAML from "yaml";
 
@@ -816,16 +817,17 @@ test("local Task front door preserves the safe development contract", async () =
   );
   const publicTaskList = await runTask("--list");
   assert.equal(publicTaskList.code, 0, "the public Task list renders");
+  const publicTaskText = stripVTControlCharacters(publicTaskList.stdout);
   for (const taskName of sbrLeaves.keys()) {
     assert.doesNotMatch(
-      publicTaskList.stdout,
+      publicTaskText,
       new RegExp(`\\* sbr:${taskName.replaceAll(":", "\\:")}:`),
       `sbr:${taskName} must be absent from the public Task list`,
     );
   }
   for (const taskName of expectedSbrAliases.keys()) {
     assert.match(
-      publicTaskList.stdout,
+      publicTaskText,
       new RegExp(`\\* ${taskName.replaceAll(":", "\\:")}:`),
       `${taskName} remains public`,
     );
