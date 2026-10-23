@@ -521,16 +521,24 @@ test("repository inspection derives pre-upload and pre-submit states from canoni
 });
 
 test("non-signing readiness fails closed on stale public-site evidence", async () => {
-  await assert.rejects(
-    execFile(process.execPath, ["scripts/check-macos-store.mjs"], { cwd: root }),
-    (error) => {
-      assert.equal(error.code, 1);
-      assert.equal(error.stdout, "");
-      assert.equal(error.stderr, "MACOS_PUBLIC_SITE_INVALID\n");
-      assert.equal(error.stderr.includes("TAMMY_MACOS_"), false);
-      return true;
-    },
-  );
+  const fixtureRoot = await createSyntheticRepositoryFixture("tammy-macos-stale-public-site-");
+  try {
+    const publicSiteRoot = path.join(fixtureRoot, "docs", "release", "public-site");
+    const pointer = JSON.parse(await readFile(path.join(publicSiteRoot, "current.json"), "utf8"));
+    const deploymentPath = path.join(publicSiteRoot, pointer.deploymentEvidence);
+    const deployment = JSON.parse(await readFile(deploymentPath, "utf8"));
+    await writeFile(
+      deploymentPath,
+      `${JSON.stringify({ ...deployment, policySha256: "0".repeat(64) }, null, 2)}\n`,
+    );
+
+    await assert.rejects(
+      inspectMacOSStoreRepository(fixtureRoot, { repositoryTestsPassed: true }),
+      /^Error: MACOS_PUBLIC_SITE_INVALID$/,
+    );
+  } finally {
+    await rm(fixtureRoot, { force: true, recursive: true });
+  }
 });
 
 test("repository readiness binds the exact deployed public site to the canonical policy", async () => {
@@ -543,15 +551,14 @@ test("repository readiness binds the exact deployed public site to the canonical
   );
   const policy = await readFile(path.join(root, "PRIVACY.md"));
   const actualPolicySha256 = createHash("sha256").update(policy).digest("hex");
-  assert.notEqual(actualDeployment.policySha256, actualPolicySha256);
-  assert.throws(
-    () => validateCurrentPublicSite(actualPointer, actualDeployment, policy),
-    /MACOS_PUBLIC_SITE_INVALID/,
-  );
-  await assert.rejects(
-    inspectMacOSStoreRepository(root, { repositoryTestsPassed: true }),
-    /MACOS_PUBLIC_SITE_INVALID/,
-  );
+  assert.equal(actualDeployment.policySha256, actualPolicySha256);
+  assert.deepEqual(validateCurrentPublicSite(actualPointer, actualDeployment, policy), {
+    deploymentEvidence: actualPointer.deploymentEvidence,
+    origin: publicSiteOrigin,
+    policySha256: actualPolicySha256,
+    privacyPolicy: `${publicSiteOrigin}/privacy`,
+    support: `${publicSiteOrigin}/support`,
+  });
 
   const synthetic = syntheticPublicSiteEvidence(policy);
   const validated = validateCurrentPublicSite(synthetic.pointer, synthetic.deployment, policy);
