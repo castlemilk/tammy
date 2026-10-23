@@ -1465,6 +1465,7 @@ test("local Task front door preserves the safe development contract", async () =
   ]);
   assert.deepEqual(shellCommands(ciTasks.macos), [
     ...ciBaseCommands,
+    "node --test scripts/*.test.mjs",
     "TAMMY_SQLCIPHER_REPRODUCIBILITY=1 pnpm sqlcipher:test",
     "go test -race -tags tammy_sqlcipher ./services/core/internal/storage/sqlcipher/... -count=1",
     "pnpm desktop:e2e:dev",

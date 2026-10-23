@@ -7,6 +7,7 @@ import {
   mkdir,
   mkdtemp,
   readFile,
+  realpath,
   rm,
   symlink,
   unlink,
@@ -121,7 +122,9 @@ ${
 }
 
 async function createUnsignedStagingRepository(context) {
-  const fixtureRoot = await mkdtemp(path.join(tmpdir(), "tammy-macos-unsigned-stage-"));
+  const fixtureRoot = await mkdtemp(
+    path.join(await realpath(tmpdir()), "tammy-macos-unsigned-stage-"),
+  );
   context.after(() => rm(fixtureRoot, { force: true, recursive: true }));
   const resources = path.join(fixtureRoot, "apps/desktop/resources");
   await Promise.all([
@@ -419,9 +422,46 @@ test("materializes exact Team-bound MAS entitlements without unresolved placehol
   await assert.rejects(readFile(mainPath), /ENOENT/u);
 });
 
+test("release output rejects an aliased checkout ancestor before commands or cleanup", async (context) => {
+  const temporary = await mkdtemp(
+    path.join(await realpath(tmpdir()), "tammy-macos-checkout-alias-"),
+  );
+  context.after(() => rm(temporary, { force: true, recursive: true }));
+  const physicalParent = path.join(temporary, "physical");
+  const physicalRoot = path.join(physicalParent, "checkout");
+  const aliasParent = path.join(temporary, "alias");
+  await mkdir(physicalRoot, { recursive: true });
+  await writeFile(path.join(physicalRoot, "preserve.txt"), "checkout data\n");
+  await symlink(physicalParent, aliasParent);
+  const aliasedRoot = path.join(aliasParent, "checkout");
+  let commandRan = false;
+  await assert.rejects(
+    packageMacOSStore.executeMacOSStoreBuild(
+      {
+        environment: {},
+        releaseRoot: path.join(aliasedRoot, ".tmp/macos-release/0.1.0/build-1"),
+        root: aliasedRoot,
+      },
+      {
+        commandRunner: async () => {
+          commandRan = true;
+        },
+      },
+    ),
+    /MACOS_RELEASE_OUTPUT_INVALID/,
+  );
+  assert.equal(commandRan, false);
+  await assert.rejects(readFile(path.join(physicalRoot, ".tmp")), /ENOENT/);
+  assert.equal(await readFile(path.join(physicalRoot, "preserve.txt"), "utf8"), "checkout data\n");
+});
+
 test("release output rejects a symlinked ignored ancestor before locking or cleanup", async (context) => {
-  const fixtureRoot = await mkdtemp(path.join(tmpdir(), "tammy-macos-output-root-"));
-  const external = await mkdtemp(path.join(tmpdir(), "tammy-macos-output-external-"));
+  const fixtureRoot = await mkdtemp(
+    path.join(await realpath(tmpdir()), "tammy-macos-output-root-"),
+  );
+  const external = await mkdtemp(
+    path.join(await realpath(tmpdir()), "tammy-macos-output-external-"),
+  );
   context.after(async () => {
     await rm(fixtureRoot, { force: true, recursive: true });
     await rm(external, { force: true, recursive: true });
@@ -449,8 +489,12 @@ test("release output rejects a symlinked ignored ancestor before locking or clea
 });
 
 test("release output rejects a direct Builder output symlink before Builder can overwrite it", async (context) => {
-  const fixtureRoot = await mkdtemp(path.join(tmpdir(), "tammy-macos-builder-root-"));
-  const external = await mkdtemp(path.join(tmpdir(), "tammy-macos-builder-external-"));
+  const fixtureRoot = await mkdtemp(
+    path.join(await realpath(tmpdir()), "tammy-macos-builder-root-"),
+  );
+  const external = await mkdtemp(
+    path.join(await realpath(tmpdir()), "tammy-macos-builder-external-"),
+  );
   context.after(async () => {
     await rm(fixtureRoot, { force: true, recursive: true });
     await rm(external, { force: true, recursive: true });
@@ -482,7 +526,9 @@ test("release output rejects a direct Builder output symlink before Builder can 
 test("code-signature normalization preserves the Mach-O payload and detects signed drift", {
   skip: process.platform !== "darwin",
 }, async (context) => {
-  const temporary = await mkdtemp(path.join(tmpdir(), "tammy-codesign-normalization-"));
+  const temporary = await mkdtemp(
+    path.join(await realpath(tmpdir()), "tammy-codesign-normalization-"),
+  );
   context.after(() => rm(temporary, { force: true, recursive: true }));
   const candidate = path.join(temporary, "candidate");
   const tampered = path.join(temporary, "tampered");
@@ -776,7 +822,7 @@ test("outer MAS app seal failure stops before productbuild", async () => {
 });
 
 test("build lock rejects concurrent owners, cleans failures, and never removes a foreign lock", async () => {
-  const temporary = await mkdtemp(path.join(tmpdir(), "tammy-macos-package-lock-"));
+  const temporary = await mkdtemp(path.join(await realpath(tmpdir()), "tammy-macos-package-lock-"));
   const lockPath = path.join(temporary, ".tmp/sbr-build-owner/owner.lock");
   const plan = {
     app: path.join(temporary, "Tammy.app"),
