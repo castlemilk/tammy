@@ -168,6 +168,8 @@ export async function recordInvoiceReceipt(
   reference: string,
 ) {
   await page.getByRole("link", { name: "Invoices", exact: true }).click();
+  const back = page.getByRole("button", { name: "Back to invoices", exact: true });
+  if (await back.isVisible()) await back.click();
   await page.getByRole("button", { name: `Open ${number}`, exact: true }).click();
   await page.getByRole("button", { name: "Record payment", exact: true }).click();
   await page.getByLabel("Payment date", { exact: true }).fill(paymentDate);

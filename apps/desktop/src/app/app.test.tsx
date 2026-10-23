@@ -223,12 +223,14 @@ describe("App", () => {
 
     await user.click(within(navigation).getByRole("link", { name: "Invoices" }));
     await screen.findByRole("heading", { name: "Invoices", level: 1 });
+    await user.click(screen.getByRole("button", { name: "New invoice" }));
+    await screen.findByRole("heading", { name: "New invoice", level: 1 });
     await user.type(screen.getByRole("textbox", { name: "Customer name" }), "Unsaved customer");
     await user.type(screen.getByRole("textbox", { name: "Description 1" }), "Expense follow-up");
 
     await user.click(within(navigation).getByRole("link", { name: "Documents" }));
     expect(await screen.findByRole("heading", { name: "Documents", level: 1 })).toBeTruthy();
-    expect(screen.queryByRole("heading", { name: "Invoices", level: 1 })).toBeNull();
+    expect(screen.queryByRole("heading", { name: "New invoice", level: 1 })).toBeNull();
     expect(screen.queryByRole("textbox", { name: "Customer name" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Save draft" })).toBeNull();
     const hiddenCustomer = screen.getByDisplayValue("Unsaved customer");
@@ -260,11 +262,14 @@ describe("App", () => {
     window.history.replaceState(null, "", "/invoices");
     const user = userEvent.setup();
     const view = render(<App />);
+    await user.click(screen.getByRole("button", { name: "New invoice" }));
+    const previousEditor = screen.getByRole("textbox", { name: "Customer name" });
     await user.type(
       screen.getByRole("textbox", { name: "Customer name" }),
       "Previous session customer",
     );
     view.unmount();
+    expect(previousEditor.isConnected).toBe(false);
 
     const retained = JSON.parse(window.sessionStorage.getItem("tammy.session.active") ?? "{}");
     window.sessionStorage.setItem(
@@ -276,6 +281,8 @@ describe("App", () => {
       }),
     );
     render(<App />);
+    expect(screen.queryByRole("textbox", { name: "Customer name" })).toBeNull();
+    await user.click(screen.getByRole("button", { name: "New invoice" }));
     expect((screen.getByRole("textbox", { name: "Customer name" }) as HTMLInputElement).value).toBe(
       "",
     );

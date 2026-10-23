@@ -55,3 +55,12 @@ forms, four test mocks and the CSV textarea), with no exclusions. It is not gree
 A later qualification-only update retains forest selection and saved-table
 keyboard scrolling in the regular CI journey; application source is unchanged
 since the clean capture package. Hosted checks must be assessed at the new head.
+
+
+## CI follow-up
+
+The first hosted run at 1a9dcb50 failed two stale App entry assumptions and a
+cached-detail receipt helper. [Original evidence and the narrow correction](ci-followup.md)
+record reproduced baselines and retained security/financial assertions. The
+corrected local desktop suite passes all 1,293 cases; both affected native journeys,
+TypeScript and lint pass. The new hosted result must be verified separately.

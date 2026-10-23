@@ -1662,6 +1662,7 @@ test("runs invoice, purchase, and BAS workflows through the packaged app", async
   expect(updatedPdf).toContain("Updated template customer");
   expect(updatedPdf).not.toContain(ORIGINAL_COMPANY_TEMPLATE.paymentInstructions);
   await page.getByRole("button", { name: "Close template editor", exact: true }).click();
+  await page.getByRole("button", { name: "Back to invoices", exact: true }).click();
   await page.getByRole("button", { name: "Open INV-MCP-001", exact: true }).click();
   await expectInvoiceTemplateSnapshot(page, ORIGINAL_COMPANY_TEMPLATE, "2026-10-30", true);
   await page.getByRole("button", { name: "Issue invoice", exact: true }).click();

@@ -101,7 +101,11 @@ findings in the new evidence report without exclusions.
 
 ### Invoice list/detail navigation (2026-10-23)
 
-The invoice route opens on the saved-record list. New invoice and Open explicitly
+The first invoice-route visit opens on the saved-record list. Returning from a
+related screen restores the cached active editor, including unsaved work. Back to
+invoices explicitly returns to the list; route activation does not discard edits.
+A replaced authenticated session removes the old cached editor entirely.
+New invoice and Open explicitly
 enter the editor/detail view. Saving stays with the confirmed invoice. Back returns
 to the preserved search, status and page and restores the originating row control
 (or New invoice). Unsaved invoice edits use the existing Keep editing / Discard

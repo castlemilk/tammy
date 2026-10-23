@@ -23,20 +23,7 @@
       "draft": 4,
       "issued": 4
     },
-    "viewports": [
-      [
-        1440,
-        1100
-      ],
-      [
-        390,
-        900
-      ],
-      [
-        320,
-        900
-      ]
-    ],
+    "viewports": [[1440, 1100], [390, 900], [320, 900]],
     "verified": [
       "solid forest selected filter",
       "eight rows within viewport",
