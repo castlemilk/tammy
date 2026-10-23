@@ -90,7 +90,9 @@ export async function runOverviewReviewJourney(page: Page, harness: ElectronHarn
     .getByRole("link", { name: /^Open exact BAS preparation / })
     .or(page.getByRole("button", { name: "Open BAS preparation", exact: true }));
   await bas.focus();
-  await expect(bas).toHaveCSS("outline-style", "solid");
+  await expect(bas).toBeFocused();
+  // Before uses the browser's native auto outline; the new composition uses the shared ring.
+  if (overviewCapturePhase !== "before") await expect(bas).toHaveCSS("outline-style", "solid");
   await capture(page, "06-exact-bas-focus", false);
   await page.keyboard.press("Enter");
   await expect(page).toHaveURL(/\/gst-bas(?:\?|$)/);
