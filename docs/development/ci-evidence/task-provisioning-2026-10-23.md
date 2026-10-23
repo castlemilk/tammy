@@ -74,8 +74,9 @@ limit. The corrected workflow passes **62 focused foundation/Task/workflow
 tests** in 6.81 seconds. The executable failure-path regression uses the real
 Unix checksum utility and verifies both a corrupt download and a transfer
 error stop before extraction, retain the original PATH file and remove the
-owned temporary directory. Windows runs the structural checks and explicitly
-skips this macOS-only shell execution test.
+owned temporary directory. If this script suite is invoked on Windows, it
+skips the macOS-only shell execution test. The current Windows Server smoke job
+does not run this script suite and does not qualify the macOS installer.
 
 The exact workflow installer was also executed once on local Apple silicon
 against the official release, in an isolated temporary directory: checksum,

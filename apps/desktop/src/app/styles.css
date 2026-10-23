@@ -404,6 +404,16 @@
   .document-index-table th {
     height: 38px;
   }
+  .banking-lines-table th,
+  .banking-lines-table td {
+    padding: 6px 12px;
+  }
+  .banking-lines-table th {
+    height: 38px;
+  }
+  .banking-lines-table td {
+    height: 56px;
+  }
   .invoice-index-table th,
   .invoice-index-table td {
     padding: 6px 12px;

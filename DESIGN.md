@@ -285,3 +285,19 @@ completed/cancelled export only when focus fell back to the page. It preserves
 another focused control and clears the target on authority changes. Native BAS
 navigation uses the shared forest focus ring. These changes do not alter amounts,
 authority checks, expected financial revisions, export arguments or file behavior.
+
+## Banking composition — board 08 (2026-10-23)
+
+The compact statement list is the main work surface. A selected line's non-modal
+review form sits beside it from 1380px, with natural page scrolling and stacked
+panels on smaller windows. The shared horizontal table scroller retains keyboard
+access to every column. Rows target 56px while allowing long names/references to
+wrap; controls remain at least 44px. Existing tokens and shared buttons own colour,
+focus and geometry. No art, gradients or invented matching suggestions enter data.
+
+The quiet forest reconciliation summary shows only returned global unmatched and
+unreconciled counts plus the latest imported statement's closing balance. This is
+not a book/cash balance, a computed difference, or totals over the bounded table.
+CSV import remains explicit and does not imply a live feed. The concept's filename,
+account/period controls and automatic document links have no supported UI contract
+here and are omitted. Real matched before/reference/after captures are required.

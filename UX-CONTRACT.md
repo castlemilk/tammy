@@ -157,3 +157,23 @@ receipt contracts or export/issue confirmations change.
   review focuses Keep as draft; explicit cancellation restores Issue focus. Editing
   dismisses that review while retaining typing focus. Successful issue focuses the
   immutable invoice heading. No automatic send, reminder or customer portal exists.
+
+### Banking review focus and composition (2026-10-23)
+
+- List search/status remains ephemeral and filters only the existing loaded
+  projection. Matching does not reset the query. Summary counts retain their
+  existing organisation-wide meaning; the latest import balance remains separate.
+- Selecting a line focuses its reviewed reference. Selecting that same line again
+  keeps the typed reference. Close, Cancel match and unconsumed Escape write
+  nothing, discard that match draft and restore its row action, or search when
+  the row has been filtered away. Escape during IME composition or a pending
+  mutation does not close a form.
+- Escape in import follows Close: keep the in-screen draft and return focus to
+  Import statement. Explicit Cancel import still clears it. Browser/native
+  constraints and the vertically resizable CSV field remain intentional.
+- Persistent success/error feedback reuses WorkNotice and receives visible focus
+  after an action. Confirmation still requires the existing decoded response;
+  post-save refresh failure still blocks another write until refresh succeeds.
+- The financial handlers, command keys, expected versions, loaded page size,
+  reconciliation gate and financial/security boundaries are unchanged. Matching
+  records a reviewed string only; no document link, journal or payment is created.

@@ -3,6 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Page } from "@playwright/test";
 import { expect, test } from "./fixtures";
+import { bankingCapturePhase, runBankingReviewJourney } from "./support/banking-journey";
 import { setupAndRunCurrentAccountingWorkflow } from "./support/current-accounting-workflow";
 import { documentsCapturePhase, runDocumentsReviewJourney } from "./support/documents-journey";
 import { readInvoiceAccounting } from "./support/invoice-income-workflow";
@@ -43,6 +44,12 @@ test.describe("Soft Precision financial workspace", () => {
     );
     const page = electronHarness.currentPage();
     await page.setViewportSize({ width: 1440, height: 1100 });
+    if (bankingCapturePhase) {
+      await runBankingReviewJourney(page, workspace);
+      expect(electronHarness.consoleErrors).toEqual([]);
+      expect(electronHarness.pageErrors).toEqual([]);
+      return;
+    }
     if (documentsCapturePhase) {
       await runDocumentsReviewJourney(page, workspace);
       expect(electronHarness.consoleErrors).toEqual([]);
@@ -460,8 +467,10 @@ test.describe("Soft Precision financial workspace", () => {
         expect(retained.accounting.outstandingMinor).toBe(82_000n);
       }
     }
-    if (!phase && !referencePhase && !detailPhase && !draftPhase && !overviewCapturePhase)
+    if (!phase && !referencePhase && !detailPhase && !draftPhase && !overviewCapturePhase) {
       await runDocumentsReviewJourney(page, workspace);
+      await runBankingReviewJourney(page, workspace);
+    }
     expect(electronHarness.consoleErrors).toEqual([]);
     expect(electronHarness.pageErrors).toEqual([]);
   });

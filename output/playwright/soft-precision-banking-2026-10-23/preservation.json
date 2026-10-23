@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "baseCommit": "724ac6fe9e5b2cba0cee6870658196c575b58486",
+  "priorTrackedPngCount": 666,
+  "allPriorPngBytesIdentical": true,
+  "orderedPathAndSha256Digest": "b168afc467c2efd1053605d96583ba629afb9d702f58a14bdeda8c8fc8e375ac",
+  "archivedFiles": 55,
+  "archiveVerification": "node scripts/check-retained-output.mjs; unchanged"
+}
