@@ -125,6 +125,12 @@ it("renders retained journals and exposes the balanced manual journal action", a
   expect(await screen.findByText("Office supplies")).toBeTruthy();
   expect(screen.getByText("$319.00")).toBeTruthy();
   const journalAction = screen.getByRole("button", { name: "Open journal: Office supplies" });
+  const journalRow = journalAction.closest("tr");
+  expect(journalRow).not.toBeNull();
+  if (!journalRow) throw new Error("Expected retained journal row");
+  for (const value of ["10/08/2026", "$319.00", "Posted"]) {
+    expect(within(journalRow).getByRole("cell", { name: value })).toBeTruthy();
+  }
   journalAction.focus();
   await user.keyboard("{Enter}");
   expect(onNavigate).toHaveBeenCalledWith(`/accounting/journals?journal=${journal.id}`);

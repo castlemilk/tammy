@@ -1725,9 +1725,13 @@ test("runs invoice, purchase, and BAS workflows through the packaged app", async
   await expect(page.getByTestId("business-invoice-income")).toContainText("$600.33");
   await expect(page.getByTestId("business-outstanding")).toContainText("$660.37");
   await page.getByRole("link", { name: "Journals", exact: true }).click();
-  await expect(
-    page.getByRole("row", { name: "30/09/2026 Invoice INV-MCP-001 $660.37 Posted", exact: true }),
-  ).toBeVisible();
+  const invoiceJournalRow = page.getByRole("row").filter({
+    has: page.getByRole("button", { name: "Open journal: Invoice INV-MCP-001", exact: true }),
+  });
+  await expect(invoiceJournalRow).toHaveCount(1);
+  for (const value of ["30/09/2026", "$660.37", "Posted"]) {
+    await expect(invoiceJournalRow.getByRole("cell", { name: value, exact: true })).toBeVisible();
+  }
   await regenerateInvoiceBas(page, "2026-07-01", "2026-09-30", "$660.37", "$60.04");
   await expect(page.getByRole("table", { name: "BAS sales sources", exact: true })).toContainText(
     "Issued invoice",

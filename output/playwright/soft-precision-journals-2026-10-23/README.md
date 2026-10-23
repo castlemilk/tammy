@@ -211,3 +211,19 @@ The final evidence lint initially found two semantic-markup issues in the compar
 report's scroll wrapper. Using a named section with its existing keyboard-accessible
 links resolves both; no app source, screenshots, validation rule or lint exclusion
 changed. The corrected evidence-only check and repository lint pass.
+
+## Original hosted failure and test adaptation
+
+At `6ad30c5e`, all four Ubuntu/Windows jobs passed, while both original macOS
+jobs failed the second existing invoice/purchase/BAS case at a missed exact row-name
+assertion after the semantic journal-button migration. Each passed five cases,
+failed one, and did not run 14. The original artifact and inspected safe frame,
+exact cause and correction are retained in [the CI follow-up](ci-row-followup.md).
+
+The corrected locator retains unique journal selection and explicitly checks the
+exact date, amount and Posted cells. The affected native case passes locally
+**22.4s /23.6s including runner**, zero retries, using the unchanged verified final
+runtime. All **10 Journals component tests**, typecheck and lint pass. All **786**
+previous captures and **55 archives** remain unchanged; only one safe hosted failure
+frame is added. These local results do not relabel either original hosted failure
+or imply the remaining 14 cases ran. Corrected exact-head CI remains separate.
