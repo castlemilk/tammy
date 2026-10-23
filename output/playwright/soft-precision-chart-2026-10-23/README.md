@@ -126,6 +126,15 @@ code and financial handlers are unchanged from `6707b3b1`; a clean package/nativ
 pass is still required for this CSS correction. This is a diagnosed source fix,
 not a blind retry or assertion weakening.
 
+The combined invoice journey already owns revenue code 4000, as established by
+`invoices/accounting_repository.go`'s real Invoice sales installation. The helper
+now allocates an available synthetic code within a bounded set when a fixture
+code is already present. Every one of the four UI creations and its exact typed
+response is still verified; no existing invoice account is touched or coverage
+skipped. Standalone before/after setup still uses its original available codes.
+This is a test-only follow-up; the verified `9bf430a7` application package is reused
+with its separately identified clean harness rather than rebuilt for that fixture.
+
 The preceding Journals head has terminal original first-attempt success in both
 [push run 40031390128](https://github.com/castlemilk/tammy/actions/runs/40031390128)
 and [PR run 40031395953](https://github.com/castlemilk/tammy/actions/runs/40031395953),

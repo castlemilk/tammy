@@ -47,17 +47,30 @@ export async function runChartJourney(page: Page, workspace: AuthenticatedAccoun
   await page.setViewportSize({ width: 1440, height: 1100 });
   await page.getByRole("link", { name: "Chart of accounts", exact: true }).click();
   const initial = await accounts(page, workspace);
+  const usedCodes = new Set(initial.map((account) => account.code));
+  const nextCode = (base: string) => {
+    for (let suffix = 0; suffix <= initial.length + samples.length + 1; suffix += 1) {
+      const code = suffix === 0 ? base : `${base}-UI${suffix}`;
+      if (!usedCodes.has(code)) {
+        usedCodes.add(code);
+        return code;
+      }
+    }
+    throw new Error("SYNTHETIC_CHART_CODE_UNAVAILABLE");
+  };
+  const journeySamples = samples.map((sample) => ({ ...sample, code: nextCode(sample.code) }));
+  const finalCode = nextCode("6300");
   const originalJournalIds = await journalIds(page, workspace);
   await capture(page, "01-installed-chart");
-  for (const sample of samples) {
+  for (const sample of journeySamples) {
     await page.getByRole("button", { name: "Add account", exact: true }).click();
     await fill(page, sample);
     await page.getByRole("button", { name: "Save account", exact: true }).click();
     await expect(page.getByRole("cell", { name: sample.name, exact: true })).toBeVisible();
   }
   const seeded = await accounts(page, workspace);
-  expect(seeded).toHaveLength(initial.length + samples.length);
-  for (const sample of samples) {
+  expect(seeded).toHaveLength(initial.length + journeySamples.length);
+  for (const sample of journeySamples) {
     expect(seeded.find((a) => a.code === sample.code)).toMatchObject({
       name: sample.name,
       type: sample.type,
@@ -107,14 +120,18 @@ export async function runChartJourney(page: Page, workspace: AuthenticatedAccoun
     }
   }
   await page.getByRole("button", { name: "Add account", exact: true }).click();
-  await fill(page, { code: "6300", name: "Synthetic studio insurance", type: AccountType.EXPENSE });
+  await fill(page, {
+    code: finalCode,
+    name: "Synthetic studio insurance",
+    type: AccountType.EXPENSE,
+  });
   await capture(page, "06-ordinary-account-entry");
   await page.getByRole("button", { name: "Cancel", exact: true }).click();
   expect(await accounts(page, workspace)).toEqual(seeded);
   if (chartCapturePhase !== "before")
     await expect(page.getByRole("button", { name: "Add account", exact: true })).toBeFocused();
   await page.getByRole("button", { name: "Add account", exact: true }).click();
-  await expect(page.getByLabel("Code", { exact: true })).toHaveValue("6300");
+  await expect(page.getByLabel("Code", { exact: true })).toHaveValue(finalCode);
   if (chartCapturePhase !== "before") {
     await page.getByLabel("Code", { exact: true }).focus();
     await page.keyboard.press("Escape");
@@ -136,7 +153,11 @@ export async function runChartJourney(page: Page, workspace: AuthenticatedAccoun
   );
   expect(await accounts(page, workspace)).toEqual(seeded);
   await capture(page, "07-rejected-duplicate");
-  await fill(page, { code: "6300", name: "Synthetic studio insurance", type: AccountType.EXPENSE });
+  await fill(page, {
+    code: finalCode,
+    name: "Synthetic studio insurance",
+    type: AccountType.EXPENSE,
+  });
   if (chartCapturePhase !== "before") await expect(page.getByRole("alert")).toHaveCount(0);
   await page.emulateMedia({ reducedMotion: "reduce" });
   for (const width of [900, 390, 320]) {
@@ -159,7 +180,7 @@ export async function runChartJourney(page: Page, workspace: AuthenticatedAccoun
   ).toBeVisible();
   const final = await accounts(page, workspace);
   expect(final).toHaveLength(seeded.length + 1);
-  expect(final.filter((a) => a.code === "6300")).toHaveLength(1);
+  expect(final.filter((a) => a.code === finalCode)).toHaveLength(1);
   for (const prior of initial.filter((a) => a.designation !== AccountDesignation.ORDINARY))
     expect(final.find((a) => a.id === prior.id)).toEqual(prior);
   await capture(page, "09-account-saved");
