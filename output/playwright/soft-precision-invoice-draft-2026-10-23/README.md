@@ -33,7 +33,7 @@ paper preview with a clear next action. The before issue-confirmation overview
 is anchored at the page heading; the opened confirmation lies below the fold.
 It is not offered as a focused image of that panel.
 
-## Implemented composition, before rendered acceptance
+## Implemented composition
 
 - A compact editor sits beside a local draft preview at wide desktop sizes; the
   two areas stack in small windows. The page/form keeps natural vertical scrolling.
@@ -67,6 +67,52 @@ are byte-identical to `262a6e77`. No Core, protobuf, credential, signing, permis
 release or tracked-cache change is part of this block. All 563 prior tracked
 output PNGs and 55 archived files remain byte-identical.
 
-Actual after pixels, package source, connected journey results and fresh hosted CI
-will be recorded after their checks complete. Tests and declarations alone do not
-establish visual fidelity. The existing draft PR and prior evidence remain intact.
+## Rendered comparison and connected journeys
+
+[Open the before/reference/after comparison](comparison.html). Eleven new real
+after frames are bound by `after-captures.json` to the clean ordinary Electron
+package at **1ec93d6d372cd704fefc74f1f22d06b48d8fc560**. Package verification
+passes seven checks with one expected skip. No runtime source changed after that
+build. The capture journey passes once in 23.4 seconds, with zero retries,
+page errors or console errors.
+
+Actual wide pixels show invoice fields and editable amounts beside the paper,
+where the previous screen only reached line items at the bottom of the first
+viewport. Forest actions, cocoa type, an ivory paper, restrained warm total tint
+and a soft serif seller identity follow the useful invoice composition in board
+02. Manual customer/address/GST fields and private estimates require more room
+than the concept's invented contact picker. Those supported controls remain
+present. This is a substantial structural correction, not a claim of identical
+pixels or app-wide design completion.
+
+At 390 and 320 pixels the preview stacks below the editor. The named, focusable
+line scrollers retain tabular values without making the entire document overflow.
+Captures deliberately show a horizontal scroll position reached by ArrowRight;
+clipped table columns are reachable using that local scroller. Totals remain
+outside it. The 320-pixel stress frame shows a long unbroken customer name and
+$1,100,000 total without document overflow. These temporary edits are restored
+without persistence; the native saved version remains one. View preview and Back
+to invoice fields retain the route and move visible focus. The focused issue
+frame shows Keep as draft focused; cancellation restores the Issue trigger.
+
+The native BAS lifecycle passes (15.8-second body), and cash/mixed-GST receipts
+with restart pass separately (19.5 seconds). The invoice/purchase/BAS case fails
+at its **second workspace unlock after restart**, at
+`current-workflows.spec.ts:1814`: it remains on Unlock your workspace with the
+generic unlock failure instead of reaching Overview. Earlier edit, template,
+issue, receipt and BAS assertions completed. This is an unresolved local result;
+neither an environmental cause nor a UI regression has been established. Its
+original artifacts are retained privately outside Git. No authentication code,
+timeouts, financial assertions or retry policy were changed to bypass it.
+
+`validation.json` records both successes and this failure. New hosted checks must
+be assessed at the new pushed head; the preceding head's six green checks do not
+validate this block. No MAS, Windows 11, production ATO or release qualification
+is claimed. The paused local SBR startup diagnostic remains separate.
+
+All 563 earlier tracked output PNGs, the seven before frames and unchanged board
+02 reference were rechecked byte-for-byte. All 55 archived files remain protected
+by the existing repository checker. `library-delivery.json` records five confirmed
+Library uploads made from separate byte-identical delivery copies. No private
+runtime logs, workspace files, authentication material or recovery secrets are
+included in this evidence directory.

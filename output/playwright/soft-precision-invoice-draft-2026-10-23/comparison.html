@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Tammy draft invoice — before, reference and after</title>
+    <style>
+      :root { color-scheme: light; font-family: system-ui, sans-serif; color: #302a25; background: #f7f3ea; }
+      body { max-width: 1800px; margin: auto; padding: 24px; }
+      h1, h2 { font-family: Georgia, serif; font-weight: 500; }
+      p { max-width: 90ch; line-height: 1.6; }
+      a { color: #235c4b; }
+      a:focus-visible { outline: 3px solid #235c4b; outline-offset: 4px; }
+      .pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+      figure { min-width: 0; margin: 0 0 24px; }
+      img { display: block; width: 100%; height: auto; border: 1px solid #dcd3c5; border-radius: 12px; }
+      figcaption { margin: 12px 0; line-height: 1.5; }
+      .narrow { max-width: 390px; }
+      @media (max-width: 800px) { .pair { grid-template-columns: 1fr; } body { padding: 16px; } }
+    </style>
+  </head>
+  <body>
+    <h1>Draft invoice creation and preview</h1>
+    <p>Real synthetic app captures use the same 1440 × 1100 viewport, invoice and fixed renderer clock. The approved full board is a generated reference concept. Its reminder, delivery, automation and customer-view controls are outside this supported workflow.</p>
+    <div class="pair">
+      <figure>
+        <a href="before/03-saved-draft.png"><img src="before/03-saved-draft.png" alt="Before: a large stacked invoice fieldset leaves line items at the bottom of the first viewport." /></a>
+        <figcaption>Before — real app, clean package 9b559fea. Saved draft INV-UI-001, $1,320 including $120 GST.</figcaption>
+      </figure>
+      <figure>
+        <a href="after/03-saved-draft.png"><img src="after/03-saved-draft.png" alt="After: compact draft fields and editable line items beside a public invoice preview and Save action." /></a>
+        <figcaption>After — real app, clean package 1ec93d6d. Same fixture and viewport. Private estimates remain editable outside the public preview.</figcaption>
+      </figure>
+    </div>
+    <h2>Approved reference — concept, not app evidence</h2>
+    <figure>
+      <a href="reference/02-automation-invoices.png"><img src="reference/02-automation-invoices.png" alt="Approved board 02: automation concept on the left, compact invoice editor beside a paper preview and proposed email panel on the right." /></a>
+      <figcaption>Unmodified board 02 from design commit 19533020. The invoice editor/paper composition on its right is this block's target; no unsupported sending or customer portal controls were copied.</figcaption>
+    </figure>
+    <h2>Narrow layout and explicit issue review</h2>
+    <div class="pair">
+      <figure class="narrow">
+        <a href="after/04-preview-320.png"><img src="after/04-preview-320.png" alt="320-pixel real app preview with visible heading focus, wrapped seller details, local table scrolling and readable total." /></a>
+        <figcaption>320 × 900. Keyboard navigation reaches local table columns; totals remain outside that scroller. The document does not overflow.</figcaption>
+      </figure>
+      <figure>
+        <a href="after/05b-issue-confirmation-focused.png"><img src="after/05b-issue-confirmation-focused.png" alt="Real issue-review panel explaining ledger changes, separate receipts and no automatic customer delivery, with visible focus on Keep as draft." /></a>
+        <figcaption>Explicit issue review, Keep as draft focused. Cancellation returns focus to Issue. No issue or send occurs automatically.</figcaption>
+      </figure>
+    </div>
+    <p><a href="README.md">Journey actions, test outcomes and remaining limitations</a> · <a href="after-captures.json">After provenance and hashes</a> · <a href="validation.json">Validation, including the unresolved local second-unlock failure</a></p>
+  </body>
+</html>
