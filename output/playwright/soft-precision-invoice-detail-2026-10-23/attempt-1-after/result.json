@@ -1,0 +1,45 @@
+{
+  "sourceRevision": "5e8b5bd07026e60aba06abdd2f3b4028afb9f3c0",
+  "sourceDirty": false,
+  "appSha256": "85e1d46d0a3fc991320a8eeb9c9528d10ed9f2fb8b77635f127ff15f8e1a39cd",
+  "journeyPassed": 1,
+  "journeyFailed": 0,
+  "seconds": 13.4,
+  "retries": 0,
+  "visualAcceptance": "needs-correction",
+  "observedIssues": [
+    "Selected view underline is warm border colour rather than forest: border-forest is not a registered colour utility.",
+    "Payment review has no intended tint: bg-muted/50 is not a registered opacity utility.",
+    "Narrow overview frame inherits the prior table scroll offset; reset its framing explicitly before overview capture."
+  ],
+  "frames": [
+    {
+      "path": "06-issued-read-only.png",
+      "sha256": "244d83f360f912a7a55b6251477452aa8890aac6ae0dc7e31dad7cedb7800223"
+    },
+    {
+      "path": "07-payment-review.png",
+      "sha256": "c8480a29e055b3a11c7668c784a3859beb84ffc350d117772ce6f8d44df306c5"
+    },
+    {
+      "path": "08-recorded-receipt.png",
+      "sha256": "3a5aa099f76ea6028c9208e0ab42f44a8d8eb77bbae1b77f010c781dc9c07cba"
+    },
+    {
+      "path": "09-review-existing-receipt.png",
+      "sha256": "d1a1fac0b3af79105217292de0082a6d695727eaa62ecc21bd97d449c9ff4dba"
+    },
+    {
+      "path": "10-issued-items-with-receipt.png",
+      "sha256": "f34dbdf6ae8e8bdbdf514c6dacb5864dbdc75d23a535d2a7a8b994721501bc96"
+    },
+    {
+      "path": "11-detail-320.png",
+      "sha256": "0e76fa4d23807fb9835a376d72fa1ff43a62729733d84301d10b64f63954212a"
+    },
+    {
+      "path": "11-detail-390.png",
+      "sha256": "cd6cb06707e1d3bb57caacf99a6e6fcba77dd0c35eaec33b94f5b8f44eeccc10"
+    }
+  ]
+}

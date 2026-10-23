@@ -109,9 +109,14 @@ test.describe("Soft Precision financial workspace", () => {
     await paymentView.focus();
     await page.keyboard.press("Space");
     await expect(paymentView).toHaveAttribute("aria-pressed", "true");
+    await expect(paymentView).toHaveCSS("border-bottom-color", "rgb(35, 92, 75)");
     await expect(paymentView).toHaveCSS("outline-style", "solid");
     await page.getByRole("button", { name: "Record payment", exact: true }).click();
     await expect(page.getByLabel("Payment date", { exact: true })).toBeFocused();
+    await expect(page.getByRole("form", { name: "Review payment", exact: true })).toHaveCSS(
+      "background-color",
+      "rgb(247, 243, 234)",
+    );
     await page
       .getByRole("combobox", { name: "Bank account", exact: true })
       .selectOption({ label: "1000 · Business bank" });
@@ -247,6 +252,11 @@ test.describe("Soft Precision financial workspace", () => {
         .poll(() => savedScroll.evaluate((element) => element.scrollLeft))
         .toBeGreaterThan(0);
       await page.getByRole("button", { name: "Open INV-UI-001", exact: true }).click();
+      await page
+        .getByRole("region", { name: "Invoice line items table", exact: true })
+        .evaluate((element) => {
+          element.scrollLeft = 0;
+        });
       await capture(page, `11-detail-${width}`);
       await page
         .getByRole("table", { name: "Invoice line items", exact: true })

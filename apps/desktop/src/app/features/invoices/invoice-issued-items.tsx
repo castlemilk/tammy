@@ -117,7 +117,7 @@ export function InvoiceIssuedItems({
               {draft.gstRegistered ? "Registered for GST" : "Not registered for GST"}
             </Information>
           </dl>
-          <div className="grid gap-3 rounded-xl bg-muted/40 p-4">
+          <div className="grid gap-3 rounded-xl bg-background p-4">
             <h2 className="text-[14px] font-semibold">Internal · never on the PDF</h2>
             <dl className="grid max-w-[400px] gap-3">
               <Amount

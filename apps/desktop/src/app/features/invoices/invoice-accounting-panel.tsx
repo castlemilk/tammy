@@ -203,7 +203,7 @@ export function InvoiceAccountingPanel({
             {(["items", "payments"] as const).map((value) => (
               <button
                 aria-pressed={view === value}
-                className={`focus-ring min-h-11 rounded-t-lg border-b-2 px-1 text-[13px] font-medium transition-colors disabled:opacity-50 ${view === value ? "border-forest text-forest" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+                className={`focus-ring min-h-11 rounded-t-lg border-b-2 px-1 text-[13px] font-medium transition-colors disabled:opacity-50 ${view === value ? "border-b-[var(--forest)] text-forest" : "border-transparent text-muted-foreground hover:text-foreground"}`}
                 disabled={busy}
                 key={value}
                 onClick={() => setView(value)}
@@ -342,7 +342,7 @@ export function InvoiceAccountingPanel({
             )}
             {paymentOpen ? (
               <form
-                className="grid gap-4 rounded-xl bg-muted/50 p-4"
+                className="grid gap-4 rounded-xl bg-background p-4"
                 aria-label="Review payment"
                 noValidate
                 onSubmit={savePayment}

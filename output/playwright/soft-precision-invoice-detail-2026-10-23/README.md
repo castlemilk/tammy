@@ -52,8 +52,8 @@ trail do not establish supported features. Those controls will not be copied.
 Existing PDF export, explicit legacy accounting review, GST-basis explanation,
 receipt validation/version/idempotency rules and internal cost privacy must remain.
 
-After evidence and validation are pending. These before captures do not establish
-that the next implementation matches the reference or is qualified for release.
+These before captures do not establish that the implementation matches the
+reference or is qualified for release.
 
 ## Source checkpoint before packaging
 
@@ -78,3 +78,22 @@ and source information is available under disclosure, outside the customer table
 The source is committed before one ordinary package build and real after capture.
 Visual acceptance and native journey results will be recorded after inspecting
 those application pixels.
+
+## First actual after attempt
+
+The first ordinary package at clean source `5e8b5bd0` passed seven applicable
+package checks, with one Windows-only skip. Its full financial journey passed
+once in 13.4 seconds, including keyboard view selection, retained unsubmitted
+review, cancel/repeated actions, native balances, export and narrow scrolling.
+All seven actual frames are retained unchanged in `attempt-1-after/` with hashes.
+
+Pixel inspection confirms that the items table and all totals now fit in the
+first desktop viewport, and recorded receipts precede review. It also identifies
+two real colour defects: the selected underline used an unregistered colour
+utility, and the review form's opacity utility produced no tint. The correction
+uses the existing forest variable and canonical oat background. Native computed
+colour assertions are added; no reference image is substituted for the real app.
+Narrow overview framing also resets table scroll explicitly before capture.
+
+After these CSS/capture corrections, all 71 focused cases pass again. TypeScript
+and lint pass with the same warnings. Final corrected pixels remain pending.
