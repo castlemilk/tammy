@@ -6,7 +6,9 @@ The original [PR macOS job 120502960080](https://github.com/castlemilk/tammy/act
 failed in the new Documents journey at line 173: after ArrowRight, `scrollLeft`
 remained zero. Six packaged cases passed, this seventh case failed and 13 did
 not run. Both Ubuntu and both Windows Server checks passed. The original push
-macOS job remains active as this follow-up is prepared; no retry was requested.
+macOS job later passed all 20 packaged cases in 16.7m on its original attempt.
+This establishes an intermittent default keyboard path across the two original
+runs; no retry was requested.
 
 The retained [artifact 12512389772](https://github.com/castlemilk/tammy/actions/runs/39979562973/artifacts/12512389772)
 has SHA256 `33dad84e919586ab6085c8994e0d265804952a190fb5b6a0b4892996664c8914`.

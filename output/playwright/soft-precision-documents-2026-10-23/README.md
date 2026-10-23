@@ -84,7 +84,7 @@ See the prior Overview folder's `screen-board-inventory.md` for the finite list
 of implemented screens and remaining dedicated comparisons. Draft, merge and
 publication holds remain in force.
 
-## Validated after comparison
+## Initial validated after comparison
 
 Open `comparison.html` for the before/reference/after view. The desktop pair
 shares the same 1440 × 1100 viewport, source selection and five synthetic files.
@@ -115,3 +115,36 @@ Confirmed Library deliveries:
 - [After](https://chatgpt.com/api/library/files/libfile_0f6dca1097ac8191ad5acd397b7f735a/download)
 - [Document review](https://chatgpt.com/api/library/files/libfile_93989a8b35ac8191af971815e623ff7e/download)
 - [320px keyboard focus](https://chatgpt.com/api/library/files/libfile_9e47ed19131c8191b8a12a05cdc8ecf2/download)
+
+## Keyboard follow-up and current comparison
+
+The first exact-head hosted CI completed five green jobs and one failed macOS
+job. Its focused 320px overflow region did not scroll after ArrowRight. The
+separate original push run passed all 20 packaged cases; no rerun was requested.
+See `ci-followup.md` for the original screenshot, artifact and bounded fix.
+
+The current comparison uses the separate 12-frame `after-keyboard-fix` capture
+from clean ordinary runtime `0f3ed9bd7151cda8757ab5e2874f95e343d78205`. The
+shared scroller now explicitly handles unmodified horizontal keys on the region
+itself, preserving child controls, modified/vertical keys and non-overflowing
+content. Native focus, overflow and actual movement assertions are retained.
+
+The corrected runtime passes seven package checks (one expected skip), 1,308
+desktop tests in 111 files, 55 focused tests in six files, typecheck, lint and
+descriptor verification. The fresh Documents capture passes in 11.2s and the
+full invoice/Overview/Documents journey in 12.5s. Both have zero retries, page
+errors and console errors. The static audit still has the same 19 findings.
+
+The first three after Library views listed above are byte-identical to the
+freshly captured desktop, review and manual-field views. They can be reused
+without relabeling their original provenance or creating duplicate Library
+items. `keyboard-fix-captures.json` records both current-source captures and the
+byte checks. The additional [320px table keyboard-scroll capture](https://chatgpt.com/api/library/files/libfile_181e651f652081918972b89335fe774a/download)
+shows the corrected explicit movement.
+
+All 653 output PNGs tracked before this follow-up and all 55 archived files
+remain byte-identical. Across this Documents folder, 40 real frames are retained
+(before, original after, corrected after, baseline attempts and one original
+hosted failure), separately from the one unchanged concept board. Exact-head
+corrected hosted outcomes are recorded in draft PR #11 after push; local checks
+here do not imply release qualification or lifted publication holds.

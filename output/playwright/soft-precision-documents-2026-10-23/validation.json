@@ -39,7 +39,7 @@
     "seconds": 11.6,
     "retries": 0
   },
-  "hostedExactHead": "pending push",
+  "hostedExactHead": "Initial d1174: five green jobs, one PR macOS keyboard-scroll failure; see ci-followup.md. Final corrected exact-head outcomes are in draft PR #11.",
   "qualificationBoundary": "Ordinary darwin-arm64 package only. No MAS, Windows 11, signing, upload, merge or publication claim.",
   "connectedNativeJourney": {
     "passed": 1,
@@ -54,5 +54,6 @@
     "failed": 0,
     "skipped": 1,
     "coreUnchanged": true
-  }
+  },
+  "scope": "Initial Documents block. Latest correction outcomes are in keyboard-fix-captures.json."
 }
