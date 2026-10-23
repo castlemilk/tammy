@@ -544,6 +544,7 @@ test("packaged Playwright stops after the first CI failure without retrying", as
   const configUrl = new URL("../apps/desktop/playwright.config.ts", import.meta.url).href;
   const expectedTests = [
     "foundation.spec.ts",
+    "financial-workspace.spec.ts",
     "current-workflows.spec.ts",
     "bas-lifecycle.spec.ts",
     "bas-preparation.spec.ts",

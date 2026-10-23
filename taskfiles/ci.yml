@@ -34,6 +34,7 @@ tasks:
         task --version | node -e 'let output=""; process.stdin.on("data", (chunk) => output += chunk); process.stdin.on("end", () => { if (output.trim() !== "3.52.0") { console.error(`UNSUPPORTED_TASK_VERSION:${output.trim()}`); process.exit(1); } })'
       - pnpm check:toolchain
       - node scripts/check-clean-tree.mjs
+      - node --test scripts/*.test.mjs
       - TAMMY_SQLCIPHER_REPRODUCIBILITY=1 pnpm sqlcipher:test
       - go test -race -tags tammy_sqlcipher ./services/core/internal/storage/sqlcipher/... -count=1
       - pnpm desktop:e2e:dev
