@@ -124,6 +124,7 @@ test("invoices/income-payments-bas: cash receipts, mixed GST and balances persis
   await page.getByRole("button", { name: "Open CASH-2026-001", exact: true }).click();
   await expect(page.getByTestId("invoice-received")).toContainText("$180.00");
   await expect(page.getByTestId("invoice-outstanding")).toContainText("$0.00");
+  await page.getByRole("button", { name: "Payments", exact: true }).click();
   await expect(
     page.getByRole("table", { name: "Recorded invoice payments", exact: true }),
   ).toContainText("Final half received");

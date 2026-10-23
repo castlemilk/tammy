@@ -1,0 +1,99 @@
+{
+  "syntheticOnly": true,
+  "runtimeSource": "9b559fea66a4e8821f3719975d0dbfabce0501e4",
+  "runtimeSourceDirty": false,
+  "testInstrumentationExtendedAfterPackage": true,
+  "testFileSha256": "8ec2c96123758f45211912f38580a048110262144f66cc7ad859bebcf9161372",
+  "appSha256": "44a30b7710432b2b294634b23096af2925a20a6800e07d14d010ca77c1961520",
+  "coreSha256": "078811e551eb5cd0c5f505e3282d82bc8f50be578c12a9d92e7bafb70d67562c",
+  "manifestSha256": "b6a770d2467cc8d89986d1cb6e068cf580abada2fe3be6f33596825e0479909f",
+  "packageChecks": {
+    "passed": 7,
+    "skippedWindowsOnly": 1
+  },
+  "journey": {
+    "passed": 1,
+    "failed": 0,
+    "retries": 0,
+    "seconds": 15.0,
+    "pageErrors": 0,
+    "consoleErrors": 0,
+    "invoiceTotalMinor": 132000,
+    "receivedMinor": 50000,
+    "outstandingMinor": 82000,
+    "receipts": 1,
+    "extra200ReviewsCancelled": 2
+  },
+  "renderedAssertions": [
+    "forest view underline rgb(35, 92, 75)",
+    "oat review surface rgb(247, 243, 234)",
+    "Space selects Payments with visible focus",
+    "opening review focuses date",
+    "view changes retain unsubmitted amount/reference",
+    "Cancel restores Record payment focus",
+    "double save produces one native payment",
+    "390/320 document containment and keyboard table scrolling",
+    "320 receipt review cancels without changing native balance",
+    "reduced motion",
+    "PDF cancel/private export",
+    "back/forward and explicit list return"
+  ],
+  "frames": [
+    {
+      "path": "after/06-issued-read-only.png",
+      "sha256": "c90f7e1c58b578c64b0b2bfc7813784efa7c04acd3d44d3812f7e22f5aa5ab4f",
+      "bytes": 107946,
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "path": "after/07-payment-review.png",
+      "sha256": "323884fec88e796f153d844c36d0f0209502e22348952ce414c065e0d1817fbb",
+      "bytes": 129742,
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "path": "after/08-recorded-receipt.png",
+      "sha256": "f20354682a022a668574dd102a98d70c8539833670dbac3b38be749b4e9395b9",
+      "bytes": 113074,
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "path": "after/09-review-existing-receipt.png",
+      "sha256": "2d65d2938d0706ce6bd003062d667aee4646bd7b8e57a75ba90485a2ef67f264",
+      "bytes": 134416,
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "path": "after/10-issued-items-with-receipt.png",
+      "sha256": "5110a1c224ec31d22e556ef03e2755d9ccbd40440b934d004dd939eac48c9c4b",
+      "bytes": 108182,
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "path": "after/11-detail-320.png",
+      "sha256": "2a0cdadcd1dc9a3b7868e025b6c338b714a68eb1fbee706947802e1cb3a1556f",
+      "bytes": 45473,
+      "width": 320,
+      "height": 900
+    },
+    {
+      "path": "after/11-detail-390.png",
+      "sha256": "df7420ad7a748b76643499c4faa98e58338b2c3d77fcca3bb1a57e864a1ec11a",
+      "bytes": 55174,
+      "width": 390,
+      "height": 900
+    },
+    {
+      "path": "after/13-payment-320.png",
+      "sha256": "5c69a668688a7d940a2fc66a81d0120b3abd784775a2e6b5bee388e0d67f6c41",
+      "bytes": 54818,
+      "width": 320,
+      "height": 900
+    }
+  ]
+}

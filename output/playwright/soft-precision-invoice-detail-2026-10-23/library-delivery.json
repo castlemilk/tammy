@@ -1,0 +1,58 @@
+{
+  "syntheticOnly": true,
+  "uploadConfirmed": true,
+  "originalCaptureBytesUnchanged": true,
+  "approvedReferenceLibraryFileId": "libfile_a592441937c4819193f44f4203f425c4",
+  "files": [
+    {
+      "capture": "before/10-issued-items-with-receipt.png",
+      "name": "Tammy-issued-items-before.png",
+      "libraryFileId": "libfile_42add01d694081918f549b7d8b62f1da",
+      "sha256": "e3cc9fe59402ec40413ef3596362eb8c018f7284e4364fe74828300ed5ba74bb",
+      "bytes": 135227,
+      "status": "succeeded",
+      "deliveryCopyXattrsApplied": true,
+      "downloadUrl": "https://chatgpt.com/api/library/files/libfile_42add01d694081918f549b7d8b62f1da/download"
+    },
+    {
+      "capture": "after/10-issued-items-with-receipt.png",
+      "name": "Tammy-issued-items-after.png",
+      "libraryFileId": "libfile_7cd4da8603108191af3cf5c254e57074",
+      "sha256": "5110a1c224ec31d22e556ef03e2755d9ccbd40440b934d004dd939eac48c9c4b",
+      "bytes": 108182,
+      "status": "succeeded",
+      "deliveryCopyXattrsApplied": true,
+      "downloadUrl": "https://chatgpt.com/api/library/files/libfile_7cd4da8603108191af3cf5c254e57074/download"
+    },
+    {
+      "capture": "before/09-review-existing-receipt.png",
+      "name": "Tammy-payment-review-before.png",
+      "libraryFileId": "libfile_a14faaf45bc48191b89a5e5e7e69ca6f",
+      "sha256": "9570423b3591bd363a90a2977b3ef9438aac8322e58101a05565d2c659fda729",
+      "bytes": 135166,
+      "status": "succeeded",
+      "deliveryCopyXattrsApplied": true,
+      "downloadUrl": "https://chatgpt.com/api/library/files/libfile_a14faaf45bc48191b89a5e5e7e69ca6f/download"
+    },
+    {
+      "capture": "after/09-review-existing-receipt.png",
+      "name": "Tammy-payment-review-after.png",
+      "libraryFileId": "libfile_500d3eeddf688191b64010f1056d2814",
+      "sha256": "2d65d2938d0706ce6bd003062d667aee4646bd7b8e57a75ba90485a2ef67f264",
+      "bytes": 134416,
+      "status": "succeeded",
+      "deliveryCopyXattrsApplied": true,
+      "downloadUrl": "https://chatgpt.com/api/library/files/libfile_500d3eeddf688191b64010f1056d2814/download"
+    },
+    {
+      "capture": "after/13-payment-320.png",
+      "name": "Tammy-payment-review-320.png",
+      "libraryFileId": "libfile_b854272a7bac819185f3751829138cc7",
+      "sha256": "5c69a668688a7d940a2fc66a81d0120b3abd784775a2e6b5bee388e0d67f6c41",
+      "bytes": 54818,
+      "status": "succeeded",
+      "deliveryCopyXattrsApplied": true,
+      "downloadUrl": "https://chatgpt.com/api/library/files/libfile_b854272a7bac819185f3751829138cc7/download"
+    }
+  ]
+}

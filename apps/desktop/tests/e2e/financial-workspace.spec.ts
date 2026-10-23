@@ -288,6 +288,30 @@ test.describe("Soft Precision financial workspace", () => {
           dimensions.available,
         );
       }
+      if (width === 320) {
+        await paymentView.click();
+        await page.getByRole("button", { name: "Record payment", exact: true }).click();
+        await page.getByLabel("Amount received (AUD)", { exact: true }).fill("200.00");
+        await page
+          .getByLabel("Payment reference (optional)", { exact: true })
+          .fill("SYNTHETIC-NARROW-REVIEW");
+        await expect
+          .poll(() =>
+            page.evaluate(
+              () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+            ),
+          )
+          .toBe(true);
+        await capture(page, "13-payment-320");
+        await page.getByRole("button", { name: "Cancel payment", exact: true }).click();
+        await expect(
+          page.getByRole("button", { name: "Record payment", exact: true }),
+        ).toBeFocused();
+        const retained = await readInvoiceAccounting(page, workspace, "INV-UI-001");
+        expect(retained.accounting.payments).toHaveLength(1);
+        expect(retained.accounting.receivedMinor).toBe(50_000n);
+        expect(retained.accounting.outstandingMinor).toBe(82_000n);
+      }
     }
     expect(electronHarness.consoleErrors).toEqual([]);
     expect(electronHarness.pageErrors).toEqual([]);
@@ -453,11 +477,14 @@ async function capture(page: Page, name: string) {
       "10-issued-items-with-receipt",
       "11-detail-390",
       "11-detail-320",
+      "13-payment-320",
     ].includes(name)
   )
     return;
   await expect(page.locator("h1")).toBeAttached();
-  if (detailPhase) {
+  if (detailPhase && name === "13-payment-320") {
+    await page.getByRole("form", { name: "Review payment", exact: true }).scrollIntoViewIfNeeded();
+  } else if (detailPhase) {
     await page.locator("h1").scrollIntoViewIfNeeded();
   } else if (/^0[1239]|^10/.test(name)) {
     await page.locator("h1").scrollIntoViewIfNeeded();

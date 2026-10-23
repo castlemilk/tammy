@@ -1774,7 +1774,14 @@ test("runs invoice, purchase, and BAS workflows through the packaged app", async
   );
   expect(retainedAccounting.accounting.paymentCount).toBe(1n);
   expect(retainedAccounting.accounting.payments[0]?.reference).toBe("First actual receipt");
-  await expectInvoiceTemplateSnapshot(restarted, ORIGINAL_COMPANY_TEMPLATE, "2026-10-30", true);
+  await expectInvoiceTemplateSnapshot(
+    restarted,
+    ORIGINAL_COMPANY_TEMPLATE,
+    "2026-10-30",
+    true,
+    "issued",
+  );
+  await restarted.getByText("Company defaults for new invoices", { exact: true }).click();
   await restarted.getByRole("button", { name: "Manage invoice template", exact: true }).click();
   await expectCompanyTemplate(restarted, UPDATED_COMPANY_TEMPLATE, false);
   await expect(
