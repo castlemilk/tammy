@@ -10,6 +10,7 @@ import type { TammyConveyorModule } from "../../../conveyor/client";
 import { businessIncomeToRecord } from "../../../shared/invoice-accounting";
 import { createProtoMethodCodec } from "../../../shared/proto-ipc";
 import { Button } from "../../components/ui/button";
+import { SurfaceHeading } from "../../components/workspace-primitives";
 import {
   ReportExportActions,
   type ReportOrganisationApi,
@@ -90,29 +91,27 @@ export function BusinessIncomePanel({
   }
   return (
     <section
-      className="overflow-hidden rounded-[6px] border border-border bg-surface"
+      className="work-surface overflow-hidden"
       aria-label="Business income"
       aria-busy={query.isFetching}
     >
-      <div className="flex flex-wrap items-end justify-between gap-3 border-b border-border p-3">
-        <div>
-          <h2 className="text-[11px] font-semibold">Business income</h2>
-          <p className="mt-1 text-[9px] text-muted-foreground">
-            Posted revenue excluding GST, with invoice receipts and balances.
-          </p>
-        </div>
-        <Button
-          className="h-7 text-[10px]"
-          disabled={!valid || query.isFetching}
-          onClick={() => api.getBusinessIncomeSummary.invalidate(input)}
-          type="button"
-          variant="ghost"
-        >
-          Refresh income
-        </Button>
-      </div>
-      <div className="grid grid-cols-4 gap-2 border-b border-border p-3 max-[760px]:grid-cols-2">
-        <label className="grid gap-1 text-[9px] font-medium">
+      <SurfaceHeading
+        title="Business income"
+        description="Posted revenue excluding GST, with invoice receipts and balances."
+        action={
+          <Button
+            className="h-11 text-[13px]"
+            disabled={!valid || query.isFetching}
+            onClick={() => api.getBusinessIncomeSummary.invalidate(input)}
+            type="button"
+            variant="ghost"
+          >
+            Refresh income
+          </Button>
+        }
+      />
+      <div className="grid grid-cols-4 gap-3 border-b border-border p-5 max-[760px]:grid-cols-2 max-[460px]:grid-cols-1">
+        <label className="grid gap-1.5 text-[12px] font-semibold text-foreground">
           Income period
           <select
             className={fieldClass}
@@ -143,12 +142,12 @@ export function BusinessIncomePanel({
         <DateField label="Balances as of" onChange={setAsOf} value={asOf} />
       </div>
       {!valid ? (
-        <p className="p-3 text-[10px] text-destructive" role="alert">
+        <p className="p-5 text-[13px] text-destructive" role="alert">
           Choose valid dates with the period start on or before its end.
         </p>
       ) : value ? (
-        <div className="grid gap-3 p-3">
-          <dl className="grid grid-cols-4 gap-3 max-[760px]:grid-cols-2">
+        <div className="grid gap-5 p-5">
+          <dl className="grid grid-cols-4 gap-3 max-[760px]:grid-cols-2 max-[460px]:grid-cols-1">
             <Metric
               label="Business income (ex GST)"
               minor={value.businessIncomeMinor}
@@ -170,7 +169,7 @@ export function BusinessIncomePanel({
               testId="business-outstanding"
             />
           </dl>
-          <p className="text-[9px] leading-4 text-muted-foreground">
+          <p className="border-t border-border pt-4 text-[12px] leading-5 text-muted-foreground">
             Income and receipts cover {value.periodStart} to {value.periodEnd}. Invoices owing
             include earlier unpaid invoices as of {value.asOfDate}. Invoice GST attributed in this
             period: {money(value.invoiceGstMinor)} (
@@ -182,15 +181,15 @@ export function BusinessIncomePanel({
             ).
           </p>
           {value.unpostedIssuedCount > 0 ? (
-            <div className="flex flex-wrap items-center gap-2 border-t border-border pt-3">
-              <p className="mr-auto text-[10px] text-warning">
+            <div className="flex flex-wrap items-center gap-3 border-t border-border pt-4">
+              <p className="mr-auto text-[13px] leading-5 text-warning">
                 {value.unpostedIssuedCount} older issued invoice
                 {value.unpostedIssuedCount === 1 ? " needs" : "s need"} accounting review. Unposted
                 invoice income in this period: {money(value.unpostedIncomeMinor)}.
               </p>
               {onReviewInvoices ? (
                 <Button
-                  className="h-7 text-[10px]"
+                  className="h-11 text-[13px]"
                   onClick={onReviewInvoices}
                   type="button"
                   variant="outline"
@@ -202,7 +201,7 @@ export function BusinessIncomePanel({
           ) : null}
         </div>
       ) : (
-        <p className="p-3 text-[10px] text-muted-foreground" role="status">
+        <p className="p-5 text-[13px] text-muted-foreground" role="status">
           {query.isFetching
             ? "Loading business income…"
             : "Business income could not be read. Refresh to try again."}
@@ -233,7 +232,7 @@ export function BusinessIncomePanel({
 }
 
 const fieldClass =
-  "focus-ring h-8 min-w-0 rounded-[4px] border border-border bg-background px-2 text-[10px]";
+  "focus-ring h-11 min-w-0 rounded-xl border border-border bg-surface px-3 text-[14px] text-foreground";
 function DateField({
   label,
   value,
@@ -244,7 +243,7 @@ function DateField({
   readonly onChange: (value: string) => void;
 }) {
   return (
-    <label className="grid gap-1 text-[9px] font-medium">
+    <label className="grid min-w-0 gap-1.5 text-[12px] font-semibold text-foreground">
       {label}
       <input
         className={fieldClass}
@@ -266,8 +265,10 @@ function Metric({
 }) {
   return (
     <div data-testid={testId}>
-      <dt className="text-[9px] text-muted-foreground">{label}</dt>
-      <dd className="mt-1 text-[17px] font-semibold">{money(minor)}</dd>
+      <dt className="text-[12px] leading-5 text-muted-foreground">{label}</dt>
+      <dd className="mt-1 text-[22px] font-semibold leading-7 tabular-nums text-foreground">
+        {money(minor)}
+      </dd>
     </div>
   );
 }

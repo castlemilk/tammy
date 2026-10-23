@@ -361,7 +361,7 @@
   }
   .work-eyebrow {
     color: var(--muted-foreground);
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 600;
     letter-spacing: 0.075em;
     text-transform: uppercase;
@@ -390,7 +390,7 @@
   .work-table th {
     padding: 12px 20px;
     color: var(--muted-foreground);
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 600;
   }
   .work-table td {

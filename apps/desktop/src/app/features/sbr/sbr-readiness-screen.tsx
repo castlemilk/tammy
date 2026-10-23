@@ -19,6 +19,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { TammyConveyorModule } from "../../../conveyor/client";
 import { createProtoMethodCodec } from "../../../shared/proto-ipc";
 import { Badge } from "../../components/ui/badge";
+import { ScreenHeading } from "../../components/workspace-primitives";
 import type { AuthenticatedWorkspace } from "../setup/setup-screen";
 import { MachineCredentialForm } from "./machine-credential-form";
 import { ProductIdForm } from "./product-id-form";
@@ -363,27 +364,23 @@ export function SbrReadinessScreen({
         : `${readinessLabel(state.readiness.state)}.`;
 
   return (
-    <div className="mx-auto grid w-full max-w-[920px] gap-5">
+    <div className="mx-auto grid w-full max-w-[1120px] gap-6">
       <p aria-live="polite" className="sr-only" role="status">
         {announcement}
       </p>
-      <header className="flex items-end justify-between gap-5 border-b border-border pb-4">
-        <div className="min-w-0">
-          <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-forest">
-            Settings / secure reporting
-          </p>
-          <h1 className="text-[19px] font-semibold tracking-[-0.025em] text-foreground">
-            SBR readiness
-          </h1>
-          <p
-            className="mt-1 min-w-0 text-[11px] leading-5 text-muted-foreground [overflow-wrap:anywhere]"
+      <ScreenHeading
+        area="Settings · Secure reporting"
+        title="SBR readiness"
+        description={
+          <span
+            className="min-w-0 [overflow-wrap:anywhere]"
             data-testid="sbr-organisation-identity"
           >
             {workspace.organisationDisplayName} · ABN {workspace.organisationCanonicalAbn}
-          </p>
-        </div>
-        <Badge variant="outline">Local only</Badge>
-      </header>
+          </span>
+        }
+        action={<Badge variant="outline">Local only</Badge>}
+      />
 
       {state.status === "loading" ? <LoadingSurface /> : null}
       {state.status === "unavailable" ? <UnavailableSurface /> : null}
@@ -420,9 +417,9 @@ export function SbrReadinessScreen({
 
 function LoadingSurface() {
   return (
-    <section aria-label="SBR readiness summary" className="border-y border-border py-8">
-      <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
-        <CircleDashed aria-hidden="true" className="size-4 animate-spin text-forest" />
+    <section aria-label="SBR readiness summary" className="work-surface p-6">
+      <div className="flex items-center gap-3 text-[14px] text-muted-foreground">
+        <CircleDashed aria-hidden="true" className="size-5 animate-spin text-forest" />
         Checking signed profile, protected credentials, and registration evidence…
       </div>
     </section>
@@ -431,12 +428,15 @@ function LoadingSurface() {
 
 function UnavailableSurface() {
   return (
-    <section aria-label="SBR readiness summary" className="border-y border-warning-border py-6">
+    <section
+      aria-label="SBR readiness summary"
+      className="work-surface border-warning-border bg-warning-soft p-6"
+    >
       <div className="flex items-start gap-3">
         <AlertTriangle aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-warning" />
         <div>
-          <h2 className="text-[13px] font-semibold text-foreground">Readiness unavailable</h2>
-          <p className="mt-1 max-w-[620px] text-[11px] leading-5 text-muted-foreground">
+          <h2 className="text-[16px] font-semibold text-foreground">Readiness unavailable</h2>
+          <p className="mt-2 max-w-[720px] text-[14px] leading-6 text-muted-foreground">
             Tammy could not inspect the authenticated local SBR state. Accounting remains available
             and no network request was started.
           </p>
@@ -475,51 +475,47 @@ function ReadinessSurface({
 
   return (
     <>
-      <section aria-labelledby="sbr-summary-heading" className="border-y border-border">
-        <div className="grid min-h-[150px] grid-cols-[minmax(0,1.35fr)_minmax(220px,0.65fr)] max-[720px]:grid-cols-1">
-          <div className="flex gap-4 py-6 pr-8 max-[720px]:pr-0">
-            <span
-              className={`grid size-9 shrink-0 place-items-center rounded-full ${ready ? "bg-ready-soft text-ready-foreground" : "bg-warning-soft text-warning"}`}
-            >
-              {ready ? (
-                <CheckCircle2 aria-hidden="true" className="size-4" />
-              ) : (
-                <AlertTriangle aria-hidden="true" className="size-4" />
-              )}
-            </span>
-            <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.11em] text-muted-foreground">
-                Current boundary
-              </p>
-              <h2
-                id="sbr-summary-heading"
-                className="mt-2 text-[17px] font-semibold text-foreground"
-              >
-                {label}
-              </h2>
-              <p className="mt-2 max-w-[520px] text-[11px] leading-5 text-muted-foreground">
-                {environment.detail}
-              </p>
-            </div>
+      <section
+        aria-labelledby="sbr-summary-heading"
+        className="work-surface grid grid-cols-[minmax(0,1.35fr)_minmax(220px,0.65fr)] overflow-hidden max-[720px]:grid-cols-1"
+      >
+        <div className="flex gap-4 p-6 max-[720px]:pr-6">
+          <span
+            className={`grid size-9 shrink-0 place-items-center rounded-full ${ready ? "bg-ready-soft text-ready-foreground" : "bg-warning-soft text-warning"}`}
+          >
+            {ready ? (
+              <CheckCircle2 aria-hidden="true" className="size-4" />
+            ) : (
+              <AlertTriangle aria-hidden="true" className="size-4" />
+            )}
+          </span>
+          <div>
+            <p className="work-eyebrow">Current boundary</p>
+            <h2 id="sbr-summary-heading" className="mt-2 text-[20px] font-semibold text-foreground">
+              {label}
+            </h2>
+            <p className="mt-2 max-w-[600px] text-[14px] leading-6 text-muted-foreground">
+              {environment.detail}
+            </p>
           </div>
-          <div className="border-l border-border py-6 pl-7 max-[720px]:border-l-0 max-[720px]:border-t max-[720px]:pl-0">
-            <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
-              <RadioTower aria-hidden="true" className="size-3.5" /> Environment
-            </div>
-            <p className="mt-3 text-[14px] font-semibold text-foreground">{environment.label}</p>
-            <p className="mt-1 text-[10px] text-muted-foreground">Authenticated signed profile</p>
+        </div>
+        <div className="border-l border-border bg-background/50 p-6 max-[720px]:border-l-0 max-[720px]:border-t">
+          <div className="flex items-center gap-2 text-[12px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
+            <RadioTower aria-hidden="true" className="size-4" /> Environment
           </div>
+          <p className="mt-3 text-[14px] font-semibold text-foreground">{environment.label}</p>
+          <p className="mt-1 text-[13px] text-muted-foreground">Authenticated signed profile</p>
         </div>
       </section>
 
       <section aria-labelledby="sbr-evidence-heading">
         <div className="mb-3 flex items-center gap-2">
-          <LockKeyhole aria-hidden="true" className="size-3.5 text-forest" />
-          <h2 id="sbr-evidence-heading" className="text-[12px] font-semibold text-foreground">
+          <LockKeyhole aria-hidden="true" className="size-4 text-forest" />
+          <h2 id="sbr-evidence-heading" className="text-[16px] font-semibold text-foreground">
             Local readiness evidence
           </h2>
         </div>
-        <dl className="grid border-t border-border text-[11px]">
+        <dl className="work-surface grid gap-0 overflow-hidden px-5 text-[14px]">
           <StatusRow
             label="Machine credential"
             value={credentialLabel(readiness.machineCredentialState)}
@@ -580,21 +576,21 @@ function ReadinessSurface({
       {issues.length ? (
         <section
           aria-labelledby="sbr-needs-attention-heading"
-          className="bg-warning-soft px-4 py-4"
+          className="work-surface border-warning-border bg-warning-soft px-5 py-5"
         >
           <h2
             id="sbr-needs-attention-heading"
-            className="text-[11px] font-semibold text-foreground"
+            className="text-[16px] font-semibold text-foreground"
           >
             Needs attention
           </h2>
-          <ul className="mb-0 mt-2 grid gap-1.5 pl-4 text-[11px] leading-5 text-muted-foreground">
+          <ul className="mb-0 mt-3 grid gap-2 pl-5 text-[14px] leading-6 text-muted-foreground">
             {issues.map((issue) => (
               <li key={issue}>{issue}</li>
             ))}
           </ul>
           <button
-            className="focus-ring mt-3 text-[10px] font-medium text-forest underline"
+            className="focus-ring mt-4 min-h-11 font-semibold text-forest underline underline-offset-2"
             onClick={() => onNavigate("/settings/organisation")}
             type="button"
           >
@@ -659,10 +655,10 @@ function StatusRow({
   readonly value: string;
 }) {
   return (
-    <div className="grid grid-cols-[minmax(150px,0.42fr)_minmax(0,0.58fr)] items-baseline gap-6 border-b border-border py-3 max-[560px]:grid-cols-1 max-[560px]:gap-1">
+    <div className="grid grid-cols-[minmax(180px,0.42fr)_minmax(0,0.58fr)] items-baseline gap-6 border-b border-border py-4 last:border-0 max-[560px]:grid-cols-1 max-[560px]:gap-1">
       <dt className="text-muted-foreground">{label}</dt>
       <dd
-        className={`m-0 min-w-0 text-foreground ${fingerprint ? "font-mono text-[10px] [overflow-wrap:anywhere]" : "font-medium"}`}
+        className={`m-0 min-w-0 text-foreground ${fingerprint ? "font-mono text-[12px] [overflow-wrap:anywhere]" : "font-medium"}`}
       >
         {value}
       </dd>
@@ -672,7 +668,7 @@ function StatusRow({
 
 function PreparationBoundary() {
   return (
-    <p className="mt-5 border-l-2 border-forest pl-3 text-[10px] leading-5 text-muted-foreground">
+    <p className="work-surface border-l-4 border-l-forest px-5 py-4 text-[13px] leading-5 text-muted-foreground">
       BAS remains preparation-only. This screen cannot declare, lodge, amend, or submit a BAS.
     </p>
   );

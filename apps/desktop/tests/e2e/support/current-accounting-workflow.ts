@@ -264,7 +264,9 @@ export async function setupAndRunCurrentAccountingWorkflow(
     .getByRole("combobox", { name: "GST accounting basis", exact: true })
     .selectOption(gstBasis === "cash" ? "1" : "2");
   await page.getByLabel("Workspace passphrase").fill(CURRENT_WORKFLOW_PASSPHRASE);
+  await page.getByLabel("Confirm workspace passphrase").fill(CURRENT_WORKFLOW_PASSPHRASE);
   await page.getByLabel("Administrator password").fill(CURRENT_WORKFLOW_ADMIN_PASSWORD);
+  await page.getByLabel("Confirm administrator password").fill(CURRENT_WORKFLOW_ADMIN_PASSWORD);
   await page.getByRole("button", { name: "Create local workspace" }).click();
   await expect(page.getByRole("heading", { name: "Save your recovery code" })).toBeVisible();
   await expect(page.getByText("One-time recovery code")).toBeVisible();

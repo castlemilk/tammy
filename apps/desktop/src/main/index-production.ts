@@ -21,6 +21,7 @@ import {
 } from "electron";
 import { registerTammyConveyor } from "../conveyor/registration";
 import { invoiceToRecord } from "../shared/invoices";
+import { APPROVED_PUBLIC_URLS } from "../shared/official-resources";
 import { readPublicLinks } from "../shared/public-links";
 import type { ReportExports } from "../shared/report-export";
 import { createCoreClient } from "./core-client";
@@ -97,9 +98,11 @@ export function createProductionDependencies(
   }
   const policy = createRendererSecurityPolicy(app.isPackaged ? undefined : developmentRendererUrl);
   const publicLinks = readPublicLinks();
-  const allowedExternalUrls = [publicLinks.privacyPolicy, publicLinks.support].filter(
-    (value): value is string => value !== undefined,
-  );
+  const allowedExternalUrls = [
+    ...APPROVED_PUBLIC_URLS,
+    publicLinks.privacyPolicy,
+    publicLinks.support,
+  ].filter((value): value is string => value !== undefined);
   let core: CoreProcess | undefined;
   let nativeWindow: BrowserWindow | undefined;
   let requestQuit: (() => void) | undefined;

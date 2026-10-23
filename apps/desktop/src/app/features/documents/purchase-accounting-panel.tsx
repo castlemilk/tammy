@@ -16,6 +16,7 @@ import {
   type PurchaseCorrectionCode,
 } from "../../../shared/purchase-errors";
 import { Button } from "../../components/ui/button";
+import { SurfaceHeading } from "../../components/workspace-primitives";
 import type { AuthenticatedWorkspace } from "../setup/setup-screen";
 import { authenticatedPurchaseRetry } from "./purchase-attempt-recovery";
 import { PurchaseClaimForm } from "./purchase-claim-form";
@@ -328,28 +329,31 @@ export function PurchaseAccountingPanel({
   };
   return (
     <section
-      className="rounded-[6px] border border-border bg-surface p-4"
+      className="work-surface grid gap-4 overflow-hidden pb-5"
       aria-label="Purchase accounting"
     >
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border pb-3">
-        <h2 className="text-[12px] font-semibold">Purchase accounting</h2>
-        {accounting ? (
-          <Button
-            type="button"
-            className="h-6 text-[9px]"
-            disabled={busy}
-            onClick={() => void reload()}
-          >
-            Reload purchase
-          </Button>
-        ) : null}
-      </div>
+      <SurfaceHeading
+        title="Purchase accounting"
+        description="Authoritative posting, settlement and GST evidence for this reviewed purchase."
+        action={
+          accounting ? (
+            <Button
+              type="button"
+              className="h-11 text-[13px]"
+              disabled={busy}
+              onClick={() => void reload()}
+            >
+              Reload purchase
+            </Button>
+          ) : undefined
+        }
+      />
       {document.status !== DocumentStatus.REVIEWED ? (
-        <p className="mt-3 text-[10px]">
+        <p className="px-5 text-[13px] leading-5">
           Save the extraction review before adding this purchase to accounts.
         </p>
       ) : !accounting ? (
-        <p className="mt-3 text-[10px]" role={get.isError ? "alert" : "status"}>
+        <p className="px-5 text-[13px] leading-5" role={get.isError ? "alert" : "status"}>
           {get.isError
             ? "Purchase accounting could not be loaded. Reload after checking the active workspace."
             : "Loading authoritative purchase…"}
@@ -359,16 +363,16 @@ export function PurchaseAccountingPanel({
           {accounting.posted ? (
             <PurchaseProjection value={accounting} evidence={evidence} accounts={seenAccounts} />
           ) : (
-            <p className="my-3 text-[10px]">Reviewed source · not added to accounts</p>
+            <p className="px-5 text-[13px]">Reviewed source · not added to accounts</p>
           )}
           {!mayPrepare(workspace) ? (
-            <p className="mt-3 text-[10px] text-muted-foreground">
+            <p className="px-5 text-[13px] leading-5 text-muted-foreground">
               Read-only role. Purchase and GST changes require an administrator or preparer.
             </p>
           ) : (
             <fieldset
               disabled={busy || pending || Boolean(confirmation)}
-              className="mt-4 grid min-w-0 gap-4 disabled:opacity-70"
+              className="mx-5 grid min-w-0 gap-5 disabled:opacity-70"
             >
               {accounting.posted ? (
                 <>

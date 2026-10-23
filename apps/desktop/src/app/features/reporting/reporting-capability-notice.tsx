@@ -10,6 +10,7 @@ import { useEffect, useMemo } from "react";
 
 import type { TammyConveyorModule } from "../../../conveyor/client";
 import { createProtoMethodCodec } from "../../../shared/proto-ipc";
+import { SurfaceHeading } from "../../components/workspace-primitives";
 
 const codec = createProtoMethodCodec({
   input: GetReportingCapabilityRequestSchema,
@@ -90,21 +91,27 @@ export function ReportingCapabilityNotice({
   }, [onStatusChange, result, taxYear]);
 
   return (
-    <section className="rounded-xl border border-border bg-background px-3 py-3 text-[14px]">
-      <div aria-live="polite" role="status">
-        {failed ? (
-          <p className="font-semibold text-warning">{unavailableCopy}</p>
-        ) : copy ? (
-          <>
-            <p className="font-semibold text-foreground">{copy.status}</p>
-            <p className="mt-1 leading-5 text-muted-foreground">{copy.summary}</p>
-          </>
-        ) : (
-          <p className="text-muted-foreground">Checking reporting support…</p>
-        )}
-        {fallbackCopy ? (
-          <p className="mt-1 leading-5 text-muted-foreground">{fallbackCopy}</p>
-        ) : null}
+    <section className="work-surface overflow-hidden">
+      <SurfaceHeading
+        title="Reporting support"
+        description="Current support for this report and entity."
+      />
+      <div className="px-5 py-4 text-[14px]">
+        <div aria-live="polite" role="status">
+          {failed ? (
+            <p className="font-semibold text-warning">{unavailableCopy}</p>
+          ) : copy ? (
+            <>
+              <p className="font-semibold text-foreground">{copy.status}</p>
+              <p className="mt-2 leading-6 text-muted-foreground">{copy.summary}</p>
+            </>
+          ) : (
+            <p className="text-muted-foreground">Checking reporting support…</p>
+          )}
+          {fallbackCopy ? (
+            <p className="mt-2 leading-6 text-muted-foreground">{fallbackCopy}</p>
+          ) : null}
+        </div>
       </div>
     </section>
   );

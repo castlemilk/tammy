@@ -398,6 +398,7 @@ export function BankingScreen({
   return (
     <div className="mx-auto grid w-full max-w-[1120px] gap-6">
       <WorkHeading
+        area="Banking"
         title="Banking"
         description="Bring in a local statement, give every line a clear reference, and reconcile when your review is complete."
         action={

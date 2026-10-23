@@ -1,3 +1,6 @@
+import { createHash } from "node:crypto";
+import { chmod, mkdir, stat, writeFile } from "node:fs/promises";
+import path from "node:path";
 import { create, isFieldSet } from "@bufbuild/protobuf";
 import {
   ApprovedFileRefSchema,
@@ -277,6 +280,304 @@ test("runs the packaged first-run journey offline and exits cleanly", async ({
   expect(consumeExpectedCspViolations(consoleErrors, probeUrls)).toEqual([]);
   expect(pageErrors).toEqual([]);
 });
+
+test("foundation/onboarding-feedback: validates the first-run form and captures private setup guidance", async ({
+  electronHarness,
+}) => {
+  const { application, page, packagedLayout } = electronHarness;
+  expect(packagedLayout.sourceRevision).toMatch(/^[0-9a-f]{40}$/);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await expect(page.getByRole("heading", { name: "Create your local workspace" })).toBeVisible();
+
+  const secretInputs = page.locator('input[autocomplete="new-password"]');
+  await expect(secretInputs).toHaveCount(4);
+  expect(await newCredentialInputTypes(page)).toEqual([
+    "password",
+    "password",
+    "password",
+    "password",
+  ]);
+  expect(
+    await secretInputs.evaluateAll((inputs) =>
+      inputs.some((input) => (input as HTMLInputElement).value.length > 0),
+    ),
+  ).toBe(false);
+
+  const evidenceDirectory = path.resolve(
+    import.meta.dirname,
+    "../../../../.tmp/ui-feedback-2026-10-23",
+    packagedLayout.sourceRevision,
+  );
+  const evidenceParent = path.dirname(evidenceDirectory);
+  await mkdir(evidenceParent, { recursive: true, mode: 0o700 });
+  await chmod(evidenceParent, 0o700);
+  await mkdir(evidenceDirectory, { recursive: true, mode: 0o700 });
+  await chmod(evidenceDirectory, 0o700);
+  const captures = [await savePrivateOnboardingCapture(page, evidenceDirectory, "setup-empty.png")];
+
+  for (const width of [1440, 900, 390, 320]) {
+    await page.setViewportSize({ width, height: 900 });
+    const documentSize = await page.evaluate(() => ({
+      bodyScrollWidth: document.body.scrollWidth,
+      clientWidth: document.documentElement.clientWidth,
+      documentScrollWidth: document.documentElement.scrollWidth,
+    }));
+    expect(documentSize.documentScrollWidth, `document overflow at ${width}px`).toBeLessThanOrEqual(
+      documentSize.clientWidth,
+    );
+    expect(documentSize.bodyScrollWidth, `body overflow at ${width}px`).toBeLessThanOrEqual(
+      documentSize.clientWidth,
+    );
+    expect(await newCredentialInputTypes(page), `unmasked input at ${width}px`).toEqual([
+      "password",
+      "password",
+      "password",
+      "password",
+    ]);
+  }
+
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  expect(await page.evaluate(() => matchMedia("(prefers-reduced-motion: reduce)").matches)).toBe(
+    true,
+  );
+  expect(await page.evaluate(() => getComputedStyle(document.documentElement).scrollBehavior)).toBe(
+    "auto",
+  );
+
+  const workspacePassphrase = page.getByLabel("Workspace passphrase");
+  const workspacePassphraseConfirmation = page.getByLabel("Confirm workspace passphrase");
+  await page.getByRole("button", { name: "Show workspace passphrase" }).focus();
+  await page.keyboard.press("Enter");
+  await expect(workspacePassphrase).toHaveAttribute("type", "text");
+  await expect(workspacePassphraseConfirmation).toHaveAttribute("type", "password");
+  await page.getByRole("button", { name: "Hide workspace passphrase" }).focus();
+  await page.keyboard.press("Enter");
+  await expect(workspacePassphrase).toHaveAttribute("type", "password");
+  await page.getByRole("button", { name: "Show confirm workspace passphrase" }).focus();
+  await page.keyboard.press("Enter");
+  await expect(workspacePassphraseConfirmation).toHaveAttribute("type", "text");
+  await expect(workspacePassphrase).toHaveAttribute("type", "password");
+  await page.getByRole("button", { name: "Hide confirm workspace passphrase" }).focus();
+  await page.keyboard.press("Enter");
+  await expect(workspacePassphraseConfirmation).toHaveAttribute("type", "password");
+
+  await page.getByRole("button", { name: "Privacy and support" }).click();
+  await expect(page.getByRole("heading", { name: "Privacy and support", level: 1 })).toBeVisible();
+  await expect(secretInputs).toHaveCount(0);
+  const privacyContents = page.getByRole("navigation", { name: "Privacy policy contents" });
+  await expect(privacyContents.getByRole("link", { name: "ATO, RAM, and SBR" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Files, reports, and local integrations" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Access, correction, and privacy complaints" }),
+  ).toBeVisible();
+  captures.push(await savePrivateOnboardingCapture(page, evidenceDirectory, "privacy-policy.png"));
+
+  const routeBeforeContents = page.url();
+  const ramHeading = page.getByRole("heading", { name: "ATO, RAM, and SBR", level: 2 });
+  await privacyContents.getByRole("link", { name: "ATO, RAM, and SBR" }).click();
+  await expect(ramHeading).toBeFocused();
+  await expect(ramHeading).toBeInViewport();
+  await expect(page.locator("#privacy-ato-ram-and-sbr")).toContainText(
+    "Relationship Authorisation Manager",
+  );
+  const integrationsHeading = page.getByRole("heading", {
+    name: "Files, reports, and local integrations",
+    level: 2,
+  });
+  await privacyContents
+    .getByRole("link", { name: "Files, reports, and local integrations" })
+    .click();
+  await expect(integrationsHeading).toBeFocused();
+  await expect(integrationsHeading).toBeInViewport();
+  await expect(page.locator("#privacy-files-reports-and-local-integrations")).toContainText(
+    "Local API and MCP access is off",
+  );
+  const complaintsHeading = page.getByRole("heading", {
+    name: "Access, correction, and privacy complaints",
+    level: 2,
+  });
+  await privacyContents
+    .getByRole("link", { name: "Access, correction, and privacy complaints" })
+    .click();
+  await expect(complaintsHeading).toBeFocused();
+  await expect(complaintsHeading).toBeInViewport();
+  expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+  await expect(page.locator("#privacy-access-correction-and-privacy-complaints")).toContainText(
+    "privacy complaints",
+  );
+  expect(page.url()).toBe(routeBeforeContents);
+  await page.getByRole("button", { name: "Back to Tammy" }).click();
+  await expect(page.getByRole("heading", { name: "Create your local workspace" })).toBeVisible();
+  await expect(secretInputs).toHaveCount(4);
+  expect(await newCredentialInputTypes(page)).toEqual([
+    "password",
+    "password",
+    "password",
+    "password",
+  ]);
+  expect(
+    await secretInputs.evaluateAll((inputs) =>
+      inputs.some((input) => (input as HTMLInputElement).value.length > 0),
+    ),
+  ).toBe(false);
+  await page.evaluate(() => window.scrollTo(0, 0));
+
+  await installAbnExternalOpenProbe(application);
+  try {
+    await page.getByLabel("Your name").fill("Tammy Setup Owner");
+    await page.getByLabel("Email or username").fill("setup-owner@tammy.invalid");
+    await page.getByLabel("Business legal name").fill("Tammy Example Pty Ltd");
+    await page.getByLabel("Business display name").fill("Tammy Example");
+    await page.getByLabel("Workspace passphrase").fill("short");
+    await page.getByLabel("Confirm workspace passphrase").fill("different");
+    await page.getByLabel("Administrator password").fill("Local-admin-2026!");
+    await page.getByLabel("Confirm administrator password").fill("Local-admin-2026!");
+    await page.getByLabel("ABN").fill("51824753556");
+
+    const createButton = page.getByRole("button", { name: "Create local workspace" });
+    await expect(page.getByText("Use 15–128 characters.")).toBeVisible();
+    await expect(page.getByText("Passwords do not match yet.")).toBeVisible();
+    await expect(createButton).toBeDisabled();
+    await expect(
+      page.getByRole("link", { name: "Look up this ABN on the Australian Business Register" }),
+    ).toBeVisible();
+    expect(await readAbnExternalCalls(application)).toEqual([]);
+
+    const decomposedPassphrase = "e\u0301".repeat(15);
+    await page.getByLabel("Workspace passphrase").fill(decomposedPassphrase);
+    await page.getByLabel("Confirm workspace passphrase").fill("é".repeat(15));
+    await expect(page.getByText("Passwords match.").first()).toBeVisible();
+    await expect(page.getByText("Format checks pass.").first()).toBeVisible();
+    await expect(createButton).toBeEnabled();
+
+    await page.getByLabel("ABN").fill("51824753557");
+    await expect(
+      page.getByText("This number does not pass the ABN checksum. Check it against the register."),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: "Look up this ABN on the Australian Business Register" }),
+    ).toHaveCount(0);
+    await expect(createButton).toBeDisabled();
+    expect(await readAbnExternalCalls(application)).toEqual([]);
+
+    const abnInput = page.getByLabel("ABN");
+    await abnInput.fill("");
+    await abnInput.focus();
+    await page.keyboard.insertText("52 682 863 690");
+    await expect(abnInput).toHaveValue("52682863690");
+    const lookupLink = page.getByRole("link", {
+      name: "Look up this ABN on the Australian Business Register",
+    });
+    await expect(lookupLink).toHaveAttribute(
+      "href",
+      "https://abr.business.gov.au/ABN/View?abn=52682863690",
+    );
+    await expect(lookupLink).toHaveAttribute("target", "_blank");
+    await expect(lookupLink).toHaveAttribute("rel", "noopener noreferrer");
+    await expect(createButton).toBeEnabled();
+    expect(await readAbnExternalCalls(application)).toEqual([]);
+
+    await lookupLink.click();
+    await expect
+      .poll(async () => readAbnExternalCalls(application))
+      .toEqual(["https://abr.business.gov.au/ABN/View?abn=52682863690"]);
+    await expect(page.getByRole("heading", { name: "Create your local workspace" })).toBeVisible();
+  } finally {
+    await restoreAbnExternalOpen(application);
+  }
+
+  const manifest = {
+    captures,
+    sourceRevision: packagedLayout.sourceRevision,
+    target: packagedLayout.target,
+  };
+  const manifestPath = path.join(evidenceDirectory, "manifest.json");
+  await writePrivateFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+  if (process.platform !== "win32") {
+    expect((await stat(evidenceParent)).mode & 0o777).toBe(0o700);
+    expect((await stat(evidenceDirectory)).mode & 0o777).toBe(0o700);
+    expect((await stat(manifestPath)).mode & 0o777).toBe(0o600);
+    for (const capture of captures) {
+      expect((await stat(path.join(evidenceDirectory, capture.fileName))).mode & 0o777).toBe(0o600);
+    }
+  }
+
+  expect(electronHarness.consoleErrors).toEqual([]);
+  expect(electronHarness.pageErrors).toEqual([]);
+});
+
+async function newCredentialInputTypes(page: import("@playwright/test").Page) {
+  return page
+    .locator('input[autocomplete="new-password"]')
+    .evaluateAll((inputs) => inputs.map((input) => (input as HTMLInputElement).type));
+}
+
+async function savePrivateOnboardingCapture(
+  page: import("@playwright/test").Page,
+  directory: string,
+  fileName: string,
+) {
+  const bytes = await page.screenshot({ animations: "disabled", fullPage: true });
+  await writePrivateFile(path.join(directory, fileName), bytes);
+  const dimensions = await page.evaluate(() => ({
+    height: document.documentElement.scrollHeight,
+    width: document.documentElement.scrollWidth,
+  }));
+  return {
+    bytes: bytes.length,
+    fileName,
+    height: dimensions.height,
+    sha256: createHash("sha256").update(bytes).digest("hex"),
+    width: dimensions.width,
+  };
+}
+
+async function writePrivateFile(filePath: string, content: string | Buffer) {
+  await writeFile(filePath, content, { mode: 0o600 });
+  await chmod(filePath, 0o600);
+}
+
+async function installAbnExternalOpenProbe(
+  application: import("@playwright/test").ElectronApplication,
+) {
+  await application.evaluate(({ shell }) => {
+    const target = globalThis as typeof globalThis & {
+      __tammyOnboardingAbnHandoffs?: string[];
+      __tammyOriginalOpenExternal?: typeof shell.openExternal;
+    };
+    if (target.__tammyOriginalOpenExternal) throw new Error("ABN_HANDOFF_PROBE_ALREADY_ACTIVE");
+    target.__tammyOriginalOpenExternal = shell.openExternal;
+    target.__tammyOnboardingAbnHandoffs = [];
+    shell.openExternal = async (url) => {
+      target.__tammyOnboardingAbnHandoffs?.push(url);
+    };
+  });
+}
+
+async function readAbnExternalCalls(
+  application: import("@playwright/test").ElectronApplication,
+): Promise<string[]> {
+  return application.evaluate(() => {
+    const target = globalThis as typeof globalThis & {
+      __tammyOnboardingAbnHandoffs?: string[];
+    };
+    return [...(target.__tammyOnboardingAbnHandoffs ?? [])];
+  });
+}
+
+async function restoreAbnExternalOpen(application: import("@playwright/test").ElectronApplication) {
+  await application.evaluate(({ shell }) => {
+    const target = globalThis as typeof globalThis & {
+      __tammyOnboardingAbnHandoffs?: string[];
+      __tammyOriginalOpenExternal?: typeof shell.openExternal;
+    };
+    if (target.__tammyOriginalOpenExternal) shell.openExternal = target.__tammyOriginalOpenExternal;
+    delete target.__tammyOnboardingAbnHandoffs;
+    delete target.__tammyOriginalOpenExternal;
+  });
+}
 
 async function windowDiagnostics(page: import("@playwright/test").Page) {
   const diagnostics = (await invokeConveyorValue(page, "system", "getSystemDiagnostics")) as {

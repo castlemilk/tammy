@@ -248,33 +248,33 @@ export function PurchaseLegacyReviewPanel({
   };
   return (
     <details
-      className="border-t border-border pt-3"
+      className="work-surface overflow-hidden"
       open={open}
       onToggle={(event) => setOpen(event.currentTarget.open)}
     >
-      <summary className="cursor-pointer text-[11px] font-semibold">
+      <summary className="cursor-pointer border-b border-border px-5 py-4 text-[14px] font-semibold">
         Review legacy purchase / opening provenance
       </summary>
-      <div className="mt-3 grid gap-3">
+      <div className="grid gap-4 p-5">
         {source?.source.case === "openingPayable" ? (
-          <p className="text-[10px] text-warning">
+          <p className="text-[13px] leading-5 text-warning">
             Opening payable {source.source.value.openingPayableId} has retained provenance without a
             document. Its settlement and GST credit allocation are unsupported; review the existing
             records.
           </p>
         ) : (
-          <p className="text-[10px] text-muted-foreground">
+          <p className="text-[13px] leading-5 text-muted-foreground">
             Older and undated sources need an explicit review. No recorded payment is not proof of
             an unpaid legacy balance.
           </p>
         )}
         {!mayPrepare(workspace) ? (
-          <p className="text-[10px]">
+          <p className="text-[13px]">
             Read-only role. An administrator or preparer must retain this decision.
           </p>
         ) : (
-          <fieldset disabled={busy} className="grid min-w-0 gap-3">
-            <div className="grid grid-cols-2 gap-2">
+          <fieldset disabled={busy} className="grid min-w-0 gap-4">
+            <div className="grid grid-cols-2 gap-3 max-[560px]:grid-cols-1">
               <PurchaseField
                 label="Legacy affected period start"
                 type="date"

@@ -224,6 +224,27 @@ it("unlocks and signs in to an existing local workspace through named protobuf m
   expect(signIn).toHaveBeenCalledOnce();
 });
 
+it("lets current credentials at the backend's 15-code-point minimum reach unlock", async () => {
+  const fixture = createConveyorFixture();
+  configureSuccessfulUnlock(fixture);
+  const user = userEvent.setup();
+  render(
+    <UnlockScreen
+      onAuthenticated={vi.fn()}
+      organisation={fixture.conveyor.organisation}
+      organisationId={fixtureIds.organisationId}
+      workspace={fixture.conveyor.workspace}
+    />,
+  );
+
+  await user.type(screen.getByLabelText("Workspace passphrase"), "passphrase12345");
+  await user.type(screen.getByLabelText("Email or username"), "admin@tammy.local");
+  await user.type(screen.getByLabelText("Administrator password"), "adminpass123456");
+  await user.click(screen.getByRole("button", { name: "Unlock workspace" }));
+
+  expect(fixture.procedures.workspace.unlockWorkspace).toHaveBeenCalledOnce();
+});
+
 it.each([
   {
     failure: "workspace unlock",

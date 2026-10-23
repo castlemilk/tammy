@@ -16,6 +16,8 @@ import type {
   WebRequestFilter,
 } from "electron";
 
+import { isOfficialAbnLookupUrl } from "../shared/official-resources.ts";
+
 export const PRODUCTION_APP_URL = "tammy://app/";
 export const MAX_RENDERER_ASSET_BYTES = 16 * 1024 * 1024;
 
@@ -1160,7 +1162,7 @@ export function installWindowGuards(
 
   const allowed = new Set(allowedExternalUrls);
   const openAllowedExternal = (details: { readonly url: string }): { readonly action: "deny" } => {
-    if (allowed.has(details.url)) {
+    if (allowed.has(details.url) || isOfficialAbnLookupUrl(details.url)) {
       const occurredAt = (external.now?.() ?? new Date()).toISOString();
       external.recordHandoff?.({ occurredAt, url: details.url, userGesture: true });
       void external.openExternal(details.url).catch(() => undefined);

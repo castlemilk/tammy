@@ -116,7 +116,7 @@ function NavigationItem({
         aria-current={current ? "page" : undefined}
         className={`focus-ring flex min-h-11 items-center gap-3 rounded-xl px-3 text-[14px] font-medium leading-4 no-underline transition-colors max-[900px]:justify-center max-[900px]:px-1 ${
           active
-            ? "bg-forest text-primary-foreground"
+            ? "bg-forest-soft text-forest"
             : "text-muted-foreground hover:bg-muted hover:text-foreground"
         }`}
         href={item.href}

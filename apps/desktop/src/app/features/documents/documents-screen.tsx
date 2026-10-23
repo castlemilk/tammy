@@ -323,6 +323,7 @@ export function DocumentsScreen({
   return (
     <div className="mx-auto grid w-full max-w-[1120px] gap-6">
       <WorkHeading
+        area="Documents"
         title="Documents"
         description="Keep source documents close to their review, purchase posting, and retained evidence."
         action={

@@ -56,7 +56,7 @@ come first. English Australian dates and AUD financial values follow existing co
 README.md and docs/development/tech-state.md distinguish connected features from planned
 suite work. Generated screens cannot establish new financial or security behaviour.
 
-Runtime token ownership: apps/desktop/src/renderer/styles.css is canonical. This document
+Runtime token ownership: apps/desktop/src/app/styles.css is canonical. This document
 mirrors its accepted palette; shared Button, Badge, Card and AppShell consume the tokens.
 There is no generated token export or external font dependency.
 
@@ -165,3 +165,24 @@ The navigation groups existing routes into Workspace, Accounting and Activity.
 The forest selected item and route context use the same shell at every route.
 The compact rail retains accessible link names. Tables scroll horizontally inside
 their surface at narrow widths; forms stack and retain full values.
+
+## Completion of the approved screens (2026-10-23)
+
+The October 22 pack remains the visual reference for connected features. Shared
+`ScreenHeading` and `SurfaceHeading` components give working screens a consistent
+hierarchy. Main content has a 1120px working width; tables own horizontal overflow,
+while long forms and policy documents retain natural document scrolling. Navigation
+uses pale forest selection with forest text, and shows the current business in the
+route context. Financial data stays in readable sans and tabular numerals.
+
+`WorkspaceEntryLayout` applies boards 11 and 13 to workspace setup, recovery and
+sign-in: a quiet introduction beside a clear form surface, with business and security
+fields grouped by purpose. The two-column layout stacks on narrow windows. Secrets
+are masked by default; new secrets get live format and confirmation feedback that
+matches Core's Unicode policy. Current credentials keep their own sign-in semantics.
+
+Privacy and support is a complete, readable policy with section navigation, sourced
+from the same generated policy content as the public site. Settings uses a concise
+summary and an in-app route to the full document. The ABN browser lookup is explicit
+and uses the official register; checksum feedback is separate from registry evidence.
+These interactions do not change financial, approval or SBR production capabilities.

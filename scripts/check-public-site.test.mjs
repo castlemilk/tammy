@@ -31,8 +31,17 @@ const pages = {
     <link rel="canonical" href="${origin}/privacy">
   </head><body>
     <nav><a href="/">Tammy</a><a href="/privacy">Privacy</a><a href="/support">Support</a></nav>
-    <h1>Privacy policy</h1><p>Effective 30 August 2026.</p>
-    <p>Gamma Systems Pty Ltd does not transmit your accounting records.</p>
+    <h1>Privacy policy</h1><p>Effective 23 October 2026.</p>
+    <p>Gamma Systems Pty Ltd does not automatically send your workspace records.</p>
+    <p>Relationship Authorisation Manager, or RAM, lets an authorisation administrator grant business access.</p>
+    <p>The current SBR readiness checks use a synthetic, network-disabled simulator. Tammy does not send BAS or other tax submissions.</p>
+    <p>The public website's hosting provider may process technical request information.</p>
+    <a href="https://abr.business.gov.au/">ABN Lookup</a>
+    <a href="https://abr.business.gov.au/Tools/WebServices">ABN Lookup web services</a>
+    <a href="https://softwaredevelopers.ato.gov.au/usingmygovidramandmachinecredentials">RAM and machine credentials</a>
+    <a href="https://softwaredevelopers.ato.gov.au/OnlineservicesforDSPs">Online services for Digital Service Providers</a>
+    <a href="https://softwaredevelopers.ato.gov.au/operational_framework/meeting-requirements">Digital Service Provider security framework</a>
+    <a href="https://www.oaic.gov.au/privacy/privacy-complaints">OAIC privacy complaints</a>
     <a href="${origin}/support">Deletion support</a>
   </body></html>`,
   "/support": `<!doctype html><html><head>
@@ -41,6 +50,8 @@ const pages = {
     <nav><a href="/">Tammy</a><a href="/privacy">Privacy</a><a href="/support">Support</a></nav>
     <h1>Support</h1><a href="mailto:ben.ebsworth@gmail.com">ben.ebsworth@gmail.com</a>
     <p>Tammy Accounting version 0.1.0.</p>
+    <p>For a privacy, access, or correction request, use the subject line Privacy.</p>
+    <p>The SBR readiness flow uses a synthetic, network-disabled simulator and does not lodge a BAS with the ATO.</p>
   </body></html>`,
 };
 
@@ -202,9 +213,12 @@ test("requires canonical identity, navigation, privacy, support, platform, and b
     ["/", "arm64"],
     ["/", "preparation-only"],
     ["/", "not lodged"],
-    ["/privacy", "30 August 2026"],
+    ["/privacy", "23 October 2026"],
+    ["/privacy", "https://abr.business.gov.au/"],
+    ["/privacy", "hosting provider may process technical request information"],
     ["/privacy", `href="${origin}/support"`],
     ["/support", "mailto:ben.ebsworth@gmail.com"],
+    ["/support", "privacy, access, or correction request"],
   ]) {
     const { fetchImpl } = mockFetch({
       [path]: { body: pages[path].replace(needle, "removed") },

@@ -37,11 +37,11 @@ function parseLinkUrl(value) {
 function parseInlines(value) {
   if (!value || /[<>]/.test(value) || value.includes("!["))
     throw policyError("raw HTML and images are not supported");
-  if (/[_~\\]/.test(value)) throw policyError("unsupported Markdown syntax");
   const inlines = [];
   let cursor = 0;
   const appendText = (text) => {
     if (!text) return;
+    if (/[_~\\]/.test(text)) throw policyError("unsupported Markdown syntax");
     const last = inlines.at(-1);
     if (last?.type === "text") last.value += text;
     else inlines.push({ type: "text", value: text });
@@ -67,7 +67,7 @@ function parseInlines(value) {
       const textEnd = value.indexOf("](", cursor + 1);
       const urlEnd = textEnd === -1 ? -1 : value.indexOf(")", textEnd + 2);
       const text = value.slice(cursor + 1, textEnd);
-      if (urlEnd === -1 || !text || /[[*`\]]/.test(text)) throw policyError("malformed link");
+      if (urlEnd === -1 || !text || /[[*`\]_~\\]/.test(text)) throw policyError("malformed link");
       inlines.push({ type: "link", text, href: parseLinkUrl(value.slice(textEnd + 2, urlEnd)) });
       cursor = urlEnd + 1;
     }

@@ -19,9 +19,16 @@ function InlineSequence({ inlines }: { inlines: readonly PolicyInline[] }) {
   ));
 }
 
+export function policySectionId(heading: string): string {
+  return `policy-${heading
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "")}`;
+}
+
 export function PolicyDocument({ sections }: { sections: readonly PolicySection[] }) {
   return sections.map((section) => (
-    <section className="policy-section" key={section.heading}>
+    <section className="policy-section" id={policySectionId(section.heading)} key={section.heading}>
       <h2>{section.heading}</h2>
       {section.blocks.map((block) => {
         if (block.kind === "paragraph") {

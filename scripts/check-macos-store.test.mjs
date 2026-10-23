@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { execFile as nodeExecFile } from "node:child_process";
+import { createHash } from "node:crypto";
 import { cp, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -31,6 +32,7 @@ import {
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const execFile = promisify(nodeExecFile);
+const publicSiteOrigin = "https://tammy-accounting.castlemilk.chatgpt.site";
 const desktopFixtureFilter = (source) =>
   !source.split(path.sep).some((segment) => ["node_modules", "out", ".vite"].includes(segment));
 const validStoreIdentity = {
@@ -51,6 +53,75 @@ const validStoreIdentity = {
     atoLodgement: "not-lodged",
   },
 };
+
+function syntheticPublicSiteEvidence(policyBytes) {
+  const projectId = "appgprj_testfixture";
+  const deploymentId = "appgdep_testfixture";
+  return {
+    pointer: {
+      schemaVersion: 1,
+      deploymentEvidence: `deployments/${deploymentId}.json`,
+    },
+    deployment: {
+      schemaVersion: 1,
+      provider: "OpenAI Sites",
+      access: "public",
+      projectId,
+      versionId: `${projectId}~appgver_testfixture`,
+      deploymentId,
+      origin: publicSiteOrigin,
+      deployedAt: "2026-10-23T00:00:00.000Z",
+      sourceCommit: "a".repeat(40),
+      policySha256: createHash("sha256").update(policyBytes).digest("hex"),
+      routes: [
+        { path: "/", status: 200, contentType: "text/html", check: "passed" },
+        { path: "/privacy", status: 200, contentType: "text/html", check: "passed" },
+        { path: "/support", status: 200, contentType: "text/html", check: "passed" },
+      ],
+    },
+  };
+}
+
+/** Install an explicitly synthetic public-site record only in a temporary test repository. */
+async function writeSyntheticPublicSiteEvidence(fixtureRoot) {
+  const publicSiteRoot = path.join(fixtureRoot, "docs", "release", "public-site");
+  const deploymentsRoot = path.join(publicSiteRoot, "deployments");
+  const policyBytes = await readFile(path.join(fixtureRoot, "PRIVACY.md"));
+  const evidence = syntheticPublicSiteEvidence(policyBytes);
+  await mkdir(deploymentsRoot, { recursive: true });
+  await Promise.all([
+    writeFile(
+      path.join(publicSiteRoot, "current.json"),
+      `${JSON.stringify(evidence.pointer, null, 2)}\n`,
+    ),
+    writeFile(
+      path.join(publicSiteRoot, evidence.pointer.deploymentEvidence),
+      `${JSON.stringify(evidence.deployment, null, 2)}\n`,
+    ),
+  ]);
+}
+
+async function createSyntheticRepositoryFixture(prefix) {
+  const fixtureRoot = await mkdtemp(path.join(tmpdir(), prefix));
+  await mkdir(path.join(fixtureRoot, "apps"), { recursive: true });
+  await mkdir(path.join(fixtureRoot, "docs"), { recursive: true });
+  await Promise.all([
+    cp(path.join(root, "apps", "desktop"), path.join(fixtureRoot, "apps", "desktop"), {
+      filter: desktopFixtureFilter,
+      recursive: true,
+    }),
+    cp(path.join(root, "docs", "development"), path.join(fixtureRoot, "docs", "development"), {
+      recursive: true,
+    }),
+    cp(path.join(root, "docs", "release"), path.join(fixtureRoot, "docs", "release"), {
+      recursive: true,
+    }),
+    cp(path.join(root, "README.md"), path.join(fixtureRoot, "README.md")),
+    cp(path.join(root, "PRIVACY.md"), path.join(fixtureRoot, "PRIVACY.md")),
+  ]);
+  await writeSyntheticPublicSiteEvidence(fixtureRoot);
+  return fixtureRoot;
+}
 
 test("required release-state gates reject blockers even when the state label matches", () => {
   assert.doesNotThrow(() =>
@@ -190,40 +261,45 @@ test("repository plist reader is portable and never shells out to plutil", async
 });
 
 test("repository inspection binds Tammy identity, store resources and operator gates", async () => {
-  const result = await inspectMacOSStoreRepository(root, { repositoryTestsPassed: true });
+  const fixtureRoot = await createSyntheticRepositoryFixture("tammy-macos-store-identity-");
+  try {
+    const result = await inspectMacOSStoreRepository(fixtureRoot, { repositoryTestsPassed: true });
 
-  assert.equal(result.appBundleId, "com.tammy.desktop");
-  assert.equal(result.category, "public.app-category.finance");
-  assert.equal(result.version, "0.1.0");
-  assert.deepEqual(result.identity, validStoreIdentity);
-  assert.equal(result.icon.width, 1024);
-  assert.equal(result.icon.height, 1024);
-  assert.deepEqual(result.operatorRequirements, [
-    "certificates-and-profiles",
-    "active-agreements",
-    "age-rating",
-    "app-store-warning-review",
-    "export-compliance",
-    "metadata-assets-entered",
-    "pricing-availability",
-    "privacy-answer",
-    "processed-build",
-    "seller-eligibility",
-    "screenshots",
-    "signed-build-privacy-report",
-  ]);
-  assert.deepEqual(result.passed, [
-    "metadata",
-    "platform-identity",
-    "policy",
-    "public-site",
-    "publisher-authority",
-    "schemas",
-    "store-identity",
-    "tests",
-  ]);
-  assert.deepEqual(result.blockers, ["SCREENSHOT_DEFINITIONS_NOT_READY"]);
-  assert.equal(result.releaseState.state, "NOT_READY");
+    assert.equal(result.appBundleId, "com.tammy.desktop");
+    assert.equal(result.category, "public.app-category.finance");
+    assert.equal(result.version, "0.1.0");
+    assert.deepEqual(result.identity, validStoreIdentity);
+    assert.equal(result.icon.width, 1024);
+    assert.equal(result.icon.height, 1024);
+    assert.deepEqual(result.operatorRequirements, [
+      "certificates-and-profiles",
+      "active-agreements",
+      "age-rating",
+      "app-store-warning-review",
+      "export-compliance",
+      "metadata-assets-entered",
+      "pricing-availability",
+      "privacy-answer",
+      "processed-build",
+      "seller-eligibility",
+      "screenshots",
+      "signed-build-privacy-report",
+    ]);
+    assert.deepEqual(result.passed, [
+      "metadata",
+      "platform-identity",
+      "policy",
+      "public-site",
+      "publisher-authority",
+      "schemas",
+      "store-identity",
+      "tests",
+    ]);
+    assert.deepEqual(result.blockers, ["SCREENSHOT_DEFINITIONS_NOT_READY"]);
+    assert.equal(result.releaseState.state, "NOT_READY");
+  } finally {
+    await rm(fixtureRoot, { force: true, recursive: true });
+  }
 });
 
 test("repository inspection derives pre-upload and pre-submit states from canonical build records", async () => {
@@ -297,6 +373,7 @@ test("repository inspection derives pre-upload and pre-submit states from canoni
       cp(path.join(root, "README.md"), path.join(fixtureRoot, "README.md")),
       cp(path.join(root, "PRIVACY.md"), path.join(fixtureRoot, "PRIVACY.md")),
     ]);
+    await writeSyntheticPublicSiteEvidence(fixtureRoot);
     await writeFile(
       path.join(fixtureRoot, "apps", "desktop", "release", "macos", "build-numbers.json"),
       `${JSON.stringify({
@@ -443,53 +520,62 @@ test("repository inspection derives pre-upload and pre-submit states from canoni
   }
 });
 
-test("non-signing check reports repository blockers without release input leakage", async () => {
-  const { stdout } = await execFile(process.execPath, ["scripts/check-macos-store.mjs"], {
-    cwd: root,
-  });
-  const result = JSON.parse(stdout);
-
-  assert.equal(result.status, "NOT_READY");
-  assert.deepEqual(result.passed, [
-    "metadata",
-    "platform-identity",
-    "policy",
-    "public-site",
-    "publisher-authority",
-    "schemas",
-    "store-identity",
-  ]);
-  assert.deepEqual(result.blockers, [
-    "REPOSITORY_TESTS_NOT_PASSED",
-    "SCREENSHOT_DEFINITIONS_NOT_READY",
-  ]);
-  assert.deepEqual(result.identity, validStoreIdentity);
-  assert.equal(stdout.includes("TAMMY_MACOS_"), false);
+test("non-signing readiness fails closed on stale public-site evidence", async () => {
+  await assert.rejects(
+    execFile(process.execPath, ["scripts/check-macos-store.mjs"], { cwd: root }),
+    (error) => {
+      assert.equal(error.code, 1);
+      assert.equal(error.stdout, "");
+      assert.equal(error.stderr, "MACOS_PUBLIC_SITE_INVALID\n");
+      assert.equal(error.stderr.includes("TAMMY_MACOS_"), false);
+      return true;
+    },
+  );
 });
 
 test("repository readiness binds the exact deployed public site to the canonical policy", async () => {
-  const recordsRoot = path.join(root, "docs/release/public-site");
-  const pointer = JSON.parse(await readFile(path.join(recordsRoot, "current.json"), "utf8"));
-  const deployment = JSON.parse(
-    await readFile(path.join(recordsRoot, pointer.deploymentEvidence), "utf8"),
+  const actualRecordsRoot = path.join(root, "docs/release/public-site");
+  const actualPointer = JSON.parse(
+    await readFile(path.join(actualRecordsRoot, "current.json"), "utf8"),
+  );
+  const actualDeployment = JSON.parse(
+    await readFile(path.join(actualRecordsRoot, actualPointer.deploymentEvidence), "utf8"),
   );
   const policy = await readFile(path.join(root, "PRIVACY.md"));
-  assert.deepEqual(validateCurrentPublicSite(pointer, deployment, policy), {
-    deploymentEvidence: pointer.deploymentEvidence,
-    origin: "https://tammy-accounting.castlemilk.chatgpt.site",
-    policySha256: deployment.policySha256,
-    privacyPolicy: "https://tammy-accounting.castlemilk.chatgpt.site/privacy",
-    support: "https://tammy-accounting.castlemilk.chatgpt.site/support",
+  const actualPolicySha256 = createHash("sha256").update(policy).digest("hex");
+  assert.notEqual(actualDeployment.policySha256, actualPolicySha256);
+  assert.throws(
+    () => validateCurrentPublicSite(actualPointer, actualDeployment, policy),
+    /MACOS_PUBLIC_SITE_INVALID/,
+  );
+  await assert.rejects(
+    inspectMacOSStoreRepository(root, { repositoryTestsPassed: true }),
+    /MACOS_PUBLIC_SITE_INVALID/,
+  );
+
+  const synthetic = syntheticPublicSiteEvidence(policy);
+  const validated = validateCurrentPublicSite(synthetic.pointer, synthetic.deployment, policy);
+  assert.deepEqual(validated, {
+    deploymentEvidence: synthetic.pointer.deploymentEvidence,
+    origin: publicSiteOrigin,
+    policySha256: synthetic.deployment.policySha256,
+    privacyPolicy: `${publicSiteOrigin}/privacy`,
+    support: `${publicSiteOrigin}/support`,
   });
   assert.throws(
-    () => validateCurrentPublicSite(pointer, deployment, Buffer.from("changed policy\n")),
+    () =>
+      validateCurrentPublicSite(
+        synthetic.pointer,
+        synthetic.deployment,
+        Buffer.from("changed policy\n"),
+      ),
     /MACOS_PUBLIC_SITE_INVALID/,
   );
   assert.throws(
     () =>
       validateCurrentPublicSite(
-        { ...pointer, deploymentEvidence: "../outside.json" },
-        deployment,
+        { ...synthetic.pointer, deploymentEvidence: "../outside.json" },
+        synthetic.deployment,
         policy,
       ),
     /MACOS_PUBLIC_SITE_INVALID/,
@@ -497,9 +583,9 @@ test("repository readiness binds the exact deployed public site to the canonical
   assert.throws(
     () =>
       validateCurrentPublicSite(
-        pointer,
+        synthetic.pointer,
         {
-          ...deployment,
+          ...synthetic.deployment,
           projectId: "appgprj_other",
         },
         policy,
@@ -609,6 +695,7 @@ test("repository readiness rejects a symlinked build ledger", async () => {
       cp(path.join(root, "README.md"), path.join(fixtureRoot, "README.md")),
       cp(path.join(root, "PRIVACY.md"), path.join(fixtureRoot, "PRIVACY.md")),
     ]);
+    await writeSyntheticPublicSiteEvidence(fixtureRoot);
     const ledger = path.join(
       fixtureRoot,
       "apps",
@@ -650,6 +737,7 @@ test("repository inspection rejects installed-name drift from the desktop produc
       cp(path.join(root, "README.md"), path.join(fixtureRoot, "README.md")),
       cp(path.join(root, "PRIVACY.md"), path.join(fixtureRoot, "PRIVACY.md")),
     ]);
+    await writeSyntheticPublicSiteEvidence(fixtureRoot);
     const packagePath = path.join(fixtureRoot, "apps", "desktop", "package.json");
     const desktopPackage = JSON.parse(await readFile(packagePath, "utf8"));
     await writeFile(
@@ -958,53 +1046,60 @@ test("development signing does not require an installer identity", () => {
 });
 
 test("the repository checker emits the only release facts consumed by Builder", async () => {
-  const inspected = await inspectMacOSStoreRepository(root, { repositoryTestsPassed: true });
-  const environment = {
-    TAMMY_MACOS_BUILD_NUMBER: "42",
-    TAMMY_MACOS_EXPORT_COMPLIANCE: "exempt",
-    TAMMY_MACOS_PROVISIONING_PROFILE: "/private/tmp/tammy.provisionprofile",
-    TAMMY_MACOS_PRIVACY_POLICY_URL: "https://tammy-accounting.castlemilk.chatgpt.site/privacy",
-    TAMMY_MACOS_SIGNING_IDENTITY: "Apple Development: Tammy (ABCDE12345)",
-    TAMMY_MACOS_SIGNING_MODE: "development",
-    TAMMY_MACOS_SUPPORT_URL: "https://tammy-accounting.castlemilk.chatgpt.site/support",
-    TAMMY_MACOS_TARGET: "mas/arm64",
-    TAMMY_MACOS_TEAM_ID: "ABCDE12345",
-  };
-  const { facts, release } = await readValidatedMacOSReleaseFacts(root, environment, {
-    ...inspected,
-    buildReservations: [{ buildNumber: "42", marketingVersion: "0.1.0" }],
-  });
-  assert.deepEqual(release, { buildNumber: "42", mode: "development" });
-  assert.deepEqual(facts, {
-    identity: {
-      appStoreName: "Tammy Accounting",
-      architectures: ["arm64"],
-      bundleIdentifier: "com.tammy.desktop",
-      copyright: "© 2026 Gamma Systems Pty Ltd",
-      installedName: "Tammy",
-      minimumMacOSVersion: "14.0",
-      publisher: "Gamma Systems Pty Ltd",
-      supportEmail: "ben.ebsworth@gmail.com",
-    },
-    marketingVersion: "0.1.0",
-    publicLinks: {
-      privacyPolicy: "https://tammy-accounting.castlemilk.chatgpt.site/privacy",
-      support: "https://tammy-accounting.castlemilk.chatgpt.site/support",
-    },
-    target: "mas/arm64",
-  });
-  await assert.rejects(
-    readValidatedMacOSReleaseFacts(root, environment, {
+  const fixtureRoot = await createSyntheticRepositoryFixture("tammy-macos-builder-facts-");
+  try {
+    const inspected = await inspectMacOSStoreRepository(fixtureRoot, {
+      repositoryTestsPassed: true,
+    });
+    const environment = {
+      TAMMY_MACOS_BUILD_NUMBER: "42",
+      TAMMY_MACOS_EXPORT_COMPLIANCE: "exempt",
+      TAMMY_MACOS_PROVISIONING_PROFILE: "/private/tmp/tammy.provisionprofile",
+      TAMMY_MACOS_PRIVACY_POLICY_URL: "https://tammy-accounting.castlemilk.chatgpt.site/privacy",
+      TAMMY_MACOS_SIGNING_IDENTITY: "Apple Development: Tammy (ABCDE12345)",
+      TAMMY_MACOS_SIGNING_MODE: "development",
+      TAMMY_MACOS_SUPPORT_URL: "https://tammy-accounting.castlemilk.chatgpt.site/support",
+      TAMMY_MACOS_TARGET: "mas/arm64",
+      TAMMY_MACOS_TEAM_ID: "ABCDE12345",
+    };
+    const { facts, release } = await readValidatedMacOSReleaseFacts(fixtureRoot, environment, {
       ...inspected,
       buildReservations: [{ buildNumber: "42", marketingVersion: "0.1.0" }],
-      consumedBuildNumbers: ["42"],
-    }),
-    /MACOS_BUILD_CONSUMED/,
-  );
+    });
+    assert.deepEqual(release, { buildNumber: "42", mode: "development" });
+    assert.deepEqual(facts, {
+      identity: {
+        appStoreName: "Tammy Accounting",
+        architectures: ["arm64"],
+        bundleIdentifier: "com.tammy.desktop",
+        copyright: "© 2026 Gamma Systems Pty Ltd",
+        installedName: "Tammy",
+        minimumMacOSVersion: "14.0",
+        publisher: "Gamma Systems Pty Ltd",
+        supportEmail: "ben.ebsworth@gmail.com",
+      },
+      marketingVersion: "0.1.0",
+      publicLinks: {
+        privacyPolicy: "https://tammy-accounting.castlemilk.chatgpt.site/privacy",
+        support: "https://tammy-accounting.castlemilk.chatgpt.site/support",
+      },
+      target: "mas/arm64",
+    });
+    await assert.rejects(
+      readValidatedMacOSReleaseFacts(fixtureRoot, environment, {
+        ...inspected,
+        buildReservations: [{ buildNumber: "42", marketingVersion: "0.1.0" }],
+        consumedBuildNumbers: ["42"],
+      }),
+      /MACOS_BUILD_CONSUMED/,
+    );
+  } finally {
+    await rm(fixtureRoot, { force: true, recursive: true });
+  }
 });
 
 test("seller eligibility cannot be supplied through a symlink", async () => {
-  const fixtureRoot = await mkdtemp(path.join(tmpdir(), "tammy-macos-seller-symlink-"));
+  const fixtureRoot = await createSyntheticRepositoryFixture("tammy-macos-seller-symlink-");
   const outsideRoot = await mkdtemp(path.join(tmpdir(), "tammy-macos-seller-outside-"));
   const outside = path.join(outsideRoot, "seller.json");
   const sellerRoot = path.join(
@@ -1018,10 +1113,12 @@ test("seller eligibility cannot be supplied through a symlink", async () => {
     "attestations",
   );
   try {
+    const inspected = await inspectMacOSStoreRepository(fixtureRoot, {
+      repositoryTestsPassed: true,
+    });
     await mkdir(sellerRoot, { recursive: true });
     await writeFile(outside, "{}\n");
     await symlink(outside, path.join(sellerRoot, "seller-eligibility.json"));
-    const inspected = await inspectMacOSStoreRepository(root, { repositoryTestsPassed: true });
     await assert.rejects(
       readValidatedMacOSReleaseFacts(
         fixtureRoot,
@@ -1187,14 +1284,17 @@ test("store metadata is truthful, public-site bound, and leaves Apple facts oper
 test("public privacy policy states the shipped app, site, support, and cleanup boundaries", async () => {
   const privacy = await readFile(path.join(root, "PRIVACY.md"), "utf8");
   for (const statement of [
-    "does not transmit your accounting records",
+    "does not automatically send your workspace records",
     "encrypted workspace",
     "macOS Keychain",
-    "Files you choose to import",
-    "no Gamma-owned analytics, cookies, accounts, or forms",
-    "Sending an email is user initiated",
-    "Removing the Tammy app alone does not promise deletion",
+    "A file you import can be retained as source evidence",
+    "no Tammy account or form and does not include advertising or analytics",
+    "Support email is received at Gmail",
+    "Removing the Tammy app alone does not remove",
     "machine credentials",
+    "Relationship Authorisation Manager, or RAM",
+    "synthetic, network-disabled simulator",
+    "does not lodge it",
     "/support",
   ]) {
     assert.match(privacy, new RegExp(statement, "i"));

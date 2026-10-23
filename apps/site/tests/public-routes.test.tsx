@@ -29,12 +29,21 @@ describe("Tammy public routes", () => {
     render(<PrivacyPage />);
 
     expect(screen.getByRole("heading", { name: "Privacy policy" })).toBeTruthy();
-    expect(screen.getByText(/does not transmit your accounting records/i)).toBeTruthy();
+    expect(screen.getByText(/does not automatically send your workspace records/i)).toBeTruthy();
+    expect(screen.getByRole("navigation", { name: "Privacy policy contents" })).toBeTruthy();
+    expect(screen.getByText(/Relationship Authorisation Manager, or RAM/)).toBeTruthy();
+    expect(screen.getByText(/synthetic, network-disabled simulator/)).toBeTruthy();
     expect(
-      screen.getByText(/hosting infrastructure may process request and security logs/i),
+      screen.getByText(
+        /hosting provider may process technical request information/i,
+      ),
     ).toBeTruthy();
+    expect(screen.getByText(/Google processes it as the email service provider/i)).toBeTruthy();
+    expect(screen.getByRole("link", { name: "ABN Lookup page" }).getAttribute("href")).toBe(
+      "https://abr.business.gov.au/",
+    );
     expect(
-      screen.getByText(/messages are processed by the relevant email providers/i),
+      screen.getByRole("link", { name: "Office of the Australian Information Commissioner" }),
     ).toBeTruthy();
   });
 
@@ -48,5 +57,7 @@ describe("Tammy public routes", () => {
     expect(screen.queryByText(/simulator-v2/)).toBeNull();
     expect(screen.getByText(/version 0\.1\.0/i)).toBeTruthy();
     expect(screen.getByText(/app deletion alone does not remove/i)).toBeTruthy();
+    expect(screen.getByText(/privacy, access, or correction request/i)).toBeTruthy();
+    expect(screen.getByText(/synthetic, network-disabled simulator/)).toBeTruthy();
   });
 });

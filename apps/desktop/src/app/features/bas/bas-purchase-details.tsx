@@ -12,6 +12,7 @@ import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "reac
 import type { TammyConveyorModule } from "../../../conveyor/client";
 import { isPurchaseCorrectionCode } from "../../../shared/purchase-errors";
 import { Button } from "../../components/ui/button";
+import { SurfaceHeading } from "../../components/workspace-primitives";
 import { purchaseCorrectionGuidance } from "../documents/purchase-accounting-panel";
 import { authenticatedPurchaseRetry } from "../documents/purchase-attempt-recovery";
 import { purchaseCodecs } from "../documents/purchase-codecs";
@@ -61,26 +62,26 @@ export function BasPurchaseDetails({
   if (value.purchaseSourceFormat !== BasPurchaseSourceFormat.RECONCILED_V1) return null;
   return (
     <div className="grid gap-4">
-      <section className="overflow-hidden rounded-[6px] border border-border bg-surface">
-        <div className="border-b border-border p-3">
-          <h2 className="text-[11px] font-semibold">Reconciled purchase sources</h2>
-          <p className="mt-1 text-[9px] text-muted-foreground">
-            Saved source allocations and claimed GST for this workpaper. Invoice, actual payment and
-            claim-period dates are separate.
-          </p>
-        </div>
+      <section className="work-surface overflow-hidden">
+        <SurfaceHeading
+          title="Reconciled purchase sources"
+          description="Saved source allocations and claimed GST for this workpaper. Invoice, actual payment and claim-period dates are separate."
+        />
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-[9px]" aria-label="Saved BAS purchase sources">
+          <table
+            className="work-table w-full text-left text-[12px]"
+            aria-label="Saved BAS purchase sources"
+          >
             <thead>
               <tr className="border-b border-border">
-                <th className="p-3">Invoice date</th>
-                <th className="p-3">Actual payment</th>
-                <th className="p-3">Claim period</th>
-                <th className="p-3">Allocation</th>
-                <th className="p-3 text-right">Gross</th>
-                <th className="p-3 text-right">Supplier / eligible GST</th>
-                <th className="p-3 text-right">Claimed GST</th>
-                <th className="p-3">Review</th>
+                <th className="p-4">Invoice date</th>
+                <th className="p-4">Actual payment</th>
+                <th className="p-4">Claim period</th>
+                <th className="p-4">Allocation</th>
+                <th className="p-4 text-right">Gross</th>
+                <th className="p-4 text-right">Supplier / eligible GST</th>
+                <th className="p-4 text-right">Claimed GST</th>
+                <th className="p-4">Review</th>
               </tr>
             </thead>
             <tbody>
@@ -89,13 +90,13 @@ export function BasPurchaseDetails({
                   className="border-b border-border last:border-0 align-top"
                   key={`${source.documentId}:${source.postingId}:${source.paymentId ?? ""}:${source.attributionId ?? ""}:${source.allocationSequence}`}
                 >
-                  <td className="p-3 whitespace-nowrap">{dateLabel(source.invoiceDate)}</td>
-                  <td className="p-3 whitespace-nowrap">{dateLabel(source.actualPaymentDate)}</td>
-                  <td className="p-3 whitespace-nowrap">
+                  <td className="p-4 whitespace-nowrap">{dateLabel(source.invoiceDate)}</td>
+                  <td className="p-4 whitespace-nowrap">{dateLabel(source.actualPaymentDate)}</td>
+                  <td className="p-4 whitespace-nowrap">
                     {dateLabel(source.claimPeriod?.periodStart)} –{" "}
                     {dateLabel(source.claimPeriod?.periodEnd)}
                   </td>
-                  <td className="p-3">
+                  <td className="p-4">
                     {source.allocationSequence} ·{" "}
                     {source.use === PurchaseUse.PRIVATE ? "Private" : "Business"} ·{" "}
                     {source.basClassification === PurchaseBasClassification.CAPITAL
@@ -104,13 +105,13 @@ export function BasPurchaseDetails({
                         ? "Non-capital"
                         : "Excluded"}
                   </td>
-                  <td className="p-3 text-right whitespace-nowrap">
+                  <td className="p-4 text-right whitespace-nowrap tabular-nums">
                     {aud(source.allocatedGross?.minorUnits)}
                   </td>
-                  <td className="p-3 text-right whitespace-nowrap">
+                  <td className="p-4 text-right whitespace-nowrap tabular-nums">
                     {aud(source.supplierGst?.minorUnits)} / {aud(source.eligibleGst?.minorUnits)}
                   </td>
-                  <td className="p-3 text-right font-semibold whitespace-nowrap">
+                  <td className="p-4 text-right font-semibold whitespace-nowrap tabular-nums">
                     {aud(source.claimedGst?.minorUnits)}
                   </td>
                   <td className="p-3">
@@ -145,7 +146,7 @@ export function BasPurchaseDetails({
                     {controls.onReviewDocument ? (
                       <Button
                         type="button"
-                        className="mt-2 h-7 text-[9px]"
+                        className="mt-2 h-11 text-[13px]"
                         onClick={() => controls.onReviewDocument!(source.documentId)}
                       >
                         Open purchase review
@@ -157,21 +158,18 @@ export function BasPurchaseDetails({
             </tbody>
           </table>
           {value.purchaseSources.length === 0 ? (
-            <p className="p-4 text-[10px] text-muted-foreground">
+            <p className="p-5 text-[13px] text-muted-foreground">
               No purchase GST is claimed in this saved period.
             </p>
           ) : null}
         </div>
       </section>
-      <section
-        className="overflow-hidden rounded-[6px] border border-border bg-surface"
-        aria-label="Purchase GST review outcomes"
-      >
-        <div className="border-b border-border p-3">
-          <h2 className="text-[11px] font-semibold">Purchase reviews and future claims</h2>
-          <p className="mt-1 text-[9px] text-muted-foreground">
-            Suspense and provisional legacy amounts are separate from GST credits (1B).
-          </p>
+      <section className="work-surface overflow-hidden" aria-label="Purchase GST review outcomes">
+        <SurfaceHeading
+          title="Purchase reviews and future claims"
+          description="Suspense and provisional legacy amounts are separate from GST credits (1B)."
+        />
+        <div className="grid gap-3 p-5">
           {value.legacyCandidateGst ? (
             <p className="mt-2 text-[10px]">
               Provisional legacy candidate GST: {aud(value.legacyCandidateGst.minorUnits)} ·

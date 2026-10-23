@@ -21,13 +21,13 @@ import {
   UnlockWorkspaceResponseSchema,
   WorkspaceUnlockProofSchema,
 } from "@tammy/connect-client/tammy/v1/workspace_pb.js";
-import { KeyRound, LoaderCircle } from "lucide-react";
+import { LoaderCircle } from "lucide-react";
 import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 
 import type { TammyConveyorModule } from "../../../conveyor/client";
 import { createProtoMethodCodec } from "../../../shared/proto-ipc";
-import paperLoop from "../../assets/paper-loop.png";
 import { Button } from "../../components/ui/button";
+import { WorkspaceEntryLayout } from "../../components/workspace-entry-layout";
 import type { AuthenticatedWorkspace } from "../setup/setup-screen";
 
 const unlockCodec = createProtoMethodCodec({
@@ -277,80 +277,56 @@ export function UnlockScreen({
   };
 
   return (
-    <main className="grid min-h-screen place-items-center bg-background px-5 py-8">
-      <section className="workspace-surface">
-        <div className="mb-6 flex items-start gap-4">
-          <span className="grid size-9 shrink-0 place-items-center rounded-full bg-forest-soft text-forest">
-            <KeyRound aria-hidden="true" className="size-4" />
-          </span>
-          <div>
-            <p className="font-serif text-[28px] font-bold tracking-[-0.04em] text-foreground">
-              tammy
-            </p>
-            <h1 className="mt-1 text-foreground page-title">Unlock your workspace</h1>
-            <p className="mt-1 text-[14px] leading-5 text-muted-foreground">
-              Your encrypted accounting data stays on this device.
-            </p>
-          </div>
-          <img alt="" aria-hidden="true" className="arrival-art" src={paperLoop} />
-        </div>
-
-        <form className="grid gap-4" onSubmit={unlockAndSignIn}>
-          <label className="grid gap-1.5 text-[14px] font-medium text-foreground">
-            Workspace passphrase
-            <input
-              autoComplete="current-password"
-              className={fieldClassName()}
-              minLength={16}
-              onChange={(event) => setWorkspacePassphrase(event.target.value)}
-              required
-              type="password"
-              value={workspacePassphrase}
-            />
-          </label>
-          <label className="grid gap-1.5 text-[14px] font-medium text-foreground">
-            Email or username
-            <input
-              autoComplete="username"
-              className={fieldClassName()}
-              onChange={(event) => setUsername(event.target.value)}
-              required
-              value={username}
-            />
-          </label>
-          <label className="grid gap-1.5 text-[14px] font-medium text-foreground">
-            Administrator password
-            <input
-              autoComplete="current-password"
-              className={fieldClassName()}
-              minLength={16}
-              onChange={(event) => setAdministratorPassword(event.target.value)}
-              required
-              type="password"
-              value={administratorPassword}
-            />
-          </label>
-          <Button className="mt-1 h-11 w-full text-[14px]" disabled={busy} type="submit">
-            {busy ? <LoaderCircle aria-hidden="true" className="size-3.5 animate-spin" /> : null}
-            Unlock workspace
-          </Button>
-        </form>
-        {error ? (
-          <p className="mt-4 text-[14px] text-destructive" role="alert">
-            {error}
-          </p>
-        ) : null}
-        {onPrivacy ? (
-          <button
-            className="focus-ring mt-4 text-[14px] font-medium text-forest underline"
-            onClick={onPrivacy}
-            type="button"
-          >
-            Privacy and support
-          </button>
-        ) : null}
-      </section>
-    </main>
+    <WorkspaceEntryLayout
+      description="Your encrypted accounting data stays on this device."
+      {...(onPrivacy === undefined ? {} : { onPrivacy })}
+      stage="unlock"
+      title="Unlock your workspace"
+    >
+      <form className="grid gap-4" onSubmit={unlockAndSignIn}>
+        <label className="grid gap-1.5 text-[14px] font-medium text-foreground">
+          Workspace passphrase
+          <input
+            autoComplete="current-password"
+            className={fieldClassName()}
+            onChange={(event) => setWorkspacePassphrase(event.target.value)}
+            required
+            type="password"
+            value={workspacePassphrase}
+          />
+        </label>
+        <label className="grid gap-1.5 text-[14px] font-medium text-foreground">
+          Email or username
+          <input
+            autoComplete="username"
+            className={fieldClassName()}
+            onChange={(event) => setUsername(event.target.value)}
+            required
+            value={username}
+          />
+        </label>
+        <label className="grid gap-1.5 text-[14px] font-medium text-foreground">
+          Administrator password
+          <input
+            autoComplete="current-password"
+            className={fieldClassName()}
+            onChange={(event) => setAdministratorPassword(event.target.value)}
+            required
+            type="password"
+            value={administratorPassword}
+          />
+        </label>
+        <Button className="mt-1 h-11 w-full text-[14px]" disabled={busy} type="submit">
+          {busy ? <LoaderCircle aria-hidden="true" className="size-3.5 animate-spin" /> : null}
+          Unlock workspace
+        </Button>
+      </form>
+      {error ? (
+        <p className="mt-4 text-[14px] text-destructive" role="alert">
+          {error}
+        </p>
+      ) : null}
+    </WorkspaceEntryLayout>
   );
 }
 

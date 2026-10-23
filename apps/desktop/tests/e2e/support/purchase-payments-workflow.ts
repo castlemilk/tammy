@@ -85,7 +85,13 @@ export async function setupPurchaseWorkspace(
     .selectOption(basis === "cash" ? "1" : "2");
   await page.getByLabel("Workspace passphrase", { exact: true }).fill(CURRENT_WORKFLOW_PASSPHRASE);
   await page
+    .getByLabel("Confirm workspace passphrase", { exact: true })
+    .fill(CURRENT_WORKFLOW_PASSPHRASE);
+  await page
     .getByLabel("Administrator password", { exact: true })
+    .fill(CURRENT_WORKFLOW_ADMIN_PASSWORD);
+  await page
+    .getByLabel("Confirm administrator password", { exact: true })
     .fill(CURRENT_WORKFLOW_ADMIN_PASSWORD);
   await page.getByRole("button", { name: "Create local workspace", exact: true }).click();
   await expect(

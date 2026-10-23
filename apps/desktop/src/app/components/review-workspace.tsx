@@ -1,25 +1,19 @@
 import { AlertCircle, CheckCircle2, FileSearch, LoaderCircle, Search } from "lucide-react";
 import type { ReactNode, Ref } from "react";
+import { ScreenHeading } from "./workspace-primitives";
 
 export function WorkHeading({
+  area,
   title,
   description,
   action,
 }: {
+  readonly area: string;
   readonly title: string;
   readonly description: string;
   readonly action?: ReactNode;
 }) {
-  return (
-    <div className="flex flex-wrap items-end justify-between gap-5">
-      <div className="max-w-[650px]">
-        <p className="work-eyebrow mb-2">Your review workspace</p>
-        <h1 className="page-title">{title}</h1>
-        <p className="mt-2 text-[14px] leading-6 text-muted-foreground">{description}</p>
-      </div>
-      {action}
-    </div>
-  );
+  return <ScreenHeading area={area} title={title} description={description} action={action} />;
 }
 
 export function WorkNotice({

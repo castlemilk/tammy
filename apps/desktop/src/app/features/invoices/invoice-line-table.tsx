@@ -1,10 +1,11 @@
 import { formatAud, type InvoiceTotals } from "@tammy/invoices/model";
 import { Plus, Trash2 } from "lucide-react";
 import { Button } from "../../components/ui/button";
+import { SurfaceHeading } from "../../components/workspace-primitives";
 import type { EditorLine } from "./invoice-editor";
 
 export const invoiceFieldClass =
-  "focus-ring h-8 w-full min-w-0 rounded-[4px] border border-border bg-background px-2 text-[11px] text-foreground disabled:opacity-70";
+  "focus-ring h-11 w-full min-w-0 rounded-xl border border-border bg-background px-3 text-[14px] text-foreground disabled:opacity-70";
 
 export function InvoiceLineTable({
   lines,
@@ -27,26 +28,30 @@ export function InvoiceLineTable({
 }) {
   const disabled = busy || readOnly;
   return (
-    <section className="grid min-w-0 gap-3" aria-labelledby="invoice-lines-heading">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-[12px] font-semibold" id="invoice-lines-heading">
-          Invoice line items
-        </h2>
-        {!readOnly ? (
-          <Button
-            className="h-8 text-[10px]"
-            disabled={busy || lines.length >= 50}
-            onClick={onAdd}
-            type="button"
-            variant="outline"
-          >
-            <Plus aria-hidden="true" className="size-3" /> Add line item
-          </Button>
-        ) : null}
-      </div>
-      <div className="focus-ring min-w-0 overflow-x-auto rounded-[6px] border border-border bg-surface">
+    <section
+      className="work-surface grid min-w-0 gap-0 overflow-hidden"
+      aria-labelledby="invoice-lines-heading"
+    >
+      <SurfaceHeading
+        title="Invoice line items"
+        headingId="invoice-lines-heading"
+        action={
+          !readOnly ? (
+            <Button
+              className="h-11 text-[13px]"
+              disabled={busy || lines.length >= 50}
+              onClick={onAdd}
+              type="button"
+              variant="outline"
+            >
+              <Plus aria-hidden="true" className="size-4" /> Add line item
+            </Button>
+          ) : undefined
+        }
+      />
+      <div className="focus-ring m-4 min-w-0 overflow-x-auto rounded-xl border border-border bg-background">
         <table
-          className="w-full min-w-[790px] table-fixed border-collapse text-[11px]"
+          className="w-full min-w-[820px] table-fixed border-collapse text-[13px]"
           aria-label="Invoice line items"
         >
           <colgroup>
@@ -58,25 +63,25 @@ export function InvoiceLineTable({
             <col className="w-[14%]" />
             {!readOnly ? <col className="w-[7%]" /> : null}
           </colgroup>
-          <thead className="border-b border-border bg-muted/40 text-left text-[10px] text-muted-foreground">
+          <thead className="border-b border-border bg-muted/40 text-left text-[12px] text-muted-foreground">
             <tr>
-              <th className="px-3 py-3 font-medium" scope="col">
+              <th className="px-4 py-4 font-medium" scope="col">
                 Description
               </th>
-              <th className="px-2 py-3 text-right font-medium" scope="col">
+              <th className="px-3 py-4 text-right font-medium" scope="col">
                 Quantity
               </th>
-              <th className="px-2 py-3 text-right font-medium" scope="col">
-                Unit cost <span className="block text-[9px] font-normal">Private</span>
+              <th className="px-3 py-4 text-right font-medium" scope="col">
+                Unit cost <span className="block text-[11px] font-normal">Private</span>
               </th>
-              <th className="px-2 py-3 text-right font-medium" scope="col">
-                Selling price <span className="block text-[9px] font-normal">Ex GST</span>
+              <th className="px-3 py-4 text-right font-medium" scope="col">
+                Selling price <span className="block text-[11px] font-normal">Ex GST</span>
               </th>
-              <th className="px-2 py-3 font-medium" scope="col">
+              <th className="px-3 py-4 font-medium" scope="col">
                 GST treatment
               </th>
-              <th className="px-3 py-3 text-right font-medium" scope="col">
-                Line total <span className="block text-[9px] font-normal">Incl GST</span>
+              <th className="px-4 py-4 text-right font-medium" scope="col">
+                Line total <span className="block text-[11px] font-normal">Incl GST</span>
               </th>
               {!readOnly ? (
                 <th className="px-2 py-3" scope="col">
@@ -88,7 +93,7 @@ export function InvoiceLineTable({
           <tbody>
             {lines.map((line, index) => (
               <tr className="border-b border-border last:border-0" key={line.key}>
-                <td className="px-3 py-3 align-top">
+                <td className="px-4 py-4 align-top">
                   <input
                     aria-label={`Description ${index + 1}`}
                     className={invoiceFieldClass}
@@ -97,13 +102,13 @@ export function InvoiceLineTable({
                     onChange={(event) => onEdit(line.key, { description: event.target.value })}
                     value={line.description}
                   />
-                  <p className="mt-1.5 text-[9px] leading-4 text-muted-foreground">
+                  <p className="mt-2 text-[11px] leading-4 text-muted-foreground">
                     {line.sourceDocumentId
                       ? "Linked reviewed expense · internal only"
                       : "Manual line"}
                   </p>
                 </td>
-                <td className="px-2 py-3 align-top">
+                <td className="px-3 py-4 align-top">
                   <input
                     aria-label={`Quantity ${index + 1}`}
                     className={`${invoiceFieldClass} text-right tabular-nums`}
@@ -113,7 +118,7 @@ export function InvoiceLineTable({
                     value={line.quantity}
                   />
                 </td>
-                <td className="px-2 py-3 align-top">
+                <td className="px-3 py-4 align-top">
                   <input
                     aria-label={`Unit cost ${index + 1}`}
                     className={`${invoiceFieldClass} text-right tabular-nums`}
@@ -123,7 +128,7 @@ export function InvoiceLineTable({
                     value={line.unitCost}
                   />
                 </td>
-                <td className="px-2 py-3 align-top">
+                <td className="px-3 py-4 align-top">
                   <input
                     aria-label={`Unit price ${index + 1}`}
                     className={`${invoiceFieldClass} text-right tabular-nums`}
@@ -133,7 +138,7 @@ export function InvoiceLineTable({
                     value={line.unitPrice}
                   />
                 </td>
-                <td className="px-2 py-3 align-top">
+                <td className="px-3 py-4 align-top">
                   <select
                     aria-label={`GST treatment ${index + 1}`}
                     className={invoiceFieldClass}
@@ -153,16 +158,16 @@ export function InvoiceLineTable({
                     <option value="out-of-scope">Out of scope</option>
                   </select>
                 </td>
-                <td className="px-3 py-3 text-right align-top tabular-nums">
-                  <span className="block py-2">
+                <td className="px-4 py-4 text-right align-top tabular-nums">
+                  <span className="block py-3">
                     {totals ? formatAud(totals.lines[index]?.totalMinor ?? 0) : "—"}
                   </span>
                 </td>
                 {!readOnly ? (
-                  <td className="px-2 py-3 align-top">
+                  <td className="px-3 py-4 align-top">
                     <Button
                       aria-label={`Remove line ${index + 1}`}
-                      className="h-8 px-2"
+                      className="size-11 px-2"
                       disabled={busy || lines.length === 1}
                       onClick={() => onRemove(line.key)}
                       type="button"

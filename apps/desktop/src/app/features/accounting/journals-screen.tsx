@@ -25,6 +25,7 @@ import { type FormEvent, useMemo, useState } from "react";
 import type { TammyConveyorModule } from "../../../conveyor/client";
 import { createProtoMethodCodec } from "../../../shared/proto-ipc";
 import { Button } from "../../components/ui/button";
+import { ScreenHeading, SurfaceHeading } from "../../components/workspace-primitives";
 import type { AuthenticatedWorkspace } from "../setup/setup-screen";
 
 const accountsCodec = createProtoMethodCodec({
@@ -240,26 +241,25 @@ export function JournalsScreen({
   }
 
   return (
-    <div className="mx-auto grid w-full max-w-[1120px] gap-5">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-foreground page-title">Journals</h1>
-          <p className="mt-1 text-[14px] leading-5 text-muted-foreground">
-            Balanced accounting entries and their retained sources.
-          </p>
-        </div>
-        <Button
-          className="h-11 text-[14px]"
-          disabled={ordinaryAccounts.length < 2}
-          aria-expanded={adding}
-          onClick={() => setAdding((value) => !value)}
-          type="button"
-        >
-          <Plus aria-hidden="true" className="size-3" /> {adding ? "Cancel" : "New journal"}
-        </Button>
-      </div>
+    <div className="mx-auto grid w-full max-w-[1120px] gap-6">
+      <ScreenHeading
+        area="Accounting · Activity"
+        title="Journals"
+        description="Balanced accounting entries and their retained sources."
+        action={
+          <Button
+            className="h-11 text-[14px]"
+            disabled={ordinaryAccounts.length < 2}
+            aria-expanded={adding}
+            onClick={() => setAdding((value) => !value)}
+            type="button"
+          >
+            <Plus aria-hidden="true" className="size-3" /> {adding ? "Cancel" : "New journal"}
+          </Button>
+        }
+      />
       {ordinaryAccounts.length < 2 && state.status === "ready" ? (
-        <p className="rounded-xl border border-warning-border bg-warning-soft px-3 py-2 text-[14px] text-foreground">
+        <p className="rounded-xl border border-warning-border bg-warning-soft px-4 py-3 text-[14px] leading-5 text-foreground">
           Create at least two ordinary accounts before posting a manual journal.
         </p>
       ) : null}
@@ -285,41 +285,47 @@ export function JournalsScreen({
           {error}
         </p>
       ) : null}
-      <section className="overflow-x-auto rounded-[20px] border border-border bg-surface">
+      <section className="work-surface overflow-hidden">
+        <SurfaceHeading
+          title="Journal history"
+          description="Posted entries are retained as balanced accounting records."
+        />
         {state.status === "ready" && state.journals.length > 0 ? (
-          <table className="w-full border-collapse text-left">
-            <thead className="border-b border-border bg-background/60 text-[12px] uppercase tracking-[0.05em] text-muted-foreground">
-              <tr>
-                <th className="px-3 py-2">Date</th>
-                <th className="px-3 py-2">Description</th>
-                <th className="px-3 py-2 text-right">Amount</th>
-                <th className="px-3 py-2">State</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border text-[14px]">
-              {state.journals.map((journal) => (
-                <tr
-                  className="focus-ring cursor-pointer hover:bg-muted/50"
-                  key={journal.id}
-                  onClick={() => onNavigate(`/accounting/journals?journal=${journal.id}`)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter" || event.key === " ") {
-                      event.preventDefault();
-                      onNavigate(`/accounting/journals?journal=${journal.id}`);
-                    }
-                  }}
-                  tabIndex={0}
-                >
-                  <td className="px-3 py-2.5">{civilDateLabel(journal)}</td>
-                  <td className="px-3 py-2.5 font-medium">{journal.memo || "Journal entry"}</td>
-                  <td className="px-3 py-2.5 text-right font-mono">
-                    {moneyLabel(journal.totalDebits?.minorUnits ?? 0n)}
-                  </td>
-                  <td className="px-3 py-2.5">{journal.state === 1 ? "Posted" : "Reversed"}</td>
+          <div className="min-w-0 overflow-x-auto">
+            <table className="w-full border-collapse text-left">
+              <thead className="border-b border-border bg-background/60 text-[11px] uppercase tracking-[0.075em] text-muted-foreground">
+                <tr>
+                  <th className="px-5 py-3">Date</th>
+                  <th className="px-5 py-3">Description</th>
+                  <th className="px-5 py-3 text-right">Amount</th>
+                  <th className="px-5 py-3">State</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-border text-[14px]">
+                {state.journals.map((journal) => (
+                  <tr
+                    className="focus-ring cursor-pointer hover:bg-muted/50"
+                    key={journal.id}
+                    onClick={() => onNavigate(`/accounting/journals?journal=${journal.id}`)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        onNavigate(`/accounting/journals?journal=${journal.id}`);
+                      }
+                    }}
+                    tabIndex={0}
+                  >
+                    <td className="px-5 py-3.5">{civilDateLabel(journal)}</td>
+                    <td className="px-5 py-3.5 font-medium">{journal.memo || "Journal entry"}</td>
+                    <td className="px-5 py-3.5 text-right font-mono tabular-nums">
+                      {moneyLabel(journal.totalDebits?.minorUnits ?? 0n)}
+                    </td>
+                    <td className="px-5 py-3.5">{journal.state === 1 ? "Posted" : "Reversed"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         ) : (
           <EmptyState status={state.status} />
         )}
@@ -344,10 +350,7 @@ function JournalForm(props: {
   readonly posting: boolean;
 }) {
   return (
-    <form
-      className="grid gap-3 rounded-xl border border-border bg-surface p-3"
-      onSubmit={props.onSubmit}
-    >
+    <form className="work-surface grid gap-4 p-5" onSubmit={props.onSubmit}>
       <div className="grid grid-cols-2 gap-3 max-[700px]:grid-cols-1">
         <label className="grid gap-1 text-[14px] font-medium">
           Date
@@ -447,56 +450,63 @@ function JournalDetail({
     accounts.map((account) => [account.id, `${account.code} — ${account.name}`]),
   );
   return (
-    <div className="mx-auto grid w-full max-w-[1120px] gap-5">
-      <div>
-        <Button onClick={onBack} type="button" variant="ghost">
-          <ArrowLeft aria-hidden="true" className="size-3" /> Journals
-        </Button>
-        <h1 className="mt-3 page-title">{journal.memo || "Journal entry"}</h1>
-        <p className="mt-1 text-[14px] text-muted-foreground">
-          {civilDateLabel(journal)} · {journal.state === 1 ? "Posted" : "Reversed"}
-        </p>
-      </div>
-      <section className="overflow-x-auto rounded-[20px] border border-border bg-surface">
-        <table className="w-full border-collapse text-left">
-          <thead className="border-b border-border bg-background/60 text-[12px] uppercase text-muted-foreground">
-            <tr>
-              <th className="px-3 py-2">Account</th>
-              <th className="px-3 py-2">Description</th>
-              <th className="px-3 py-2 text-right">Debit</th>
-              <th className="px-3 py-2 text-right">Credit</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border text-[14px]">
-            {journal.lines.map((line) => (
-              <tr key={line.id}>
-                <td className="px-3 py-2.5 font-medium">
-                  {names.get(line.accountId) ?? line.accountId}
+    <div className="mx-auto grid w-full max-w-[1120px] gap-6">
+      <ScreenHeading
+        area="Accounting · Journal detail"
+        title={journal.memo || "Journal entry"}
+        description={`${civilDateLabel(journal)} · ${journal.state === 1 ? "Posted" : "Reversed"}`}
+        action={
+          <Button onClick={onBack} type="button" variant="outline">
+            <ArrowLeft aria-hidden="true" className="size-4" /> Journals
+          </Button>
+        }
+      />
+      <section className="work-surface overflow-hidden">
+        <SurfaceHeading
+          title="Entry lines"
+          description="Debits and credits recorded in this journal."
+        />
+        <div className="min-w-0 overflow-x-auto">
+          <table className="w-full border-collapse text-left">
+            <thead className="border-b border-border bg-background/60 text-[11px] uppercase tracking-[0.075em] text-muted-foreground">
+              <tr>
+                <th className="px-5 py-3">Account</th>
+                <th className="px-5 py-3">Description</th>
+                <th className="px-5 py-3 text-right">Debit</th>
+                <th className="px-5 py-3 text-right">Credit</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border text-[14px]">
+              {journal.lines.map((line) => (
+                <tr key={line.id}>
+                  <td className="px-5 py-3.5 font-medium">
+                    {names.get(line.accountId) ?? line.accountId}
+                  </td>
+                  <td className="px-5 py-3.5 text-muted-foreground">{line.description}</td>
+                  <td className="px-5 py-3.5 text-right font-mono tabular-nums">
+                    {line.debit?.minorUnits ? moneyLabel(line.debit.minorUnits) : "—"}
+                  </td>
+                  <td className="px-5 py-3.5 text-right font-mono tabular-nums">
+                    {line.credit?.minorUnits ? moneyLabel(line.credit.minorUnits) : "—"}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+            <tfoot className="border-t border-border text-[14px] font-semibold">
+              <tr>
+                <td className="px-5 py-3.5" colSpan={2}>
+                  Total
                 </td>
-                <td className="px-3 py-2.5 text-muted-foreground">{line.description}</td>
-                <td className="px-3 py-2.5 text-right font-mono">
-                  {line.debit?.minorUnits ? moneyLabel(line.debit.minorUnits) : "—"}
+                <td className="px-5 py-3.5 text-right font-mono tabular-nums">
+                  {moneyLabel(journal.totalDebits?.minorUnits ?? 0n)}
                 </td>
-                <td className="px-3 py-2.5 text-right font-mono">
-                  {line.credit?.minorUnits ? moneyLabel(line.credit.minorUnits) : "—"}
+                <td className="px-5 py-3.5 text-right font-mono tabular-nums">
+                  {moneyLabel(journal.totalCredits?.minorUnits ?? 0n)}
                 </td>
               </tr>
-            ))}
-          </tbody>
-          <tfoot className="border-t border-border text-[14px] font-semibold">
-            <tr>
-              <td className="px-3 py-2.5" colSpan={2}>
-                Total
-              </td>
-              <td className="px-3 py-2.5 text-right font-mono">
-                {moneyLabel(journal.totalDebits?.minorUnits ?? 0n)}
-              </td>
-              <td className="px-3 py-2.5 text-right font-mono">
-                {moneyLabel(journal.totalCredits?.minorUnits ?? 0n)}
-              </td>
-            </tr>
-          </tfoot>
-        </table>
+            </tfoot>
+          </table>
+        </div>
       </section>
     </div>
   );

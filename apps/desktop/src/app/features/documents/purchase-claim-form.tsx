@@ -230,21 +230,21 @@ export function PurchaseClaimForm({
   };
   return (
     <details
-      className="border-t border-border pt-3"
+      className="work-surface overflow-hidden"
       open={open || Boolean(retainedRequest)}
       onToggle={(event) => setOpen(event.currentTarget.open)}
     >
-      <summary className="cursor-pointer text-[11px] font-semibold">
+      <summary className="cursor-pointer border-b border-border px-5 py-4 text-[14px] font-semibold">
         Review claim period or defer GST
       </summary>
-      <div className="mt-3 grid gap-3">
-        <p className="text-[10px] leading-5 text-muted-foreground">
+      <div className="grid gap-4 p-5">
+        <p className="text-[13px] leading-6 text-muted-foreground">
           Delayed claims require actual due-date proof and review of the ordinary time limit. The
           core verifies ownership, remaining credit, closed periods and expiry.
         </p>
         {deferral ? (
           <>
-            <p className="text-[9px]">
+            <p className="text-[12px] leading-5">
               Retained deferral {deferral.id}. Original decision amount is not a current remaining
               balance.
             </p>
@@ -270,7 +270,7 @@ export function PurchaseClaimForm({
           </>
         ) : null}
         {retained ? (
-          <dl className="grid grid-cols-2 gap-1 text-[9px]">
+          <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-[12px] max-[560px]:grid-cols-1">
             <dt>Normal event</dt>
             <dd>{dateLabel(retained.normalEventDate)}</dd>
             <dt>Earliest eligible period</dt>
@@ -304,7 +304,7 @@ export function PurchaseClaimForm({
                 ))}
               </PurchaseChoice>
             ) : (
-              <p className="text-[9px]">
+              <p className="text-[12px] leading-5">
                 Normal event: invoice {dateLabel(posting.invoiceDate)} · posting {posting.id}
               </p>
             )}
@@ -357,11 +357,11 @@ export function PurchaseClaimForm({
             />
           </>
         )}
-        <p className="text-[9px]">
+        <p className="text-[12px]">
           Current evidence: {evidence?.id ?? "Missing"} · held{" "}
           {dateLabel(evidence?.review?.heldDate)}
         </p>
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-2 gap-3 max-[560px]:grid-cols-1">
           <PurchaseField
             label="Claim / affected period start"
             type="date"
@@ -393,7 +393,7 @@ export function PurchaseClaimForm({
           checked={confirmed}
           onChange={setConfirmed}
         />
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-3">
           <Button type="button" onClick={() => submit("claim")}>
             Attribute reviewed GST
           </Button>

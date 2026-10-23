@@ -12,7 +12,7 @@ import {
   OrganisationVerificationState,
 } from "@tammy/connect-client/tammy/v1/organisation_pb.js";
 import { AlertTriangle, LoaderCircle, RefreshCw } from "lucide-react";
-import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { type TammyConveyor, tammyConveyor } from "../conveyor/client";
 import type { DesktopLaunchScenario } from "../shared/launch-scenario";
 import { createProtoMethodCodec } from "../shared/proto-ipc";
@@ -24,6 +24,7 @@ import {
 } from "./app-shell/router";
 import { SimulatorBanner } from "./app-shell/simulator-banner";
 import { Button } from "./components/ui/button";
+import { ScreenHeading, SurfaceHeading } from "./components/workspace-primitives";
 import { ChartScreen } from "./features/accounting/chart-screen";
 import { JournalsScreen } from "./features/accounting/journals-screen";
 import { TrialBalanceScreen } from "./features/accounting/trial-balance-screen";
@@ -195,6 +196,7 @@ function hasSbrWorkspaceProjection(
 
 export function App({ conveyor = tammyConveyor }: { readonly conveyor?: TammyConveyor } = {}) {
   const launchScenario = window.tammyLaunchScenario ?? "accounting";
+  const privacyReturnPath = useRef("/overview");
   const [access, setAccess] = useState<WorkspaceAccess>(initialAccess);
   const [workspace, setWorkspace] = useState<AuthenticatedWorkspace | undefined>(
     storedAuthenticatedWorkspace,
@@ -370,6 +372,9 @@ export function App({ conveyor = tammyConveyor }: { readonly conveyor?: TammyCon
   const navigate = useCallback(
     (path: string) => {
       const resolved = resolveAppLocation(path, access);
+      if (resolved.path === "/privacy" && currentLocation() !== "/privacy") {
+        privacyReturnPath.current = currentLocation();
+      }
       window.history.pushState(null, "", resolved.path);
       setActivePath(resolved.path);
     },
@@ -395,7 +400,7 @@ export function App({ conveyor = tammyConveyor }: { readonly conveyor?: TammyCon
   if (activePath === "/privacy") {
     return (
       <ScenarioFrame scenario={launchScenario}>
-        <PrivacyScreen onBack={() => navigate("/overview")} />
+        <PrivacyScreen onBack={() => navigate(privacyReturnPath.current)} />
       </ScenarioFrame>
     );
   }
@@ -444,7 +449,13 @@ export function App({ conveyor = tammyConveyor }: { readonly conveyor?: TammyCon
 
   return (
     <ScenarioFrame scenario={launchScenario}>
-      <AppShell activePath={activePath} onNavigate={navigate}>
+      <AppShell
+        activePath={activePath}
+        onNavigate={navigate}
+        {...(workspace?.organisationDisplayName
+          ? { organisationDisplayName: workspace.organisationDisplayName }
+          : {})}
+      >
         <EngineStatus onRetry={loadDiagnostics} state={diagnosticsState} />
         <RouteContent
           conveyor={conveyor}
@@ -454,6 +465,7 @@ export function App({ conveyor = tammyConveyor }: { readonly conveyor?: TammyCon
           settingsProjection={settingsProjection}
           settingsAuthorityKey={settingsAuthorityKey}
           onReloadSettings={reloadSettings}
+          onReloadDiagnostics={loadDiagnostics}
           workspace={workspace}
         />
       </AppShell>
@@ -550,6 +562,7 @@ function ActiveRouteContent({
   settingsAuthorityKey,
   settingsProjection,
   onReloadSettings,
+  onReloadDiagnostics,
   state,
   workspace,
 }: {
@@ -559,6 +572,7 @@ function ActiveRouteContent({
   readonly settingsAuthorityKey: string | undefined;
   readonly settingsProjection: SettingsProjectionState;
   readonly onReloadSettings: () => void;
+  readonly onReloadDiagnostics: () => void;
   readonly state: DiagnosticsState;
   readonly workspace: AuthenticatedWorkspace | undefined;
 }) {
@@ -654,15 +668,48 @@ function ActiveRouteContent({
   }
   if (path === "/settings") {
     return (
-      <div className="mx-auto grid w-full max-w-[920px] gap-5">
-        <div>
-          <h1 className="text-[18px] font-semibold tracking-[-0.02em] text-foreground">Settings</h1>
-          <p className="mt-1 text-[11px] leading-5 text-muted-foreground">
-            Local workspace and system information.
-          </p>
+      <div className="grid min-w-0 gap-6">
+        <ScreenHeading
+          area="Your workspace"
+          title="Settings"
+          description="Your business, local access and the tools that keep your records on this device."
+        />
+        <div className="grid min-w-0 items-start gap-5 min-[1100px]:grid-cols-2">
+          <section className="work-surface min-w-0">
+            <SurfaceHeading
+              title="Your local workspace"
+              description="Business identity and reporting settings belong to this workspace."
+            />
+            <div className="grid gap-5 p-5">
+              <dl className="m-0 grid gap-4 text-[14px]">
+                <div className="grid gap-1">
+                  <dt className="text-[12px] text-muted-foreground">Business</dt>
+                  <dd className="m-0 break-words font-semibold">
+                    {workspace?.organisationDisplayName ?? "Local workspace"}
+                  </dd>
+                </div>
+                <div className="grid gap-1">
+                  <dt className="text-[12px] text-muted-foreground">Accounting records</dt>
+                  <dd className="m-0">Encrypted on this device</dd>
+                </div>
+              </dl>
+              <div className="flex flex-wrap gap-2 border-t border-border pt-4">
+                <Button
+                  onClick={() => onNavigate("/settings/organisation")}
+                  type="button"
+                  variant="outline"
+                >
+                  Organisation details
+                </Button>
+                <Button onClick={() => onNavigate("/settings/sbr")} type="button" variant="outline">
+                  SBR readiness
+                </Button>
+              </div>
+            </div>
+          </section>
+          <PrivacyStatement onPrivacy={() => onNavigate("/privacy")} />
         </div>
-        <DiagnosticsCard onRetry={() => undefined} state={state} />
-        <PrivacyStatement />
+        <DiagnosticsCard onRetry={onReloadDiagnostics} state={state} />
       </div>
     );
   }
@@ -672,23 +719,20 @@ function ActiveRouteContent({
     }
     const trustedWorkspace = settingsProjection.workspace;
     return (
-      <div className="mx-auto grid w-full max-w-[920px] gap-5">
-        <div className="border-b border-border pb-4">
-          <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-forest">
-            Settings / organisation
-          </p>
-          <h1 className="text-[19px] font-semibold tracking-[-0.025em] text-foreground">
-            Organisation
-          </h1>
-        </div>
-        <dl className="grid min-w-0 border-t border-border text-[11px]">
-          <div className="grid grid-cols-[180px_minmax(0,1fr)] border-b border-border py-3">
+      <div className="grid min-w-0 gap-6">
+        <ScreenHeading
+          area="Settings / organisation"
+          title="Organisation"
+          description="Keep your business identity and the evidence behind it clear and connected."
+        />
+        <dl className="work-surface m-0 grid min-w-0 px-5 text-[14px]">
+          <div className="grid grid-cols-[180px_minmax(0,1fr)] gap-2 border-b border-border py-4 max-[640px]:grid-cols-1">
             <dt className="text-muted-foreground">Display name</dt>
             <dd className="m-0 min-w-0 font-medium text-foreground [overflow-wrap:anywhere]">
               {trustedWorkspace.organisationDisplayName}
             </dd>
           </div>
-          <div className="grid grid-cols-[180px_minmax(0,1fr)] border-b border-border py-3">
+          <div className="grid grid-cols-[180px_minmax(0,1fr)] gap-2 py-4 max-[640px]:grid-cols-1">
             <dt className="text-muted-foreground">Canonical ABN</dt>
             <dd className="m-0 font-medium text-foreground">
               {trustedWorkspace.organisationCanonicalAbn}
