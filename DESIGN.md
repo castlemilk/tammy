@@ -142,7 +142,8 @@ approved transparent paper-loop art appears only at arrival/completion, outside 
 - Do reuse semantic tokens and shared controls across connected screens.
 - Do verify real packaged screenshots with isolated synthetic data.
 - Do preserve core authorization, amounts, tax rules and idempotency.
-- Don't turn planned invoices, bank feeds or stock tracking into visible capabilities.
+- Use planned reference screens only for capabilities now implemented and tested.
+  Invoice editing and reporting are implemented; bank feeds and stock tracking remain planned.
 - Don't add art to financial tables or copy generated financial examples as contracts.
 
 ## Review workspace uplift (2026-10-22)
@@ -174,6 +175,12 @@ hierarchy. Main content has a 1120px working width; tables own horizontal overfl
 while long forms and policy documents retain natural document scrolling. Navigation
 uses pale forest selection with forest text, and shows the current business in the
 route context. Financial data stays in readable sans and tabular numerals.
+
+The same hierarchy and surfaces extend through purchase review, retained evidence,
+invoice templates, reporting exports, RAM credentials and account security forms.
+Metadata is at least 12px, narrative copy and inputs use 14px, and standard controls
+retain a 44px target. `HorizontalScrollArea` owns named, focusable table regions so
+read-only accounting and invoice tables can scroll with the keyboard at narrow widths.
 
 `WorkspaceEntryLayout` applies boards 11 and 13 to workspace setup, recovery and
 sign-in: a quiet introduction beside a clear form surface, with business and security

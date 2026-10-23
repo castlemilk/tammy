@@ -349,11 +349,11 @@ export function PurchaseAccountingPanel({
         }
       />
       {document.status !== DocumentStatus.REVIEWED ? (
-        <p className="px-5 text-[13px] leading-5">
+        <p className="px-5 text-[14px] leading-6">
           Save the extraction review before adding this purchase to accounts.
         </p>
       ) : !accounting ? (
-        <p className="px-5 text-[13px] leading-5" role={get.isError ? "alert" : "status"}>
+        <p className="px-5 text-[14px] leading-6" role={get.isError ? "alert" : "status"}>
           {get.isError
             ? "Purchase accounting could not be loaded. Reload after checking the active workspace."
             : "Loading authoritative purchase…"}
@@ -363,10 +363,10 @@ export function PurchaseAccountingPanel({
           {accounting.posted ? (
             <PurchaseProjection value={accounting} evidence={evidence} accounts={seenAccounts} />
           ) : (
-            <p className="px-5 text-[13px]">Reviewed source · not added to accounts</p>
+            <p className="px-5 text-[14px]">Reviewed source · not added to accounts</p>
           )}
           {!mayPrepare(workspace) ? (
-            <p className="px-5 text-[13px] leading-5 text-muted-foreground">
+            <p className="px-5 text-[14px] leading-6 text-muted-foreground">
               Read-only role. Purchase and GST changes require an administrator or preparer.
             </p>
           ) : (
@@ -391,7 +391,7 @@ export function PurchaseAccountingPanel({
                       }
                     />
                   ) : (
-                    <p className="text-[10px]">This payable is fully settled.</p>
+                    <p className="text-[14px] leading-6">This payable is fully settled.</p>
                   )}
                   <EvidenceForm
                     document={document}
@@ -442,14 +442,14 @@ export function PurchaseAccountingPanel({
                 </>
               )}
               {accountsQuery.isError ? (
-                <p className="text-[10px]" role="alert">
+                <p className="text-[14px] leading-6" role="alert">
                   Accounts could not be loaded.
                 </p>
               ) : null}
               <div className="flex flex-wrap gap-2">
                 <Button
                   type="button"
-                  className="h-6 text-[9px]"
+                  className="text-[12px]"
                   disabled={accountCursors.length < 2 || accountsQuery.isFetching}
                   onClick={() => setAccountCursors((current) => current.slice(0, -1))}
                 >
@@ -457,7 +457,7 @@ export function PurchaseAccountingPanel({
                 </Button>
                 <Button
                   type="button"
-                  className="h-6 text-[9px]"
+                  className="text-[12px]"
                   disabled={!accountsResponse?.page?.nextCursor || accountsQuery.isFetching}
                   onClick={() =>
                     setAccountCursors((current) => [
@@ -473,12 +473,12 @@ export function PurchaseAccountingPanel({
           )}
           {accounting.posted ? (
             <div className="mt-4 border-t border-border pt-3">
-              <h3 className="text-[11px] font-semibold">
+              <h3 className="text-[14px] font-semibold">
                 Retained payment history · {accounting.paymentCount} total
               </h3>
               <div className="mt-2 overflow-x-auto">
                 <table
-                  className="w-full text-left text-[9px] [&_td]:align-top"
+                  className="w-full text-left text-[12px] [&_td]:align-top"
                   aria-label="Purchase payments"
                 >
                   <thead>
@@ -504,7 +504,7 @@ export function PurchaseAccountingPanel({
                             {payment.id} · version {payment.accountingVersion}
                           </div>
                           <details className="mt-1">
-                            <summary className="cursor-pointer text-muted-foreground">
+                            <summary className="block min-h-11 cursor-pointer py-3 text-[12px] text-muted-foreground">
                               Retained payment details
                             </summary>
                             <dl className="mt-2 grid gap-1">
@@ -559,14 +559,14 @@ export function PurchaseAccountingPanel({
                 </table>
               </div>
               {list.isError ? (
-                <p role="alert" className="text-[10px]">
+                <p role="alert" className="text-[14px] leading-6">
                   Payment history could not be loaded.
                 </p>
               ) : null}
               <div className="mt-2 flex gap-2">
                 <Button
                   type="button"
-                  className="h-7 text-[9px]"
+                  className="text-[12px]"
                   disabled={paymentCursors.length < 2 || list.isFetching}
                   onClick={() => setPaymentCursors((current) => current.slice(0, -1))}
                 >
@@ -574,7 +574,7 @@ export function PurchaseAccountingPanel({
                 </Button>
                 <Button
                   type="button"
-                  className="h-7 text-[9px]"
+                  className="text-[12px]"
                   disabled={!payments?.page?.nextCursor || list.isFetching}
                   onClick={() =>
                     setPaymentCursors((current) => [...current, payments!.page!.nextCursor ?? ""])
@@ -588,17 +588,17 @@ export function PurchaseAccountingPanel({
         </>
       )}
       {error ? (
-        <p className="mt-3 text-[10px] leading-5 text-warning" role="alert">
+        <p className="mt-3 text-[14px] leading-6 text-warning" role="alert">
           {error}
         </p>
       ) : null}
       {notice ? (
-        <p className="mt-3 text-[10px] text-forest" role="status">
+        <p className="mt-3 text-[14px] leading-6 text-forest" role="status">
           {notice}
         </p>
       ) : null}
       {pending && !error ? (
-        <p className="mt-3 text-[10px]" role="status">
+        <p className="mt-3 text-[14px] leading-6" role="status">
           A purchase request is retained from an earlier view. Its business facts and key are
           unchanged; retry requires an explicit action.
         </p>
@@ -634,7 +634,7 @@ export function PurchaseAccountingPanel({
           aria-label="Confirm purchase action"
           className="mt-3 grid gap-3 rounded-[5px] border border-warning-border bg-warning-soft p-3"
         >
-          <p className="text-[10px] leading-5">{confirmation.text}</p>
+          <p className="text-[14px] leading-6">{confirmation.text}</p>
           <div className="flex flex-wrap gap-2">
             <Button
               autoFocus
@@ -680,7 +680,7 @@ function PurchaseProjection({
     value.reviewOutcomes?.timing !== p.PurchaseReviewStatus.CLEAR;
   return (
     <div className="mt-3 grid gap-3">
-      <p className="text-[10px] font-medium">
+      <p className="text-[14px] font-medium">
         Added to accounts ·{" "}
         {value.posting?.gstBasis === GstBasis.CASH
           ? "Cash basis"
@@ -690,9 +690,9 @@ function PurchaseProjection({
         · accounting version {value.accountingVersion}
       </p>
       {needsReview ? (
-        <p className="text-[10px] text-warning">Needs GST evidence/claim-period review</p>
+        <p className="text-[14px] leading-6 text-warning">Needs GST evidence/claim-period review</p>
       ) : null}
-      <dl className="grid grid-cols-[1fr_auto] gap-x-3 gap-y-1 text-[10px]">
+      <dl className="grid grid-cols-[1fr_auto] gap-x-3 gap-y-1 text-[12px]">
         {rows.map(([label, amount]) => (
           <div className="contents" key={label}>
             <dt>{label}</dt>
@@ -702,7 +702,7 @@ function PurchaseProjection({
       </dl>
       <div className="overflow-x-auto">
         <table
-          className="w-full text-left text-[9px] [&_th]:pr-2 [&_td]:pr-2"
+          className="w-full text-left text-[12px] [&_th]:pr-2 [&_td]:pr-2"
           aria-label="Posted purchase allocations"
         >
           <thead>
@@ -760,15 +760,15 @@ function PurchaseProjection({
           </tbody>
         </table>
       </div>
-      <p className="text-[9px] break-all text-muted-foreground">
+      <p className="text-[12px] break-all text-muted-foreground">
         Posting: {value.posting?.id} · evidence: {evidence?.id ?? "posting snapshot"} · held{" "}
         {dateLabel(summaryEvidence?.heldDate)}
       </p>
       <details>
-        <summary className="cursor-pointer text-[9px] text-muted-foreground">
+        <summary className="block min-h-11 cursor-pointer py-3 text-[12px] text-muted-foreground">
           Retained posting and evidence details
         </summary>
-        <div className="mt-2 grid gap-2 break-all text-[9px]">
+        <div className="mt-2 grid gap-2 break-all text-[12px]">
           <section>
             <h4 className="font-semibold">Posting provenance</h4>
             <dl className="grid grid-cols-[minmax(120px,1fr)_minmax(0,2fr)] gap-1">
@@ -1051,7 +1051,9 @@ function PaymentForm({
       open={open || Boolean(retainedRequest)}
       onToggle={(event) => setOpen(event.currentTarget.open)}
     >
-      <summary className="cursor-pointer text-[11px] font-semibold">Record payment</summary>
+      <summary className="block min-h-11 cursor-pointer py-3 text-[12px] font-semibold">
+        Record payment
+      </summary>
       <div className="mt-3 grid gap-3">
         <PurchaseField label="Actual payment date" type="date" value={date} onChange={setDate} />
         <PurchaseField label="Payment amount (AUD)" value={amount} onChange={setAmount} />
@@ -1115,7 +1117,9 @@ function EvidenceForm({
       open={open || Boolean(retainedRequest)}
       onToggle={(event) => setOpen(event.currentTarget.open)}
     >
-      <summary className="cursor-pointer text-[11px] font-semibold">Review GST evidence</summary>
+      <summary className="block min-h-11 cursor-pointer py-3 text-[12px] font-semibold">
+        Review GST evidence
+      </summary>
       <div className="mt-3 grid gap-3">
         <PurchaseEvidenceFields
           api={documentApi}

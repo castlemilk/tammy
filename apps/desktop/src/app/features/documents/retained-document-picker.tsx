@@ -71,10 +71,10 @@ export function RetainedDocumentPicker({
           </option>
         ))}
       </PurchaseChoice>
-      <div className="flex items-center gap-2 text-[9px]">
+      <div className="flex items-center gap-2 text-[12px]">
         <Button
           type="button"
-          className="h-6 px-2 text-[9px]"
+          className="px-2 text-[12px]"
           disabled={cursors.length < 2 || query.isFetching}
           onClick={() => setCursors((current) => current.slice(0, -1))}
         >
@@ -82,13 +82,17 @@ export function RetainedDocumentPicker({
         </Button>
         <Button
           type="button"
-          className="h-6 px-2 text-[9px]"
+          className="px-2 text-[12px]"
           disabled={!response?.page?.nextCursor || query.isFetching}
           onClick={() => setCursors((current) => [...current, response!.page!.nextCursor ?? ""])}
         >
           Next {label.toLowerCase()} page
         </Button>
-        {query.isError ? <span role="alert">Reviewed records could not be loaded.</span> : null}
+        {query.isError ? (
+          <span className="text-[14px] leading-6 text-destructive" role="alert">
+            Reviewed records could not be loaded.
+          </span>
+        ) : null}
       </div>
     </div>
   );

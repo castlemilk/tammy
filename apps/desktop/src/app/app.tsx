@@ -517,7 +517,7 @@ function EngineStatus({
         <AlertTriangle aria-hidden="true" className="size-3.5 text-warning" />
         Local engine unavailable. Your data has not left this device.
       </div>
-      <Button className="h-7 text-[14px]" onClick={onRetry} type="button" variant="outline">
+      <Button className="h-11 text-[14px]" onClick={onRetry} type="button" variant="outline">
         <RefreshCw aria-hidden="true" className="size-3" />
         Retry local engine
       </Button>
@@ -774,11 +774,11 @@ function SettingsProjectionStatus({ state }: { readonly state: SettingsProjectio
   const unavailable = state.status === "unavailable";
   return (
     <div className="mx-auto w-full max-w-[920px] border-y border-border py-8">
-      <p aria-live="polite" className="text-[11px] text-muted-foreground" role="status">
+      <p aria-live="polite" className="text-[12px] text-muted-foreground" role="status">
         {unavailable ? "Workspace details unavailable" : "Loading authenticated workspace details"}
       </p>
       {unavailable ? (
-        <p className="mt-2 text-[10px] leading-5 text-muted-foreground">
+        <p className="mt-2 text-[12px] leading-5 text-muted-foreground">
           Tammy could not confirm the current user and organisation. No privileged settings are
           shown.
         </p>

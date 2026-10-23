@@ -5,7 +5,7 @@ export function SimulatorBanner({ scenario }: { readonly scenario: DesktopLaunch
   return (
     <div
       aria-live="polite"
-      className="bg-warning px-4 py-2 text-center text-[11px] font-bold tracking-[0.08em] text-warning-foreground"
+      className="bg-warning px-4 py-2 text-center text-[12px] font-bold tracking-[0.08em] text-warning-foreground"
       role="status"
     >
       SIMULATOR — NOT FOR ATO LODGMENT

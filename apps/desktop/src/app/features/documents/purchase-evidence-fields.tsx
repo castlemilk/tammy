@@ -209,7 +209,7 @@ export function PurchaseEvidenceFields({
               }
             />
           ) : (
-            <p className="text-[9px] text-muted-foreground">
+            <p className="text-[12px] text-muted-foreground">
               Evidence source: {acquisition.sourceDisplayName} · version {acquisition.version}
             </p>
           )}
@@ -217,7 +217,7 @@ export function PurchaseEvidenceFields({
       ) : null}
       {value.classification === PurchaseEvidenceClassification.SUPPORTED_EXCEPTION ? (
         <div className="grid gap-2 border-l-2 border-border pl-3">
-          <p className="text-[10px]">
+          <p className="text-[14px] leading-6">
             The retained rule applies to the whole acquisition up to $75 excluding GST. Invoice
             splitting or a small allocation does not qualify by itself.
           </p>

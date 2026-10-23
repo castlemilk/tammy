@@ -1,5 +1,6 @@
 import { formatAud, type InvoiceTotals } from "@tammy/invoices/model";
 import { Plus, Trash2 } from "lucide-react";
+import { HorizontalScrollArea } from "../../components/horizontal-scroll-area";
 import { Button } from "../../components/ui/button";
 import { SurfaceHeading } from "../../components/workspace-primitives";
 import type { EditorLine } from "./invoice-editor";
@@ -49,7 +50,10 @@ export function InvoiceLineTable({
           ) : undefined
         }
       />
-      <div className="focus-ring m-4 min-w-0 overflow-x-auto rounded-xl border border-border bg-background">
+      <HorizontalScrollArea
+        label="Invoice line items table"
+        className="m-4 rounded-xl border border-border bg-background"
+      >
         <table
           className="w-full min-w-[820px] table-fixed border-collapse text-[13px]"
           aria-label="Invoice line items"
@@ -72,16 +76,16 @@ export function InvoiceLineTable({
                 Quantity
               </th>
               <th className="px-3 py-4 text-right font-medium" scope="col">
-                Unit cost <span className="block text-[11px] font-normal">Private</span>
+                Unit cost <span className="block text-[12px] font-normal">Private</span>
               </th>
               <th className="px-3 py-4 text-right font-medium" scope="col">
-                Selling price <span className="block text-[11px] font-normal">Ex GST</span>
+                Selling price <span className="block text-[12px] font-normal">Ex GST</span>
               </th>
               <th className="px-3 py-4 font-medium" scope="col">
                 GST treatment
               </th>
               <th className="px-4 py-4 text-right font-medium" scope="col">
-                Line total <span className="block text-[11px] font-normal">Incl GST</span>
+                Line total <span className="block text-[12px] font-normal">Incl GST</span>
               </th>
               {!readOnly ? (
                 <th className="px-2 py-3" scope="col">
@@ -102,7 +106,7 @@ export function InvoiceLineTable({
                     onChange={(event) => onEdit(line.key, { description: event.target.value })}
                     value={line.description}
                   />
-                  <p className="mt-2 text-[11px] leading-4 text-muted-foreground">
+                  <p className="mt-2 text-[12px] leading-5 text-muted-foreground">
                     {line.sourceDocumentId
                       ? "Linked reviewed expense · internal only"
                       : "Manual line"}
@@ -181,7 +185,7 @@ export function InvoiceLineTable({
             ))}
           </tbody>
         </table>
-      </div>
+      </HorizontalScrollArea>
     </section>
   );
 }

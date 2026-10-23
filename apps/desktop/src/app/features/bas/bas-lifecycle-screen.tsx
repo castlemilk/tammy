@@ -46,7 +46,7 @@ export function BasLifecycleScreen({
           </span>
           <span
             aria-hidden="true"
-            className="rounded-full border border-border px-3 py-1.5 text-[11px] font-medium group-open:hidden"
+            className="rounded-full border border-border px-3 py-1.5 text-[12px] font-medium group-open:hidden"
           >
             Open
           </span>

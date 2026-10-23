@@ -24,6 +24,7 @@ import { type FormEvent, useMemo, useState } from "react";
 
 import type { TammyConveyorModule } from "../../../conveyor/client";
 import { createProtoMethodCodec } from "../../../shared/proto-ipc";
+import { HorizontalScrollArea } from "../../components/horizontal-scroll-area";
 import { Button } from "../../components/ui/button";
 import { ScreenHeading, SurfaceHeading } from "../../components/workspace-primitives";
 import type { AuthenticatedWorkspace } from "../setup/setup-screen";
@@ -291,9 +292,9 @@ export function JournalsScreen({
           description="Posted entries are retained as balanced accounting records."
         />
         {state.status === "ready" && state.journals.length > 0 ? (
-          <div className="min-w-0 overflow-x-auto">
+          <HorizontalScrollArea label="Journal history table">
             <table className="w-full border-collapse text-left">
-              <thead className="border-b border-border bg-background/60 text-[11px] uppercase tracking-[0.075em] text-muted-foreground">
+              <thead className="border-b border-border bg-background/60 text-[12px] uppercase tracking-[0.075em] text-muted-foreground">
                 <tr>
                   <th className="px-5 py-3">Date</th>
                   <th className="px-5 py-3">Description</th>
@@ -325,7 +326,7 @@ export function JournalsScreen({
                 ))}
               </tbody>
             </table>
-          </div>
+          </HorizontalScrollArea>
         ) : (
           <EmptyState status={state.status} />
         )}
@@ -466,9 +467,9 @@ function JournalDetail({
           title="Entry lines"
           description="Debits and credits recorded in this journal."
         />
-        <div className="min-w-0 overflow-x-auto">
+        <HorizontalScrollArea label="Journal entry lines table">
           <table className="w-full border-collapse text-left">
-            <thead className="border-b border-border bg-background/60 text-[11px] uppercase tracking-[0.075em] text-muted-foreground">
+            <thead className="border-b border-border bg-background/60 text-[12px] uppercase tracking-[0.075em] text-muted-foreground">
               <tr>
                 <th className="px-5 py-3">Account</th>
                 <th className="px-5 py-3">Description</th>
@@ -506,7 +507,7 @@ function JournalDetail({
               </tr>
             </tfoot>
           </table>
-        </div>
+        </HorizontalScrollArea>
       </section>
     </div>
   );

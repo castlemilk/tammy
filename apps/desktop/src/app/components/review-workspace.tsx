@@ -123,7 +123,7 @@ export function WorkFilters<T extends string>({
           className={`focus-ring flex min-h-11 items-center gap-2 rounded-xl px-3 text-[13px] font-semibold transition-colors ${value === option.value ? "bg-forest-soft text-forest" : "text-muted-foreground hover:bg-muted"}`}
         >
           {option.label}
-          <span className="rounded-md bg-surface px-1.5 py-0.5 text-[11px] tabular-nums">
+          <span className="rounded-md bg-surface px-1.5 py-0.5 text-[12px] tabular-nums">
             {option.count}
           </span>
         </button>

@@ -2686,8 +2686,8 @@ function PrepareStage(props: any) {
             method.
           </p>
         ) : null}
-        <div className="grid gap-2 rounded border border-border bg-background p-3">
-          <h3 className="text-[10px] font-semibold">Other activity statement obligations</h3>
+        <div className="grid gap-3 rounded-xl border border-border bg-background p-4">
+          <h3 className="text-[14px] font-semibold">Other activity statement obligations</h3>
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
             {OTHER_OBLIGATIONS.map(([key, label]) => (
               <EnumField
@@ -2706,8 +2706,8 @@ function PrepareStage(props: any) {
           </div>
         </div>
         {paygiMethodNeedsIncomeYear ? (
-          <div className="grid gap-2 rounded border border-border bg-background p-3">
-            <h3 className="text-[10px] font-semibold">PAYGI confirmed income year</h3>
+          <div className="grid gap-3 rounded-xl border border-border bg-background p-4">
+            <h3 className="text-[14px] font-semibold">PAYGI confirmed income year</h3>
             <p className="text-[12px] leading-5 text-muted-foreground">
               This income-year identity is retained in the obligations profile and reused for the
               later PAYG input review. The first shared evidence identity below confirms this year.

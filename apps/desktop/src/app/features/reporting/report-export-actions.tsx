@@ -113,12 +113,12 @@ export function ReportExportActions({
   };
   return (
     <fieldset
-      className="grid min-w-0 gap-2 border-t border-border p-3"
+      className="grid min-w-0 gap-3 border-t border-border p-4"
       aria-label={`${label} export`}
     >
       <div className="flex flex-wrap items-center gap-2">
         <Button
-          className="h-7 text-[10px]"
+          className="h-11 text-[14px]"
           type="button"
           variant="outline"
           disabled={disabled || pending || profile.isFetching || !organisation || !validReport}
@@ -127,7 +127,7 @@ export function ReportExportActions({
           Export PDF
         </Button>
         <Button
-          className="h-7 text-[10px]"
+          className="h-11 text-[14px]"
           type="button"
           variant="outline"
           disabled={disabled || pending || profile.isFetching || !organisation || !validReport}
@@ -136,7 +136,7 @@ export function ReportExportActions({
           Export CSV
         </Button>
         <Button
-          className="h-7 text-[10px]"
+          className="h-11 text-[14px]"
           type="button"
           variant="ghost"
           disabled={pending || profile.isFetching || !organisationId}
@@ -144,7 +144,7 @@ export function ReportExportActions({
         >
           Refresh export identity
         </Button>
-        <p className="text-[9px] text-muted-foreground">
+        <p className="text-[12px] text-muted-foreground">
           {organisation
             ? `${organisation.legalName} · ABN ${organisation.abn}`
             : profile.isFetching
@@ -153,17 +153,17 @@ export function ReportExportActions({
         </p>
       </div>
       {pending ? (
-        <p className="text-[10px]" role="status">
+        <p className="text-[12px]" role="status">
           Preparing {label.toLowerCase()} export…
         </p>
       ) : null}
       {message ? (
-        <p className="text-[10px]" role="status">
+        <p className="text-[12px]" role="status">
           {message}
         </p>
       ) : null}
       {error ? (
-        <p className="text-[10px] text-destructive" role="alert">
+        <p className="text-[12px] text-destructive" role="alert">
           {error}
         </p>
       ) : null}

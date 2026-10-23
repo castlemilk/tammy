@@ -441,7 +441,7 @@ export function BankingScreen({
             <div>
               <p className="work-eyebrow">01 · Bring in a statement</p>
               <h2 className="mt-1 font-serif text-[26px]">Import local CSV rows</h2>
-              <p className="mt-2 text-[13px] text-muted-foreground">
+              <p className="mt-2 text-[14px] leading-6 text-muted-foreground">
                 Enter the actual opening balance and statement rows. Nothing is matched
                 automatically.
               </p>
@@ -475,11 +475,11 @@ export function BankingScreen({
                   value={openingBalance}
                 />
               </label>
-              <p className="mt-3 text-[12px] leading-6 text-muted-foreground">
+              <p className="mt-3 text-[14px] leading-6 text-muted-foreground">
                 Use the balance immediately before these transactions. Negative amounts represent
                 money out.
               </p>
-              <div className="mt-5 rounded-xl bg-background p-4 text-[12px] leading-6">
+              <div className="mt-5 rounded-xl bg-background p-4 text-[14px] leading-6">
                 <p className="font-semibold">Three columns, one transaction per line</p>
                 <code className="break-words">YYYY-MM-DD,description,signed amount</code>
                 <p className="mt-2 text-muted-foreground">
@@ -490,7 +490,7 @@ export function BankingScreen({
             <label className="grid content-start gap-2 text-[12px] font-semibold">
               CSV rows
               <textarea
-                className="focus-ring min-h-52 min-w-0 resize-y rounded-xl border border-border bg-surface p-4 font-mono text-[13px] font-normal leading-6"
+                className="focus-ring min-h-52 min-w-0 resize-y rounded-xl border border-border bg-surface p-4 font-mono text-[14px] font-normal leading-6"
                 disabled={busy}
                 onChange={(event) => setRows(event.target.value)}
                 required
@@ -547,7 +547,7 @@ export function BankingScreen({
                 ? formatMoney(summary.latestClosingBalance.minorUnits)
                 : "—"}
             </p>
-            <p className="mt-1 text-[11px] text-muted-foreground">
+            <p className="mt-1 text-[12px] text-muted-foreground">
               AUD · from the latest retained import
             </p>
           </div>
@@ -682,11 +682,11 @@ export function BankingScreen({
         )}
         <div className="flex flex-wrap items-center justify-between gap-4 border-t border-border p-5">
           <div>
-            <p className="text-[13px] font-semibold">
+            <p className="text-[14px] font-semibold">
               {summary?.unmatchedLineCount ?? 0} unmatched · {summary?.unreconciledLineCount ?? 0}{" "}
               unreconciled
             </p>
-            <p className="mt-1 text-[12px] leading-5 text-muted-foreground">
+            <p className="mt-1 text-[14px] leading-6 text-muted-foreground">
               {lines.length} loaded (up to 200).{" "}
               {canReconcile
                 ? "Every imported line is matched. You can complete reconciliation."
@@ -711,7 +711,7 @@ export function BankingScreen({
             <div>
               <p className="work-eyebrow">02 · Review a match</p>
               <h2 className="mt-1 break-words font-serif text-[26px]">{selected.description}</h2>
-              <p className="mt-2 text-[13px] text-muted-foreground">
+              <p className="mt-2 text-[14px] leading-6 text-muted-foreground">
                 {formatDate(selected.transactionDate)} ·{" "}
                 <span className="font-semibold tabular-nums">
                   {formatMoney(selected.amount?.minorUnits)}
@@ -743,7 +743,7 @@ export function BankingScreen({
                 value={reference}
               />
             </label>
-            <p id="match-reference-help" className="text-[13px] leading-6 text-muted-foreground">
+            <p id="match-reference-help" className="text-[14px] leading-6 text-muted-foreground">
               Check the source yourself, then record its invoice, receipt or journal reference. This
               records a match only. It does not link a source document, post a journal, or send a
               payment.

@@ -11,6 +11,7 @@ import {
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import type { TammyConveyorModule } from "../../../conveyor/client";
 import { isPurchaseCorrectionCode } from "../../../shared/purchase-errors";
+import { HorizontalScrollArea } from "../../components/horizontal-scroll-area";
 import { Button } from "../../components/ui/button";
 import { SurfaceHeading } from "../../components/workspace-primitives";
 import { purchaseCorrectionGuidance } from "../documents/purchase-accounting-panel";
@@ -67,7 +68,7 @@ export function BasPurchaseDetails({
           title="Reconciled purchase sources"
           description="Saved source allocations and claimed GST for this workpaper. Invoice, actual payment and claim-period dates are separate."
         />
-        <div className="overflow-x-auto">
+        <HorizontalScrollArea label="Saved BAS purchase sources table">
           <table
             className="work-table w-full text-left text-[12px]"
             aria-label="Saved BAS purchase sources"
@@ -162,7 +163,7 @@ export function BasPurchaseDetails({
               No purchase GST is claimed in this saved period.
             </p>
           ) : null}
-        </div>
+        </HorizontalScrollArea>
       </section>
       <section className="work-surface overflow-hidden" aria-label="Purchase GST review outcomes">
         <SurfaceHeading
@@ -171,7 +172,7 @@ export function BasPurchaseDetails({
         />
         <div className="grid gap-3 p-5">
           {value.legacyCandidateGst ? (
-            <p className="mt-2 text-[10px]">
+            <p className="mt-2 text-[14px] leading-6">
               Provisional legacy candidate GST: {aud(value.legacyCandidateGst.minorUnits)} ·
               entitlement remains subject to review.
             </p>
@@ -186,7 +187,7 @@ export function BasPurchaseDetails({
           />
         ))}
         {value.purchaseReviews.length === 0 ? (
-          <p className="p-4 text-[10px] text-muted-foreground">
+          <p className="p-5 text-[14px] text-muted-foreground">
             No retained purchase review outcomes for this snapshot.
           </p>
         ) : null}
@@ -218,22 +219,22 @@ function ReviewRow({
       ? value.legacySource.source.value.documentId
       : undefined);
   return (
-    <div className="grid gap-2 border-b border-border p-3 text-[10px] last:border-0">
+    <div className="grid gap-3 border-b border-border p-4 text-[13px] last:border-0">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h3 className="font-semibold">{statusLabel(value.status)}</h3>
+        <h3 className="text-[14px] font-semibold">{statusLabel(value.status)}</h3>
         <p>
           Eligible {aud(value.eligibleGst?.minorUnits)} · unclaimed{" "}
           {aud(value.unclaimedGst?.minorUnits)}
         </p>
       </div>
-      <p className="leading-5">{value.reason}</p>
-      <p className="text-[9px] text-muted-foreground">
+      <p className="text-[14px] leading-6">{value.reason}</p>
+      <p className="text-[12px] text-muted-foreground">
         Invoice {dateLabel(value.invoiceDate)} · payment {dateLabel(value.actualPaymentDate)} ·
         affected period {dateLabel(value.affectedPeriod?.periodStart)} –{" "}
         {dateLabel(value.affectedPeriod?.periodEnd)}
       </p>
       {future ? (
-        <dl className="grid grid-cols-[minmax(130px,1fr)_minmax(0,2fr)] gap-1 text-[9px]">
+        <dl className="grid grid-cols-[minmax(130px,1fr)_minmax(0,2fr)] gap-2 text-[12px]">
           <dt>Future claim amount</dt>
           <dd>{aud(future.allocatedDeferredGst?.minorUnits)}</dd>
           <dt>Actual required return due</dt>
@@ -262,8 +263,10 @@ function ReviewRow({
       ) : null}
       {value.legacyReview ? (
         <details>
-          <summary className="cursor-pointer text-[9px]">Retained legacy decision</summary>
-          <div className="mt-2 grid gap-1 text-[9px] break-all">
+          <summary className="min-h-11 cursor-pointer py-2 text-[12px]">
+            Retained legacy decision
+          </summary>
+          <div className="mt-2 grid gap-2 break-all text-[12px]">
             <p>
               {value.legacyReview.id} · revision {value.legacyReview.sourceRevision} ·{" "}
               {hex(value.legacyReview.sourceHash)}
@@ -284,7 +287,7 @@ function ReviewRow({
       {documentId && controls.onReviewDocument ? (
         <Button
           type="button"
-          className="justify-self-start h-7 text-[9px]"
+          className="h-11 justify-self-start text-[13px]"
           onClick={() => controls.onReviewDocument!(documentId)}
         >
           Review purchase source
@@ -412,7 +415,7 @@ function BasLegacyDecision({
   };
   return (
     <div>
-      <p className="text-[9px] text-muted-foreground">
+      <p className="text-[12px] leading-5 text-muted-foreground">
         These are saved snapshot facts. Confirm the current source and supporting records before
         retaining a new decision.
       </p>
@@ -450,7 +453,7 @@ function BasLegacyDecision({
             {source?.case === "document" && controls.onReviewDocument ? (
               <Button
                 type="button"
-                className="h-7 text-[9px]"
+                className="h-11 text-[13px]"
                 onClick={() => controls.onReviewDocument!(source.value.documentId)}
               >
                 Open source document

@@ -141,16 +141,13 @@ export function BASLodgerRoleControl({
   if (!actorUserId || !sessionId) return null;
   if (currentUserQuery.isError) {
     return (
-      <section
-        className="grid gap-2 rounded-[6px] border border-border bg-surface p-3"
-        aria-label="BAS approval authority"
-      >
-        <h2 className="text-[11px] font-semibold">BAS approval authority</h2>
-        <p className="text-[10px] text-muted-foreground" role="status">
+      <section className="work-surface grid gap-4 p-5" aria-label="BAS approval authority">
+        <h2 className="text-[16px] font-semibold">BAS approval authority</h2>
+        <p className="text-[12px] text-muted-foreground" role="status">
           Current roles could not be verified, so role controls are unavailable.
         </p>
         <Button
-          className="h-8 justify-self-start text-[10px]"
+          className="h-11 justify-self-start text-[13px]"
           onClick={() => void currentUserQuery.refetch()}
           type="button"
           variant="outline"
@@ -301,33 +298,30 @@ export function BASLodgerRoleControl({
   };
 
   return (
-    <section
-      className="grid gap-2 rounded-[6px] border border-border bg-surface p-3"
-      aria-label="BAS approval authority"
-    >
+    <section className="work-surface grid gap-4 p-5" aria-label="BAS approval authority">
       <div>
-        <h2 className="text-[11px] font-semibold">BAS approval authority</h2>
-        <p className="mt-1 text-[10px] text-muted-foreground">
+        <h2 className="text-[16px] font-semibold">BAS approval authority</h2>
+        <p className="mt-1 text-[14px] text-muted-foreground">
           Manage only this account’s business lodger role. Other roles are preserved.
         </p>
-        <p className="mt-1 text-[10px] text-muted-foreground">
+        <p className="mt-1 text-[12px] text-muted-foreground">
           {operatorName} · Current roles: {currentUser.roles.map(roleName).join(", ")}
         </p>
       </div>
       {pendingAttempt ? (
-        <p className="text-[10px] text-muted-foreground" role="status">
+        <p className="text-[12px] text-muted-foreground" role="status">
           The last request may have completed. Retrying uses the same request and idempotency key.
         </p>
       ) : null}
       {needsReview ? (
-        <p className="text-[10px] text-muted-foreground" role="status">
+        <p className="text-[12px] text-muted-foreground" role="status">
           Review the current complete role set above before choosing a new value.
         </p>
       ) : null}
-      <label className="flex items-center gap-2 text-[10px]">
+      <label className="flex min-h-11 items-center gap-3 text-[13px]">
         <input
           checked={checked}
-          className="focus-ring size-4 accent-[var(--color-primary)]"
+          className="focus-ring size-5 accent-[var(--color-primary)]"
           disabled={busy || Boolean(pendingAttempt)}
           onChange={(event) => {
             setDesiredLodger(event.currentTarget.checked);
@@ -342,16 +336,16 @@ export function BASLodgerRoleControl({
       </label>
       {confirming && desiredLodger !== undefined ? (
         <fieldset
-          className="grid gap-2 rounded-[6px] border border-border bg-muted/30 p-3"
+          className="grid gap-4 rounded-xl border border-border bg-muted/30 p-4"
           aria-label="Confirm BAS role change"
         >
-          <p className="text-[10px]">
+          <p className="text-[14px] leading-6">
             Confirm {desiredLodger ? "adding" : "removing"} the business lodger role for{" "}
             {operatorName}. This changes only this account’s business lodger role.
           </p>
           <div className="flex flex-wrap gap-2">
             <Button
-              className="h-8 text-[10px]"
+              className="h-11 text-[13px]"
               disabled={busy}
               onClick={() => void confirmRoleChange()}
               type="button"
@@ -359,7 +353,7 @@ export function BASLodgerRoleControl({
               {busy ? "Checking current roles…" : "Confirm and save"}
             </Button>
             <Button
-              className="h-8 text-[10px]"
+              className="h-11 text-[13px]"
               disabled={busy}
               onClick={() => setConfirming(false)}
               type="button"
@@ -371,19 +365,19 @@ export function BASLodgerRoleControl({
         </fieldset>
       ) : null}
       {error ? (
-        <p className="text-[10px] text-destructive" role="alert">
+        <p className="text-[12px] text-destructive" role="alert">
           {error}
         </p>
       ) : null}
       {message ? (
-        <p className="text-[10px] text-forest" role="status">
+        <p className="text-[12px] text-forest" role="status">
           {message}
         </p>
       ) : null}
       {pendingAttempt ? (
         <div className="flex flex-wrap gap-2">
           <Button
-            className="h-8 text-[10px]"
+            className="h-11 text-[13px]"
             disabled={busy}
             onClick={() => void executeAttempt(pendingAttempt)}
             type="button"
@@ -391,7 +385,7 @@ export function BASLodgerRoleControl({
             {busy ? "Retrying…" : "Retry exact request"}
           </Button>
           <Button
-            className="h-8 text-[10px]"
+            className="h-11 text-[13px]"
             disabled={busy}
             onClick={() => void refreshAndDiscardAttempt()}
             type="button"
@@ -402,7 +396,7 @@ export function BASLodgerRoleControl({
         </div>
       ) : !confirming ? (
         <Button
-          className="h-8 justify-self-start text-[10px]"
+          className="h-11 justify-self-start text-[13px]"
           disabled={busy || needsReview || checked === liveLodgerRole}
           onClick={() => {
             setError(undefined);

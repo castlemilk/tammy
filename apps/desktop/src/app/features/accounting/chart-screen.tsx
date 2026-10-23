@@ -19,6 +19,7 @@ import { type FormEvent, useMemo, useState } from "react";
 
 import type { TammyConveyorModule } from "../../../conveyor/client";
 import { createProtoMethodCodec } from "../../../shared/proto-ipc";
+import { HorizontalScrollArea } from "../../components/horizontal-scroll-area";
 import { Button } from "../../components/ui/button";
 import { ScreenHeading, SurfaceHeading } from "../../components/workspace-primitives";
 import type { AuthenticatedWorkspace } from "../setup/setup-screen";
@@ -202,9 +203,9 @@ export function ChartScreen({ api, workspace }: ChartScreenProps) {
           description="Protected controls remain separate from ordinary accounts."
         />
         {chart.status === "ready" && chart.accounts.length > 0 ? (
-          <div className="min-w-0 overflow-x-auto">
+          <HorizontalScrollArea label="Accounts table">
             <table className="w-full border-collapse text-left">
-              <thead className="border-b border-border bg-background/60 text-[11px] uppercase tracking-[0.075em] text-muted-foreground">
+              <thead className="border-b border-border bg-background/60 text-[12px] uppercase tracking-[0.075em] text-muted-foreground">
                 <tr>
                   <th className="px-5 py-3 font-semibold">Code</th>
                   <th className="px-5 py-3 font-semibold">Account</th>
@@ -231,7 +232,7 @@ export function ChartScreen({ api, workspace }: ChartScreenProps) {
                 ))}
               </tbody>
             </table>
-          </div>
+          </HorizontalScrollArea>
         ) : (
           <div className="grid min-h-64 place-items-center px-5 py-10 text-center">
             <div>

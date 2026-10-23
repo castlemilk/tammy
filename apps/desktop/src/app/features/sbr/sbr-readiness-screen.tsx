@@ -400,7 +400,7 @@ export function SbrReadinessScreen({
       {factorEnabled ? (
         <section
           aria-label="Account security status"
-          className="border-t border-border pt-4 text-[11px] text-muted-foreground"
+          className="work-surface p-5 text-[12px] text-muted-foreground"
         >
           Security code is enabled for your account.
         </section>

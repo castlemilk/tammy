@@ -297,12 +297,12 @@ export function LegacyRuleReferenceRepair({
     knownLegacy;
 
   return (
-    <details aria-label="Tax-rule reference" className="rounded border border-border bg-surface">
-      <summary className="cursor-pointer list-none px-3 py-2 text-[10px] font-semibold [&::-webkit-details-marker]:hidden">
+    <details aria-label="Tax-rule reference" className="work-surface overflow-hidden">
+      <summary className="min-h-11 cursor-pointer list-none px-5 py-3 text-[14px] font-semibold [&::-webkit-details-marker]:hidden">
         Tax-rule reference
       </summary>
-      <div className="grid gap-3 border-t border-border p-3">
-        <p className="text-[9px] leading-4 text-muted-foreground">
+      <div className="grid gap-4 border-t border-border p-5">
+        <p className="text-[14px] leading-6 text-muted-foreground">
           Check the stored active rule reference when BAS capture reports that its retained rule
           bundle cannot be loaded. No BAS history is changed by this check or repair.
         </p>
@@ -315,17 +315,17 @@ export function LegacyRuleReferenceRepair({
           {checking ? "Checking…" : "Check stored tax-rule reference"}
         </Button>
         {error ? (
-          <p className="text-[9px] text-warning" role="alert">
+          <p className="text-[12px] text-warning" role="alert">
             {error}
           </p>
         ) : null}
         {notice ? (
-          <p className="text-[9px] text-forest" role="status">
+          <p className="text-[12px] text-forest" role="status">
             {notice}
           </p>
         ) : null}
         {storedOrganisation ? (
-          <dl className="grid gap-1 rounded border border-border bg-background p-2 text-[9px]">
+          <dl className="grid gap-2 rounded-xl border border-border bg-background p-4 text-[12px]">
             <div>
               <dt className="inline text-muted-foreground">Stored source: </dt>
               <dd className="m-0 inline break-all">
@@ -346,33 +346,36 @@ export function LegacyRuleReferenceRepair({
           </dl>
         ) : null}
         {current ? (
-          <p className="text-[9px] text-forest" role="status">
+          <p className="text-[12px] text-forest" role="status">
             This organisation already uses the supported tax-rule reference.
           </p>
         ) : null}
         {knownLegacy ? (
-          <p className="text-[9px] text-warning" role="status">
+          <p className="text-[12px] text-warning" role="status">
             This workspace uses the known legacy tax-rule reference.
           </p>
         ) : null}
         {storedOrganisation && !current && !knownLegacy ? (
-          <p className="text-[9px] text-warning" role="alert">
+          <p className="text-[12px] text-warning" role="alert">
             This reference does not match the supported bundle or the one recognized legacy value.
             It was left unchanged; contact support.
           </p>
         ) : null}
         {knownLegacy && !canManage ? (
-          <p className="text-[9px] text-warning" role="note">
+          <p className="text-[12px] text-warning" role="note">
             Ask a workspace administrator to update this known legacy tax-rule reference.
           </p>
         ) : null}
         {knownLegacy && canManage ? (
-          <form className="grid gap-3" onSubmit={(event) => void submit(event)}>
-            <p className="text-[9px] leading-4 text-warning">
+          <form
+            className="grid gap-4 rounded-xl border border-border bg-background p-4"
+            onSubmit={(event) => void submit(event)}
+          >
+            <p className="text-[14px] leading-6 text-warning">
               This exact legacy reference is recognized. Updating the active organisation reference
               does not rewrite existing calculations or frozen BAS handoffs.
             </p>
-            <label className="grid gap-1 text-[9px]">
+            <label className="grid gap-2 text-[13px]">
               Reason for rule-reference update
               <input
                 className={fieldClassName}
@@ -382,7 +385,7 @@ export function LegacyRuleReferenceRepair({
                 value={reason}
               />
             </label>
-            <label className="grid gap-1 text-[9px]">
+            <label className="grid gap-2 text-[13px]">
               Effective from
               <input
                 className={fieldClassName}
@@ -393,11 +396,11 @@ export function LegacyRuleReferenceRepair({
               />
             </label>
             {!date ? (
-              <p className="text-[9px] text-warning" role="note">
+              <p className="text-[12px] text-warning" role="note">
                 Choose a valid date after today in Australia/Melbourne.
               </p>
             ) : null}
-            <label className="grid gap-1 text-[9px]">
+            <label className="grid gap-2 text-[13px]">
               Fresh TOTP code
               <input
                 autoComplete="one-time-code"
@@ -409,7 +412,7 @@ export function LegacyRuleReferenceRepair({
                 value={totp}
               />
             </label>
-            <p className="text-[9px] text-muted-foreground">
+            <p className="text-[12px] text-muted-foreground">
               If you need to set up TOTP, open Settings → SBR readiness. An SBR machine credential
               is not required for this update.
             </p>

@@ -85,7 +85,7 @@ export function OwnedPostedPurchasePicker({
         }}
       />
       {selected && posting ? (
-        <div className="grid gap-1 border border-border bg-muted/20 p-3 text-[9px]" role="status">
+        <div className="grid gap-1 border border-border bg-muted/20 p-3 text-[12px]" role="status">
           <p className="font-semibold">
             Verified posting · {posting.supplierName || "Unknown supplier"} ·{" "}
             {posting.invoiceNumber || "No invoice number"}
@@ -106,7 +106,7 @@ export function OwnedPostedPurchasePicker({
           </dl>
         </div>
       ) : selected ? (
-        <p className="text-[9px] text-warning" role={query.isError ? "alert" : "status"}>
+        <p className="text-[14px] leading-6 text-warning" role={query.isError ? "alert" : "status"}>
           {query.isError
             ? "The selected posted purchase could not be verified. Reload the owned document before linking it."
             : query.isFetching
@@ -117,7 +117,7 @@ export function OwnedPostedPurchasePicker({
       {query.isError ? (
         <Button
           type="button"
-          className="h-6 justify-self-start text-[9px]"
+          className="justify-self-start text-[12px]"
           onClick={() => void query.refetch()}
         >
           Reload selected purchase

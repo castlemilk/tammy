@@ -769,13 +769,32 @@ test("covers workspace setup, recovery, accounting, and interaction journeys thr
     ["SBR readiness", "/settings/sbr", "SBR readiness", "34-sbr-readiness"],
   ] as const) {
     await assertRoute(page, link, route, heading);
+    if (route === "/invoices")
+      await expect(page.getByLabel("Invoice number", { exact: true })).toBeVisible();
+    if (route === "/audit")
+      await expect(page.getByRole("main").getByRole("list").first()).toBeVisible();
+    if (route === "/settings/organisation")
+      await expect(page.getByText("51824753556", { exact: true })).toBeVisible();
+    if (route === "/settings/sbr") await expect(page.locator("#sbr-summary-heading")).toBeVisible();
     await captureJourney(page, capture);
   }
   await page.setViewportSize({ width: 320, height: 900 });
-  for (const [link, route, heading, capture] of [
-    ["Chart of accounts", "/accounting/chart", "Chart of accounts", "35-320-chart"],
-    ["Journals", "/accounting/journals", "Journals", "36-320-journals"],
-    ["Trial balance", "/accounting/trial-balance", "Trial balance", "37-320-trial-balance"],
+  for (const [link, route, heading, capture, region] of [
+    [
+      "Chart of accounts",
+      "/accounting/chart",
+      "Chart of accounts",
+      "35-320-chart",
+      "Accounts table",
+    ],
+    ["Journals", "/accounting/journals", "Journals", "36-320-journals", "Journal history table"],
+    [
+      "Trial balance",
+      "/accounting/trial-balance",
+      "Trial balance",
+      "37-320-trial-balance",
+      "Account balances table",
+    ],
   ] as const) {
     await assertRoute(page, link, route, heading);
     await expect(page.getByRole("table").first()).toBeVisible();
@@ -792,6 +811,17 @@ test("covers workspace setup, recovery, accounting, and interaction journeys thr
         }),
       ),
     ).toBe(true);
+    const scroller = page.getByRole("region", { name: region, exact: true });
+    await expect(scroller).toHaveAttribute("tabindex", "0");
+    await scroller.evaluate((element) => {
+      element.scrollLeft = 0;
+    });
+    await scroller.focus();
+    await page.keyboard.press("ArrowRight");
+    await expect.poll(() => scroller.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
+    await scroller.evaluate((element) => {
+      element.scrollLeft = 0;
+    });
     await captureJourney(page, capture);
   }
 

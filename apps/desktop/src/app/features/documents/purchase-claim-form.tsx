@@ -238,13 +238,13 @@ export function PurchaseClaimForm({
         Review claim period or defer GST
       </summary>
       <div className="grid gap-4 p-5">
-        <p className="text-[13px] leading-6 text-muted-foreground">
+        <p className="text-[14px] leading-6 text-muted-foreground">
           Delayed claims require actual due-date proof and review of the ordinary time limit. The
           core verifies ownership, remaining credit, closed periods and expiry.
         </p>
         {deferral ? (
           <>
-            <p className="text-[12px] leading-5">
+            <p className="text-[14px] leading-6">
               Retained deferral {deferral.id}. Original decision amount is not a current remaining
               balance.
             </p>
@@ -304,7 +304,7 @@ export function PurchaseClaimForm({
                 ))}
               </PurchaseChoice>
             ) : (
-              <p className="text-[12px] leading-5">
+              <p className="text-[14px] leading-6">
                 Normal event: invoice {dateLabel(posting.invoiceDate)} · posting {posting.id}
               </p>
             )}
@@ -357,7 +357,7 @@ export function PurchaseClaimForm({
             />
           </>
         )}
-        <p className="text-[12px]">
+        <p className="text-[14px] leading-6">
           Current evidence: {evidence?.id ?? "Missing"} · held{" "}
           {dateLabel(evidence?.review?.heldDate)}
         </p>

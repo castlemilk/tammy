@@ -110,7 +110,7 @@ function PolicyContents({ sections }: { readonly sections: readonly PolicySectio
         {sections.map((section) => (
           <li key={section.heading}>
             <a
-              className="font-medium text-forest underline underline-offset-2"
+              className="flex min-h-11 items-center font-medium text-forest underline underline-offset-2"
               href={`#${sectionId(section.heading)}`}
               onClick={(event) => {
                 event.preventDefault();
@@ -137,7 +137,7 @@ export function PrivacyStatement({ onPrivacy }: { readonly onPrivacy?: () => voi
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-forest">
+          <p className="text-[12px] font-semibold uppercase tracking-[0.12em] text-forest">
             Your information
           </p>
           <h2
@@ -147,11 +147,11 @@ export function PrivacyStatement({ onPrivacy }: { readonly onPrivacy?: () => voi
             Privacy at a glance
           </h2>
         </div>
-        <span className="rounded-full border border-border px-2.5 py-1 text-[10px] font-medium text-muted-foreground">
+        <span className="rounded-full border border-border px-2.5 py-1 text-[12px] font-medium text-muted-foreground">
           Effective {policy.effectiveDate}
         </span>
       </div>
-      <div className="mt-4 grid gap-3 text-[13px] leading-6 text-muted-foreground">
+      <div className="mt-4 grid gap-3 text-[14px] leading-6 text-muted-foreground">
         <p>
           Your accounting workspace and selected evidence stay encrypted on this Mac. Tammy has no
           cloud workspace or cross-device sync and does not automatically send those records to
@@ -177,7 +177,7 @@ export function PrivacyStatement({ onPrivacy }: { readonly onPrivacy?: () => voi
         ) : null}
         {links.privacyPolicy ? (
           <a
-            className="font-medium text-forest underline underline-offset-2"
+            className="inline-flex min-h-11 items-center font-medium text-forest underline underline-offset-2"
             href={links.privacyPolicy}
             rel="noopener noreferrer"
             target="_blank"
@@ -187,7 +187,7 @@ export function PrivacyStatement({ onPrivacy }: { readonly onPrivacy?: () => voi
         ) : null}
         {links.support ? (
           <a
-            className="font-medium text-forest underline underline-offset-2"
+            className="inline-flex min-h-11 items-center font-medium text-forest underline underline-offset-2"
             href={links.support}
             rel="noopener noreferrer"
             target="_blank"
@@ -222,7 +222,7 @@ export function PrivacyScreen({ onBack }: { readonly onBack: () => void }) {
           </div>
           <article className="min-w-0">
             <PolicySections sections={policy.sections} />
-            <p className="pt-5 text-[13px] leading-6 text-muted-foreground">
+            <p className="pt-5 text-[14px] leading-6 text-muted-foreground">
               Privacy and access or correction requests: ben.ebsworth@gmail.com. Do not send
               accounting records or credentials by email.
             </p>

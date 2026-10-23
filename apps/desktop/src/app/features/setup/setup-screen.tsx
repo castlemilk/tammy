@@ -394,7 +394,7 @@ export function SetupScreen({
             <p className="mb-2 flex items-center gap-2 text-[14px] font-semibold text-forest">
               <CheckCircle2 aria-hidden="true" className="size-4" /> One-time recovery code
             </p>
-            <p className="break-all font-mono text-[13px] leading-6 text-foreground">
+            <p className="break-all font-mono text-[14px] leading-6 text-foreground">
               {pending.recoveryCode}
             </p>
           </div>
@@ -545,7 +545,7 @@ export function SetupScreen({
                 </span>
                 {abnLookup ? (
                   <a
-                    className="focus-ring w-fit rounded-sm text-[12px] font-medium text-forest underline underline-offset-2"
+                    className="focus-ring inline-flex min-h-11 w-fit items-center rounded-sm text-[12px] font-medium text-forest underline underline-offset-2"
                     href={abnLookup}
                     rel="noopener noreferrer"
                     target="_blank"

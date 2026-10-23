@@ -142,7 +142,7 @@ export function BusinessIncomePanel({
         <DateField label="Balances as of" onChange={setAsOf} value={asOf} />
       </div>
       {!valid ? (
-        <p className="p-5 text-[13px] text-destructive" role="alert">
+        <p className="p-5 text-[14px] leading-6 text-destructive" role="alert">
           Choose valid dates with the period start on or before its end.
         </p>
       ) : value ? (
@@ -169,7 +169,7 @@ export function BusinessIncomePanel({
               testId="business-outstanding"
             />
           </dl>
-          <p className="border-t border-border pt-4 text-[12px] leading-5 text-muted-foreground">
+          <p className="border-t border-border pt-4 text-[14px] leading-6 text-muted-foreground">
             Income and receipts cover {value.periodStart} to {value.periodEnd}. Invoices owing
             include earlier unpaid invoices as of {value.asOfDate}. Invoice GST attributed in this
             period: {money(value.invoiceGstMinor)} (
@@ -182,14 +182,14 @@ export function BusinessIncomePanel({
           </p>
           {value.unpostedIssuedCount > 0 ? (
             <div className="flex flex-wrap items-center gap-3 border-t border-border pt-4">
-              <p className="mr-auto text-[13px] leading-5 text-warning">
+              <p className="mr-auto text-[14px] leading-6 text-warning">
                 {value.unpostedIssuedCount} older issued invoice
                 {value.unpostedIssuedCount === 1 ? " needs" : "s need"} accounting review. Unposted
                 invoice income in this period: {money(value.unpostedIncomeMinor)}.
               </p>
               {onReviewInvoices ? (
                 <Button
-                  className="h-11 text-[13px]"
+                  className="h-11 text-[14px]"
                   onClick={onReviewInvoices}
                   type="button"
                   variant="outline"
@@ -201,7 +201,7 @@ export function BusinessIncomePanel({
           ) : null}
         </div>
       ) : (
-        <p className="p-5 text-[13px] text-muted-foreground" role="status">
+        <p className="p-5 text-[14px] leading-6 text-muted-foreground" role="status">
           {query.isFetching
             ? "Loading business income…"
             : "Business income could not be read. Refresh to try again."}

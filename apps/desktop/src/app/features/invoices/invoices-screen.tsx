@@ -478,7 +478,7 @@ export function InvoicesScreen({ api }: { readonly api: InvoicesApi }) {
           ) : null}
           <form className="grid min-w-0 gap-5" onSubmit={save}>
             <fieldset className="work-surface grid gap-5 p-5" disabled={busy || issued}>
-              <legend className="px-1 text-[11px] font-semibold text-foreground">
+              <legend className="px-1 text-[13px] font-semibold text-foreground">
                 {issued ? "Issued invoice · read only" : "Invoice details"}
               </legend>
               {current ? (
@@ -579,7 +579,7 @@ export function InvoicesScreen({ api }: { readonly api: InvoicesApi }) {
                   />
                 </label>
               </div>
-              <label className="flex items-center gap-2 text-[11px] text-foreground">
+              <label className="flex min-h-11 items-center gap-3 text-[13px] text-foreground">
                 <input
                   checked={editor.gstRegistered}
                   onChange={(event) =>
@@ -812,7 +812,7 @@ export function InvoicesScreen({ api }: { readonly api: InvoicesApi }) {
                     >
                       <span className="flex justify-between gap-2 text-[13px] font-medium">
                         <span>{record.draft.number || "Unnumbered"}</span>
-                        <span className="text-[11px] uppercase tracking-[0.05em] text-muted-foreground">
+                        <span className="text-[12px] uppercase tracking-[0.05em] text-muted-foreground">
                           {record.state}
                         </span>
                       </span>
@@ -846,7 +846,7 @@ function MoneyRow({
 }) {
   return (
     <p
-      className={`flex items-baseline justify-between gap-3 text-[11px] ${strong ? "font-semibold text-foreground" : "text-muted-foreground"}`}
+      className={`flex items-baseline justify-between gap-3 text-[14px] ${strong ? "font-semibold text-foreground" : "text-muted-foreground"}`}
       data-testid={testId}
     >
       <span>{label}</span>

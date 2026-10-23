@@ -1,6 +1,7 @@
 import { formatAud } from "@tammy/invoices/model";
 import { RefreshCw } from "lucide-react";
 import { useState } from "react";
+import { HorizontalScrollArea } from "../../components/horizontal-scroll-area";
 import { Button } from "../../components/ui/button";
 import { SurfaceHeading } from "../../components/workspace-primitives";
 import type { InvoiceExpense } from "./invoice-editor";
@@ -83,7 +84,10 @@ export function ReviewedExpenseTable({
           {error}
         </p>
       ) : null}
-      <div className="focus-ring mx-5 min-w-0 overflow-x-auto rounded-xl border border-border bg-background">
+      <HorizontalScrollArea
+        label="Reviewed expenses table"
+        className="mx-5 rounded-xl border border-border bg-background"
+      >
         <table
           className="w-full min-w-[600px] border-collapse text-[13px]"
           aria-label="Reviewed expenses"
@@ -128,7 +132,7 @@ export function ReviewedExpenseTable({
                   <td className="px-4 py-4">
                     <span>{expense.description}</span>
                     {added ? (
-                      <span className="ml-2 rounded-full border border-border px-2 py-1 text-[11px] text-muted-foreground">
+                      <span className="ml-2 rounded-full border border-border px-2.5 py-1.5 text-[12px] text-muted-foreground">
                         Added
                       </span>
                     ) : null}
@@ -156,7 +160,7 @@ export function ReviewedExpenseTable({
             ) : null}
           </tbody>
         </table>
-      </div>
+      </HorizontalScrollArea>
       <div className="mx-5 flex flex-wrap items-end justify-between gap-4">
         <label className="grid w-[160px] gap-1.5 text-[12px] font-semibold">
           Markup percentage

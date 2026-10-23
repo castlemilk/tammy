@@ -384,7 +384,7 @@ export function DocumentsScreen({
             <label className="grid w-full max-w-[240px] gap-1 text-[12px] font-semibold">
               Accounting state
               <select
-                className="focus-ring h-10 rounded-xl border border-border bg-surface px-3 text-[13px] font-normal"
+                className="focus-ring h-11 rounded-xl border border-border bg-surface px-3 text-[14px] font-normal"
                 value={accountingFilter ?? 0}
                 onChange={(event) => {
                   setAccountingFilter(Number(event.target.value) || undefined);
@@ -520,7 +520,7 @@ export function DocumentsScreen({
           </span>
           <div className="flex flex-wrap gap-2">
             <Button
-              className="h-9 text-[12px]"
+              className="min-h-11 text-[12px]"
               disabled={cursors.length < 2 || documentsQuery.isFetching}
               onClick={() => setCursors((current) => current.slice(0, -1))}
               type="button"
@@ -529,7 +529,7 @@ export function DocumentsScreen({
               Previous document page
             </Button>
             <Button
-              className="h-9 text-[12px]"
+              className="min-h-11 text-[12px]"
               disabled={state.status !== "ready" || !state.nextCursor || documentsQuery.isFetching}
               onClick={() => {
                 if (state.status === "ready" && state.nextCursor)
@@ -544,7 +544,7 @@ export function DocumentsScreen({
         </div>
       </section>
       {locating ? (
-        <p className="text-[13px] text-muted-foreground" role="status">
+        <p className="text-[14px] leading-6 text-muted-foreground" role="status">
           Locating selected document…
         </p>
       ) : null}
@@ -679,7 +679,7 @@ function ReviewPanel({
           <h2 className="mt-1 break-words font-serif text-[26px] leading-8">
             {document.sourceDisplayName}
           </h2>
-          <p className="mt-1 text-[12px] text-muted-foreground">
+          <p className="mt-1 text-[14px] leading-5 text-muted-foreground">
             {formatBytes(document.byteLength)} · retained locally
           </p>
         </div>
@@ -708,7 +708,7 @@ function ReviewPanel({
                 "No native text was found. Enter the details from the source image manually."}
             </pre>
           </div>
-          <p className="mt-4 text-[12px] leading-5 text-muted-foreground">
+          <p className="mt-4 text-[14px] leading-6 text-muted-foreground">
             This is retained text, not an original-file preview. Check the source file when
             confirming details.
           </p>
@@ -720,7 +720,7 @@ function ReviewPanel({
             </h3>
             <DocumentStatusLabel reviewed={reviewed} />
           </div>
-          <p className="text-[12px] leading-5 text-muted-foreground">
+          <p className="text-[14px] leading-6 text-muted-foreground">
             {reviewed
               ? "Your review is saved. No accounting entries were posted by this action."
               : "Suggestions need your confirmation. Saving a review does not post accounting entries."}

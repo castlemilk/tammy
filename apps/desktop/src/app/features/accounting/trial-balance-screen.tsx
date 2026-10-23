@@ -10,6 +10,7 @@ import { useMemo } from "react";
 
 import type { TammyConveyorModule } from "../../../conveyor/client";
 import { createProtoMethodCodec } from "../../../shared/proto-ipc";
+import { HorizontalScrollArea } from "../../components/horizontal-scroll-area";
 import { ScreenHeading, SurfaceHeading } from "../../components/workspace-primitives";
 import type { AuthenticatedWorkspace } from "../setup/setup-screen";
 
@@ -77,7 +78,7 @@ export function TrialBalanceScreen({ api, now, workspace }: TrialBalanceScreenPr
           description="Debits and credits in Australian dollars."
         />
         {state.status === "ready" ? (
-          <div className="min-w-0 overflow-x-auto">
+          <HorizontalScrollArea label="Account balances table">
             <table className="w-full border-collapse text-left">
               <thead className="border-b border-border bg-background/60 text-[12px] uppercase tracking-[0.06em] text-muted-foreground">
                 <tr>
@@ -114,7 +115,7 @@ export function TrialBalanceScreen({ api, now, workspace }: TrialBalanceScreenPr
                 </tr>
               </tfoot>
             </table>
-          </div>
+          </HorizontalScrollArea>
         ) : (
           <div className="grid min-h-64 place-items-center text-center">
             <div>

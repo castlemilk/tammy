@@ -240,7 +240,7 @@ export function PurchasePostingForm({
   };
   return (
     <div className="grid gap-4">
-      <p className="text-[13px] leading-5 text-muted-foreground">
+      <p className="text-[14px] leading-6 text-muted-foreground">
         Review each allocation. Supplier GST and the amount eligible for credit are separate
         decisions.
       </p>
@@ -366,7 +366,7 @@ export function PurchasePostingForm({
       ) : duplicateCandidates.length === 1 ? (
         <>
           <p
-            className="text-[13px] leading-5 text-warning"
+            className="text-[14px] leading-6 text-warning"
             role={verifiedCandidateId ? "note" : "alert"}
           >
             {verifiedCandidateId
@@ -426,11 +426,11 @@ export function PurchasePostingForm({
           className="grid gap-3 rounded-xl border border-warning-border bg-warning-soft p-4"
           role="alert"
         >
-          <p className="text-[13px] leading-5">
+          <p className="text-[14px] leading-6">
             Multiple possible duplicate purchases were found. Choosing among multiple matches is not
             supported, so this purchase cannot be posted.
           </p>
-          <ul className="grid gap-2 text-[12px] leading-5">
+          <ul className="grid gap-2 text-[14px] leading-6">
             {duplicateCandidates.map((candidate) => (
               <li key={candidate.posting?.id ?? candidate.documentId} className="break-all">
                 {candidate.supplierName || "Unknown supplier"} ·{" "}

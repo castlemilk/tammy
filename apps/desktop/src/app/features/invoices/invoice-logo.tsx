@@ -35,10 +35,10 @@ export function InvoiceLogo({
 
   if (error)
     return (
-      <div className="flex flex-wrap items-center gap-2 text-[10px] text-muted-foreground">
+      <div className="flex flex-wrap items-center gap-3 text-[12px] text-muted-foreground">
         <span role="alert">Logo preview could not be loaded.</span>
         <Button
-          className="h-7 text-[10px]"
+          className="h-11 text-[13px]"
           onClick={() => setAttempt((value) => value + 1)}
           type="button"
           variant="outline"
@@ -54,6 +54,6 @@ export function InvoiceLogo({
       src={preview.dataUrl}
     />
   ) : (
-    <p className="text-[10px] text-muted-foreground">Loading logo…</p>
+    <p className="text-[12px] text-muted-foreground">Loading logo…</p>
   );
 }

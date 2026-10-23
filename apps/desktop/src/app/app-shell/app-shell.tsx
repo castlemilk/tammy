@@ -44,7 +44,7 @@ export function AppShell({
             <LockKeyhole aria-hidden="true" className="size-3.5" />
             Local workspace
           </p>
-          <p className="mt-1 text-[11px] leading-5 text-muted-foreground">
+          <p className="mt-1 text-[12px] leading-5 text-muted-foreground">
             A little clarity, every day.
             <br />
             Your records stay on this device.

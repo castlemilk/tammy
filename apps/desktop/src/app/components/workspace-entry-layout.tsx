@@ -33,13 +33,13 @@ export function WorkspaceEntryLayout({
               </span>
             </div>
             <div className="mt-7 max-w-md lg:mt-16">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-forest">
+              <p className="text-[12px] font-semibold uppercase tracking-[0.16em] text-forest">
                 Your local accounting desk
               </p>
               <h2 className="mt-3 max-w-sm font-serif text-[26px] leading-[1.12] tracking-[-0.035em] text-foreground sm:text-[32px]">
                 Clear records, kept close.
               </h2>
-              <p className="mt-3 max-w-sm text-[13px] leading-6 text-muted-foreground">
+              <p className="mt-3 max-w-sm text-[14px] leading-6 text-muted-foreground">
                 Set up the business details you use for your local books, then protect the workspace
                 with credentials you control.
               </p>
@@ -59,7 +59,7 @@ export function WorkspaceEntryLayout({
                   >
                     <span
                       aria-hidden="true"
-                      className={`grid size-7 shrink-0 place-items-center rounded-full border text-[10px] ${complete || active ? "border-forest bg-forest-soft text-forest" : "border-border bg-surface"}`}
+                      className={`grid size-7 shrink-0 place-items-center rounded-full border text-[12px] ${complete || active ? "border-forest bg-forest-soft text-forest" : "border-border bg-surface"}`}
                     >
                       {complete ? "✓" : String(index + 1).padStart(2, "0")}
                     </span>
@@ -69,19 +69,19 @@ export function WorkspaceEntryLayout({
               })}
             </ol>
           ) : (
-            <p className="max-w-sm border-l-2 border-forest/30 pl-4 text-[12px] leading-5 text-muted-foreground">
+            <p className="max-w-sm border-l-2 border-forest/30 pl-4 text-[14px] leading-6 text-muted-foreground">
               Your saved workspace remains encrypted on this device.
             </p>
           )}
 
           <div className="flex flex-wrap items-end justify-between gap-4 border-t border-border pt-4">
-            <p className="max-w-xs text-[11px] leading-5 text-muted-foreground">
+            <p className="max-w-xs text-[14px] leading-6 text-muted-foreground">
               Tammy keeps workspace data on this device. Recovery details are shown once during
               setup.
             </p>
             {onPrivacy ? (
               <button
-                className="focus-ring shrink-0 rounded-md text-[12px] font-medium text-forest underline underline-offset-2"
+                className="focus-ring inline-flex min-h-11 shrink-0 items-center rounded-md text-[12px] font-medium text-forest underline underline-offset-2"
                 onClick={onPrivacy}
                 type="button"
               >

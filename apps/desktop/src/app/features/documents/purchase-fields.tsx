@@ -69,9 +69,9 @@ export function PurchaseCheck({
   readonly onChange: (value: boolean) => void;
 }) {
   return (
-    <label className="flex items-start gap-2 text-[13px] leading-5">
+    <label className="flex min-h-11 items-center gap-3 text-[14px] leading-6">
       <input
-        className="focus-ring mt-0.5 size-4"
+        className="focus-ring size-4 shrink-0"
         type="checkbox"
         checked={checked}
         onChange={(e) => onChange(e.target.checked)}

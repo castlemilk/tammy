@@ -257,21 +257,21 @@ export function MachineCredentialForm({
   };
 
   return (
-    <section aria-labelledby="machine-credential-heading" className="border-t border-border pt-4">
+    <section aria-labelledby="machine-credential-heading" className="work-surface grid gap-4 p-5">
       <div className="flex items-center gap-2">
         <KeyRound aria-hidden="true" className="size-3.5 text-forest" />
-        <h2 id="machine-credential-heading" className="text-[12px] font-semibold">
+        <h2 id="machine-credential-heading" className="text-[16px] font-semibold">
           RAM machine credential
         </h2>
       </div>
-      <p className="mt-1 text-[10px] leading-5 text-muted-foreground">
+      <p className="text-[14px] leading-6 text-muted-foreground">
         The credential stays in protected storage on this Mac. Every operation requires a new
         security code.
       </p>
-      <div className="mt-3 flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-2">
         {missing ? (
           <Button
-            className="h-9 text-[11px]"
+            className="h-11 text-[13px]"
             onClick={() => chooseAction("import")}
             type="button"
             variant="outline"
@@ -281,7 +281,7 @@ export function MachineCredentialForm({
         ) : (
           <>
             <Button
-              className="h-9 text-[11px]"
+              className="h-11 text-[13px]"
               onClick={() => chooseAction("unlock")}
               type="button"
               variant="outline"
@@ -289,7 +289,7 @@ export function MachineCredentialForm({
               Unlock for local use
             </Button>
             <Button
-              className="h-9 text-[11px]"
+              className="h-11 text-[13px]"
               onClick={() => chooseAction("replace")}
               type="button"
               variant="outline"
@@ -297,7 +297,7 @@ export function MachineCredentialForm({
               Replace credential
             </Button>
             <Button
-              className="h-9 text-[11px]"
+              className="h-11 text-[13px]"
               onClick={() => chooseAction("remove")}
               type="button"
               variant="outline"
@@ -309,21 +309,16 @@ export function MachineCredentialForm({
         )}
       </div>
       {locked ? (
-        <Button
-          className="mt-3 h-9 text-[11px]"
-          onClick={onChanged}
-          type="button"
-          variant="outline"
-        >
+        <Button className="h-11 text-[13px]" onClick={onChanged} type="button" variant="outline">
           Refresh status
         </Button>
       ) : null}
       {action ? (
         <form
-          className="mt-4 grid max-w-[520px] gap-3 border-l-2 border-forest pl-4"
+          className="grid max-w-[520px] gap-4 rounded-xl border border-border bg-background p-4"
           onSubmit={submit}
         >
-          <h3 className="text-[11px] font-semibold">
+          <h3 className="text-[15px] font-semibold">
             {action === "import"
               ? "Import machine credential"
               : action === "replace"
@@ -335,7 +330,7 @@ export function MachineCredentialForm({
           {action === "import" || action === "replace" ? (
             <div>
               <Button
-                className="h-9 text-[11px]"
+                className="h-11 text-[13px]"
                 disabled={busy}
                 onClick={select}
                 type="button"
@@ -344,14 +339,14 @@ export function MachineCredentialForm({
                 Choose credential in macOS
               </Button>
               {selected ? (
-                <p className="mt-2 text-[10px] text-ready-foreground">
+                <p className="mt-2 text-[12px] text-ready-foreground">
                   Credential selected. Its filename is not retained or shown.
                 </p>
               ) : null}
             </div>
           ) : null}
           {action === "replace" ? (
-            <label className="flex items-start gap-2 text-[11px] leading-5">
+            <label className="flex min-h-11 items-start gap-3 text-[13px] leading-6">
               <input
                 className="mt-1"
                 checked={confirmed}
@@ -363,7 +358,7 @@ export function MachineCredentialForm({
             </label>
           ) : null}
           {action !== "remove" ? (
-            <label className="grid gap-1.5 text-[11px] font-medium">
+            <label className="grid gap-2 text-[13px] font-medium">
               Credential password
               <input
                 autoComplete="off"
@@ -376,7 +371,7 @@ export function MachineCredentialForm({
               />
             </label>
           ) : (
-            <label className="flex items-start gap-2 text-[11px] leading-5">
+            <label className="flex min-h-11 items-start gap-3 text-[13px] leading-6">
               <input
                 className="mt-1"
                 checked={confirmed}
@@ -387,7 +382,7 @@ export function MachineCredentialForm({
               {workspace.organisationCanonicalAbn}. Direct SBR will become unavailable.
             </label>
           )}
-          <label className="grid max-w-[220px] gap-1.5 text-[11px] font-medium">
+          <label className="grid max-w-[220px] gap-2 text-[13px] font-medium">
             Fresh six-digit code
             <input
               autoComplete="one-time-code"
@@ -402,7 +397,7 @@ export function MachineCredentialForm({
           </label>
           <div className="flex gap-2">
             <Button
-              className="h-9 text-[11px]"
+              className="h-11 text-[13px]"
               disabled={busy || ((action === "import" || action === "replace") && !selected)}
               type="submit"
             >
@@ -410,7 +405,7 @@ export function MachineCredentialForm({
               Continue
             </Button>
             <Button
-              className="h-9 text-[11px]"
+              className="h-11 text-[13px]"
               disabled={busy}
               onClick={() => chooseAction(action)}
               type="button"
@@ -421,11 +416,7 @@ export function MachineCredentialForm({
           </div>
         </form>
       ) : null}
-      <p
-        aria-live="polite"
-        className="mt-3 min-h-4 text-[11px] text-muted-foreground"
-        role="status"
-      >
+      <p aria-live="polite" className="min-h-5 text-[12px] text-muted-foreground" role="status">
         {notice ?? ""}
       </p>
     </section>

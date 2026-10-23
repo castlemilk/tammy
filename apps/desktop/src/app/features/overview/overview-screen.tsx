@@ -104,13 +104,13 @@ export function OverviewScreen({
                     {card.value}
                   </p>
                   {!(card.label === "GST & BAS" && onOpenBas) ? (
-                    <p className="mt-1 text-[12px] leading-4 text-muted-foreground">
+                    <p className="mt-1 text-[14px] leading-5 text-muted-foreground">
                       {card.detail}
                     </p>
                   ) : null}
                   {card.label === "GST & BAS" && onOpenBas ? (
                     <div className="mt-3 grid gap-2 border-t border-border pt-3">
-                      <p className="text-[13px] leading-5 text-muted-foreground">
+                      <p className="text-[14px] leading-6 text-muted-foreground">
                         {summary.status === "ready"
                           ? basAttentionDetail(summary.value.basStatus)
                           : "BAS status unavailable"}
@@ -121,7 +121,7 @@ export function OverviewScreen({
                             return target ? (
                               <a
                                 aria-label={`Open exact BAS preparation ${summary.value.basPreparation?.id}`}
-                                className="w-fit text-[13px] font-semibold text-forest underline underline-offset-2"
+                                className="inline-flex min-h-11 w-fit items-center text-[14px] font-semibold text-forest underline underline-offset-2"
                                 href={target}
                                 onClick={(event) => {
                                   event.preventDefault();
@@ -132,7 +132,7 @@ export function OverviewScreen({
                               </a>
                             ) : (
                               <button
-                                className="w-fit text-left text-[13px] font-semibold text-forest underline underline-offset-2"
+                                className="inline-flex min-h-11 w-fit items-center text-left text-[14px] font-semibold text-forest underline underline-offset-2"
                                 onClick={() => onOpenBas("/gst-bas")}
                                 type="button"
                               >
