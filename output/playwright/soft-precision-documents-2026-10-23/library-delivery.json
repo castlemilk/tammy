@@ -1,0 +1,121 @@
+{
+  "files": [
+    {
+      "operation": "create_library_file",
+      "status": "succeeded",
+      "path": "/Tammy-Documents-before.png",
+      "file_id": "file_0000000067d481faaf1171bf118fecb7",
+      "library_file_id": "libfile_8d6978b67ccc81919efcbfe12ba8d188",
+      "file_name": "Tammy-Documents-before.png",
+      "current_version_number": 0,
+      "restored_from_version_number": null,
+      "xattrs": [
+        {
+          "name": "user.library-file-version",
+          "value": "0"
+        }
+      ],
+      "directory_id": "libdir_a3a19ff1eb58819186e5b2b573334313",
+      "mime_type": "image/png",
+      "library_artifact_type": "image",
+      "file_size_bytes": 174801,
+      "sourcePath": "before/02-list-selected.png",
+      "sha256": "6ea4f5e3bedfc19072f6e24f91193f1da9dd497b86d73c4448423c2022c03883",
+      "localIdentityPersisted": true
+    },
+    {
+      "operation": "create_library_file",
+      "status": "succeeded",
+      "path": "/Tammy-Documents-approved-board-08-concept.png",
+      "file_id": "file_000000004c64820baaa77c5102332034",
+      "library_file_id": "libfile_10ac0000a4f881919121867d18df7719",
+      "file_name": "Tammy-Documents-approved-board-08-concept.png",
+      "current_version_number": 0,
+      "restored_from_version_number": null,
+      "xattrs": [
+        {
+          "name": "user.library-file-version",
+          "value": "0"
+        }
+      ],
+      "directory_id": "libdir_a3a19ff1eb58819186e5b2b573334313",
+      "mime_type": "image/png",
+      "library_artifact_type": "image_gen",
+      "file_size_bytes": 1755406,
+      "sourcePath": "reference/08-documents-banking-activity.png",
+      "sha256": "1ff7a89366290bd31c7a4747b51e81cc9820db9eeaf15bbbc489e08f9210b301",
+      "localIdentityPersisted": true
+    },
+    {
+      "operation": "create_library_file",
+      "status": "succeeded",
+      "path": "/Tammy-Documents-after.png",
+      "file_id": "file_000000001a4881f7b7db00a827943812",
+      "library_file_id": "libfile_0f6dca1097ac8191ad5acd397b7f735a",
+      "file_name": "Tammy-Documents-after.png",
+      "current_version_number": 0,
+      "restored_from_version_number": null,
+      "xattrs": [
+        {
+          "name": "user.library-file-version",
+          "value": "0"
+        }
+      ],
+      "directory_id": "libdir_a3a19ff1eb58819186e5b2b573334313",
+      "mime_type": "image/png",
+      "library_artifact_type": "image",
+      "file_size_bytes": 200857,
+      "sourcePath": "after/02-list-selected.png",
+      "sha256": "7d4e3fea55ec903dd231e1484d0fc6d5c4fa08bdfadd08dc24ea09552a85f0a6",
+      "localIdentityPersisted": true
+    },
+    {
+      "operation": "create_library_file",
+      "status": "succeeded",
+      "path": "/Tammy-Document-review-after.png",
+      "file_id": "file_00000000d0a881f5b1884bc0c40a4388",
+      "library_file_id": "libfile_93989a8b35ac8191af971815e623ff7e",
+      "file_name": "Tammy-Document-review-after.png",
+      "current_version_number": 0,
+      "restored_from_version_number": null,
+      "xattrs": [
+        {
+          "name": "user.library-file-version",
+          "value": "0"
+        }
+      ],
+      "directory_id": "libdir_a3a19ff1eb58819186e5b2b573334313",
+      "mime_type": "image/png",
+      "library_artifact_type": "image",
+      "file_size_bytes": 210112,
+      "sourcePath": "after/03-review-before-save.png",
+      "sha256": "674429569aa2a4232a7b01d361c6092954fca1373c614d7e949b1490236a5afc",
+      "localIdentityPersisted": true
+    },
+    {
+      "operation": "create_library_file",
+      "status": "succeeded",
+      "path": "/Tammy-Document-review-keyboard-320px.png",
+      "file_id": "file_000000006bd481fabf5fd9ca292f8b7d",
+      "library_file_id": "libfile_9e47ed19131c8191b8a12a05cdc8ecf2",
+      "file_name": "Tammy-Document-review-keyboard-320px.png",
+      "current_version_number": 0,
+      "restored_from_version_number": null,
+      "xattrs": [
+        {
+          "name": "user.library-file-version",
+          "value": "0"
+        }
+      ],
+      "directory_id": "libdir_a3a19ff1eb58819186e5b2b573334313",
+      "mime_type": "image/png",
+      "library_artifact_type": "image",
+      "file_size_bytes": 48191,
+      "sourcePath": "after/10-manual-fields-320.png",
+      "sha256": "1245b581d135940e402c3d1677724b0f8b2d1fa3fc4f9cb6239f9cec5d5bc3d2",
+      "localIdentityPersisted": true
+    }
+  ],
+  "preparedPreflight": "Failed before mutation: sandbox DNS, then hosted tool discovery reported prepare_uploads unavailable. Direct supported ordered creates succeeded; no duplicate upload.",
+  "originalBytesUnchanged": true
+}

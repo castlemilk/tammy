@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Tammy Documents · real before/reference/after</title>
+    <style>
+      :root { color-scheme: light; font: 16px/1.55 system-ui, sans-serif; color: #342d27; background: #f5f1e8; }
+      body { max-width: 1600px; margin: auto; padding: 24px; }
+      h1, h2 { font-family: Georgia, serif; line-height: 1.2; }
+      h1 { margin-bottom: 12px; }
+      p { max-width: 85ch; }
+      a { color: #215c4d; text-underline-offset: 3px; }
+      a:focus-visible { outline: 2px solid #215c4d; outline-offset: 4px; }
+      .pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+      figure { margin: 0 0 24px; min-width: 0; }
+      img { display: block; width: 100%; height: auto; border: 1px solid #d9cdbd; border-radius: 12px; }
+      figcaption { padding: 8px 0; font-weight: 600; }
+      .narrow { max-width: 390px; }
+      @media (max-width: 760px) { body { padding: 16px; } .pair { grid-template-columns: 1fr; } }
+    </style>
+  </head>
+  <body>
+    <h1>Documents: compact evidence and review</h1>
+    <p>Real Electron renders, isolated synthetic records, matched 1440 × 1100 desktop viewports. The approved board is a generated concept and is labelled separately. <a href="README.md">Journey, provenance, tests and limits</a>.</p>
+    <div class="pair">
+      <figure>
+        <a href="before/02-list-selected.png"><img src="before/02-list-selected.png" alt="Before: five synthetic files in tall rows, two-level toolbar and large review header" /></a>
+        <figcaption>Before · unchanged app · 1440 × 1100</figcaption>
+      </figure>
+      <figure>
+        <a href="after/02-list-selected.png"><img src="after/02-list-selected.png" alt="After: compact five-file list, single toolbar and selected source text beside review details" /></a>
+        <figcaption>After · corrected package · 1440 × 1100</figcaption>
+      </figure>
+    </div>
+    <h2>Approved visual reference</h2>
+    <figure>
+      <a href="reference/08-documents-banking-activity.png"><img src="reference/08-documents-banking-activity.png" alt="Approved board 08: Documents at left, Banking in the centre and Activity at right" /></a>
+      <figcaption>Board 08 · unchanged generated concept · Documents panel at left</figcaption>
+    </figure>
+    <p>The app retains source text and does not provide the concept's original-file preview, page/zoom controls or document-type selector. The explicit limitation and separate purchase-posting controls remain. The baseline Total suggestion incorrectly reads Subtotal; the after view uses whole-word matching, without automatically confirming or posting anything.</p>
+    <h2>Review and narrow-window keyboard access</h2>
+    <div class="pair">
+      <figure>
+        <a href="after/03-review-before-save.png"><img src="after/03-review-before-save.png" alt="Selected document with wider scrollable retained text and narrower manual confirmation form" /></a>
+        <figcaption>Source and confirmation form · 1440 × 1100</figcaption>
+      </figure>
+      <figure class="narrow">
+        <a href="after/10-manual-fields-320.png"><img src="after/10-manual-fields-320.png" alt="320px manual image-entry form with visible forest keyboard focus on supplier" /></a>
+        <figcaption>Manual entry · 320 × 1000 · reduced motion</figcaption>
+      </figure>
+    </div>
+  </body>
+</html>

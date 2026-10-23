@@ -83,3 +83,35 @@ Server checks do not establish MAS or Windows 11 release qualification.
 See the prior Overview folder's `screen-board-inventory.md` for the finite list
 of implemented screens and remaining dedicated comparisons. Draft, merge and
 publication holds remain in force.
+
+## Validated after comparison
+
+Open `comparison.html` for the before/reference/after view. The desktop pair
+shares the same 1440 × 1100 viewport, source selection and five synthetic files.
+Both versions use the same retained source strings; the explicit Total now
+suggests 110.00 instead of incorrectly using Subtotal 100.00. The successful
+before journey explicitly corrected that amount before human confirmation.
+
+The after runtime is clean ordinary package source
+`8ce3a2cc94f831d3be1cfbcde745d3e7fe63bf53`. It passes seven package checks with
+one expected skip. The Core binary and document upload/review command functions
+are unchanged; `after-captures.json` records their hashes and source provenance.
+All 12 after frames were retained. Actual desktop/list/review and narrow pixels
+were inspected; rows are approximately 55px rather than 77px. Focusable controls
+remain at least 44px high. This brings the supported hierarchy closer to board
+08; it is not an assertion that every generated detail is implemented.
+
+Local validation: 52 Documents/purchase tests in five files; the complete
+desktop suite's 1,306 tests in 111 files; typecheck and lint; descriptor
+verification. The native Documents-only journey passes in 11.6s and the full
+invoice/Overview/Documents case in 14.6s, both without retries, console errors or
+page errors. This adds a dedicated Documents comparison to the finite inventory;
+the other pending screen families remain as recorded in the Overview inventory.
+
+Confirmed Library deliveries:
+
+- [Before](https://chatgpt.com/api/library/files/libfile_8d6978b67ccc81919efcbfe12ba8d188/download)
+- [Approved board 08 concept](https://chatgpt.com/api/library/files/libfile_10ac0000a4f881919121867d18df7719/download)
+- [After](https://chatgpt.com/api/library/files/libfile_0f6dca1097ac8191ad5acd397b7f735a/download)
+- [Document review](https://chatgpt.com/api/library/files/libfile_93989a8b35ac8191af971815e623ff7e/download)
+- [320px keyboard focus](https://chatgpt.com/api/library/files/libfile_9e47ed19131c8191b8a12a05cdc8ecf2/download)
