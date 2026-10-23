@@ -101,10 +101,27 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Install exact Task
+        timeout-minutes: 5
         shell: bash
         run: |
-          go install github.com/go-task/task/v3/cmd/task@v3.52.0
-          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+          set -euo pipefail
+          task_install_dir="$(mktemp -d "${RUNNER_TEMP%/}/tammy-task.XXXXXX")"
+          trap 'rm -rf "$task_install_dir"' EXIT
+          curl --fail --silent --show-error --location \
+            --proto '=https' --proto-redir '=https' \
+            --connect-timeout 10 --max-time 120 --retry 0 \
+            --output "$task_install_dir/task.tar.gz" \
+            https://github.com/go-task/task/releases/download/v3.52.0/task_darwin_arm64.tar.gz
+          printf '%s  %s\n' \
+            debfa9a3bc06fcb5d5550b44725ecd22bb305499ce057bd6d7a774db5cdaa7b8 \
+            "$task_install_dir/task.tar.gz" | shasum -a 256 --check --status
+          tar -xzf "$task_install_dir/task.tar.gz" -C "$task_install_dir" task
+          test -f "$task_install_dir/task" && test ! -L "$task_install_dir/task"
+          chmod 755 "$task_install_dir/task"
+          test "$("$task_install_dir/task" --version)" = "3.52.0"
+          rm "$task_install_dir/task.tar.gz"
+          printf '%s\n' "$task_install_dir" >> "$GITHUB_PATH"
+          trap - EXIT
 
       - name: Verify exact Task version
         shell: bash

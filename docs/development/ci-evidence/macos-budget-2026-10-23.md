@@ -29,8 +29,10 @@ is unavailable because the outer cancellation skipped artifact retention.
 
 SBR deliberately obtains fresh 30-second TOTP counters across credential and
 simulator operations. Those waits qualify anti-replay behavior. It already has
-an eight-minute test deadline; the other packaged cases retain two-minute
-deadlines. The successful push completed all 20 cases, including SBR. The
+an eight-minute test deadline. The packaged global default is two minutes;
+existing scenario overrides, including the fifteen-minute BAS and seven-minute
+pagination cases, remain unchanged. The successful push completed all 20 cases,
+including SBR. The
 comparison completed all 19 ordinary cases, including the Documents keyboard
 correction, but had only about 4m20s left when its final SBR project began.
 That is less than even the successful run's observed duration.
