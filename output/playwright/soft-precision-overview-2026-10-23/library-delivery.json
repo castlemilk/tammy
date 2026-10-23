@@ -1,0 +1,62 @@
+{
+  "syntheticOnly": true,
+  "uploadConfirmed": true,
+  "originalCaptureBytesUnchanged": true,
+  "files": [
+    {
+      "capture": "before/02-income-and-attention.png",
+      "name": "Tammy-overview-before.png",
+      "kind": "real synthetic app screenshot",
+      "libraryFileId": "libfile_7c426ad5e10c81919b2371c956d2b163",
+      "sha256": "9c94b94e2dec4317d1497beb7c3db50339de07d9b9a72a0a3d728139f2b08154",
+      "bytes": 146732,
+      "status": "succeeded",
+      "deliveryCopyXattrsApplied": true,
+      "downloadUrl": "https://chatgpt.com/api/library/files/libfile_7c426ad5e10c81919b2371c956d2b163/download"
+    },
+    {
+      "capture": "reference/01-soft-precision-views.png",
+      "name": "Tammy-board-01-reference-concept.png",
+      "kind": "approved generated concept",
+      "libraryFileId": "libfile_dfe3c7380e908191a43cc48a76db46b8",
+      "sha256": "c627e2021bbf4f23795a9b7490d9becdd0d332111359a99aa8f39fa946a8e3f9",
+      "bytes": 2032545,
+      "status": "succeeded",
+      "deliveryCopyXattrsApplied": true,
+      "downloadUrl": "https://chatgpt.com/api/library/files/libfile_dfe3c7380e908191a43cc48a76db46b8/download"
+    },
+    {
+      "capture": "after/02-income-and-attention.png",
+      "name": "Tammy-overview-after.png",
+      "kind": "real synthetic app screenshot",
+      "libraryFileId": "libfile_54584210fa0081919a695bd76fe6ab08",
+      "sha256": "bbef78835a85f895bf33bd4bf02240af07ed03639aaba1746db79e2b0a7c5217",
+      "bytes": 163788,
+      "status": "succeeded",
+      "deliveryCopyXattrsApplied": true,
+      "downloadUrl": "https://chatgpt.com/api/library/files/libfile_54584210fa0081919a695bd76fe6ab08/download"
+    },
+    {
+      "capture": "after/05-income-focus-320.png",
+      "name": "Tammy-overview-320.png",
+      "kind": "real synthetic app screenshot",
+      "libraryFileId": "libfile_1db5db62e638819182405669ac407911",
+      "sha256": "4db085eee907491cbbd2287c572f4716d6c981e7adfdd879fee104bc06add498",
+      "bytes": 54928,
+      "status": "succeeded",
+      "deliveryCopyXattrsApplied": true,
+      "downloadUrl": "https://chatgpt.com/api/library/files/libfile_1db5db62e638819182405669ac407911/download"
+    },
+    {
+      "capture": "after/07-income-1100.png",
+      "name": "Tammy-overview-1100-aligned.png",
+      "kind": "real synthetic app screenshot",
+      "libraryFileId": "libfile_62d17c05b464819192e9cc34915f50ca",
+      "sha256": "aa633a03efefea79abc8d252041b2780c835a8903562959d44391ac6d9b7e788",
+      "bytes": 163376,
+      "status": "succeeded",
+      "deliveryCopyXattrsApplied": true,
+      "downloadUrl": "https://chatgpt.com/api/library/files/libfile_62d17c05b464819192e9cc34915f50ca/download"
+    }
+  ]
+}

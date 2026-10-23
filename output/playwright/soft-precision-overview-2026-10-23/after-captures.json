@@ -1,0 +1,92 @@
+{
+  "syntheticOnly": true,
+  "runtimeSource": "74e147431c950bb094dba57f1386bd3ed3840020",
+  "runtimeSourceDirty": false,
+  "package": {
+    "passed": 7,
+    "skipped": 1,
+    "failed": 0,
+    "releaseKind": "ordinary-package",
+    "appSha256": "f9cce51ed2bf11ab4e34ac1df7c83096b253a20c35c2e2a821263074866f31d0",
+    "coreSha256": "078811e551eb5cd0c5f505e3282d82bc8f50be578c12a9d92e7bafb70d67562c",
+    "manifestSha256": "f3e0ef958446221ff834fa6b92cca7dea7532d6eb4b7ca3a6b195ec7d3fafbe9"
+  },
+  "journey": {
+    "passed": 1,
+    "failed": 0,
+    "seconds": 20.6,
+    "testBodySeconds": 17.9,
+    "retries": 0,
+    "pageErrors": 0,
+    "consoleErrors": 0
+  },
+  "geometryChecks": {
+    "wideIncomeAndAttentionAligned": true,
+    "mediumDateInputMinWidth": 140,
+    "supportingAmountTopDifferenceLessThanPx": 2,
+    "containedViewports": [1440, 1100, 900, 390, 320]
+  },
+  "frames": [
+    {
+      "path": "after/01-local-summary.png",
+      "sha256": "d740765996724686a8f714f3796c1856d2ca0835e842796b05561c1e456eb92f",
+      "bytes": 159156,
+      "viewport": [1440, 1100]
+    },
+    {
+      "path": "after/02-income-and-attention.png",
+      "sha256": "bbef78835a85f895bf33bd4bf02240af07ed03639aaba1746db79e2b0a7c5217",
+      "bytes": 163788,
+      "viewport": [1440, 1100]
+    },
+    {
+      "path": "after/03-invalid-period.png",
+      "sha256": "8666cd415834bd8daa8f489ac0b99233de11ef41ba50ab13cac99b02f607b80f",
+      "bytes": 142240,
+      "viewport": [1440, 1100]
+    },
+    {
+      "path": "after/04-export-cancelled.png",
+      "sha256": "9717f54606f2cccf296260df27d177c1205bcc8f7e120ac897d2ecbc827bb41a",
+      "bytes": 165281,
+      "viewport": [1440, 1100]
+    },
+    {
+      "path": "after/05-income-focus-320.png",
+      "sha256": "4db085eee907491cbbd2287c572f4716d6c981e7adfdd879fee104bc06add498",
+      "bytes": 54928,
+      "viewport": [320, 900]
+    },
+    {
+      "path": "after/05-income-focus-390.png",
+      "sha256": "698e7aa392051219b8c68f8a0dc2fc017ce060009b2a0868801418d530537b34",
+      "bytes": 59486,
+      "viewport": [390, 900]
+    },
+    {
+      "path": "after/06-exact-bas-focus.png",
+      "sha256": "3faa1185cb721cb725a2ead20f36856e51bc3d66807be786a44aaa243ef1bf2a",
+      "bytes": 165386,
+      "viewport": [1440, 1100]
+    },
+    {
+      "path": "after/07-income-1100.png",
+      "sha256": "aa633a03efefea79abc8d252041b2780c835a8903562959d44391ac6d9b7e788",
+      "bytes": 163376,
+      "viewport": [1100, 1100]
+    },
+    {
+      "path": "after/07-income-900.png",
+      "sha256": "4aecb189820fed66921722edf128e6a4ebb006cb569a29e5a71a3f83bab83468",
+      "bytes": 139712,
+      "viewport": [900, 1100]
+    }
+  ],
+  "visualInspection": [
+    "after/02-income-and-attention.png",
+    "after/03-invalid-period.png",
+    "after/05-income-focus-320.png",
+    "after/07-income-1100.png"
+  ],
+  "runtimeCodeChangesAfterPackage": 0
+}

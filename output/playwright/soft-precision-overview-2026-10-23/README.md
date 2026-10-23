@@ -106,3 +106,31 @@ and cash mixed-GST receipts/BAS restart (16.3s), 45.0s total. The earlier local
 second-unlock failure is not retried or declared resolved by these different cases.
 `first-after-attempt.json` records exact source, frames and outcomes. Corrected
 rendered evidence follows after rebuilding the small visual change.
+
+## Corrected rendered acceptance for this representative screen
+
+Nine corrected after frames are bound to the clean ordinary package at
+**74e147431c950bb094dba57f1386bd3ed3840020**. It passes seven package checks with one
+expected skip. Its native capture journey passes once in **20.6 seconds**
+(17.9-second body), zero retries/page/console errors. No runtime code changes after
+this build. The native assertions verify side-by-side alignment at 1440px,
+readable date-field widths and aligned supporting amount tops at 1100/900px,
+390/320px containment, native cancelled-export focus and the actual retained
+receipt count/balances after back/forward navigation.
+
+Actual final 1440px and 1100px pixels were inspected. The primary income figure,
+supporting values and review/BAS column now occupy the first desktop viewport;
+amounts share a baseline when labels wrap. Narrow fields remain readable and the
+page scrolls naturally, without hiding remaining balances or the attention column.
+The earlier 320px and invalid-period pixels were also inspected; their layout and
+state behavior are unchanged by the final label-height adjustment. This is
+representative Overview fidelity, not every screen or state. No recent-activity
+feed, cash chart or automated matching banner is fabricated to imitate the concept.
+
+[Open the before/reference/after comparison](comparison.html).
+`after-captures.json`, `validation.json` and `library-delivery.json` record source,
+hashes, checks and five confirmed Library uploads from separate delivery copies.
+The reference is always labelled as a concept; all other delivered images are real
+synthetic app captures. The before, attempt and older evidence bytes remain intact.
+Final hosted results must be checked at the new pushed head; this local checkpoint
+does not present pending checks as passed.
