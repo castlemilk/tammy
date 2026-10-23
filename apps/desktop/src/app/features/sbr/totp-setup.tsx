@@ -318,19 +318,22 @@ export function TotpSetup({
   };
 
   return (
-    <section aria-labelledby="totp-setup-heading" className="border-t border-border pt-4">
+    <section aria-labelledby="totp-setup-heading" className="work-surface p-5">
       <div className="flex items-start gap-3">
         <ShieldCheck aria-hidden="true" className="mt-0.5 size-4 text-forest" />
         <div className="min-w-0 flex-1">
-          <h2 id="totp-setup-heading" className="text-[12px] font-semibold">
+          <h2 id="totp-setup-heading" className="text-[16px] font-semibold">
             Set up a security code
           </h2>
-          <p className="mt-1 text-[10px] leading-5 text-muted-foreground">
+          <p className="mt-2 text-[14px] leading-6 text-muted-foreground">
             Protected actions require a fresh six-digit code and the appropriate role.
           </p>
           {!visiblePending ? (
-            <form className="mt-3 grid max-w-[420px] gap-3" onSubmit={enrol}>
-              <label className="grid gap-1.5 text-[11px] font-medium">
+            <form
+              className="mt-4 grid max-w-[420px] gap-4 rounded-xl border border-border bg-background p-4"
+              onSubmit={enrol}
+            >
+              <label className="grid gap-2 text-[13px] font-medium">
                 Current account password
                 <input
                   autoComplete="current-password"
@@ -342,7 +345,7 @@ export function TotpSetup({
                   value={password}
                 />
               </label>
-              <Button className="h-9 w-fit text-[11px]" disabled={busy} type="submit">
+              <Button className="h-11 w-fit text-[13px]" disabled={busy} type="submit">
                 {busy ? (
                   <LoaderCircle aria-hidden="true" className="size-3.5 animate-spin" />
                 ) : null}
@@ -352,17 +355,20 @@ export function TotpSetup({
               </Button>
             </form>
           ) : (
-            <form className="mt-3 grid max-w-[520px] gap-3" onSubmit={confirm}>
-              <div className="border-l-2 border-forest bg-muted/40 px-3 py-2">
-                <p className="text-[10px] font-medium">Provisioning material — shown once</p>
+            <form
+              className="mt-4 grid max-w-[520px] gap-4 rounded-xl border border-border bg-background p-4"
+              onSubmit={confirm}
+            >
+              <div className="grid gap-2 rounded-xl border border-warning-border bg-warning-soft p-4">
+                <p className="text-[12px] font-semibold">Provisioning material — shown once</p>
                 <code
-                  className="mt-1 block break-all text-[11px]"
+                  className="block break-all text-[13px]"
                   data-testid="totp-provisioning-material"
                 >
                   {visiblePending.material}
                 </code>
               </div>
-              <label className="grid max-w-[220px] gap-1.5 text-[11px] font-medium">
+              <label className="grid max-w-[220px] gap-2 text-[13px] font-medium">
                 Six-digit code
                 <input
                   autoComplete="one-time-code"
@@ -375,17 +381,17 @@ export function TotpSetup({
                   value={code}
                 />
               </label>
-              <Button className="h-9 w-fit text-[11px]" disabled={busy} type="submit">
+              <Button className="h-11 w-fit text-[13px]" disabled={busy} type="submit">
                 Confirm security code
               </Button>
             </form>
           )}
-          <p className={error ? "mt-3 text-[11px] text-destructive" : "sr-only"} role="alert">
+          <p className={error ? "mt-3 text-[12px] text-destructive" : "sr-only"} role="alert">
             {error ?? ""}
           </p>
           {outcomeLocked ? (
             <Button
-              className="mt-3 h-9 w-fit text-[11px]"
+              className="mt-3 h-11 w-fit text-[13px]"
               disabled={busy}
               onClick={refreshFactor}
               type="button"

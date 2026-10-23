@@ -263,8 +263,16 @@ export async function setupAndRunCurrentAccountingWorkflow(
   await page
     .getByRole("combobox", { name: "GST accounting basis", exact: true })
     .selectOption(gstBasis === "cash" ? "1" : "2");
-  await page.getByLabel("Workspace passphrase").fill(CURRENT_WORKFLOW_PASSPHRASE);
-  await page.getByLabel("Administrator password").fill(CURRENT_WORKFLOW_ADMIN_PASSWORD);
+  await page.getByLabel("Workspace passphrase", { exact: true }).fill(CURRENT_WORKFLOW_PASSPHRASE);
+  await page
+    .getByLabel("Confirm workspace passphrase", { exact: true })
+    .fill(CURRENT_WORKFLOW_PASSPHRASE);
+  await page
+    .getByLabel("Administrator password", { exact: true })
+    .fill(CURRENT_WORKFLOW_ADMIN_PASSWORD);
+  await page
+    .getByLabel("Confirm administrator password", { exact: true })
+    .fill(CURRENT_WORKFLOW_ADMIN_PASSWORD);
   await page.getByRole("button", { name: "Create local workspace" }).click();
   await expect(page.getByRole("heading", { name: "Save your recovery code" })).toBeVisible();
   await expect(page.getByText("One-time recovery code")).toBeVisible();
@@ -291,9 +299,11 @@ export async function setupAndRunCurrentAccountingWorkflow(
   });
   await expect(page).toHaveURL(/\/unlock$/);
   await expect(page.getByRole("heading", { name: "Unlock your workspace" })).toBeVisible();
-  await page.getByLabel("Workspace passphrase").fill(CURRENT_WORKFLOW_PASSPHRASE);
+  await page.getByLabel("Workspace passphrase", { exact: true }).fill(CURRENT_WORKFLOW_PASSPHRASE);
   await page.getByLabel("Email or username").fill(CURRENT_WORKFLOW_USERNAME);
-  await page.getByLabel("Administrator password").fill(CURRENT_WORKFLOW_ADMIN_PASSWORD);
+  await page
+    .getByLabel("Administrator password", { exact: true })
+    .fill(CURRENT_WORKFLOW_ADMIN_PASSWORD);
   await page.getByRole("button", { name: "Unlock workspace" }).click();
   await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible();
 

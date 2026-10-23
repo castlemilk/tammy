@@ -109,7 +109,7 @@ export function commandContext(workspace: AuthenticatedWorkspace, freshFactor: F
 }
 
 export const fieldClassName =
-  "focus-ring h-9 w-full rounded-[5px] border border-border bg-background px-3 text-[11px] text-foreground placeholder:text-muted-foreground";
+  "focus-ring h-11 w-full rounded-xl border border-border bg-background px-3 text-[14px] text-foreground placeholder:text-muted-foreground";
 
 export const unknownOutcomeCopy =
   "The local operation outcome is unknown. Refresh status before trying again.";

@@ -7,7 +7,7 @@ import type { AuthenticatedWorkspace } from "../setup/setup-screen";
 import { uuidV7 } from "./purchase-command-state";
 
 export const purchaseFieldClass =
-  "focus-ring h-8 min-w-0 w-full rounded-[5px] border border-border bg-surface px-2 text-[10px] font-normal";
+  "focus-ring h-11 min-w-0 w-full rounded-xl border border-border bg-background px-3 text-[14px] font-normal";
 export function PurchaseField({
   label,
   value,
@@ -22,7 +22,7 @@ export function PurchaseField({
   readonly maxLength?: number;
 }) {
   return (
-    <label className="grid min-w-0 gap-1 text-[9px] font-semibold">
+    <label className="grid min-w-0 gap-1.5 text-[12px] font-semibold text-foreground">
       {label}
       <input
         className={purchaseFieldClass}
@@ -47,7 +47,7 @@ export function PurchaseChoice({
   readonly children: ReactNode;
 }) {
   return (
-    <label className="grid min-w-0 gap-1 text-[9px] font-semibold">
+    <label className="grid min-w-0 gap-1.5 text-[12px] font-semibold text-foreground">
       {label}
       <select
         className={purchaseFieldClass}
@@ -69,9 +69,9 @@ export function PurchaseCheck({
   readonly onChange: (value: boolean) => void;
 }) {
   return (
-    <label className="flex items-start gap-2 text-[10px] leading-4">
+    <label className="flex min-h-11 items-center gap-3 text-[14px] leading-6">
       <input
-        className="focus-ring mt-0.5 size-3"
+        className="focus-ring size-4 shrink-0"
         type="checkbox"
         checked={checked}
         onChange={(e) => onChange(e.target.checked)}

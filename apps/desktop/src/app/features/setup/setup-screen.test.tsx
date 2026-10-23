@@ -31,7 +31,7 @@ import {
   CreateWorkspaceResponseSchema,
   WorkspaceSchema,
 } from "@tammy/connect-client/tammy/v1/workspace_pb.js";
-import { screen } from "@testing-library/react";
+import { fireEvent, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { expect, it, vi } from "vitest";
 import retainedRuleBytes from "../../../../../../services/core/internal/artefacts/bundles/au_gst_v1.pb.json?raw";
@@ -233,7 +233,15 @@ it.each([GstBasis.NON_CASH, GstBasis.CASH])(
     await user.type(screen.getByLabelText("Email or username"), "admin@tammy.local");
     await user.type(screen.getByLabelText("Business legal name"), "Tammy Business Pty Ltd");
     await user.type(screen.getByLabelText("Business display name"), "Tammy Business");
-    await user.type(screen.getByLabelText("ABN"), "51824753556");
+    await user.type(screen.getByLabelText("ABN"), "51 824 753 556");
+    const lookup = screen.getByRole("link", {
+      name: "Look up this ABN on the Australian Business Register",
+    });
+    expect(lookup.getAttribute("href")).toBe(
+      "https://abr.business.gov.au/ABN/View?abn=51824753556",
+    );
+    expect(lookup.getAttribute("target")).toBe("_blank");
+    expect(lookup.getAttribute("rel")).toBe("noopener noreferrer");
     expect(screen.getByRole("combobox", { name: "GST accounting basis" })).toHaveProperty(
       "value",
       String(GstBasis.NON_CASH),
@@ -247,7 +255,15 @@ it.each([GstBasis.NON_CASH, GstBasis.CASH])(
       "workspace-passphrase-long-enough",
     );
     await user.type(
+      screen.getByLabelText("Confirm workspace passphrase"),
+      "workspace-passphrase-long-enough",
+    );
+    await user.type(
       screen.getByLabelText("Administrator password"),
+      "administrator-password-long-enough",
+    );
+    await user.type(
+      screen.getByLabelText("Confirm administrator password"),
       "administrator-password-long-enough",
     );
     await user.click(screen.getByRole("button", { name: "Create local workspace" }));
@@ -291,5 +307,120 @@ it.each([GstBasis.NON_CASH, GstBasis.CASH])(
     ]) {
       expect(cached.some((value) => containsText(value, secret))).toBe(false);
     }
+  },
+);
+
+it.each([
+  {
+    abn: "51824753557",
+    passphrase: "workspace-passphrase-long-enough",
+    confirmation: "workspace-passphrase-long-enough",
+    expected: "This number does not pass the ABN checksum. Check it against the register.",
+  },
+  {
+    abn: "51824753556",
+    passphrase: "workspace-passphrase-long-enough",
+    confirmation: "workspace-passphrase-does-not-match",
+    expected: "Passwords do not match yet.",
+  },
+  {
+    abn: "51824753556",
+    passphrase: "a".repeat(14),
+    confirmation: "a".repeat(14),
+    expected: "Use 15–128 characters.",
+  },
+])(
+  "blocks workspace creation for a failing ABN or credential check",
+  async ({ abn, passphrase, confirmation, expected }) => {
+    const fixture = createConveyorFixture();
+    const user = userEvent.setup();
+    render(
+      <SetupScreen
+        onAuthenticated={vi.fn()}
+        organisation={fixture.conveyor.organisation}
+        reporting={fixture.conveyor.reporting}
+        workspace={fixture.conveyor.workspace}
+      />,
+    );
+
+    await user.type(screen.getByLabelText("Your name"), "Tammy Admin");
+    await user.type(screen.getByLabelText("Email or username"), "admin@tammy.local");
+    await user.type(screen.getByLabelText("Business legal name"), "Tammy Business Pty Ltd");
+    await user.type(screen.getByLabelText("Business display name"), "Tammy Business");
+    await user.type(screen.getByLabelText("ABN"), abn);
+    await user.type(screen.getByLabelText("Workspace passphrase"), passphrase);
+    await user.type(screen.getByLabelText("Confirm workspace passphrase"), confirmation);
+    await user.type(
+      screen.getByLabelText("Administrator password"),
+      "administrator-password-long-enough",
+    );
+    await user.type(
+      screen.getByLabelText("Confirm administrator password"),
+      "administrator-password-long-enough",
+    );
+
+    const createButton = screen.getByRole("button", { name: "Create local workspace" });
+    expect(createButton.hasAttribute("disabled")).toBe(true);
+    expect(fixture.procedures.workspace.createWorkspace).not.toHaveBeenCalled();
+    expect(screen.getByText(expected)).toBeTruthy();
+    if (abn === "51824753557") {
+      expect(
+        screen.queryByRole("link", {
+          name: "Look up this ABN on the Australian Business Register",
+        }),
+      ).toBeNull();
+    }
+  },
+);
+
+it.each(["Business legal name", "Business display name"])(
+  "blocks workspace creation when %s contains only whitespace",
+  async (blankNameLabel) => {
+    const fixture = createConveyorFixture();
+    const user = userEvent.setup();
+    render(
+      <SetupScreen
+        onAuthenticated={vi.fn()}
+        organisation={fixture.conveyor.organisation}
+        reporting={fixture.conveyor.reporting}
+        workspace={fixture.conveyor.workspace}
+      />,
+    );
+
+    await user.type(screen.getByLabelText("Your name"), "Tammy Admin");
+    await user.type(screen.getByLabelText("Email or username"), "admin@tammy.local");
+    await user.type(screen.getByLabelText("Business legal name"), "Tammy Business Pty Ltd");
+    await user.type(screen.getByLabelText("Business display name"), "Tammy Business");
+    await user.clear(screen.getByLabelText(blankNameLabel));
+    await user.type(screen.getByLabelText(blankNameLabel), "   ");
+    await user.type(screen.getByLabelText("ABN"), "51824753556");
+    await user.type(
+      screen.getByLabelText("Workspace passphrase"),
+      "workspace-passphrase-long-enough",
+    );
+    await user.type(
+      screen.getByLabelText("Confirm workspace passphrase"),
+      "workspace-passphrase-long-enough",
+    );
+    await user.type(
+      screen.getByLabelText("Administrator password"),
+      "administrator-password-long-enough",
+    );
+    await user.type(
+      screen.getByLabelText("Confirm administrator password"),
+      "administrator-password-long-enough",
+    );
+
+    const createButton = screen.getByRole("button", { name: "Create local workspace" });
+    expect(createButton.hasAttribute("disabled")).toBe(true);
+    expect(screen.getByText("Enter a business name.")).toBeTruthy();
+    const form = createButton.closest("form");
+    if (!form) throw new Error("Setup form was not rendered");
+    fireEvent.submit(form);
+
+    expect(fixture.procedures.workspace.createWorkspace).not.toHaveBeenCalled();
+    expect(screen.getByRole("alert").textContent).toBe(
+      "Enter a value in each name field before creating the workspace.",
+    );
   },
 );

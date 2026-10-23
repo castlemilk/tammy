@@ -416,34 +416,34 @@ export function SbrSimulatorPanel({
     storedOperation && caseForName(selectedCase).value !== storedOperation.failureCase;
 
   return (
-    <section aria-labelledby="sbr-simulator-heading" className="border-y border-border py-5">
+    <section aria-labelledby="sbr-simulator-heading" className="work-surface overflow-hidden">
       <p aria-live="polite" className="sr-only" role="status">
         {announcement}
       </p>
-      <div className="flex items-start justify-between gap-5">
+      <div className="flex items-start justify-between gap-5 border-b border-border p-5">
         <div className="flex min-w-0 gap-3">
           <span className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-full bg-muted text-forest">
             <FlaskConical aria-hidden="true" className="size-3.5" />
           </span>
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.11em] text-forest">
+            <p className="text-[12px] font-semibold uppercase tracking-[0.11em] text-forest">
               Simulator-only diagnostic
             </p>
-            <h2 id="sbr-simulator-heading" className="mt-1 text-[13px] font-semibold">
+            <h2 id="sbr-simulator-heading" className="mt-1 text-[16px] font-semibold">
               SBR readiness simulator
             </h2>
-            <p className="mt-1 max-w-[620px] text-[10px] leading-5 text-muted-foreground">
+            <p className="mt-2 max-w-[620px] text-[14px] leading-6 text-muted-foreground">
               A deterministic, network-disabled check. BAS work stays preparation-only; no live
               accounting record is read or transmitted.
             </p>
           </div>
         </div>
-        <span className="shrink-0 border border-border px-2 py-1 text-[9px] font-semibold uppercase tracking-[0.09em] text-muted-foreground">
+        <span className="shrink-0 rounded-full border border-border px-3 py-1.5 text-[12px] font-semibold uppercase tracking-[0.09em] text-muted-foreground">
           Test evidence
         </span>
       </div>
 
-      <dl className="mt-4 grid grid-cols-2 border-t border-border text-[10px] max-[620px]:grid-cols-1">
+      <dl className="grid grid-cols-2 px-5 text-[12px] max-[620px]:grid-cols-1">
         <IdentityRow label="Fixture" value={SBR_SIMULATOR_FIXTURE_ID} />
         <IdentityRow label="Organisation" value="Wattle & Co Test Pty Ltd" />
         <IdentityRow label="Simulator ABN" value="ABN 11 000 000 560" />
@@ -459,9 +459,9 @@ export function SbrSimulatorPanel({
       ) : !factorEnabled ? (
         <StatusOnly copy="Enable a security factor before running this fixed local fixture." />
       ) : (
-        <form className="mt-4 grid gap-3" onSubmit={start}>
+        <form className="grid gap-4 p-5" onSubmit={start}>
           <div className="grid grid-cols-[minmax(0,1fr)_220px] gap-3 max-[620px]:grid-cols-1">
-            <label className="grid gap-1.5 text-[10px] font-medium">
+            <label className="grid gap-2 text-[13px] font-medium">
               Test-only diagnostic case
               <select
                 className={fieldClassName}
@@ -476,7 +476,7 @@ export function SbrSimulatorPanel({
                 ))}
               </select>
             </label>
-            <label className="grid gap-1.5 text-[10px] font-medium">
+            <label className="grid gap-2 text-[13px] font-medium">
               Fresh six-digit code
               <input
                 autoComplete="one-time-code"
@@ -492,14 +492,14 @@ export function SbrSimulatorPanel({
             </label>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <Button className="h-9 text-[11px]" disabled={busy || locked} type="submit">
+            <Button className="h-11 text-[13px]" disabled={busy || locked} type="submit">
               {busy ? <LoaderCircle aria-hidden="true" className="size-3.5 animate-spin" /> : null}
               Run simulator fixture
             </Button>
             {storedOperation ? (
               <>
                 <Button
-                  className="h-9 text-[11px]"
+                  className="h-11 text-[13px]"
                   disabled={busy || locked}
                   onClick={() => void repeat("replay")}
                   type="button"
@@ -508,7 +508,7 @@ export function SbrSimulatorPanel({
                   Replay exact request
                 </Button>
                 <Button
-                  className="h-9 text-[11px]"
+                  className="h-11 text-[13px]"
                   disabled={busy || locked || !changedCase}
                   onClick={() => void repeat("conflict")}
                   type="button"
@@ -520,7 +520,7 @@ export function SbrSimulatorPanel({
             ) : null}
             {locked ? (
               <Button
-                className="h-9 text-[11px]"
+                className="h-11 text-[13px]"
                 onClick={refreshAuthoritativeStatus}
                 type="button"
                 variant="outline"
@@ -533,15 +533,15 @@ export function SbrSimulatorPanel({
           <div className="min-h-10 border-l border-border pl-3">
             {result ? (
               <>
-                <p className="text-[10px] font-semibold tracking-[0.04em] text-foreground">
+                <p className="text-[14px] font-semibold tracking-[0.04em] text-foreground">
                   {result}
                 </p>
-                <p className="mt-1 text-[10px] leading-5 text-muted-foreground">
+                <p className="mt-1 text-[14px] leading-6 text-muted-foreground">
                   {resultDetail(result, authoritativeUnknown)}
                 </p>
               </>
             ) : (
-              <p className="text-[10px] leading-5 text-muted-foreground">
+              <p className="text-[14px] leading-6 text-muted-foreground">
                 {resultDetail(undefined)}
               </p>
             )}
@@ -563,7 +563,7 @@ function IdentityRow({ label, value }: { readonly label: string; readonly value:
 
 function StatusOnly({ copy }: { readonly copy: string }) {
   return (
-    <p className="mt-4 border-l border-border pl-3 text-[10px] leading-5 text-muted-foreground">
+    <p className="m-5 mt-0 rounded-xl border border-border bg-background p-4 text-[12px] leading-5 text-muted-foreground">
       {copy}
     </p>
   );

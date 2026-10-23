@@ -8,7 +8,7 @@ import {
 import { assertInvoicePdfReady } from "@tammy/invoices/pdf-policy";
 import { Download, Plus } from "lucide-react";
 import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
-
+import { normalizeAbnInput } from "../../../shared/abn";
 import type {
   CompanyInvoiceTemplate,
   InvoiceLogoPreview,
@@ -16,6 +16,7 @@ import type {
 } from "../../../shared/invoice-template";
 import { WorkNotice } from "../../components/review-workspace";
 import { Button } from "../../components/ui/button";
+import { ScreenHeading } from "../../components/workspace-primitives";
 import { type InvoiceAccountingApi, InvoiceAccountingPanel } from "./invoice-accounting-panel";
 import {
   appendExpenseLines,
@@ -395,43 +396,47 @@ export function InvoicesScreen({ api }: { readonly api: InvoicesApi }) {
   }
 
   return (
-    <div className="mx-auto grid w-full max-w-[1120px] gap-6">
-      <header className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <p className="work-eyebrow mb-2">Sales workspace</p>
-          <h1 className="page-title">Invoices</h1>
-          <p className="mt-2 max-w-[620px] text-[14px] leading-6 text-muted-foreground">
-            Bring your work into a clear invoice. Review the details, issue it, then record receipts
-            as they arrive.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button disabled={busy} onClick={loadProposal} type="button" variant="outline">
-            Use MCP draft
-          </Button>
-          <Button
-            disabled={busy}
-            onClick={() =>
-              requestReplacement({
-                editor: template
-                  ? applyInvoiceTemplate(newEditor(), template.defaults)
-                  : newEditor(),
-                ...(template?.defaults.logoAssetId
-                  ? { logoAssetId: template.defaults.logoAssetId }
-                  : {}),
-              })
-            }
-            type="button"
-            variant="outline"
-          >
-            <Plus aria-hidden="true" className="size-4" /> New invoice
-          </Button>
-        </div>
-      </header>
+    <div className="mx-auto grid w-full min-w-0 max-w-[1120px] gap-6">
+      <ScreenHeading
+        area="Sales · Invoices"
+        title="Invoices"
+        description="Bring your work into a clear invoice. Review the details, issue it, then record receipts as they arrive."
+        action={
+          <div className="flex flex-wrap gap-2">
+            <Button
+              className="h-11 text-[13px]"
+              disabled={busy}
+              onClick={loadProposal}
+              type="button"
+              variant="outline"
+            >
+              Use MCP draft
+            </Button>
+            <Button
+              className="h-11 text-[13px]"
+              disabled={busy}
+              onClick={() =>
+                requestReplacement({
+                  editor: template
+                    ? applyInvoiceTemplate(newEditor(), template.defaults)
+                    : newEditor(),
+                  ...(template?.defaults.logoAssetId
+                    ? { logoAssetId: template.defaults.logoAssetId }
+                    : {}),
+                })
+              }
+              type="button"
+              variant="outline"
+            >
+              <Plus aria-hidden="true" className="size-4" /> New invoice
+            </Button>
+          </div>
+        }
+      />
 
       {replacement ? (
         <div
-          className="flex flex-wrap items-center gap-3 rounded-[20px] border border-border bg-surface p-3 text-[14px]"
+          className="work-surface flex flex-wrap items-center gap-4 p-4 text-[14px]"
           role="alert"
         >
           <p className="mr-auto">
@@ -474,17 +479,17 @@ export function InvoicesScreen({ api }: { readonly api: InvoicesApi }) {
               key={current.id}
             />
           ) : null}
-          <form className="work-surface grid min-w-0 gap-6 p-5 sm:p-6" onSubmit={save}>
-            <fieldset className="grid min-w-0 gap-5" disabled={busy || issued}>
-              <legend className="mb-4 text-[16px] font-semibold text-foreground">
+          <form className="grid min-w-0 gap-5" onSubmit={save}>
+            <fieldset className="work-surface grid min-w-0 gap-5 p-5" disabled={busy || issued}>
+              <legend className="px-1 text-[16px] font-semibold text-foreground">
                 {issued ? "Issued invoice · read only" : "Invoice details"}
               </legend>
               {current ? (
-                <p className="text-[14px] text-muted-foreground">
+                <p className="text-[13px] leading-5 text-muted-foreground">
                   Seller: {current.sellerName} · ABN {current.sellerAbn}
                 </p>
               ) : (
-                <p className="text-[14px] text-muted-foreground">
+                <p className="text-[13px] leading-5 text-muted-foreground">
                   Seller name and ABN come from your signed-in organisation when you save.
                 </p>
               )}
@@ -507,7 +512,7 @@ export function InvoicesScreen({ api }: { readonly api: InvoicesApi }) {
                   ) : null}
                 </div>
               ) : null}
-              <div className="grid grid-cols-3 gap-4 max-[620px]:grid-cols-1">
+              <div className="grid grid-cols-3 gap-4 max-[760px]:grid-cols-1">
                 <label className={labelClass}>
                   Invoice number
                   <input
@@ -536,7 +541,7 @@ export function InvoicesScreen({ api }: { readonly api: InvoicesApi }) {
                   />
                 </label>
               </div>
-              <div className="grid grid-cols-2 gap-4 max-[620px]:grid-cols-1">
+              <div className="grid grid-cols-2 gap-4 max-[760px]:grid-cols-1">
                 <label className={labelClass}>
                   Customer name
                   <input
@@ -551,8 +556,9 @@ export function InvoicesScreen({ api }: { readonly api: InvoicesApi }) {
                   <input
                     className={fieldClass}
                     inputMode="numeric"
-                    maxLength={20}
-                    onChange={(event) => edit({ customerAbn: event.target.value })}
+                    onChange={(event) =>
+                      edit({ customerAbn: normalizeAbnInput(event.target.value) })
+                    }
                     value={editor.customerAbn ?? ""}
                   />
                 </label>
@@ -593,7 +599,7 @@ export function InvoicesScreen({ api }: { readonly api: InvoicesApi }) {
                 />{" "}
                 Registered for GST
               </label>
-              <p className="text-[13px] leading-5 text-muted-foreground">
+              <p className="text-[13px] leading-6 text-muted-foreground">
                 Only enable GST if this business is registered. Selling prices are exclusive of GST;
                 review the treatment on each line.
               </p>
@@ -630,7 +636,7 @@ export function InvoicesScreen({ api }: { readonly api: InvoicesApi }) {
                 selectedIds={selectedExpenseIds}
               />
             ) : null}
-            <p className="text-[13px] leading-5 text-muted-foreground">
+            <p className="text-[13px] leading-6 text-muted-foreground">
               Unit costs are private invoice estimates. Import uses the expense’s net cost; markup
               changes your selling price. Editing a cost leaves the original reviewed document and
               ledger unchanged.
@@ -649,7 +655,7 @@ export function InvoicesScreen({ api }: { readonly api: InvoicesApi }) {
             />
 
             <fieldset
-              className="grid grid-cols-2 gap-4 max-[620px]:grid-cols-1"
+              className="grid grid-cols-2 gap-4 max-[760px]:grid-cols-1"
               disabled={busy || issued}
             >
               <label className={labelClass}>
@@ -720,10 +726,7 @@ export function InvoicesScreen({ api }: { readonly api: InvoicesApi }) {
             </section>
 
             {confirmIssue ? (
-              <div
-                className="grid gap-3 rounded-[20px] border border-border bg-surface p-3 text-[14px]"
-                role="alert"
-              >
+              <div className="work-surface grid gap-4 p-5 text-[14px]" role="alert">
                 <p>
                   Issuing locks this invoice, removes the draft watermark and records sales, GST and
                   the amount owing in the business ledger. Record actual receipts separately. Your

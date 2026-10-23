@@ -14,7 +14,7 @@ export function HorizontalScrollArea({
     <section
       aria-label={label}
       className={cn("focus-ring relative min-w-0 overflow-x-auto", className)}
-      // biome-ignore lint/a11y/noNoninteractiveTabindex: This labelled overflow region must accept keyboard scrolling when table cells are read-only.
+      // biome-ignore lint/a11y/noNoninteractiveTabindex: A labelled overflow region accepts keyboard scrolling for read-only tables.
       tabIndex={0}
     >
       {children}

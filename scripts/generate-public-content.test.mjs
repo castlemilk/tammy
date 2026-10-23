@@ -86,6 +86,21 @@ test("parses the intentionally small policy Markdown contract", () => {
   });
 });
 
+test("allows underscores inside HTTPS paths without allowing them in policy prose", () => {
+  const link = "https://softwaredevelopers.ato.gov.au/operational_framework/meeting-requirements";
+  const parsed = parsePolicyMarkdown(privacy.replace("https://example.com/support", link));
+
+  assert.ok(
+    JSON.stringify(parsed).includes(JSON.stringify(link)),
+    "official HTTPS paths may contain underscores",
+  );
+  assert.throws(
+    () => parsePolicyMarkdown(privacy.replace("Plain text", "plain_text")),
+    /policy Markdown/i,
+    "underscores remain unsupported in unformatted policy text",
+  );
+});
+
 for (const [name, line] of [
   ["indented ATX heading", "  ## Not a section"],
   ["indented blockquote", "   > quoted"],
@@ -392,19 +407,25 @@ test("canonical repository policy, identity, and removal inventory generate dete
     ]);
   for (const heading of [
     "## Publisher and scope",
-    "## Website and hosting",
-    "## Support email",
-    "## Retention and deletion",
-    "## Reporting boundary",
+    "## Information in your workspace",
+    "## Local storage and security",
+    "## Files, reports, and local integrations",
+    "## ABN and entity checks",
+    "## ATO, RAM, and SBR",
+    "## Website, email, and service providers",
+    "## Retention, backups, and deletion",
+    "## Access, correction, and privacy complaints",
   ])
     assert.ok(canonicalPrivacy.includes(heading));
   for (const claim of [
     "Gamma Systems Pty Ltd",
     "ben.ebsworth@gmail.com",
-    "Local records remain on your Mac until you remove them",
-    "does not lodge ATO or SBR submissions",
+    "Workspace records remain on your Mac until you remove them",
+    "does not send BAS or other tax submissions to the ATO or SBR",
+    "ABN Lookup page](https://abr.business.gov.au/)",
+    "SBR readiness checks use a synthetic, network-disabled simulator",
   ])
-    assert.ok(canonicalPrivacy.includes(claim));
+    assert.ok(canonicalPrivacy.includes(claim), `canonical policy is missing: ${claim}`);
   const input = {
     identity: JSON.parse(canonicalIdentity),
     privacy: canonicalPrivacy,

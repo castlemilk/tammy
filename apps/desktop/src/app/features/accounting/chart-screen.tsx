@@ -19,7 +19,9 @@ import { type FormEvent, useMemo, useState } from "react";
 
 import type { TammyConveyorModule } from "../../../conveyor/client";
 import { createProtoMethodCodec } from "../../../shared/proto-ipc";
+import { HorizontalScrollArea } from "../../components/horizontal-scroll-area";
 import { Button } from "../../components/ui/button";
+import { ScreenHeading, SurfaceHeading } from "../../components/workspace-primitives";
 import type { AuthenticatedWorkspace } from "../setup/setup-screen";
 
 const codec = createProtoMethodCodec({
@@ -121,37 +123,36 @@ export function ChartScreen({ api, workspace }: ChartScreenProps) {
   };
 
   return (
-    <div className="mx-auto grid w-full max-w-[1120px] gap-5">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-foreground page-title">Chart of accounts</h1>
-          <p className="mt-1 text-[14px] leading-5 text-muted-foreground">
-            Accounts installed for your Australian business ledger.
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          {chart.status === "ready" ? (
-            <p className="text-[14px] font-medium text-muted-foreground">
-              {chart.accounts.length} accounts
-            </p>
-          ) : null}
-          <Button
-            className="h-11 text-[14px]"
-            aria-expanded={adding}
-            onClick={() => setAdding((value) => !value)}
-            type="button"
-          >
-            <Plus aria-hidden="true" className="size-3" /> {adding ? "Cancel" : "Add account"}
-          </Button>
-        </div>
-      </div>
+    <div className="mx-auto grid w-full max-w-[1120px] gap-6">
+      <ScreenHeading
+        area="Accounting · Structure"
+        title="Chart of accounts"
+        description="Accounts installed for your Australian business ledger."
+        action={
+          <div className="flex flex-wrap items-center gap-3">
+            {chart.status === "ready" ? (
+              <p className="text-[14px] font-medium text-muted-foreground">
+                {chart.accounts.length} accounts
+              </p>
+            ) : null}
+            <Button
+              className="h-11 text-[14px]"
+              aria-expanded={adding}
+              onClick={() => setAdding((value) => !value)}
+              type="button"
+            >
+              <Plus aria-hidden="true" className="size-3" /> {adding ? "Cancel" : "Add account"}
+            </Button>
+          </div>
+        }
+      />
 
       {adding ? (
         <form
-          className="grid grid-cols-[120px_minmax(0,1fr)_160px_auto] gap-3 rounded-xl border border-border bg-surface p-3 max-[760px]:grid-cols-1"
+          className="work-surface grid grid-cols-[120px_minmax(0,1fr)_160px_auto] items-end gap-4 p-5 max-[760px]:grid-cols-1"
           onSubmit={addAccount}
         >
-          <label className="grid gap-1 text-[14px] font-medium text-foreground">
+          <label className="grid gap-1.5 text-[13px] font-semibold text-foreground">
             Code
             <input
               className={fieldClassName()}
@@ -161,7 +162,7 @@ export function ChartScreen({ api, workspace }: ChartScreenProps) {
               value={code}
             />
           </label>
-          <label className="grid gap-1 text-[14px] font-medium text-foreground">
+          <label className="grid gap-1.5 text-[13px] font-semibold text-foreground">
             Account name
             <input
               className={fieldClassName()}
@@ -171,7 +172,7 @@ export function ChartScreen({ api, workspace }: ChartScreenProps) {
               value={name}
             />
           </label>
-          <label className="grid gap-1 text-[14px] font-medium text-foreground">
+          <label className="grid gap-1.5 text-[13px] font-semibold text-foreground">
             Type
             <select
               className={fieldClassName()}
@@ -196,36 +197,42 @@ export function ChartScreen({ api, workspace }: ChartScreenProps) {
         </p>
       ) : null}
 
-      <section className="overflow-x-auto rounded-[20px] border border-border bg-surface">
+      <section className="work-surface overflow-hidden">
+        <SurfaceHeading
+          title="Accounts"
+          description="Protected controls remain separate from ordinary accounts."
+        />
         {chart.status === "ready" && chart.accounts.length > 0 ? (
-          <table className="w-full border-collapse text-left">
-            <thead className="border-b border-border bg-background/60 text-[12px] uppercase tracking-[0.05em] text-muted-foreground">
-              <tr>
-                <th className="px-3 py-2 font-semibold">Code</th>
-                <th className="px-3 py-2 font-semibold">Account</th>
-                <th className="px-3 py-2 font-semibold">Type</th>
-                <th className="px-3 py-2 font-semibold">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border text-[14px]">
-              {chart.accounts.map((account) => (
-                <tr key={account.id}>
-                  <td className="w-24 px-3 py-2.5 font-mono font-medium text-foreground">
-                    {account.code}
-                  </td>
-                  <td className="px-3 py-2.5 font-medium text-foreground">{account.name}</td>
-                  <td className="px-3 py-2.5 text-muted-foreground">
-                    {accountTypeLabel(account.type)}
-                  </td>
-                  <td className="px-3 py-2.5">
-                    <span className="rounded-full bg-success-soft px-2 py-1 text-[12px] font-semibold text-forest">
-                      {account.status === AccountStatus.ACTIVE ? "Active" : "Archived"}
-                    </span>
-                  </td>
+          <HorizontalScrollArea label="Accounts table">
+            <table className="w-full border-collapse text-left">
+              <thead className="border-b border-border bg-background/60 text-[12px] uppercase tracking-[0.075em] text-muted-foreground">
+                <tr>
+                  <th className="px-5 py-3 font-semibold">Code</th>
+                  <th className="px-5 py-3 font-semibold">Account</th>
+                  <th className="px-5 py-3 font-semibold">Type</th>
+                  <th className="px-5 py-3 font-semibold">Status</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-border text-[14px]">
+                {chart.accounts.map((account) => (
+                  <tr key={account.id}>
+                    <td className="w-24 px-5 py-3.5 font-mono font-medium text-foreground">
+                      {account.code}
+                    </td>
+                    <td className="px-5 py-3.5 font-medium text-foreground">{account.name}</td>
+                    <td className="px-5 py-3.5 text-muted-foreground">
+                      {accountTypeLabel(account.type)}
+                    </td>
+                    <td className="px-5 py-3.5">
+                      <span className="rounded-full bg-success-soft px-2 py-1 text-[12px] font-semibold text-forest">
+                        {account.status === AccountStatus.ACTIVE ? "Active" : "Archived"}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </HorizontalScrollArea>
         ) : (
           <div className="grid min-h-64 place-items-center px-5 py-10 text-center">
             <div>

@@ -149,15 +149,15 @@ export function ProductIdForm({
   };
 
   return (
-    <section aria-labelledby="product-id-heading" className="border-t border-border pt-4">
-      <h2 id="product-id-heading" className="text-[12px] font-semibold">
+    <section aria-labelledby="product-id-heading" className="work-surface grid gap-4 p-5">
+      <h2 id="product-id-heading" className="text-[16px] font-semibold">
         EVTE Product ID
       </h2>
-      <p className="mt-1 text-[10px] leading-5 text-muted-foreground">
+      <p className="text-[14px] leading-6 text-muted-foreground">
         Protected locally for the authenticated registration scope. The value is never displayed
         after import.
       </p>
-      <dl className="mt-2 grid max-w-[620px] grid-cols-[150px_minmax(0,1fr)] gap-y-1 text-[10px]">
+      <dl className="grid max-w-[620px] grid-cols-[minmax(100px,0.8fr)_minmax(0,1.5fr)] gap-x-4 gap-y-2 text-[12px]">
         <dt className="text-muted-foreground">Product scope</dt>
         <dd className="m-0 break-all">{productIdentifier}</dd>
         <dt className="text-muted-foreground">Service scope</dt>
@@ -166,7 +166,7 @@ export function ProductIdForm({
       <div className="mt-3 flex gap-2">
         {state !== ProductIdState.PRESENT ? (
           <Button
-            className="h-9 text-[11px]"
+            className="h-11 text-[13px]"
             onClick={() => choose("import")}
             type="button"
             variant="outline"
@@ -175,7 +175,7 @@ export function ProductIdForm({
           </Button>
         ) : (
           <Button
-            className="h-9 text-[11px]"
+            className="h-11 text-[13px]"
             onClick={() => choose("remove")}
             type="button"
             variant="outline"
@@ -185,22 +185,17 @@ export function ProductIdForm({
         )}
       </div>
       {locked ? (
-        <Button
-          className="mt-3 h-9 text-[11px]"
-          onClick={onChanged}
-          type="button"
-          variant="outline"
-        >
+        <Button className="h-11 text-[13px]" onClick={onChanged} type="button" variant="outline">
           Refresh status
         </Button>
       ) : null}
       {action ? (
         <form
-          className="mt-4 grid max-w-[420px] gap-3 border-l-2 border-forest pl-4"
+          className="grid max-w-[420px] gap-4 rounded-xl border border-border bg-background p-4"
           onSubmit={submit}
         >
           {action === "import" ? (
-            <label className="grid gap-1.5 text-[11px] font-medium">
+            <label className="grid gap-2 text-[13px] font-medium">
               Product ID value
               <input
                 autoComplete="off"
@@ -213,11 +208,11 @@ export function ProductIdForm({
               />
             </label>
           ) : (
-            <p className="text-[11px] leading-5">
+            <p className="text-[14px] leading-6">
               Remove the protected Product ID for this exact EVTE product and service scope.
             </p>
           )}
-          <label className="grid max-w-[220px] gap-1.5 text-[11px] font-medium">
+          <label className="grid max-w-[220px] gap-2 text-[13px] font-medium">
             Fresh six-digit code
             <input
               autoComplete="one-time-code"
@@ -231,12 +226,12 @@ export function ProductIdForm({
             />
           </label>
           <div className="flex gap-2">
-            <Button className="h-9 text-[11px]" disabled={busy} type="submit">
+            <Button className="h-11 text-[13px]" disabled={busy} type="submit">
               {busy ? <LoaderCircle aria-hidden="true" className="size-3.5 animate-spin" /> : null}
               Continue
             </Button>
             <Button
-              className="h-9 text-[11px]"
+              className="h-11 text-[13px]"
               disabled={busy}
               onClick={() => choose(action)}
               type="button"
@@ -247,11 +242,7 @@ export function ProductIdForm({
           </div>
         </form>
       ) : null}
-      <p
-        aria-live="polite"
-        className="mt-3 min-h-4 text-[11px] text-muted-foreground"
-        role="status"
-      >
+      <p aria-live="polite" className="min-h-5 text-[12px] text-muted-foreground" role="status">
         {notice ?? ""}
       </p>
     </section>

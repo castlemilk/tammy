@@ -1,4 +1,5 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import { chmod, mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { create, type DescMessage, type MessageShape } from "@bufbuild/protobuf";
@@ -236,6 +237,10 @@ const attentionCodec = createProtoMethodCodec({
 test("covers workspace setup, recovery, accounting, and interaction journeys through the packaged app", async ({
   electronHarness,
 }) => {
+  test.info().annotations.push({
+    type: "feedback-source",
+    description: electronHarness.packagedLayout.sourceRevision,
+  });
   let page = electronHarness.page;
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.evaluate(() => {
@@ -252,8 +257,12 @@ test("covers workspace setup, recovery, accounting, and interaction journeys thr
   await page.getByLabel("Business legal name").fill("Tammy Business Pty Ltd");
   await page.getByLabel("Business display name").fill("Tammy Business");
   await page.getByLabel("ABN").fill("51824753556");
-  await page.getByLabel("Workspace passphrase").fill(WORKSPACE_PASSPHRASE);
-  await page.getByLabel("Administrator password").fill(ADMINISTRATOR_PASSWORD);
+  await page.getByLabel("Workspace passphrase", { exact: true }).fill(WORKSPACE_PASSPHRASE);
+  await page.getByLabel("Confirm workspace passphrase", { exact: true }).fill(WORKSPACE_PASSPHRASE);
+  await page.getByLabel("Administrator password", { exact: true }).fill(ADMINISTRATOR_PASSWORD);
+  await page
+    .getByLabel("Confirm administrator password", { exact: true })
+    .fill(ADMINISTRATOR_PASSWORD);
   await page.getByRole("button", { name: "Create local workspace" }).click();
   await expect(page.getByRole("heading", { name: "Save your recovery code" })).toBeVisible();
   await expect(page.getByText("One-time recovery code")).toBeVisible();
@@ -285,9 +294,9 @@ test("covers workspace setup, recovery, accounting, and interaction journeys thr
   await expect(page.getByRole("heading", { name: "Unlock your workspace" })).toBeVisible();
   await page.setViewportSize({ width: 1440, height: 1000 });
   await captureJourney(page, "03-unlock");
-  await page.getByLabel("Workspace passphrase").fill(WORKSPACE_PASSPHRASE);
+  await page.getByLabel("Workspace passphrase", { exact: true }).fill(WORKSPACE_PASSPHRASE);
   await page.getByLabel("Email or username").fill(USERNAME);
-  await page.getByLabel("Administrator password").fill(ADMINISTRATOR_PASSWORD);
+  await page.getByLabel("Administrator password", { exact: true }).fill(ADMINISTRATOR_PASSWORD);
   await page.getByRole("button", { name: "Unlock workspace" }).click();
   await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible();
 
@@ -744,6 +753,9 @@ test("covers workspace setup, recovery, accounting, and interaction journeys thr
   await openSavedBasWorkpaperPanel(page);
   await expect(page.getByText("Draft — not lodged", { exact: true }).first()).toBeVisible();
   await expect(page.getByText("Unresolved legacy source", { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Refresh exact history", exact: true }),
+  ).toBeEnabled();
   await captureJourney(page, "09-gst-draft");
   await assertRoute(page, "Overview", "/overview", "Overview");
   await expect(
@@ -752,6 +764,74 @@ test("covers workspace setup, recovery, accounting, and interaction journeys thr
 
   await captureJourney(page, "10-overview");
   if (process.env.TAMMY_JOURNEY_CAPTURE !== "before") await interactionJourney(page);
+
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  for (const [link, route, heading, capture] of [
+    ["Invoices", "/invoices", "Invoices", "30-invoices"],
+    ["Audit trail", "/audit", "Audit trail", "31-audit"],
+    ["Settings", "/settings", "Settings", "32-settings"],
+    ["Organisation", "/settings/organisation", "Organisation", "33-organisation"],
+    ["SBR readiness", "/settings/sbr", "SBR readiness", "34-sbr-readiness"],
+  ] as const) {
+    await assertRoute(page, link, route, heading);
+    if (route === "/invoices")
+      await expect(page.getByLabel("Invoice number", { exact: true })).toBeVisible();
+    if (route === "/audit")
+      await expect(page.getByRole("main").getByRole("list").first()).toBeVisible();
+    if (route === "/settings/organisation")
+      await expect(page.getByText("51824753556", { exact: true })).toBeVisible();
+    if (route === "/settings/sbr")
+      await expect(
+        page.getByRole("heading", { name: "Readiness unavailable", exact: true }),
+      ).toBeVisible();
+    await captureJourney(page, capture);
+  }
+  await page.setViewportSize({ width: 320, height: 900 });
+  for (const [link, route, heading, capture, region] of [
+    [
+      "Chart of accounts",
+      "/accounting/chart",
+      "Chart of accounts",
+      "35-320-chart",
+      "Accounts table",
+    ],
+    ["Journals", "/accounting/journals", "Journals", "36-320-journals", "Journal history table"],
+    [
+      "Trial balance",
+      "/accounting/trial-balance",
+      "Trial balance",
+      "37-320-trial-balance",
+      "Account balances table",
+    ],
+  ] as const) {
+    await assertRoute(page, link, route, heading);
+    await expect(page.getByRole("table").first()).toBeVisible();
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+    ).toBe(true);
+    expect(
+      await page.getByRole("table").evaluateAll((tables) =>
+        tables.every((table) => {
+          for (let parent = table.parentElement; parent; parent = parent.parentElement) {
+            if (getComputedStyle(parent).overflowX === "auto") return true;
+          }
+          return false;
+        }),
+      ),
+    ).toBe(true);
+    const scroller = page.getByRole("region", { name: region, exact: true });
+    await expect(scroller).toHaveAttribute("tabindex", "0");
+    await scroller.evaluate((element) => {
+      element.scrollLeft = 0;
+    });
+    await scroller.focus();
+    await page.keyboard.press("ArrowRight");
+    await expect.poll(() => scroller.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
+    await scroller.evaluate((element) => {
+      element.scrollLeft = 0;
+    });
+    await captureJourney(page, capture);
+  }
 
   expect(electronHarness.consoleErrors).toEqual([]);
   expect(electronHarness.pageErrors).toEqual([]);
@@ -843,6 +923,54 @@ async function captureJourney(
   milestone: string,
   recovery = false,
 ) {
+  const sourceRevision = test
+    .info()
+    .annotations.find((annotation) => annotation.type === "feedback-source")?.description;
+  if (
+    sourceRevision &&
+    /^(0[1-9]-|10-|19-320-(documents|banking)|25-match-review|2[89]-|3[0-7]-)/.test(milestone)
+  ) {
+    expect(sourceRevision).toMatch(/^[0-9a-f]{40}$/);
+    const directory = path.resolve(
+      import.meta.dirname,
+      "../../../../.tmp/ui-feedback-2026-10-23",
+      sourceRevision,
+      "workflows",
+    );
+    await mkdir(directory, { recursive: true, mode: 0o700 });
+    await chmod(directory, 0o700);
+    const screenshotPath = path.join(directory, `${milestone}.png`);
+    await page.screenshot({
+      animations: "disabled",
+      fullPage: true,
+      path: screenshotPath,
+      mask: [
+        page.locator(
+          'input[type="password"], input[autocomplete="new-password"], input[autocomplete="current-password"]',
+        ),
+        ...(recovery ? [page.locator("p.break-all")] : []),
+      ],
+    });
+    await chmod(screenshotPath, 0o600);
+    await writeFile(
+      path.join(directory, `${milestone}.json`),
+      `${JSON.stringify(
+        {
+          sourceRevision,
+          milestone,
+          viewport: page.viewportSize(),
+          sha256: createHash("sha256")
+            .update(await readFile(screenshotPath))
+            .digest("hex"),
+          secretInputsMasked: true,
+          recoveryMasked: recovery,
+        },
+        null,
+        2,
+      )}\n`,
+      { mode: 0o600 },
+    );
+  }
   const upliftPhase = process.env.TAMMY_UPLIFT_CAPTURE;
   const phase = upliftPhase ?? process.env.TAMMY_JOURNEY_CAPTURE;
   if (phase !== "before" && phase !== "after") {
@@ -972,6 +1100,13 @@ async function interactionJourney(page: import("@playwright/test").Page) {
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
     true,
   );
+  const narrowReconciliation = page.getByRole("button", {
+    name: "Complete reconciliation",
+    exact: true,
+  });
+  await narrowReconciliation.scrollIntoViewIfNeeded();
+  await expect(narrowReconciliation).toBeVisible();
+  await expect(narrowReconciliation).toBeDisabled();
   await captureJourney(page, "25-match-review-narrow");
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.getByRole("button", { name: "Cancel match" }).click();
@@ -1656,9 +1791,11 @@ async function resetTableHorizontalScroll(table: import("@playwright/test").Loca
 }
 
 async function unlockCurrentWorkflowWorkspace(page: import("@playwright/test").Page) {
-  await page.getByLabel("Workspace passphrase").fill(CURRENT_WORKFLOW_PASSPHRASE);
+  await page.getByLabel("Workspace passphrase", { exact: true }).fill(CURRENT_WORKFLOW_PASSPHRASE);
   await page.getByLabel("Email or username").fill(CURRENT_WORKFLOW_USERNAME);
-  await page.getByLabel("Administrator password").fill(CURRENT_WORKFLOW_ADMIN_PASSWORD);
+  await page
+    .getByLabel("Administrator password", { exact: true })
+    .fill(CURRENT_WORKFLOW_ADMIN_PASSWORD);
   await page.getByRole("button", { name: "Unlock workspace" }).click();
   await expect(page.getByRole("heading", { name: "Overview", exact: true })).toBeVisible();
 }

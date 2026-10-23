@@ -240,18 +240,18 @@ export function PurchasePostingForm({
   };
   return (
     <div className="grid gap-4">
-      <p className="text-[10px] text-muted-foreground">
+      <p className="text-[14px] leading-6 text-muted-foreground">
         Review each allocation. Supplier GST and the amount eligible for credit are separate
         decisions.
       </p>
       {allocations.map((row, index) => (
-        <div key={row.key} className="grid gap-2 border-b border-border pb-3">
+        <div key={row.key} className="grid gap-3 rounded-xl border border-border bg-background p-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-[10px] font-semibold">Allocation {index + 1}</h3>
+            <h3 className="text-[14px] font-semibold">Allocation {index + 1}</h3>
             {allocations.length > 1 ? (
               <Button
                 type="button"
-                className="h-6 text-[9px]"
+                className="h-11 text-[13px]"
                 onClick={() => setAllocations((current) => current.filter((_, i) => i !== index))}
               >
                 Remove allocation {index + 1}
@@ -275,7 +275,7 @@ export function PurchasePostingForm({
                 </option>
               ))}
           </PurchaseChoice>
-          <div className="grid grid-cols-3 gap-2 max-[600px]:grid-cols-1">
+          <div className="grid grid-cols-3 gap-3 max-[760px]:grid-cols-1">
             <PurchaseField
               label={`Gross ${index + 1} (AUD)`}
               value={row.gross}
@@ -292,7 +292,7 @@ export function PurchasePostingForm({
               onChange={(eligible) => set(index, { eligible })}
             />
           </div>
-          <div className="grid grid-cols-3 gap-2 max-[600px]:grid-cols-1">
+          <div className="grid grid-cols-3 gap-3 max-[760px]:grid-cols-1">
             <PurchaseChoice
               label={`Use ${index + 1}`}
               value={String(row.use)}
@@ -334,7 +334,7 @@ export function PurchasePostingForm({
       ))}
       <Button
         type="button"
-        className="justify-self-start h-7 text-[10px]"
+        className="h-11 justify-self-start text-[13px]"
         disabled={allocations.length >= 50}
         onClick={() => setAllocations((current) => [...current, blank()])}
       >
@@ -365,7 +365,10 @@ export function PurchasePostingForm({
         />
       ) : duplicateCandidates.length === 1 ? (
         <>
-          <p className="text-[10px] text-warning" role={verifiedCandidateId ? "note" : "alert"}>
+          <p
+            className="text-[14px] leading-6 text-warning"
+            role={verifiedCandidateId ? "note" : "alert"}
+          >
             {verifiedCandidateId
               ? "A possible duplicate was found. Select it and confirm only if the retained posting represents a separate transaction. If it is the same transaction, return to the existing purchase review."
               : "The possible duplicate does not include a verified owned posting. Reload the purchase before continuing."}
@@ -386,7 +389,7 @@ export function PurchasePostingForm({
               </option>
             ) : null}
           </PurchaseChoice>
-          <dl className="grid grid-cols-[minmax(120px,1fr)_minmax(0,2fr)] gap-1 break-all text-[9px]">
+          <dl className="grid grid-cols-[minmax(150px,1fr)_minmax(0,2fr)] gap-x-3 gap-y-2 break-all text-[12px]">
             <dt>Supplier</dt>
             <dd>{duplicateCandidates[0]?.supplierName || "—"}</dd>
             <dt>Invoice</dt>
@@ -419,12 +422,15 @@ export function PurchasePostingForm({
           />
         </>
       ) : (
-        <div className="grid gap-2 border border-warning-border bg-warning-soft p-3" role="alert">
-          <p className="text-[10px]">
+        <div
+          className="grid gap-3 rounded-xl border border-warning-border bg-warning-soft p-4"
+          role="alert"
+        >
+          <p className="text-[14px] leading-6">
             Multiple possible duplicate purchases were found. Choosing among multiple matches is not
             supported, so this purchase cannot be posted.
           </p>
-          <ul className="grid gap-2 text-[9px]">
+          <ul className="grid gap-2 text-[14px] leading-6">
             {duplicateCandidates.map((candidate) => (
               <li key={candidate.posting?.id ?? candidate.documentId} className="break-all">
                 {candidate.supplierName || "Unknown supplier"} ·{" "}

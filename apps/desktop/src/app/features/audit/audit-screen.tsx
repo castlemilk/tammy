@@ -21,6 +21,7 @@ import { useMemo } from "react";
 
 import type { TammyConveyorModule } from "../../../conveyor/client";
 import { createProtoMethodCodec } from "../../../shared/proto-ipc";
+import { ScreenHeading, SurfaceHeading } from "../../components/workspace-primitives";
 import type { AuthenticatedWorkspace } from "../setup/setup-screen";
 
 interface Activity {
@@ -179,17 +180,17 @@ export function AuditScreen({
       [journals, bankLines, documentList, currentBas].every((query) => query.isError));
 
   return (
-    <div className="mx-auto grid w-full max-w-[980px] gap-4">
-      <div>
-        <h1 className=" page-title">Audit trail</h1>
-        <p className="mt-1 text-[14px] text-muted-foreground">
-          A local chronological view of retained business records.
-        </p>
-      </div>
-      <section className="overflow-x-auto rounded-[20px] border border-border bg-surface">
-        <div className="border-b border-border px-3 py-2 text-[12px] font-semibold uppercase tracking-[0.05em] text-muted-foreground">
-          Recent activity
-        </div>
+    <div className="mx-auto grid w-full max-w-[1120px] gap-6">
+      <ScreenHeading
+        area="Business records · Activity"
+        title="Audit trail"
+        description="A local chronological view of retained business records."
+      />
+      <section className="work-surface overflow-hidden">
+        <SurfaceHeading
+          title="Recent activity"
+          description="Documents, journals, banking and BAS drafts."
+        />
         {activities === undefined && !unavailable ? (
           <div className="grid min-h-64 place-items-center">
             <LoaderCircle className="size-4 animate-spin text-forest" />
@@ -198,19 +199,21 @@ export function AuditScreen({
           <ol className="divide-y divide-border">
             {activities.map((activity) => (
               <li
-                className="grid grid-cols-[90px_1fr_auto] items-center gap-3 px-3 py-3"
+                className="grid grid-cols-[110px_minmax(0,1fr)_auto] items-center gap-4 px-5 py-4 max-[560px]:grid-cols-[1fr_auto]"
                 key={`${activity.kind}-${activity.id}`}
               >
-                <span className="rounded-full bg-muted px-2 py-1 text-center text-[12px] font-semibold text-muted-foreground">
+                <span className="rounded-full bg-muted px-3 py-1.5 text-center text-[12px] font-semibold text-muted-foreground max-[560px]:col-span-2 max-[560px]:justify-self-start">
                   {activity.kind}
                 </span>
                 <span>
-                  <span className="block text-[14px] font-semibold">{activity.label}</span>
-                  <span className="mt-1 block text-[12px] text-muted-foreground">
+                  <span className="block text-[14px] font-semibold leading-5">
+                    {activity.label}
+                  </span>
+                  <span className="mt-1 block text-[13px] leading-5 text-muted-foreground">
                     {activity.detail}
                   </span>
                 </span>
-                <time className="text-[12px] text-muted-foreground">
+                <time className="text-[12px] tabular-nums text-muted-foreground">
                   {activity.at > 0 ? new Date(activity.at).toLocaleDateString("en-AU") : "—"}
                 </time>
               </li>
@@ -230,7 +233,7 @@ export function AuditScreen({
           </div>
         )}
       </section>
-      <p className="text-[12px] text-muted-foreground">
+      <p className="text-[13px] leading-5 text-muted-foreground">
         This product view does not replace exported audit-chain verification evidence.
       </p>
     </div>

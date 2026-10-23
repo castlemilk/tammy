@@ -142,7 +142,8 @@ approved transparent paper-loop art appears only at arrival/completion, outside 
 - Do reuse semantic tokens and shared controls across connected screens.
 - Do verify real packaged screenshots with isolated synthetic data.
 - Do preserve core authorization, amounts, tax rules and idempotency.
-- Don't turn planned bank feeds or stock tracking into visible capabilities.
+- Use planned reference screens only for capabilities now implemented and tested.
+  Invoice editing and reporting are implemented; bank feeds and stock tracking remain planned.
 - Don't add art to financial tables or copy generated financial examples as contracts.
 
 ## Review workspace uplift (2026-10-22)
@@ -181,3 +182,30 @@ The navigation groups existing routes into Workspace, Accounting and Activity.
 The forest selected item and route context use the same shell at every route.
 The compact rail retains accessible link names. Tables scroll horizontally inside
 their surface at narrow widths; forms stack and retain full values.
+
+## Completion of the approved screens (2026-10-23)
+
+The October 22 pack remains the visual reference for connected features. Shared
+`ScreenHeading` and `SurfaceHeading` components give working screens a consistent
+hierarchy. Main content has a 1120px working width; tables own horizontal overflow,
+while long forms and policy documents retain natural document scrolling. Navigation
+uses pale forest selection with forest text, and shows the current business in the
+route context. Financial data stays in readable sans and tabular numerals.
+
+The same hierarchy and surfaces extend through purchase review, retained evidence,
+invoice templates, reporting exports, RAM credentials and account security forms.
+Metadata is at least 12px, narrative copy and inputs use 14px, and standard controls
+retain a 44px target. `HorizontalScrollArea` owns named, focusable table regions so
+read-only accounting and invoice tables can scroll with the keyboard at narrow widths.
+
+`WorkspaceEntryLayout` applies boards 11 and 13 to workspace setup, recovery and
+sign-in: a quiet introduction beside a clear form surface, with business and security
+fields grouped by purpose. The two-column layout stacks on narrow windows. Secrets
+are masked by default; new secrets get live format and confirmation feedback that
+matches Core's Unicode policy. Current credentials keep their own sign-in semantics.
+
+Privacy and support is a complete, readable policy with section navigation, sourced
+from the same generated policy content as the public site. Settings uses a concise
+summary and an in-app route to the full document. The ABN browser lookup is explicit
+and uses the official register; checksum feedback is separate from registry evidence.
+These interactions do not change financial, approval or SBR production capabilities.

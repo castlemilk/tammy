@@ -28,7 +28,7 @@ export function BasLifecycleScreen({
   };
 }) {
   return (
-    <div className="mx-auto grid w-full max-w-[1120px] gap-4">
+    <div className="mx-auto grid w-full max-w-[1200px] gap-6">
       <BASLodgerRoleControl api={roleControlApi} workspace={legacyProps.workspace} />
       <BasPreparationLifecycle
         api={lifecycleApi}
@@ -38,20 +38,20 @@ export function BasLifecycleScreen({
         {...(initialPreparationTarget ? { initialPreparationTarget } : {})}
         workspace={legacyProps.workspace}
       />
-      <details className="group rounded border border-border bg-surface">
-        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-3 text-[11px] font-semibold [&::-webkit-details-marker]:hidden">
+      <details className="work-surface group overflow-hidden">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-5 py-4 text-[15px] font-semibold [&::-webkit-details-marker]:hidden max-[600px]:flex-wrap">
           <span>Saved workpapers and exports</span>
-          <span className="text-[9px] font-normal text-muted-foreground">
+          <span className="text-[12px] font-normal text-muted-foreground">
             Existing local GST workpapers, reports and purchase-source review
           </span>
           <span
             aria-hidden="true"
-            className="rounded border border-border px-2 py-1 text-[8px] font-medium group-open:hidden"
+            className="rounded-full border border-border px-3 py-1.5 text-[12px] font-medium group-open:hidden"
           >
             Open
           </span>
         </summary>
-        <div className="border-t border-border p-3">
+        <div className="border-t border-border p-5">
           <BasScreen {...legacyProps} />
         </div>
       </details>

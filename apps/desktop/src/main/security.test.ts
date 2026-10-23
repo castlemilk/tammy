@@ -1165,4 +1165,47 @@ describe("Electron boundary installation", () => {
     });
     expect(openExternal).toHaveBeenCalledExactlyOnceWith(privacyUrl);
   });
+
+  it("opens only the canonical checksum-valid ABN details handoff", () => {
+    let windowOpenHandler: ((details: { url: string }) => { action: "deny" }) | undefined;
+    const openExternal = vi.fn(async () => undefined);
+    const recordHandoff = vi.fn();
+    const webContents = {
+      getURL: vi.fn(() => PRODUCTION_APP_URL),
+      on: vi.fn(),
+      removeListener: vi.fn(),
+      setWindowOpenHandler: vi.fn((handler: typeof windowOpenHandler) => {
+        windowOpenHandler = handler;
+      }),
+    };
+    installWindowGuards(webContents as never, PRODUCTION_APP_URL, {
+      allowedExternalUrls: [],
+      openExternal,
+      recordHandoff,
+    });
+    const validUrl = "https://abr.business.gov.au/ABN/View?abn=52682863690";
+    for (const url of [
+      "http://abr.business.gov.au/ABN/View?abn=52682863690",
+      "https://abr.business.gov.au.evil.test/ABN/View?abn=52682863690",
+      "https://evil.test/ABN/View?abn=52682863690",
+      "https://user@abr.business.gov.au/ABN/View?abn=52682863690",
+      "https://abr.business.gov.au:444/ABN/View?abn=52682863690",
+      "https://abr.business.gov.au/ABN/View?abn=52682863691",
+      `${validUrl}&next=https://evil.test`,
+      `${validUrl}&abn=51824753556`,
+      `${validUrl}#fragment`,
+      "https://abr.business.gov.au/ABN/View?abn=52%20682%20863%20690",
+      "https://abr.business.gov.au/ABN/View?abn=5268286369",
+      "https://abr.business.gov.au/ABN/View?abn=526828636900",
+    ]) {
+      expect(windowOpenHandler?.({ url })).toEqual({ action: "deny" });
+    }
+    expect(openExternal).not.toHaveBeenCalled();
+    expect(recordHandoff).not.toHaveBeenCalled();
+    expect(windowOpenHandler?.({ url: validUrl })).toEqual({ action: "deny" });
+    expect(openExternal).toHaveBeenCalledExactlyOnceWith(validUrl);
+    expect(recordHandoff).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({ url: validUrl, userGesture: true }),
+    );
+  });
 });

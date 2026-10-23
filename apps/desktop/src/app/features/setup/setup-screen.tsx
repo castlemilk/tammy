@@ -29,14 +29,20 @@ import {
   CreateWorkspaceResponseSchema,
   RecoveryGroupConfirmationSchema,
 } from "@tammy/connect-client/tammy/v1/workspace_pb.js";
-import { CheckCircle2, KeyRound, LoaderCircle } from "lucide-react";
+import { CheckCircle2, LoaderCircle } from "lucide-react";
 import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 
 import type { TammyConveyorModule } from "../../../conveyor/client";
+import { abnLookupUrl, isValidAbn, normalizeAbnInput } from "../../../shared/abn";
 import { createBundledTaxRuleSourceRef } from "../../../shared/bundled-tax-rule";
+import {
+  getNewCredentialFeedback,
+  newCredentialValuesMatch,
+} from "../../../shared/new-credential-policy";
 import { createProtoMethodCodec } from "../../../shared/proto-ipc";
-import paperLoop from "../../assets/paper-loop.png";
+import { NewCredentialField } from "../../components/new-credential-field";
 import { Button } from "../../components/ui/button";
+import { WorkspaceEntryLayout } from "../../components/workspace-entry-layout";
 import { ReportingCapabilityNotice } from "../reporting/reporting-capability-notice";
 
 const createCodec = createProtoMethodCodec({
@@ -126,7 +132,11 @@ function uuidV7(): string {
 }
 
 function fieldClassName(): string {
-  return "focus-ring h-11 w-full rounded-xl border border-border bg-surface px-3 text-[14px] text-foreground outline-none placeholder:text-muted-foreground";
+  return "focus-ring h-11 min-w-0 w-full rounded-xl border border-border bg-surface px-3 text-[14px] text-foreground outline-none placeholder:text-muted-foreground";
+}
+
+function isWhitespaceOnly(value: string): boolean {
+  return value.length > 0 && value.trim().length === 0;
 }
 
 export function SetupScreen({
@@ -143,7 +153,9 @@ export function SetupScreen({
   const [abn, setAbn] = useState("");
   const [gstBasis, setGstBasis] = useState(GstBasis.NON_CASH);
   const [workspacePassphrase, setWorkspacePassphrase] = useState("");
+  const [workspacePassphraseConfirmation, setWorkspacePassphraseConfirmation] = useState("");
   const [administratorPassword, setAdministratorPassword] = useState("");
+  const [administratorPasswordConfirmation, setAdministratorPasswordConfirmation] = useState("");
   const [pending, setPending] = useState<PendingSetup>();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
@@ -166,6 +178,23 @@ export function SetupScreen({
     input: currentUserInput,
     retry: false,
   });
+  const workspacePassphraseFeedback = getNewCredentialFeedback(workspacePassphrase);
+  const administratorPasswordFeedback = getNewCredentialFeedback(administratorPassword);
+  const abnIsValid = isValidAbn(abn);
+  const abnLookup = abnLookupUrl(abn);
+  const nameFieldsAreNonblank = [
+    displayName,
+    username,
+    businessLegalName,
+    businessDisplayName,
+  ].every((value) => value.trim().length > 0);
+  const canCreateWorkspace =
+    nameFieldsAreNonblank &&
+    abnIsValid &&
+    workspacePassphraseFeedback.valid &&
+    administratorPasswordFeedback.valid &&
+    newCredentialValuesMatch(workspacePassphrase, workspacePassphraseConfirmation) &&
+    newCredentialValuesMatch(administratorPassword, administratorPasswordConfirmation);
 
   useEffect(() => {
     if (!pendingAuthentication) return;
@@ -244,6 +273,14 @@ export function SetupScreen({
 
   const createWorkspace = async (event: FormEvent) => {
     event.preventDefault();
+    if (!nameFieldsAreNonblank) {
+      setError("Enter a value in each name field before creating the workspace.");
+      return;
+    }
+    if (!canCreateWorkspace) {
+      setError("Review the ABN and credential checks before creating the workspace.");
+      return;
+    }
     setBusy(true);
     setError(undefined);
     const setupId = uuidV7();
@@ -265,10 +302,13 @@ export function SetupScreen({
       );
       if (!response.workspace || !response.recoverySecret?.utf8.byteLength)
         throw new Error("invalid");
+      setWorkspacePassphrase("");
+      setWorkspacePassphraseConfirmation("");
+      setAdministratorPasswordConfirmation("");
       setPending({
         gstBasis,
         administratorPassword,
-        abn,
+        abn: normalizeAbnInput(abn),
         businessDisplayName,
         businessLegalName,
         recoveryCode: new TextDecoder().decode(response.recoverySecret.utf8),
@@ -328,179 +368,268 @@ export function SetupScreen({
   };
 
   return (
-    <main className="grid min-h-screen place-items-center bg-background px-5 py-8">
-      <section className="workspace-surface">
-        <div className="mb-6 flex items-start gap-4">
-          <span className="grid size-9 shrink-0 place-items-center rounded-full bg-forest-soft text-forest">
-            <KeyRound aria-hidden="true" className="size-4" />
-          </span>
-          <div>
-            <p className="font-serif text-[28px] font-bold tracking-[-0.04em] text-foreground">
-              tammy
+    <WorkspaceEntryLayout
+      description={
+        pending
+          ? "Keep this one-time code somewhere safe before continuing."
+          : "Your accounting data stays encrypted on this device."
+      }
+      {...(onPrivacy === undefined ? {} : { onPrivacy })}
+      stage={pending ? "recovery" : "details"}
+      title={pending ? "Save your recovery code" : "Create your local workspace"}
+    >
+      <div className="mb-5">
+        <ReportingCapabilityNotice
+          api={reporting}
+          entityType={ReportingEntityType.AU_BUSINESS}
+          fallbackCopy="Local BAS preparation requires confirmed supported obligations and source evidence. Tammy does not declare or lodge a BAS with the ATO."
+          report={ReportKind.GST_WORKPAPER}
+          taxYear={2024}
+        />
+      </div>
+
+      {pending ? (
+        <div className="grid gap-5">
+          <div className="rounded-xl border border-ready-border bg-forest-soft px-4 py-4">
+            <p className="mb-2 flex items-center gap-2 text-[14px] font-semibold text-forest">
+              <CheckCircle2 aria-hidden="true" className="size-4" /> One-time recovery code
             </p>
-            <h1 className="mt-1 text-foreground page-title">
-              {pending ? "Save your recovery code" : "Create your local workspace"}
-            </h1>
-            <p className="mt-1 text-[14px] leading-5 text-muted-foreground">
-              {pending
-                ? "Keep this one-time code somewhere safe before continuing."
-                : "Your accounting data stays encrypted on this device."}
+            <p className="break-all font-mono text-[14px] leading-6 text-foreground">
+              {pending.recoveryCode}
             </p>
           </div>
-          <img alt="" aria-hidden="true" className="arrival-art" src={paperLoop} />
-        </div>
-
-        <div className="mb-5">
-          <ReportingCapabilityNotice
-            api={reporting}
-            entityType={ReportingEntityType.AU_BUSINESS}
-            fallbackCopy="Local BAS preparation requires confirmed supported obligations and source evidence. Tammy does not declare or lodge a BAS with the ATO."
-            report={ReportKind.GST_WORKPAPER}
-            taxYear={2024}
-          />
-        </div>
-
-        {pending ? (
-          <div className="grid gap-5">
-            <div className="rounded-xl border border-ready-border bg-forest-soft px-4 py-4">
-              <p className="mb-2 flex items-center gap-2 text-[14px] font-semibold text-forest">
-                <CheckCircle2 aria-hidden="true" className="size-4" /> One-time recovery code
-              </p>
-              <p className="break-all font-mono text-[13px] leading-6 text-foreground">
-                {pending.recoveryCode}
-              </p>
-            </div>
-            <Button
-              className="h-11 w-full text-[14px]"
-              disabled={busy}
-              onClick={confirmAndSignIn}
-              type="button"
-            >
-              {busy ? <LoaderCircle aria-hidden="true" className="size-3.5 animate-spin" /> : null}I
-              saved my recovery code
-            </Button>
-          </div>
-        ) : (
-          <form className="grid gap-4" onSubmit={createWorkspace}>
-            <label className="grid gap-1.5 text-[14px] font-medium text-foreground">
-              Your name
-              <input
-                autoComplete="name"
-                className={fieldClassName()}
-                onChange={(event) => setDisplayName(event.target.value)}
-                required
-                value={displayName}
-              />
-            </label>
-            <label className="grid gap-1.5 text-[14px] font-medium text-foreground">
-              Email or username
-              <input
-                autoComplete="username"
-                className={fieldClassName()}
-                onChange={(event) => setUsername(event.target.value)}
-                required
-                value={username}
-              />
-            </label>
-            <label className="grid gap-1.5 text-[14px] font-medium text-foreground">
-              Business legal name
-              <input
-                className={fieldClassName()}
-                maxLength={256}
-                onChange={(event) => setBusinessLegalName(event.target.value)}
-                required
-                value={businessLegalName}
-              />
-            </label>
-            <label className="grid gap-1.5 text-[14px] font-medium text-foreground">
-              Business display name
-              <input
-                className={fieldClassName()}
-                maxLength={256}
-                onChange={(event) => setBusinessDisplayName(event.target.value)}
-                required
-                value={businessDisplayName}
-              />
-            </label>
-            <label className="grid gap-1.5 text-[14px] font-medium text-foreground">
-              ABN
-              <input
-                className={fieldClassName()}
-                inputMode="numeric"
-                maxLength={11}
-                minLength={11}
-                onChange={(event) => setAbn(event.target.value)}
-                pattern="[0-9]{11}"
-                required
-                value={abn}
-              />
-            </label>
-            <label className="grid gap-1.5 text-[14px] font-medium text-foreground">
-              GST accounting basis
-              <select
-                aria-label="GST accounting basis"
-                aria-describedby="gst-basis-description"
-                className={fieldClassName()}
-                onChange={(event) => setGstBasis(Number(event.target.value) as GstBasis)}
-                value={gstBasis}
-              >
-                <option value={GstBasis.NON_CASH}>Non-cash (accrual)</option>
-                <option value={GstBasis.CASH}>Cash</option>
-              </select>
-              <span
-                id="gst-basis-description"
-                className="text-[12px] font-normal leading-5 text-muted-foreground"
-              >
-                Use the basis your business reports to the ATO. Cash-basis invoice GST follows
-                recorded receipts; cash purchase credits require payment evidence.
-              </span>
-            </label>
-            <label className="grid gap-1.5 text-[14px] font-medium text-foreground">
-              Workspace passphrase
-              <input
-                autoComplete="new-password"
-                className={fieldClassName()}
-                minLength={16}
-                onChange={(event) => setWorkspacePassphrase(event.target.value)}
-                required
-                type="password"
-                value={workspacePassphrase}
-              />
-            </label>
-            <label className="grid gap-1.5 text-[14px] font-medium text-foreground">
-              Administrator password
-              <input
-                autoComplete="new-password"
-                className={fieldClassName()}
-                minLength={16}
-                onChange={(event) => setAdministratorPassword(event.target.value)}
-                required
-                type="password"
-                value={administratorPassword}
-              />
-            </label>
-            <Button className="mt-1 h-11 w-full text-[14px]" disabled={busy} type="submit">
-              {busy ? <LoaderCircle aria-hidden="true" className="size-3.5 animate-spin" /> : null}
-              Create local workspace
-            </Button>
-          </form>
-        )}
-        {error ? (
-          <p className="mt-4 text-[14px] text-destructive" role="alert">
-            {error}
-          </p>
-        ) : null}
-        {onPrivacy ? (
-          <button
-            className="focus-ring mt-4 text-[14px] font-medium text-forest underline"
-            onClick={onPrivacy}
+          <Button
+            className="h-11 w-full text-[14px]"
+            disabled={busy}
+            onClick={confirmAndSignIn}
             type="button"
           >
-            Privacy and support
-          </button>
-        ) : null}
-      </section>
-    </main>
+            {busy ? <LoaderCircle aria-hidden="true" className="size-3.5 animate-spin" /> : null}I
+            saved my recovery code
+          </Button>
+        </div>
+      ) : (
+        <form className="grid gap-5" onSubmit={createWorkspace}>
+          <fieldset className="grid min-w-0 gap-4">
+            <legend className="mb-3 text-[12px] font-semibold uppercase tracking-[0.12em] text-forest">
+              Business details
+            </legend>
+            <div className="grid min-w-0 gap-4 sm:grid-cols-2">
+              <label className="grid min-w-0 gap-1.5 text-[13px] font-medium text-foreground">
+                Your name
+                <input
+                  aria-describedby={
+                    isWhitespaceOnly(displayName) ? "setup-display-name-feedback" : undefined
+                  }
+                  aria-invalid={isWhitespaceOnly(displayName)}
+                  autoComplete="name"
+                  className={fieldClassName()}
+                  id="setup-display-name"
+                  onChange={(event) => setDisplayName(event.target.value)}
+                  required
+                  value={displayName}
+                />
+                {isWhitespaceOnly(displayName) ? (
+                  <span
+                    className="text-[12px] font-normal leading-5 text-destructive"
+                    id="setup-display-name-feedback"
+                    role="status"
+                  >
+                    Enter your name.
+                  </span>
+                ) : null}
+              </label>
+              <label className="grid min-w-0 gap-1.5 text-[13px] font-medium text-foreground">
+                Email or username
+                <input
+                  aria-describedby={
+                    isWhitespaceOnly(username) ? "setup-username-feedback" : undefined
+                  }
+                  aria-invalid={isWhitespaceOnly(username)}
+                  autoComplete="username"
+                  className={fieldClassName()}
+                  id="setup-username"
+                  onChange={(event) => setUsername(event.target.value)}
+                  required
+                  value={username}
+                />
+                {isWhitespaceOnly(username) ? (
+                  <span
+                    className="text-[12px] font-normal leading-5 text-destructive"
+                    id="setup-username-feedback"
+                    role="status"
+                  >
+                    Enter an email or username.
+                  </span>
+                ) : null}
+              </label>
+              <label className="grid min-w-0 gap-1.5 text-[13px] font-medium text-foreground">
+                Business legal name
+                <input
+                  aria-describedby={
+                    isWhitespaceOnly(businessLegalName) ? "setup-legal-name-feedback" : undefined
+                  }
+                  aria-invalid={isWhitespaceOnly(businessLegalName)}
+                  className={fieldClassName()}
+                  id="setup-legal-name"
+                  maxLength={256}
+                  onChange={(event) => setBusinessLegalName(event.target.value)}
+                  required
+                  value={businessLegalName}
+                />
+                {isWhitespaceOnly(businessLegalName) ? (
+                  <span
+                    className="text-[12px] font-normal leading-5 text-destructive"
+                    id="setup-legal-name-feedback"
+                    role="status"
+                  >
+                    Enter a business name.
+                  </span>
+                ) : null}
+              </label>
+              <label className="grid min-w-0 gap-1.5 text-[13px] font-medium text-foreground">
+                Business display name
+                <input
+                  aria-describedby={
+                    isWhitespaceOnly(businessDisplayName)
+                      ? "setup-business-display-name-feedback"
+                      : undefined
+                  }
+                  aria-invalid={isWhitespaceOnly(businessDisplayName)}
+                  className={fieldClassName()}
+                  id="setup-business-display-name"
+                  maxLength={256}
+                  onChange={(event) => setBusinessDisplayName(event.target.value)}
+                  required
+                  value={businessDisplayName}
+                />
+                {isWhitespaceOnly(businessDisplayName) ? (
+                  <span
+                    className="text-[12px] font-normal leading-5 text-destructive"
+                    id="setup-business-display-name-feedback"
+                    role="status"
+                  >
+                    Enter a business name.
+                  </span>
+                ) : null}
+              </label>
+              <div className="grid min-w-0 gap-1.5 text-[13px] font-medium text-foreground sm:col-span-2">
+                <label htmlFor="setup-abn">ABN</label>
+                <input
+                  aria-describedby="abn-description abn-lookup-help"
+                  aria-invalid={abn.length > 0 && !abnIsValid}
+                  autoComplete="off"
+                  className={fieldClassName()}
+                  id="setup-abn"
+                  inputMode="numeric"
+                  onChange={(event) => setAbn(normalizeAbnInput(event.target.value))}
+                  required
+                  spellCheck={false}
+                  value={abn}
+                />
+                <span
+                  className={`text-[12px] font-normal leading-5 ${abn.length > 0 && !abnIsValid ? "text-destructive" : "text-muted-foreground"}`}
+                  id="abn-description"
+                  role="status"
+                  aria-live="polite"
+                >
+                  {abn.length === 0
+                    ? "Enter 11 digits. Spaces are removed automatically."
+                    : abnIsValid
+                      ? "The checksum passes; confirm the ABN in the register to verify its current details."
+                      : !/^[0-9]*$/.test(abn)
+                        ? "Enter the 11 digits shown on your ABN record."
+                        : abn.length !== 11
+                          ? "Enter exactly 11 digits."
+                          : "This number does not pass the ABN checksum. Check it against the register."}
+                </span>
+                {abnLookup ? (
+                  <a
+                    className="focus-ring inline-flex min-h-11 w-fit items-center rounded-sm text-[12px] font-medium text-forest underline underline-offset-2"
+                    href={abnLookup}
+                    rel="noopener noreferrer"
+                    target="_blank"
+                  >
+                    Look up this ABN on the Australian Business Register
+                  </a>
+                ) : null}
+                {abnLookup ? (
+                  <span
+                    className="text-[12px] font-normal leading-5 text-muted-foreground"
+                    id="abn-lookup-help"
+                  >
+                    This opens the Australian Business Register in your browser. It does not fill
+                    this form or replace checking the register details.
+                  </span>
+                ) : (
+                  <span className="sr-only" id="abn-lookup-help">
+                    A register lookup link appears when the checksum passes.
+                  </span>
+                )}
+              </div>
+              <label className="grid min-w-0 gap-1.5 text-[13px] font-medium text-foreground sm:col-span-2">
+                GST accounting basis
+                <select
+                  aria-label="GST accounting basis"
+                  aria-describedby="gst-basis-description"
+                  className={fieldClassName()}
+                  onChange={(event) => setGstBasis(Number(event.target.value) as GstBasis)}
+                  value={gstBasis}
+                >
+                  <option value={GstBasis.NON_CASH}>Non-cash (accrual)</option>
+                  <option value={GstBasis.CASH}>Cash</option>
+                </select>
+                <span
+                  id="gst-basis-description"
+                  className="text-[12px] font-normal leading-5 text-muted-foreground"
+                >
+                  Use the basis your business reports to the ATO. Cash-basis invoice GST follows
+                  recorded receipts; cash purchase credits require payment evidence.
+                </span>
+              </label>
+            </div>
+          </fieldset>
+
+          <fieldset className="grid min-w-0 gap-4 border-t border-border pt-4">
+            <legend className="mb-3 text-[12px] font-semibold uppercase tracking-[0.12em] text-forest">
+              Workspace credentials
+            </legend>
+            <div className="grid min-w-0 gap-5 sm:grid-cols-2">
+              <NewCredentialField
+                confirmation={workspacePassphraseConfirmation}
+                confirmationLabel="Confirm workspace passphrase"
+                label="Workspace passphrase"
+                onChange={setWorkspacePassphrase}
+                onConfirmationChange={setWorkspacePassphraseConfirmation}
+                value={workspacePassphrase}
+              />
+              <NewCredentialField
+                confirmation={administratorPasswordConfirmation}
+                confirmationLabel="Confirm administrator password"
+                label="Administrator password"
+                onChange={setAdministratorPassword}
+                onConfirmationChange={setAdministratorPasswordConfirmation}
+                value={administratorPassword}
+              />
+            </div>
+          </fieldset>
+
+          <Button
+            className="mt-1 h-11 w-full text-[14px]"
+            disabled={busy || !canCreateWorkspace}
+            type="submit"
+          >
+            {busy ? <LoaderCircle aria-hidden="true" className="size-3.5 animate-spin" /> : null}
+            Create local workspace
+          </Button>
+        </form>
+      )}
+      {error ? (
+        <p className="mt-4 text-[14px] text-destructive" role="alert">
+          {error}
+        </p>
+      ) : null}
+    </WorkspaceEntryLayout>
   );
 }
 

@@ -1,4 +1,4 @@
-import { mkdir, readFile, stat } from "node:fs/promises";
+import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Page } from "@playwright/test";
@@ -7,7 +7,7 @@ import { setupAndRunCurrentAccountingWorkflow } from "./support/current-accounti
 import { readInvoiceAccounting } from "./support/invoice-income-workflow";
 
 const phase = process.env.TAMMY_FINANCIAL_UI_CAPTURE;
-if (phase !== undefined && phase !== "before" && phase !== "after") {
+if (phase !== undefined && phase !== "before" && phase !== "after" && phase !== "integration") {
   throw new Error("FINANCIAL_UI_CAPTURE_PHASE_INVALID");
 }
 
@@ -221,13 +221,15 @@ async function capture(page: Page, name: string) {
   }
   const directory = path.resolve(
     path.dirname(fileURLToPath(import.meta.url)),
-    "../../../../output/playwright/soft-precision-financial-2026-10-23",
-    phase,
+    phase === "integration"
+      ? "../../../../output/playwright/soft-precision-integration-2026-10-23"
+      : "../../../../output/playwright/soft-precision-financial-2026-10-23",
+    phase === "integration" ? "after" : phase,
   );
   await mkdir(directory, { recursive: true });
-  await page.screenshot({
+  const bytes = await page.screenshot({
     animations: "disabled",
-    path: path.join(directory, `${name}.png`),
     mask: [page.locator("input[type=password]")],
   });
+  await writeFile(path.join(directory, `${name}.png`), bytes, { flag: "wx" });
 }

@@ -1,4 +1,4 @@
-import { screen, within } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it } from "vitest";
 
@@ -98,4 +98,37 @@ it("renders the walkthrough app shell", async () => {
   await user.click(within(navigation).getByRole("link", { name: "Journals" }));
   expect(screen.getByRole("heading", { level: 1, name: "Journals" })).toBeTruthy();
   expect(await screen.findByText("Journals unavailable")).toBeTruthy();
+});
+
+it("retries the local engine from Settings instead of leaving a dead action", async () => {
+  installConveyorFixture();
+  if (!fixture) throw new Error("fixture missing");
+  fixture.procedures.system.getSystemDiagnostics.mockRejectedValueOnce(new Error("unavailable"));
+  window.history.replaceState(null, "", "/settings");
+  const user = userEvent.setup();
+  render(<App />);
+  await screen.findByText("Local engine unavailable");
+  const card = screen
+    .getByRole("heading", { name: "Local workspace foundation" })
+    .closest("section");
+  if (!card) throw new Error("diagnostics section missing");
+  await user.click(within(card).getByRole("button", { name: "Retry local engine" }));
+  await waitFor(() =>
+    expect(fixture?.procedures.system.getSystemDiagnostics).toHaveBeenCalledTimes(2),
+  );
+  expect(await within(card).findByText("Local engine ready")).toBeTruthy();
+});
+
+it("returns to Settings after reading the full privacy policy", async () => {
+  installConveyorFixture();
+  window.history.replaceState(null, "", "/settings");
+  const user = userEvent.setup();
+  render(<App />);
+  await screen.findByRole("heading", { name: "Settings", level: 1 });
+  await user.click(screen.getByRole("button", { name: "Read full privacy policy" }));
+  expect(
+    await screen.findByRole("heading", { name: "Privacy and support", level: 1 }),
+  ).toBeTruthy();
+  await user.click(screen.getByRole("button", { name: "Back to Tammy" }));
+  expect(await screen.findByRole("heading", { name: "Settings", level: 1 })).toBeTruthy();
 });

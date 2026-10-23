@@ -4,6 +4,7 @@ import type {
   InvoiceTemplateDefaults,
 } from "../../../shared/invoice-template";
 import { Button } from "../../components/ui/button";
+import { SurfaceHeading } from "../../components/workspace-primitives";
 import { invoiceFieldClass } from "./invoice-line-table";
 import { InvoiceLogo } from "./invoice-logo";
 import type { InvoicesApi } from "./invoices-screen";
@@ -136,40 +137,40 @@ export function InvoiceTemplatePanel({
     }
   }
 
-  const labelClass = "grid min-w-0 gap-1 text-[13px] font-medium text-foreground";
+  const labelClass = "grid min-w-0 gap-1.5 text-[13px] font-medium text-foreground";
   return (
     <section
       aria-busy={loading || busy}
       aria-label="Company invoice template"
-      className="grid min-w-0 gap-4 border-y border-border py-5"
+      className="work-surface grid min-w-0 gap-4 overflow-hidden pb-5"
     >
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h2 className="text-[16px] font-semibold">Company invoice template</h2>
-          <p className="mt-1 text-[13px] leading-5 text-muted-foreground">
-            Logo, payment details and terms for new invoices.
-          </p>
-        </div>
-        <Button
-          aria-controls="invoice-template-fields"
-          aria-expanded={expanded}
-          disabled={disabled || busy}
-          onClick={() => setExpanded((value) => !value)}
-          type="button"
-          variant="outline"
-        >
-          {expanded ? "Close template editor" : "Manage invoice template"}
-        </Button>
-      </div>
+      <SurfaceHeading
+        title="Company invoice template"
+        description="Logo, payment details and terms for new invoices."
+        action={
+          <Button
+            aria-controls="invoice-template-fields"
+            aria-expanded={expanded}
+            className="h-11 text-[13px]"
+            disabled={disabled || busy}
+            onClick={() => setExpanded((value) => !value)}
+            type="button"
+            variant="outline"
+          >
+            {expanded ? "Close template editor" : "Manage invoice template"}
+          </Button>
+        }
+      />
       {loading ? (
-        <p className="text-[13px] text-muted-foreground">Loading company template…</p>
+        <p className="px-5 text-[13px] text-muted-foreground">Loading company template…</p>
       ) : null}
       {error ? (
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="mx-5 flex flex-wrap items-center gap-3">
           <p className="text-[13px] text-destructive" role="alert">
             {error}
           </p>
           <Button
+            className="h-11 text-[13px]"
             disabled={loading || busy || disabled}
             onClick={onRetry}
             type="button"
@@ -180,8 +181,8 @@ export function InvoiceTemplatePanel({
         </div>
       ) : null}
       {expanded ? (
-        <div className="grid gap-3" id="invoice-template-fields">
-          <fieldset className="grid gap-3" disabled={disabled || busy || !editor || loading}>
+        <div className="grid gap-4 px-5" id="invoice-template-fields">
+          <fieldset className="grid gap-4" disabled={disabled || busy || !editor || loading}>
             <div className="grid grid-cols-[minmax(0,1fr)_180px] gap-4 max-[620px]:grid-cols-1">
               <label className={labelClass}>
                 Template seller address
@@ -205,7 +206,7 @@ export function InvoiceTemplatePanel({
                   />
                 </label>
                 <span
-                  className="text-[13px] font-normal text-muted-foreground"
+                  className="text-[12px] font-normal text-muted-foreground"
                   id="invoice-template-terms-help"
                 >
                   0–365 days after the issue date
@@ -237,7 +238,7 @@ export function InvoiceTemplatePanel({
                 Company logo
                 <input
                   accept="image/png,image/jpeg"
-                  className="focus-ring w-full text-[13px] text-muted-foreground file:mr-3 file:rounded-xl file:border file:border-border file:bg-background file:px-3 file:py-3 file:text-[13px] file:text-foreground"
+                  className="focus-ring min-h-11 w-full text-[13px] text-muted-foreground file:mr-3 file:rounded-xl file:border file:border-border file:bg-background file:px-3 file:py-3 file:text-[13px] file:text-foreground"
                   onChange={(event) => {
                     const file = event.target.files?.[0];
                     event.target.value = "";
@@ -246,18 +247,23 @@ export function InvoiceTemplatePanel({
                   type="file"
                 />
               </label>
-              <p className="text-[13px] text-muted-foreground">
+              <p className="text-[12px] leading-5 text-muted-foreground">
                 PNG or JPEG · up to 1 MiB · maximum 4096 px per side and 4 million pixels.
               </p>
               {editor?.logoAssetId ? (
                 <div className="flex flex-wrap items-center gap-4">
                   <InvoiceLogo api={api} id={editor.logoAssetId} label="Company logo preview" />
-                  <Button onClick={removeLogo} type="button" variant="outline">
+                  <Button
+                    className="h-11 text-[13px]"
+                    onClick={removeLogo}
+                    type="button"
+                    variant="outline"
+                  >
                     Remove logo
                   </Button>
                 </div>
               ) : (
-                <p className="text-[13px] text-muted-foreground">No company logo selected.</p>
+                <p className="text-[12px] text-muted-foreground">No company logo selected.</p>
               )}
             </div>
           </fieldset>
@@ -272,10 +278,16 @@ export function InvoiceTemplatePanel({
             </p>
           ) : null}
           <div className="flex flex-wrap gap-2">
-            <Button disabled={disabled || busy || !editor || loading} onClick={save} type="button">
+            <Button
+              className="h-11 text-[13px]"
+              disabled={disabled || busy || !editor || loading}
+              onClick={save}
+              type="button"
+            >
               {busy ? "Working…" : "Save template"}
             </Button>
             <Button
+              className="h-11 text-[13px]"
               disabled={disabled || busy || !template || loading || !canApply}
               onClick={onApply}
               type="button"
@@ -285,6 +297,7 @@ export function InvoiceTemplatePanel({
             </Button>
             {failure ? (
               <Button
+                className="h-11 text-[13px]"
                 disabled={disabled || busy}
                 onClick={reloadVersion}
                 type="button"
@@ -294,7 +307,7 @@ export function InvoiceTemplatePanel({
               </Button>
             ) : null}
           </div>
-          <p className="text-[13px] leading-5 text-muted-foreground">
+          <p className="text-[12px] leading-5 text-muted-foreground">
             Saving updates company defaults. Apply replaces this draft’s logo, seller address,
             notes, payment instructions and due date. Saved invoices keep their own details.
           </p>

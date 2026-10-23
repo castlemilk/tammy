@@ -133,6 +133,7 @@ import {
   reportExportMessage,
 } from "../../../shared/report-export";
 import { Button } from "../../components/ui/button";
+import { ScreenHeading, SurfaceHeading } from "../../components/workspace-primitives";
 import { assertFreshFactor, authentication, uuidV7 } from "../sbr/sbr-form-support";
 import type { AuthenticatedWorkspace } from "../setup/setup-screen";
 import { LegacyRuleReferenceRepair } from "./legacy-rule-reference-repair";
@@ -1987,24 +1988,23 @@ export function BasPreparationLifecycle({
     );
 
   return (
-    <section aria-label="BAS preparation lifecycle" className="grid gap-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-[18px] font-semibold tracking-[-0.02em]">BAS preparation</h1>
-          <p className="mt-1 max-w-[760px] text-[11px] leading-5 text-muted-foreground">
-            Period-led preparation, exact review snapshots and purpose-bound manual approval. Tammy
-            never submits BAS information to the ATO.
-          </p>
-        </div>
-        <p className="rounded border border-border bg-background px-3 py-2 text-[10px]">
-          {lodgerCopy}
-        </p>
-      </div>
-      <nav aria-label="BAS lifecycle stages" className="flex flex-wrap gap-2">
+    <section aria-label="BAS preparation lifecycle" className="grid gap-6">
+      <ScreenHeading
+        area="Reporting · Australian tax"
+        title="BAS preparation"
+        description="Period-led preparation, exact review snapshots and purpose-bound manual approval. Tammy never submits BAS information to the ATO."
+        action={
+          <p className="work-surface max-w-[420px] px-4 py-3 text-[13px] leading-5">{lodgerCopy}</p>
+        }
+      />
+      <nav
+        aria-label="BAS lifecycle stages"
+        className="flex flex-wrap items-center gap-2 rounded-2xl border border-border bg-surface p-3"
+      >
         {tabs.map((tab) => (
           <Button
             aria-current={stage === tab ? "step" : undefined}
-            className="h-8 text-[10px]"
+            className="h-11 text-[13px]"
             key={tab}
             onClick={() => setStage(tab)}
             type="button"
@@ -2014,7 +2014,7 @@ export function BasPreparationLifecycle({
           </Button>
         ))}
         <Button
-          className="ml-auto h-8 text-[10px]"
+          className="ml-auto h-11 text-[13px] max-[560px]:ml-0"
           disabled={loading || busy}
           onClick={refresh}
           type="button"
@@ -2025,7 +2025,7 @@ export function BasPreparationLifecycle({
       </nav>
       {prep ? (
         <p
-          className="break-words rounded border border-border bg-background px-3 py-2 text-[9px]"
+          className="work-surface break-words px-4 py-3 text-[13px] leading-5"
           data-testid="bas-preparation-creation-reason"
         >
           <strong>Retained preparation reason:</strong>{" "}
@@ -2034,7 +2034,7 @@ export function BasPreparationLifecycle({
       ) : null}
       {initialPreparationStatus === "pending" ? (
         <p
-          className="rounded border border-border bg-background px-3 py-2 text-[10px]"
+          className="rounded-xl border border-border bg-background px-4 py-3 text-[13px] leading-5"
           role="status"
         >
           Resolving the exact BAS preparation link…
@@ -2042,7 +2042,7 @@ export function BasPreparationLifecycle({
       ) : null}
       {initialPreparationStatus === "stale" ? (
         <p
-          className="rounded border border-warning-border bg-warning-soft px-3 py-2 text-[10px]"
+          className="rounded-xl border border-warning-border bg-warning-soft px-4 py-3 text-[13px] leading-5"
           role="alert"
         >
           This exact BAS preparation link is stale or unavailable. No newer preparation was
@@ -2051,7 +2051,7 @@ export function BasPreparationLifecycle({
       ) : null}
       {initialPreparationStatus === "sources-unavailable" ? (
         <p
-          className="rounded border border-warning-border bg-warning-soft px-3 py-2 text-[10px]"
+          className="rounded-xl border border-warning-border bg-warning-soft px-4 py-3 text-[13px] leading-5"
           role="alert"
         >
           The exact preparation is retained, but one or more exact profile, period, or frozen source
@@ -2060,7 +2060,7 @@ export function BasPreparationLifecycle({
       ) : null}
       {initialPreparationStatus === "unavailable" ? (
         <p
-          className="rounded border border-warning-border bg-warning-soft px-3 py-2 text-[10px]"
+          className="rounded-xl border border-warning-border bg-warning-soft px-4 py-3 text-[13px] leading-5"
           role="alert"
         >
           The exact BAS preparation could not be checked right now. No newer preparation was
@@ -2069,7 +2069,7 @@ export function BasPreparationLifecycle({
       ) : null}
       {error ? (
         <p
-          className="rounded border border-warning-border bg-warning-soft px-3 py-2 text-[10px]"
+          className="rounded-xl border border-warning-border bg-warning-soft px-4 py-3 text-[13px] leading-5"
           role="alert"
         >
           {error}
@@ -2077,7 +2077,7 @@ export function BasPreparationLifecycle({
       ) : null}
       {message ? (
         <p
-          className="rounded border border-success-border bg-success-soft px-3 py-2 text-[10px]"
+          className="rounded-xl border border-success-border bg-success-soft px-4 py-3 text-[13px] leading-5"
           role="status"
         >
           {message}
@@ -2473,13 +2473,13 @@ function PrepareStage(props: any) {
         onUpdated={onRuleReferenceUpdated}
         workspace={workspace}
       />
-      <section className="grid gap-3 rounded border border-border bg-surface p-3">
+      <section className="work-surface grid gap-4 p-5">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-[12px] font-semibold">Obligations profile</h2>
-          <label className="grid gap-1 text-[9px]">
+          <h2 className="text-[17px] font-semibold">Obligations profile</h2>
+          <label className="grid gap-1.5 text-[12px] font-semibold">
             Selected immutable profile
             <select
-              className="h-8 min-w-[240px] rounded border border-border bg-background px-2"
+              className="work-input h-11 min-w-[240px] text-[14px]"
               onChange={(event) => setSelectedProfile(event.target.value)}
               value={selectedProfile ?? ""}
             >
@@ -2495,11 +2495,11 @@ function PrepareStage(props: any) {
             </select>
           </label>
         </div>
-        <p className="text-[9px] leading-4 text-muted-foreground">
+        <p className="text-[12px] leading-5 text-muted-foreground">
           Profiles are retained as immutable revisions. Unknown means the question is still
           unresolved; it does not mean inactive.
         </p>
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-3 max-[560px]:grid-cols-1">
           <DateInput label="Effective from" value={effectiveStart} setValue={setEffectiveStart} />
           <DateInput
             label="Effective through (optional)"
@@ -2568,11 +2568,11 @@ function PrepareStage(props: any) {
           <TextInput label="GST decision reason" value={gstReason} setValue={setGstReason} />
         </div>
         {!effectiveStart ? (
-          <p className="text-[9px] text-warning" role="note">
+          <p className="text-[12px] leading-5 text-warning" role="note">
             Enter the profile effective start date before saving.
           </p>
         ) : effectiveEnd && effectiveEnd < effectiveStart ? (
-          <p className="text-[9px] text-warning" role="note">
+          <p className="text-[12px] leading-5 text-warning" role="note">
             The profile end date must be on or after its start date.
           </p>
         ) : null}
@@ -2591,12 +2591,12 @@ function PrepareStage(props: any) {
               />
             </div>
             {!gstRegistrationStart ? (
-              <p className="text-[9px] text-warning" role="note">
+              <p className="text-[12px] leading-5 text-warning" role="note">
                 Enter the retained GST registration start date. This is separate from the profile
                 effective date and is required before a registered profile can be saved.
               </p>
             ) : gstRegistrationEnd && gstRegistrationEnd < gstRegistrationStart ? (
-              <p className="text-[9px] text-warning" role="note">
+              <p className="text-[12px] leading-5 text-warning" role="note">
                 The GST registration end date must be on or after its start date.
               </p>
             ) : null}
@@ -2681,13 +2681,13 @@ function PrepareStage(props: any) {
           <TextInput label="PAYGI reason" value={paygiReason} setValue={setPaygiReason} />
         </div>
         {!paygiProfileMethodConsistent ? (
-          <p className="text-[9px] text-warning" role="note">
+          <p className="text-[12px] leading-5 text-warning" role="note">
             Not-applicable PAYGI must use the not-applicable method. Active PAYGI cannot use that
             method.
           </p>
         ) : null}
-        <div className="grid gap-2 rounded border border-border bg-background p-3">
-          <h3 className="text-[10px] font-semibold">Other activity statement obligations</h3>
+        <div className="grid gap-3 rounded-xl border border-border bg-background p-4">
+          <h3 className="text-[14px] font-semibold">Other activity statement obligations</h3>
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
             {OTHER_OBLIGATIONS.map(([key, label]) => (
               <EnumField
@@ -2706,9 +2706,9 @@ function PrepareStage(props: any) {
           </div>
         </div>
         {paygiMethodNeedsIncomeYear ? (
-          <div className="grid gap-2 rounded border border-border bg-background p-3">
-            <h3 className="text-[10px] font-semibold">PAYGI confirmed income year</h3>
-            <p className="text-[9px] leading-4 text-muted-foreground">
+          <div className="grid gap-3 rounded-xl border border-border bg-background p-4">
+            <h3 className="text-[14px] font-semibold">PAYGI confirmed income year</h3>
+            <p className="text-[12px] leading-5 text-muted-foreground">
               This income-year identity is retained in the obligations profile and reused for the
               later PAYG input review. The first shared evidence identity below confirms this year.
             </p>
@@ -2730,12 +2730,12 @@ function PrepareStage(props: any) {
               />
             </div>
             {!incomeYearIdentityComplete ? (
-              <p className="text-[9px] text-warning" role="note">
+              <p className="text-[12px] leading-5 text-warning" role="note">
                 Enter a canonical income-year UUID and both calendar dates before saving this amount
                 or rate method or its later PAYG input.
               </p>
             ) : incomeYearEnd < incomeYearStart ? (
-              <p className="text-[9px] text-warning" role="note">
+              <p className="text-[12px] leading-5 text-warning" role="note">
                 The income year end date must be on or after its start date.
               </p>
             ) : null}
@@ -2746,19 +2746,19 @@ function PrepareStage(props: any) {
           setValue={setEvidence}
           label="Shared retained profile evidence identity"
         />
-        <p className="text-[9px] leading-4 text-muted-foreground">
+        <p className="text-[12px] leading-5 text-muted-foreground">
           This exact source is attached to GST, PAYGW, PAYGI and each selected active or not
           applicable answer in the other-obligations inventory. It also confirms the PAYGI income
           year. Unknown answers remain unresolved and receive no reason or evidence.
         </p>
         {hasDecidedObligation && !profileEvidenceComplete ? (
-          <p className="text-[9px] text-warning" role="note">
+          <p className="text-[12px] leading-5 text-warning" role="note">
             Enter a complete retained source identity before saving a decided obligation or selected
             PAYGI amount or rate method.
           </p>
         ) : null}
         {!gstStatusMatchesApplicability ? (
-          <p className="text-[9px] text-warning" role="note">
+          <p className="text-[12px] leading-5 text-warning" role="note">
             Active GST requires a registered status and registration start date. Not-applicable GST
             requires a not-registered status.
           </p>
@@ -2768,12 +2768,12 @@ function PrepareStage(props: any) {
           value={profileReason}
           setValue={setProfileReason}
         />
-        <p className="text-[9px] leading-4 text-muted-foreground">
+        <p className="text-[12px] leading-5 text-muted-foreground">
           This reviewed profile reason is also retained as the reason for every selected active or
           not applicable answer in the other-obligations inventory.
         </p>
         <Button
-          className="h-8 w-fit text-[10px]"
+          className="h-11 w-fit text-[13px]"
           disabled={!canSaveProfile}
           onClick={onSaveProfile}
           type="button"
@@ -2782,13 +2782,13 @@ function PrepareStage(props: any) {
         </Button>
       </section>
 
-      <section className="grid gap-3 rounded border border-border bg-surface p-3">
-        <h2 className="text-[12px] font-semibold">Period selection and due date</h2>
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-          <label className="grid gap-1 text-[9px]">
+      <section className="work-surface grid gap-4 p-5">
+        <h2 className="text-[17px] font-semibold">Period selection and due date</h2>
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-4 max-[560px]:grid-cols-1">
+          <label className="grid gap-1.5 text-[12px] font-semibold">
             Confirmed period history
             <select
-              className="h-8 rounded border border-border bg-background px-2"
+              className="work-input h-11 text-[14px]"
               onChange={(event) => setSelectedPeriod(event.target.value)}
               value={selectedPeriod ?? ""}
             >
@@ -2839,7 +2839,7 @@ function PrepareStage(props: any) {
           />
         </div>
         {selectedSuggestion ? (
-          <p className="text-[9px] leading-4 text-muted-foreground">
+          <p className="text-[12px] leading-5 text-muted-foreground">
             Calendar suggestion uses retained rule {selectedSuggestion.dueDateRuleVersion} ·{" "}
             {hex(selectedSuggestion.dueDateRuleHash)}. Confirm an externally sourced date or
             deferral only with exact retained evidence. The calendar date is guidance; an exact
@@ -2858,7 +2858,7 @@ function PrepareStage(props: any) {
           setValue={setPeriodReason}
         />
         <Button
-          className="h-8 w-fit text-[10px]"
+          className="h-11 w-fit text-[13px]"
           disabled={!canPrepare || busy || !selectedSuggestion || !periodReason.trim()}
           onClick={onConfirmPeriod}
           type="button"
@@ -2866,7 +2866,7 @@ function PrepareStage(props: any) {
           Confirm selected period
         </Button>
         {selectedPeriodItem ? (
-          <p className="text-[9px] text-muted-foreground">
+          <p className="text-[12px] leading-5 text-muted-foreground">
             Exact selected period {selectedPeriodItem.period?.id} · revision{" "}
             {selectedPeriodItem.period?.revision} · confirmed due{" "}
             {iso(selectedPeriodItem.confirmedDueDate)}.
@@ -2874,17 +2874,17 @@ function PrepareStage(props: any) {
         ) : null}
       </section>
 
-      <section className="grid gap-3 rounded border border-border bg-surface p-3">
+      <section className="work-surface grid gap-4 p-5">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
-            <h2 className="text-[12px] font-semibold">Prepare this period</h2>
-            <p className="mt-1 text-[9px] text-muted-foreground">
+            <h2 className="text-[17px] font-semibold">Prepare this period</h2>
+            <p className="mt-1 text-[12px] leading-5 text-muted-foreground">
               Regeneration retains an immutable exact calculation and reports incomplete coverage as
               blockers or warnings.
             </p>
           </div>
           <Button
-            className="h-8 text-[10px]"
+            className="h-11 text-[13px]"
             disabled={!canPrepare || busy || !selectedPeriodItem || !selectedProfile}
             onClick={onRegenerate}
             type="button"
@@ -2893,21 +2893,21 @@ function PrepareStage(props: any) {
           </Button>
         </div>
         {selectedPreparation ? (
-          <p className="break-all text-[9px] text-muted-foreground">
+          <p className="break-all text-[12px] leading-5 text-muted-foreground">
             Selected preparation {selectedPreparation.preparationId} · version{" "}
             {selectedPreparation.version} · {hashField("input hash", selectedPreparation.inputHash)}
           </p>
         ) : (
-          <p className="text-[9px] text-muted-foreground">
+          <p className="text-[12px] text-muted-foreground">
             Select a confirmed period and profile, then prepare the first retained calculation.
           </p>
         )}
       </section>
 
       {selectedPreparation ? (
-        <section className="grid gap-3 rounded border border-border bg-surface p-3">
-          <h2 className="text-[12px] font-semibold">PAYGW and PAYGI labels</h2>
-          <p className="text-[9px] text-muted-foreground">
+        <section className="work-surface grid gap-4 p-5">
+          <h2 className="text-[17px] font-semibold">PAYGW and PAYGI labels</h2>
+          <p className="text-[12px] leading-5 text-muted-foreground">
             Each label is entered as unknown, not applicable, known zero or an exact positive
             amount. Evidence stays linked to the saved input snapshot.
           </p>
@@ -3021,7 +3021,7 @@ function PrepareStage(props: any) {
             }
           />
           <Button
-            className="h-8 w-fit text-[10px]"
+            className="h-11 w-fit text-[13px]"
             disabled={!canPrepare || busy}
             onClick={onSaveInputs}
             type="button"
@@ -3055,19 +3055,19 @@ function ReviewStage(props: any) {
     .filter(Boolean) as Ref[];
   return (
     <div className="grid gap-4">
-      <section className="grid gap-3 rounded border border-border bg-surface p-3">
+      <section className="work-surface grid gap-4 p-5">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h2 className="text-[12px] font-semibold">Exact review snapshot</h2>
-            <p className="mt-1 max-w-3xl text-[9px] leading-4 text-muted-foreground">
+            <h2 className="text-[17px] font-semibold">Exact review snapshot</h2>
+            <p className="mt-1 max-w-3xl text-[12px] leading-5 text-muted-foreground">
               Validation is pinned to the calculation, input hash and source snapshot. Freeze
               re-reads this exact identity before asking for the fresh factor.
             </p>
           </div>
-          <label className="grid gap-1 text-[9px]">
+          <label className="grid gap-1.5 text-[12px] font-semibold">
             Preparation history
             <select
-              className="h-8 min-w-[340px] rounded border border-border bg-background px-2"
+              className="work-input h-11 min-w-[340px] text-[14px]"
               onChange={(event) => setSelected(event.target.value)}
               value={selected ?? ""}
             >
@@ -3080,7 +3080,7 @@ function ReviewStage(props: any) {
           </label>
         </div>
         {preparation ? (
-          <dl className="grid grid-cols-[160px_minmax(0,1fr)] gap-x-3 gap-y-1 break-all text-[9px]">
+          <dl className="grid grid-cols-[180px_minmax(0,1fr)] gap-x-4 gap-y-2 break-all text-[12px] max-[560px]:grid-cols-1">
             <dt>Retained state</dt>
             <dd>{preparationStateLabel(preparation.state)}</dd>
             <dt>Live source currentness</dt>
@@ -3109,10 +3109,10 @@ function ReviewStage(props: any) {
             </dd>
           </dl>
         ) : (
-          <p className="text-[10px]">Select a retained preparation to review.</p>
+          <p className="text-[13px]">Select a retained preparation to review.</p>
         )}
         <Button
-          className="h-8 w-fit text-[10px]"
+          className="h-11 w-fit text-[13px]"
           disabled={!canPrepare || busy || !preparation || !calculation}
           onClick={onValidate}
           type="button"
@@ -3121,27 +3121,24 @@ function ReviewStage(props: any) {
         </Button>
       </section>
       {calculation ? (
-        <section className="overflow-hidden rounded border border-border bg-surface">
-          <div className="border-b border-border p-3">
-            <h3 className="text-[11px] font-semibold">Calculated BAS labels</h3>
-            <p className="mt-1 text-[9px] text-muted-foreground">
-              Exact cents and separately reported whole dollars come from the retained calculation
-              traces.
-            </p>
-          </div>
+        <section className="work-surface overflow-hidden">
+          <SurfaceHeading
+            title="Calculated BAS labels"
+            description="Exact cents and separately reported whole dollars come from the retained calculation traces."
+          />
           <div className="overflow-x-auto">
             <table
               aria-label="Exact BAS calculation labels"
-              className="w-full text-left text-[9px]"
+              className="work-table w-full min-w-[920px] text-left text-[12px]"
             >
               <thead>
                 <tr className="border-b border-border">
-                  <th className="p-2">Label</th>
-                  <th className="p-2">State</th>
-                  <th className="p-2">Exact cents</th>
-                  <th className="p-2">Reported whole dollars</th>
-                  <th className="p-2">Rounding difference</th>
-                  <th className="p-2">Rule</th>
+                  <th className="p-4">Label</th>
+                  <th className="p-4">State</th>
+                  <th className="p-4">Exact cents</th>
+                  <th className="p-4">Reported whole dollars</th>
+                  <th className="p-4">Rounding difference</th>
+                  <th className="p-4">Rule</th>
                 </tr>
               </thead>
               <tbody>
@@ -3150,22 +3147,24 @@ function ReviewStage(props: any) {
                     className="border-b border-border last:border-0"
                     key={`${item.label}:${item.ruleId}`}
                   >
-                    <td className="p-2 font-semibold">{formLabel(item.label)}</td>
-                    <td className="p-2">{amountStateLabel(item.state)}</td>
-                    <td className="p-2">
+                    <td className="p-4 font-semibold">{formLabel(item.label)}</td>
+                    <td className="p-4">{amountStateLabel(item.state)}</td>
+                    <td className="p-4 font-mono tabular-nums">
                       {item.exactCentsNumerator
                         ? `${item.exactCentsNumerator}/${item.exactCentsDenominator}`
                         : item.exactRateNumerator
                           ? `${item.exactRateNumerator}/${item.exactRateDenominator} rate`
                           : "—"}
                     </td>
-                    <td className="p-2">{item.reportedWholeDollars?.toString() ?? "—"}</td>
-                    <td className="p-2">
+                    <td className="p-4 tabular-nums">
+                      {item.reportedWholeDollars?.toString() ?? "—"}
+                    </td>
+                    <td className="p-4 font-mono tabular-nums">
                       {item.roundingDifferenceCentsNumerator
                         ? `${item.roundingDifferenceCentsNumerator}/${item.roundingDifferenceCentsDenominator} cents`
                         : "—"}
                     </td>
-                    <td className="p-2">{item.ruleId}</td>
+                    <td className="p-4">{item.ruleId}</td>
                   </tr>
                 ))}
               </tbody>
@@ -3174,16 +3173,16 @@ function ReviewStage(props: any) {
         </section>
       ) : null}
       {validation ? (
-        <section className="grid gap-3 rounded border border-border bg-surface p-3">
-          <h3 className="text-[11px] font-semibold">Review findings</h3>
+        <section className="work-surface grid gap-4 p-5">
+          <h3 className="text-[16px] font-semibold">Review findings</h3>
           {validation.findings.length === 0 ? (
-            <p className="text-[9px] text-muted-foreground">
+            <p className="text-[12px] text-muted-foreground">
               No findings were recorded in this exact validation.
             </p>
           ) : (
             validation.findings.map((finding: BasValidationFinding) => (
               <label
-                className="flex items-start gap-2 rounded border border-border bg-background p-2 text-[9px]"
+                className="flex items-start gap-3 rounded-xl border border-border bg-background p-4 text-[13px] leading-5"
                 key={finding.findingId}
               >
                 <input
@@ -3228,13 +3227,13 @@ function ReviewStage(props: any) {
               </label>
             ))
           )}
-          <p className="text-[9px] leading-4 text-muted-foreground">
+          <p className="text-[12px] leading-5 text-muted-foreground">
             Warning acknowledgement hashes are calculated from the selected protobuf finding and
             bound to this validation and source snapshot. Blockers and unsupported findings cannot
             be acknowledged away.
           </p>
           <Button
-            className="h-8 w-fit text-[10px]"
+            className="h-11 w-fit text-[13px]"
             disabled={!canPrepare || busy || acknowledged.length === 0}
             onClick={onAcknowledge}
             type="button"
@@ -3271,20 +3270,20 @@ function FreezeStage(props: any) {
   } = props;
   return (
     <div className="grid gap-4">
-      <section className="grid gap-3 rounded border border-border bg-surface p-3">
+      <section className="work-surface grid gap-4 p-5">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h2 className="text-[12px] font-semibold">Freeze for manual handoff</h2>
-            <p className="mt-1 max-w-3xl text-[9px] leading-4 text-muted-foreground">
+            <h2 className="text-[17px] font-semibold">Freeze for manual handoff</h2>
+            <p className="mt-1 max-w-3xl text-[12px] leading-5 text-muted-foreground">
               Only a Business Lodger can approve this action. Workspace admins can prepare and read
               BAS records, but cannot use approval actions. The command is bound to a fresh TOTP
               assertion for this exact freeze purpose.
             </p>
           </div>
-          <label className="grid gap-1 text-[9px]">
+          <label className="grid gap-1.5 text-[12px] font-semibold">
             Preparation
             <select
-              className="h-8 min-w-[340px] rounded border border-border bg-background px-2"
+              className="work-input h-11 min-w-[340px] text-[14px]"
               onChange={(event) => setSelected(event.target.value)}
               value={selected ?? ""}
             >
@@ -3297,7 +3296,7 @@ function FreezeStage(props: any) {
           </label>
         </div>
         {preparation ? (
-          <p className="break-all text-[9px] text-muted-foreground">
+          <p className="break-all text-[12px] leading-5 text-muted-foreground">
             Exact review target {preparation.preparationId} · v{preparation.version} ·{" "}
             {hex(preparation.contentHash)} · retained state{" "}
             {preparationStateLabel(preparation.state)} · live source currentness{" "}
@@ -3305,7 +3304,7 @@ function FreezeStage(props: any) {
           </p>
         ) : null}
         {liveCurrentness !== BasLiveCurrentness.CURRENT ? (
-          <p className="rounded border border-warning-border bg-warning-soft p-2 text-[9px]">
+          <p className="rounded-xl border border-warning-border bg-warning-soft p-4 text-[13px] leading-5">
             The live source set is not confirmed current. Refresh the exact record before approval;
             a retained review-ready state does not establish currentness.
           </p>
@@ -3318,11 +3317,11 @@ function FreezeStage(props: any) {
           inputMode="numeric"
           maxLength={6}
         />
-        <p className="text-[9px] text-muted-foreground">
+        <p className="text-[12px] leading-5 text-muted-foreground">
           This local action creates a frozen handoff snapshot. It does not lodge or submit a BAS.
         </p>
         <Button
-          className="h-8 w-fit text-[10px]"
+          className="h-11 w-fit text-[13px]"
           disabled={
             !canApprove ||
             busy ||
@@ -3338,12 +3337,12 @@ function FreezeStage(props: any) {
           Approve and freeze exact snapshot
         </Button>
       </section>
-      <section className="grid gap-3 rounded border border-border bg-surface p-3">
-        <h2 className="text-[12px] font-semibold">Frozen identity and replacements</h2>
-        <label className="grid gap-1 text-[9px]">
+      <section className="work-surface grid gap-4 p-5">
+        <h2 className="text-[17px] font-semibold">Frozen identity and replacements</h2>
+        <label className="grid gap-1.5 text-[12px] font-semibold">
           Frozen history
           <select
-            className="h-8 rounded border border-border bg-background px-2"
+            className="work-input h-11 text-[14px]"
             onChange={(event) => setSelectedFrozen(event.target.value)}
             value={selectedFrozen ?? ""}
           >
@@ -3356,19 +3355,19 @@ function FreezeStage(props: any) {
           </select>
         </label>
         {frozen.map((item: BasFrozenBasSummary) => (
-          <p className="break-all text-[9px] text-muted-foreground" key={refKey(item.frozenBas)}>
+          <p className="break-all text-[12px] text-muted-foreground" key={refKey(item.frozenBas)}>
             {item.frozenBas?.id} · {hex(item.frozenBas?.contentHash)} · preparation{" "}
             {item.preparation?.id}
           </p>
         ))}
         {selectedFrozen ? (
-          <p className="text-[9px] text-muted-foreground">
+          <p className="text-[12px] leading-5 text-muted-foreground">
             Selected frozen snapshot live source currentness:{" "}
             {currentnessLabel(frozenLiveCurrentness)}. This is a new read status and does not change
             the frozen approval record.
           </p>
         ) : null}
-        <p className="text-[9px] text-muted-foreground">
+        <p className="text-[12px] leading-5 text-muted-foreground">
           An unused frozen attempt can be replaced only while no external completion has been
           recorded. The original frozen identity remains in history.
         </p>
@@ -3378,7 +3377,7 @@ function FreezeStage(props: any) {
           setValue={setReplacementReason}
         />
         <Button
-          className="h-8 w-fit text-[10px]"
+          className="h-11 w-fit text-[13px]"
           disabled={
             !canApprove ||
             busy ||
@@ -3441,17 +3440,17 @@ function ExportStage(props: {
   } = props;
   return (
     <div className="grid gap-4">
-      <section className="grid gap-3 rounded border border-border bg-surface p-3">
-        <h2 className="text-[12px] font-semibold">Export an exact retained BAS version</h2>
-        <p className="text-[9px] leading-4 text-muted-foreground">
+      <section className="work-surface grid gap-4 p-5">
+        <h2 className="text-[17px] font-semibold">Export an exact retained BAS version</h2>
+        <p className="text-[12px] leading-5 text-muted-foreground">
           The report reads only the selected immutable calculation or frozen snapshot identity. It
           does not read current profile or workpaper data and does not lodge the BAS.
         </p>
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-          <label className="grid gap-1 text-[9px]">
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-4 max-[560px]:grid-cols-1">
+          <label className="grid gap-1.5 text-[12px] font-semibold">
             Exact report source
             <select
-              className="h-8 rounded border border-border bg-background px-2"
+              className="work-input h-11 text-[14px]"
               onChange={(event) =>
                 setExportKind(event.target.value as "calculation" | "frozen_bas")
               }
@@ -3461,10 +3460,10 @@ function ExportStage(props: {
               <option value="calculation">Retained calculation</option>
             </select>
           </label>
-          <label className="grid gap-1 text-[9px]">
+          <label className="grid gap-1.5 text-[12px] font-semibold">
             Format
             <select
-              className="h-8 rounded border border-border bg-background px-2"
+              className="work-input h-11 text-[14px]"
               onChange={(event) => setFormat(event.target.value as "pdf" | "csv")}
               value={format}
             >
@@ -3473,10 +3472,10 @@ function ExportStage(props: {
             </select>
           </label>
           {exportKind === "frozen_bas" ? (
-            <label className="grid gap-1 text-[9px]">
+            <label className="grid gap-1.5 text-[12px] font-semibold">
               Frozen BAS identity
               <select
-                className="h-8 rounded border border-border bg-background px-2"
+                className="work-input h-11 text-[14px]"
                 onChange={(event) => setSelectedFrozen(event.target.value)}
                 value={selectedFrozen}
               >
@@ -3489,10 +3488,10 @@ function ExportStage(props: {
               </select>
             </label>
           ) : (
-            <label className="grid gap-1 text-[9px]">
+            <label className="grid gap-1.5 text-[12px] font-semibold">
               Calculation preparation
               <select
-                className="h-8 rounded border border-border bg-background px-2"
+                className="work-input h-11 text-[14px]"
                 onChange={(event) => setSelectedPreparation(event.target.value)}
                 value={selectedPreparation}
               >
@@ -3509,7 +3508,7 @@ function ExportStage(props: {
           )}
         </div>
         {exportKind === "frozen_bas" && detail ? (
-          <dl className="grid grid-cols-[140px_minmax(0,1fr)] gap-x-3 gap-y-1 break-all text-[9px]">
+          <dl className="grid grid-cols-[160px_minmax(0,1fr)] gap-x-4 gap-y-2 break-all text-[12px] max-[560px]:grid-cols-1">
             <dt>Frozen BAS</dt>
             <dd>
               {detail.frozenId} · {hex(detail.contentHash)}
@@ -3529,19 +3528,19 @@ function ExportStage(props: {
           </dl>
         ) : null}
         {exportKind === "calculation" && selectedCalculation ? (
-          <p className="break-all text-[9px] text-muted-foreground">
+          <p className="break-all text-[12px] text-muted-foreground">
             Exact calculation target {selectedCalculation.id} · revision{" "}
             {selectedCalculation.revision} · {hex(selectedCalculation.contentHash)}.
           </p>
         ) : null}
-        <p className="rounded border border-warning-border bg-warning-soft p-2 text-[9px]">
+        <p className="rounded-xl border border-warning-border bg-warning-soft p-4 text-[13px] leading-5">
           A frozen report is labelled “manual handoff — not lodged.” Live source currentness is a
           separate read and does not alter the retained frozen approval. Export history stores the
           exact target, format, result and file hash; it does not store the destination path or file
           contents.
         </p>
         <Button
-          className="h-8 w-fit text-[10px]"
+          className="h-11 w-fit text-[13px]"
           disabled={busy || (exportKind === "frozen_bas" ? !selectedFrozen : !selectedCalculation)}
           onClick={onExport}
           type="button"
@@ -3549,20 +3548,17 @@ function ExportStage(props: {
           {busy ? "Preparing exact report…" : `Export ${format.toUpperCase()}`}
         </Button>
       </section>
-      <section
-        aria-label="Exact-target export history"
-        className="grid gap-2 rounded border border-border bg-surface p-3"
-      >
+      <section aria-label="Exact-target export history" className="work-surface grid gap-4 p-5">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
-            <h2 className="text-[12px] font-semibold">Exact-target export history</h2>
-            <p className="text-[9px] text-muted-foreground">
+            <h2 className="text-[17px] font-semibold">Exact-target export history</h2>
+            <p className="text-[12px] leading-5 text-muted-foreground">
               Only events for the selected retained target are shown. Destination paths and report
               bytes are not stored.
             </p>
           </div>
           <Button
-            className="h-7 text-[9px]"
+            className="h-11 text-[13px]"
             disabled={eventsLoading}
             onClick={onRefreshHistory}
             type="button"
@@ -3572,22 +3568,22 @@ function ExportStage(props: {
           </Button>
         </div>
         {eventsError ? (
-          <p className="text-[9px] text-warning-foreground" role="alert">
+          <p className="text-[13px] text-warning-foreground" role="alert">
             Export history could not be loaded. Retry without changing the selected target.
           </p>
         ) : eventsLoading ? (
-          <p className="text-[9px] text-muted-foreground">
+          <p className="text-[12px] text-muted-foreground">
             Reading all pages for this exact target…
           </p>
         ) : events.length === 0 ? (
-          <p className="text-[9px] text-muted-foreground">
+          <p className="text-[12px] text-muted-foreground">
             No export events for this exact target.
           </p>
         ) : (
           <ul className="grid gap-1">
             {events.map((event) => (
               <li
-                className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-t border-border py-2 text-[9px]"
+                className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-t border-border py-3 text-[12px]"
                 key={refKey(event.exportEvent)}
               >
                 <span className="break-all">
@@ -3681,24 +3677,24 @@ function ExternalStage(props: any) {
 
   return (
     <div className="grid gap-4">
-      <section className="grid gap-3 rounded border border-border bg-surface p-3">
-        <h2 className="text-[12px] font-semibold">
+      <section className="work-surface grid gap-4 p-5">
+        <h2 className="text-[17px] font-semibold">
           Record what the user says happened outside Tammy
         </h2>
-        <p className="text-[9px] leading-4 text-muted-foreground">
+        <p className="text-[12px] leading-5 text-muted-foreground">
           Every event is stored as USER_RECORDED_UNVERIFIED. Tammy cannot confirm that the ATO
           received, processed or accepted anything. Pending, unknown, rejection, reviewer handoff,
           payment and refund events do not advance the confirmed chain.
         </p>
-        <p className="text-[9px] leading-4 text-muted-foreground">
+        <p className="text-[12px] leading-5 text-muted-foreground">
           Completed lodgement and acceptance require a Business Lodger and a fresh confirmation
           factor. Other user-recorded events require a preparer or workspace admin. Corrections
           remain Business Lodger-only.
         </p>
-        <label className="grid gap-1 text-[9px]">
+        <label className="grid gap-1.5 text-[12px] font-semibold">
           Frozen BAS
           <select
-            className="h-8 rounded border border-border bg-background px-2"
+            className="work-input h-11 text-[14px]"
             onChange={(event) => setSelectedFrozen(event.target.value)}
             value={selectedFrozen ?? ""}
           >
@@ -3710,7 +3706,7 @@ function ExternalStage(props: any) {
             ))}
           </select>
         </label>
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-4 max-[560px]:grid-cols-1">
           <EnumField
             label="User-recorded event"
             value={eventKind}
@@ -3761,7 +3757,7 @@ function ExternalStage(props: any) {
           />
         ) : null}
         <Button
-          className="h-8 w-fit text-[10px]"
+          className="h-11 w-fit text-[13px]"
           disabled={
             !canRecordEvent ||
             busy ||
@@ -3774,22 +3770,22 @@ function ExternalStage(props: any) {
         >
           Record user-reported event as unverified
         </Button>
-        <p className="break-all text-[9px] text-muted-foreground">
+        <p className="break-all text-[12px] leading-5 text-muted-foreground">
           Current preparation {preparation?.preparationId ?? "—"} ·{" "}
           {preparation ? preparationStateLabel(preparation.state) : "no exact selected preparation"}
         </p>
       </section>
 
-      <section className="grid gap-3 rounded border border-border bg-surface p-3">
-        <h2 className="text-[12px] font-semibold">External history and corrections</h2>
+      <section className="work-surface grid gap-4 p-5">
+        <h2 className="text-[17px] font-semibold">External history and corrections</h2>
         {observations.length === 0 ? (
-          <p className="text-[9px] text-muted-foreground">
+          <p className="text-[12px] text-muted-foreground">
             No external observations for this frozen identity. Refresh will preserve the selected
             frozen target.
           </p>
         ) : (
           observations.map((item: BasExternalObservationSummary) => (
-            <div className="border-b border-border py-2 text-[9px]" key={refKey(item.observation)}>
+            <div className="border-b border-border py-3 text-[12px]" key={refKey(item.observation)}>
               <strong>
                 {item.eventKind === undefined ? "Correction" : eventLabel(item.eventKind)} ·
                 USER_RECORDED_UNVERIFIED
@@ -3802,10 +3798,10 @@ function ExternalStage(props: any) {
             </div>
           ))
         )}
-        <label className="grid gap-1 text-[9px]">
+        <label className="grid gap-1.5 text-[12px] font-semibold">
           Correct a retained observation
           <select
-            className="h-8 rounded border border-border bg-background px-2"
+            className="work-input h-11 text-[14px]"
             onChange={(event) => setCorrectionObservation(event.target.value)}
             value={correctionObservation ?? ""}
           >
@@ -3818,7 +3814,7 @@ function ExternalStage(props: any) {
             ))}
           </select>
         </label>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-4 max-[560px]:grid-cols-1">
           <EnumField
             label="Correction type"
             value={correctionKind}
@@ -3848,12 +3844,12 @@ function ExternalStage(props: any) {
           value={correctionReason}
           setValue={setCorrectionReason}
         />
-        <p className="text-[9px] text-muted-foreground">
+        <p className="text-[12px] leading-5 text-muted-foreground">
           Correcting a retained assertion is a Business Lodger action. It preserves the original
           observation and does not verify what the ATO did.
         </p>
         <Button
-          className="h-8 w-fit text-[10px]"
+          className="h-11 w-fit text-[13px]"
           disabled={!canApprove || busy || !hasCorrectionTarget || !correctionReason.trim()}
           onClick={onCorrect}
           type="button"
@@ -3862,13 +3858,13 @@ function ExternalStage(props: any) {
         </Button>
       </section>
 
-      <section className="grid gap-3 rounded border border-border bg-surface p-3">
-        <h2 className="text-[12px] font-semibold">Create a revision from the confirmed chain</h2>
-        <p className="text-[9px] text-muted-foreground">
+      <section className="work-surface grid gap-4 p-5">
+        <h2 className="text-[17px] font-semibold">Create a revision from the confirmed chain</h2>
+        <p className="text-[12px] leading-5 text-muted-foreground">
           A revision starts from the exact latest confirmed head and effective original supplied by
           the server. Choose the applicable retained profile and period in Prepare.
         </p>
-        <p className="break-all text-[9px] text-muted-foreground">
+        <p className="break-all text-[12px] leading-5 text-muted-foreground">
           Selected profile {selectedProfile?.id ?? "—"} · period {selectedPeriod?.id ?? "—"} ·{" "}
           {hasConfirmedHead
             ? `confirmed head ${currentChain.latestHead.expectedState.value.id}`
@@ -3876,7 +3872,7 @@ function ExternalStage(props: any) {
         </p>
         <TextInput label="Revision reason" value={revisionReason} setValue={setRevisionReason} />
         <Button
-          className="h-8 w-fit text-[10px]"
+          className="h-11 w-fit text-[13px]"
           disabled={
             !canPrepare ||
             busy ||
@@ -3892,15 +3888,15 @@ function ExternalStage(props: any) {
         </Button>
       </section>
 
-      <section className="grid gap-3 rounded border border-border bg-surface p-3">
-        <h2 className="text-[12px] font-semibold">Resolve a contested external history</h2>
-        <p className="text-[9px] text-muted-foreground">
+      <section className="work-surface grid gap-4 p-5">
+        <h2 className="text-[17px] font-semibold">Resolve a contested external history</h2>
+        <p className="text-[12px] text-muted-foreground">
           Current family overlay: {disputeOverlayLabel(currentDisputeOverlay)} · branch resolution:{" "}
           {currentBranchResolution?.id ?? "none"} · frozen barrier:{" "}
           {currentFrozenBarrier?.id ?? "none"}.
         </p>
         {hasCurrentDispute ? (
-          <div className="grid gap-2 rounded border border-border bg-background p-2 text-[9px]">
+          <div className="grid gap-3 rounded-xl border border-border bg-background p-4 text-[12px]">
             <p>
               The server derived these exact dispute subjects and dependency proof from the full
               retained history. Tammy will submit this ordered set unchanged.
@@ -3930,7 +3926,7 @@ function ExternalStage(props: any) {
             </p>
           </div>
         ) : (
-          <p className="text-[9px] text-muted-foreground">
+          <p className="text-[12px] text-muted-foreground">
             No current contested history is available for this exact preparation. Record or correct
             a user-reported external event, then refresh the retained history.
           </p>
@@ -3957,7 +3953,7 @@ function ExternalStage(props: any) {
           maxLength={6}
         />
         <Button
-          className="h-8 w-fit text-[10px]"
+          className="h-11 w-fit text-[13px]"
           disabled={
             !canApprove ||
             busy ||
@@ -3972,9 +3968,9 @@ function ExternalStage(props: any) {
         </Button>
       </section>
 
-      <section className="grid gap-3 rounded border border-border bg-surface p-3">
-        <h2 className="text-[12px] font-semibold">Replace a rejected attempt</h2>
-        <p className="text-[9px] text-muted-foreground">
+      <section className="work-surface grid gap-4 p-5">
+        <h2 className="text-[17px] font-semibold">Replace a rejected attempt</h2>
+        <p className="text-[12px] leading-5 text-muted-foreground">
           Replacement is enabled only when the selected exact attempt has a retained rejection
           observation; it does not erase that attempt.
         </p>
@@ -3991,7 +3987,7 @@ function ExternalStage(props: any) {
           maxLength={6}
         />
         <Button
-          className="h-8 w-fit text-[10px]"
+          className="h-11 w-fit text-[13px]"
           disabled={
             !canApprove ||
             busy ||
@@ -4006,7 +4002,7 @@ function ExternalStage(props: any) {
           Replace selected rejected attempt (fresh TOTP)
         </Button>
         {disputes.map((item: BasExternalDisputeResolutionSummary) => (
-          <p className="break-all text-[9px] text-muted-foreground" key={refKey(item.resolution)}>
+          <p className="break-all text-[12px] text-muted-foreground" key={refKey(item.resolution)}>
             {item.resolution?.id} · {item.outcome} · {dateTimeLabel(item.resolvedAt)}
           </p>
         ))}
@@ -4024,10 +4020,10 @@ function DateInput({
   readonly setValue: (value: string) => void;
 }) {
   return (
-    <label className="grid gap-1 text-[9px]">
+    <label className="grid gap-1.5 text-[12px] font-semibold text-foreground">
       {label}
       <input
-        className="h-8 rounded border border-border bg-background px-2"
+        className="work-input h-11 min-w-0"
         onChange={(event) => setValue(event.target.value)}
         type="date"
         value={value}
@@ -4049,10 +4045,10 @@ function TextInput({
   readonly maxLength?: number;
 }) {
   return (
-    <label className="grid gap-1 text-[9px]">
+    <label className="grid gap-1.5 text-[12px] font-semibold text-foreground">
       {label}
       <input
-        className="h-8 min-w-0 rounded border border-border bg-background px-2 text-[10px]"
+        className="work-input h-11 min-w-0 text-[14px]"
         inputMode={inputMode ?? "text"}
         maxLength={maxLength}
         onChange={(event) => setValue(event.target.value)}
@@ -4073,10 +4069,10 @@ function EnumField<E extends number>({
   readonly options: readonly { readonly value: number; readonly label: string }[];
 }) {
   return (
-    <label className="grid gap-1 text-[9px]">
+    <label className="grid gap-1.5 text-[12px] font-semibold text-foreground">
       {label}
       <select
-        className="h-8 min-w-0 rounded border border-border bg-background px-2 text-[10px]"
+        className="work-input h-11 min-w-0 text-[14px]"
         onChange={(event) => setValue(Number(event.target.value) as E)}
         value={value}
       >
@@ -4099,9 +4095,9 @@ function EvidenceEditor({
   readonly label: string;
 }) {
   return (
-    <fieldset className="grid gap-2 rounded border border-border p-2">
-      <legend className="px-1 text-[9px] font-semibold">{label}</legend>
-      <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+    <fieldset className="grid gap-3 rounded-xl border border-border bg-background/50 p-4">
+      <legend className="px-1 text-[12px] font-semibold text-foreground">{label}</legend>
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4 max-[560px]:grid-cols-1">
         <TextInput
           label="Source type"
           value={value.type}
@@ -4123,7 +4119,7 @@ function EvidenceEditor({
           setValue={(hash) => setValue({ ...value, hash })}
         />
       </div>
-      <p className="text-[8px] leading-4 text-muted-foreground">
+      <p className="text-[12px] leading-5 text-muted-foreground">
         Paste an exact identity already retained in Tammy. Do not enter a local file path or SBR
         credential.
       </p>

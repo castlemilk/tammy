@@ -1,6 +1,6 @@
 /* oxlint-disable next/no-html-link-for-pages -- Vinext serves these static same-origin routes without a Next runtime. */
 import type { Metadata } from "next";
-import { PolicyDocument } from "../../components/policy-document";
+import { PolicyDocument, policySectionId } from "../../components/policy-document";
 import { publicContent } from "../../content/public-content.generated";
 
 const { identity, policy } = publicContent;
@@ -37,6 +37,16 @@ export default function PrivacyPage() {
             Effective {policy.effectiveDate}. Last updated {policy.effectiveDate}.
           </p>
         </header>
+        <nav aria-label="Privacy policy contents" className="policy-contents">
+          <h2>Contents</h2>
+          <ol>
+            {policy.sections.map((section) => (
+              <li key={section.heading}>
+                <a href={`#${policySectionId(section.heading)}`}>{section.heading}</a>
+              </li>
+            ))}
+          </ol>
+        </nav>
         <PolicyDocument sections={policy.sections} />
         <p className="document-contact">
           Questions about this policy? Visit <a href="/support">Support</a>.

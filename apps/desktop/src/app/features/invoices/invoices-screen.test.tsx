@@ -125,6 +125,25 @@ it("loads an MCP proposal for human editing without saving it", async () => {
   expect(calls.saved).toEqual([]);
 });
 
+it("normalizes a pasted customer ABN in the editor and saved invoice", async () => {
+  const { api, calls } = fixture();
+  render(<InvoicesScreen api={api} />);
+  await useProposal();
+
+  const customerAbn = screen.getByLabelText("Customer ABN (optional)") as HTMLInputElement;
+  fireEvent.change(customerAbn, { target: { value: "52 682 863 690" } });
+  expect(customerAbn.value).toBe("52682863690");
+
+  await userEvent.click(screen.getByRole("button", { name: "Save draft" }));
+  await screen.findByText("Draft saved.");
+  expect(calls.saved[0]?.customerAbn).toBe("52682863690");
+
+  fireEvent.change(customerAbn, {
+    target: { value: "52A 682 863 690 ABCDEFGHIJK" },
+  });
+  expect(customerAbn.value).toBe("52A682863690ABCDEFGHIJK");
+});
+
 it("saves exact decimal amounts and disables export after unsaved edits", async () => {
   const { api, calls } = fixture();
   render(<InvoicesScreen api={api} />);

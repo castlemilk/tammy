@@ -10,6 +10,8 @@ import { useMemo } from "react";
 
 import type { TammyConveyorModule } from "../../../conveyor/client";
 import { createProtoMethodCodec } from "../../../shared/proto-ipc";
+import { HorizontalScrollArea } from "../../components/horizontal-scroll-area";
+import { ScreenHeading, SurfaceHeading } from "../../components/workspace-primitives";
 import type { AuthenticatedWorkspace } from "../setup/setup-screen";
 
 const codec = createProtoMethodCodec({
@@ -64,51 +66,56 @@ export function TrialBalanceScreen({ api, now, workspace }: TrialBalanceScreenPr
     }
   }, [organisationId, trialBalance.data, trialBalance.isError]);
   return (
-    <div className="mx-auto grid w-full max-w-[1120px] gap-5">
-      <div>
-        <h1 className="text-foreground page-title">Trial balance</h1>
-        <p className="mt-1 text-[14px] leading-5 text-muted-foreground">
-          Debit and credit balances as at {instant.toLocaleDateString("en-AU")}.
-        </p>
-      </div>
-      <section className="overflow-x-auto rounded-[20px] border border-border bg-surface">
+    <div className="mx-auto grid w-full max-w-[1120px] gap-6">
+      <ScreenHeading
+        area="Accounting · Reports"
+        title="Trial balance"
+        description={`Debit and credit balances as at ${instant.toLocaleDateString("en-AU")}.`}
+      />
+      <section className="work-surface overflow-hidden">
+        <SurfaceHeading
+          title="Account balances"
+          description="Debits and credits in Australian dollars."
+        />
         {state.status === "ready" ? (
-          <table className="w-full border-collapse text-left">
-            <thead className="border-b border-border bg-background/60 text-[12px] uppercase text-muted-foreground">
-              <tr>
-                <th className="px-3 py-2">Account</th>
-                <th className="px-3 py-2 text-right">Debit (AUD)</th>
-                <th className="px-3 py-2 text-right">Credit (AUD)</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border text-[14px]">
-              {state.value.lines.map((line) => (
-                <tr key={line.account?.id ?? line.code}>
-                  <td className="px-3 py-2.5">
-                    <span className="mr-3 font-mono text-muted-foreground">{line.code}</span>
-                    <span className="font-medium">{line.name}</span>
+          <HorizontalScrollArea label="Account balances table">
+            <table className="w-full border-collapse text-left">
+              <thead className="border-b border-border bg-background/60 text-[12px] uppercase tracking-[0.06em] text-muted-foreground">
+                <tr>
+                  <th className="px-5 py-3">Account</th>
+                  <th className="px-5 py-3 text-right">Debit (AUD)</th>
+                  <th className="px-5 py-3 text-right">Credit (AUD)</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border text-[14px]">
+                {state.value.lines.map((line) => (
+                  <tr key={line.account?.id ?? line.code}>
+                    <td className="px-5 py-3.5">
+                      <span className="mr-3 font-mono text-muted-foreground">{line.code}</span>
+                      <span className="font-medium">{line.name}</span>
+                    </td>
+                    <td className="px-5 py-3.5 text-right font-mono tabular-nums">
+                      {moneyLabel(line.debits?.minorUnits ?? 0n)}
+                    </td>
+                    <td className="px-5 py-3.5 text-right font-mono tabular-nums">
+                      {moneyLabel(line.credits?.minorUnits ?? 0n)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot className="border-t border-border text-[14px] font-semibold text-forest">
+                <tr>
+                  <td className="px-5 py-3.5">Total</td>
+                  <td className="px-5 py-3.5 text-right font-mono tabular-nums">
+                    {moneyLabel(state.value.totalDebits?.minorUnits ?? 0n)}
                   </td>
-                  <td className="px-3 py-2.5 text-right font-mono">
-                    {moneyLabel(line.debits?.minorUnits ?? 0n)}
-                  </td>
-                  <td className="px-3 py-2.5 text-right font-mono">
-                    {moneyLabel(line.credits?.minorUnits ?? 0n)}
+                  <td className="px-5 py-3.5 text-right font-mono tabular-nums">
+                    {moneyLabel(state.value.totalCredits?.minorUnits ?? 0n)}
                   </td>
                 </tr>
-              ))}
-            </tbody>
-            <tfoot className="border-t border-border text-[14px] font-semibold text-forest">
-              <tr>
-                <td className="px-3 py-2.5">Total</td>
-                <td className="px-3 py-2.5 text-right font-mono">
-                  {moneyLabel(state.value.totalDebits?.minorUnits ?? 0n)}
-                </td>
-                <td className="px-3 py-2.5 text-right font-mono">
-                  {moneyLabel(state.value.totalCredits?.minorUnits ?? 0n)}
-                </td>
-              </tr>
-            </tfoot>
-          </table>
+              </tfoot>
+            </table>
+          </HorizontalScrollArea>
         ) : (
           <div className="grid min-h-64 place-items-center text-center">
             <div>

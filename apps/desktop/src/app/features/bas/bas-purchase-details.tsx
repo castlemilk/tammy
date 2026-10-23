@@ -11,7 +11,9 @@ import {
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import type { TammyConveyorModule } from "../../../conveyor/client";
 import { isPurchaseCorrectionCode } from "../../../shared/purchase-errors";
+import { HorizontalScrollArea } from "../../components/horizontal-scroll-area";
 import { Button } from "../../components/ui/button";
+import { SurfaceHeading } from "../../components/workspace-primitives";
 import { purchaseCorrectionGuidance } from "../documents/purchase-accounting-panel";
 import { authenticatedPurchaseRetry } from "../documents/purchase-attempt-recovery";
 import { purchaseCodecs } from "../documents/purchase-codecs";
@@ -61,26 +63,26 @@ export function BasPurchaseDetails({
   if (value.purchaseSourceFormat !== BasPurchaseSourceFormat.RECONCILED_V1) return null;
   return (
     <div className="grid gap-4">
-      <section className="overflow-hidden rounded-[6px] border border-border bg-surface">
-        <div className="border-b border-border p-3">
-          <h2 className="text-[11px] font-semibold">Reconciled purchase sources</h2>
-          <p className="mt-1 text-[9px] text-muted-foreground">
-            Saved source allocations and claimed GST for this workpaper. Invoice, actual payment and
-            claim-period dates are separate.
-          </p>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-[9px]" aria-label="Saved BAS purchase sources">
+      <section className="work-surface overflow-hidden">
+        <SurfaceHeading
+          title="Reconciled purchase sources"
+          description="Saved source allocations and claimed GST for this workpaper. Invoice, actual payment and claim-period dates are separate."
+        />
+        <HorizontalScrollArea label="Saved BAS purchase sources table">
+          <table
+            className="work-table w-full text-left text-[12px]"
+            aria-label="Saved BAS purchase sources"
+          >
             <thead>
               <tr className="border-b border-border">
-                <th className="p-3">Invoice date</th>
-                <th className="p-3">Actual payment</th>
-                <th className="p-3">Claim period</th>
-                <th className="p-3">Allocation</th>
-                <th className="p-3 text-right">Gross</th>
-                <th className="p-3 text-right">Supplier / eligible GST</th>
-                <th className="p-3 text-right">Claimed GST</th>
-                <th className="p-3">Review</th>
+                <th className="p-4">Invoice date</th>
+                <th className="p-4">Actual payment</th>
+                <th className="p-4">Claim period</th>
+                <th className="p-4">Allocation</th>
+                <th className="p-4 text-right">Gross</th>
+                <th className="p-4 text-right">Supplier / eligible GST</th>
+                <th className="p-4 text-right">Claimed GST</th>
+                <th className="p-4">Review</th>
               </tr>
             </thead>
             <tbody>
@@ -89,13 +91,13 @@ export function BasPurchaseDetails({
                   className="border-b border-border last:border-0 align-top"
                   key={`${source.documentId}:${source.postingId}:${source.paymentId ?? ""}:${source.attributionId ?? ""}:${source.allocationSequence}`}
                 >
-                  <td className="p-3 whitespace-nowrap">{dateLabel(source.invoiceDate)}</td>
-                  <td className="p-3 whitespace-nowrap">{dateLabel(source.actualPaymentDate)}</td>
-                  <td className="p-3 whitespace-nowrap">
+                  <td className="p-4 whitespace-nowrap">{dateLabel(source.invoiceDate)}</td>
+                  <td className="p-4 whitespace-nowrap">{dateLabel(source.actualPaymentDate)}</td>
+                  <td className="p-4 whitespace-nowrap">
                     {dateLabel(source.claimPeriod?.periodStart)} –{" "}
                     {dateLabel(source.claimPeriod?.periodEnd)}
                   </td>
-                  <td className="p-3">
+                  <td className="p-4">
                     {source.allocationSequence} ·{" "}
                     {source.use === PurchaseUse.PRIVATE ? "Private" : "Business"} ·{" "}
                     {source.basClassification === PurchaseBasClassification.CAPITAL
@@ -104,13 +106,13 @@ export function BasPurchaseDetails({
                         ? "Non-capital"
                         : "Excluded"}
                   </td>
-                  <td className="p-3 text-right whitespace-nowrap">
+                  <td className="p-4 text-right whitespace-nowrap tabular-nums">
                     {aud(source.allocatedGross?.minorUnits)}
                   </td>
-                  <td className="p-3 text-right whitespace-nowrap">
+                  <td className="p-4 text-right whitespace-nowrap tabular-nums">
                     {aud(source.supplierGst?.minorUnits)} / {aud(source.eligibleGst?.minorUnits)}
                   </td>
-                  <td className="p-3 text-right font-semibold whitespace-nowrap">
+                  <td className="p-4 text-right font-semibold whitespace-nowrap tabular-nums">
                     {aud(source.claimedGst?.minorUnits)}
                   </td>
                   <td className="p-3">
@@ -145,7 +147,7 @@ export function BasPurchaseDetails({
                     {controls.onReviewDocument ? (
                       <Button
                         type="button"
-                        className="mt-2 h-7 text-[9px]"
+                        className="mt-2 h-11 text-[13px]"
                         onClick={() => controls.onReviewDocument!(source.documentId)}
                       >
                         Open purchase review
@@ -157,23 +159,20 @@ export function BasPurchaseDetails({
             </tbody>
           </table>
           {value.purchaseSources.length === 0 ? (
-            <p className="p-4 text-[10px] text-muted-foreground">
+            <p className="p-5 text-[13px] text-muted-foreground">
               No purchase GST is claimed in this saved period.
             </p>
           ) : null}
-        </div>
+        </HorizontalScrollArea>
       </section>
-      <section
-        className="overflow-hidden rounded-[6px] border border-border bg-surface"
-        aria-label="Purchase GST review outcomes"
-      >
-        <div className="border-b border-border p-3">
-          <h2 className="text-[11px] font-semibold">Purchase reviews and future claims</h2>
-          <p className="mt-1 text-[9px] text-muted-foreground">
-            Suspense and provisional legacy amounts are separate from GST credits (1B).
-          </p>
+      <section className="work-surface overflow-hidden" aria-label="Purchase GST review outcomes">
+        <SurfaceHeading
+          title="Purchase reviews and future claims"
+          description="Suspense and provisional legacy amounts are separate from GST credits (1B)."
+        />
+        <div className="grid gap-3 p-5">
           {value.legacyCandidateGst ? (
-            <p className="mt-2 text-[10px]">
+            <p className="mt-2 text-[14px] leading-6">
               Provisional legacy candidate GST: {aud(value.legacyCandidateGst.minorUnits)} ·
               entitlement remains subject to review.
             </p>
@@ -188,7 +187,7 @@ export function BasPurchaseDetails({
           />
         ))}
         {value.purchaseReviews.length === 0 ? (
-          <p className="p-4 text-[10px] text-muted-foreground">
+          <p className="p-5 text-[14px] text-muted-foreground">
             No retained purchase review outcomes for this snapshot.
           </p>
         ) : null}
@@ -220,22 +219,22 @@ function ReviewRow({
       ? value.legacySource.source.value.documentId
       : undefined);
   return (
-    <div className="grid gap-2 border-b border-border p-3 text-[10px] last:border-0">
+    <div className="grid gap-3 border-b border-border p-4 text-[13px] last:border-0">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h3 className="font-semibold">{statusLabel(value.status)}</h3>
+        <h3 className="text-[14px] font-semibold">{statusLabel(value.status)}</h3>
         <p>
           Eligible {aud(value.eligibleGst?.minorUnits)} · unclaimed{" "}
           {aud(value.unclaimedGst?.minorUnits)}
         </p>
       </div>
-      <p className="leading-5">{value.reason}</p>
-      <p className="text-[9px] text-muted-foreground">
+      <p className="text-[14px] leading-6">{value.reason}</p>
+      <p className="text-[12px] text-muted-foreground">
         Invoice {dateLabel(value.invoiceDate)} · payment {dateLabel(value.actualPaymentDate)} ·
         affected period {dateLabel(value.affectedPeriod?.periodStart)} –{" "}
         {dateLabel(value.affectedPeriod?.periodEnd)}
       </p>
       {future ? (
-        <dl className="grid grid-cols-[minmax(130px,1fr)_minmax(0,2fr)] gap-1 text-[9px]">
+        <dl className="grid grid-cols-[minmax(130px,1fr)_minmax(0,2fr)] gap-2 text-[12px]">
           <dt>Future claim amount</dt>
           <dd>{aud(future.allocatedDeferredGst?.minorUnits)}</dd>
           <dt>Actual required return due</dt>
@@ -264,8 +263,10 @@ function ReviewRow({
       ) : null}
       {value.legacyReview ? (
         <details>
-          <summary className="cursor-pointer text-[9px]">Retained legacy decision</summary>
-          <div className="mt-2 grid gap-1 text-[9px] break-all">
+          <summary className="min-h-11 cursor-pointer py-2 text-[12px]">
+            Retained legacy decision
+          </summary>
+          <div className="mt-2 grid gap-2 break-all text-[12px]">
             <p>
               {value.legacyReview.id} · revision {value.legacyReview.sourceRevision} ·{" "}
               {hex(value.legacyReview.sourceHash)}
@@ -286,7 +287,7 @@ function ReviewRow({
       {documentId && controls.onReviewDocument ? (
         <Button
           type="button"
-          className="justify-self-start h-7 text-[9px]"
+          className="h-11 justify-self-start text-[13px]"
           onClick={() => controls.onReviewDocument!(documentId)}
         >
           Review purchase source
@@ -414,7 +415,7 @@ function BasLegacyDecision({
   };
   return (
     <div>
-      <p className="text-[9px] text-muted-foreground">
+      <p className="text-[12px] leading-5 text-muted-foreground">
         These are saved snapshot facts. Confirm the current source and supporting records before
         retaining a new decision.
       </p>
@@ -452,7 +453,7 @@ function BasLegacyDecision({
             {source?.case === "document" && controls.onReviewDocument ? (
               <Button
                 type="button"
-                className="h-7 text-[9px]"
+                className="h-11 text-[13px]"
                 onClick={() => controls.onReviewDocument!(source.value.documentId)}
               >
                 Open source document

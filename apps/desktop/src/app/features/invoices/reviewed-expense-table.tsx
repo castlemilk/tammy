@@ -3,6 +3,7 @@ import { RefreshCw } from "lucide-react";
 import { useState } from "react";
 import { HorizontalScrollArea } from "../../components/horizontal-scroll-area";
 import { Button } from "../../components/ui/button";
+import { SurfaceHeading } from "../../components/workspace-primitives";
 import type { InvoiceExpense } from "./invoice-editor";
 import { invoiceFieldClass } from "./invoice-line-table";
 
@@ -43,20 +44,28 @@ export function ReviewedExpenseTable({
   const selectedCost = selected.reduce((sum, expense) => sum + expense.subtotalMinor, 0);
   return (
     <section
-      className="grid min-w-0 gap-4 border-t border-border pt-6"
+      className="work-surface grid min-w-0 gap-4 overflow-hidden pb-5"
       aria-labelledby="reviewed-expenses-heading"
       aria-busy={loading}
     >
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-[16px] font-semibold" id="reviewed-expenses-heading">
-          Reviewed expenses
-        </h2>
-        <Button disabled={busy || loading} onClick={onRefresh} type="button" variant="ghost">
-          <RefreshCw aria-hidden="true" className="size-3" />{" "}
-          {error ? "Retry expenses" : "Refresh expenses"}
-        </Button>
-      </div>
-      <label className="grid min-w-0 gap-1 text-[13px] font-medium">
+      <SurfaceHeading
+        title="Reviewed expenses"
+        headingId="reviewed-expenses-heading"
+        description="Add reviewed source costs as draft invoice lines."
+        action={
+          <Button
+            className="h-11 text-[13px]"
+            disabled={busy || loading}
+            onClick={onRefresh}
+            type="button"
+            variant="ghost"
+          >
+            <RefreshCw aria-hidden="true" className="size-4" />{" "}
+            {error ? "Retry expenses" : "Refresh expenses"}
+          </Button>
+        }
+      />
+      <label className="mx-5 grid min-w-0 gap-1.5 text-[12px] font-semibold">
         Search reviewed expenses
         <input
           className={`${invoiceFieldClass} max-w-[320px]`}
@@ -66,38 +75,38 @@ export function ReviewedExpenseTable({
         />
       </label>
       {loading ? (
-        <p className="text-[14px] text-muted-foreground" role="status">
+        <p className="px-5 text-[14px] text-muted-foreground" role="status">
           Loading reviewed expenses…
         </p>
       ) : null}
       {error ? (
-        <p className="text-[14px] text-destructive" role="alert">
+        <p className="px-5 text-[14px] text-destructive" role="alert">
           {error}
         </p>
       ) : null}
       <HorizontalScrollArea
-        label="Scrollable reviewed expenses"
-        className="rounded-[20px] border border-border bg-surface"
+        label="Reviewed expenses table"
+        className="mx-5 rounded-xl border border-border bg-background"
       >
         <table
-          className="w-full min-w-[540px] border-collapse text-[14px]"
+          className="w-full min-w-[600px] border-collapse text-[14px]"
           aria-label="Reviewed expenses"
         >
           <thead className="border-b border-border bg-muted/40 text-left text-[13px] text-muted-foreground">
             <tr>
-              <th className="w-12 px-3 py-3 font-medium" scope="col">
+              <th className="w-14 px-4 py-4 font-medium" scope="col">
                 <span className="sr-only">Select</span>
               </th>
-              <th className="px-3 py-3 font-medium" scope="col">
+              <th className="px-4 py-4 font-medium" scope="col">
                 Description
               </th>
-              <th className="px-3 py-3 text-right font-medium" scope="col">
+              <th className="px-4 py-4 text-right font-medium" scope="col">
                 Net cost
               </th>
-              <th className="px-3 py-3 text-right font-medium" scope="col">
+              <th className="px-4 py-4 text-right font-medium" scope="col">
                 Source GST
               </th>
-              <th className="px-3 py-3 text-right font-medium" scope="col">
+              <th className="px-4 py-4 text-right font-medium" scope="col">
                 Gross cost
               </th>
             </tr>
@@ -110,7 +119,7 @@ export function ReviewedExpenseTable({
                   className={`border-b border-border last:border-0 ${selectedIds.includes(expense.id) ? "bg-primary/5" : ""}`}
                   key={expense.id}
                 >
-                  <td className="px-3 py-3">
+                  <td className="px-4 py-4">
                     <input
                       aria-label={`Select ${expense.description}`}
                       checked={selectedIds.includes(expense.id) && !added}
@@ -120,21 +129,21 @@ export function ReviewedExpenseTable({
                       type="checkbox"
                     />
                   </td>
-                  <td className="px-3 py-3">
+                  <td className="px-4 py-4">
                     <span>{expense.description}</span>
                     {added ? (
-                      <span className="ml-2 rounded border border-border px-1.5 py-0.5 text-[12px] text-muted-foreground">
+                      <span className="ml-2 rounded-full border border-border px-2.5 py-1.5 text-[12px] text-muted-foreground">
                         Added
                       </span>
                     ) : null}
                   </td>
-                  <td className="whitespace-nowrap px-3 py-3 text-right tabular-nums">
+                  <td className="whitespace-nowrap px-4 py-4 text-right tabular-nums">
                     {formatAud(expense.subtotalMinor)}
                   </td>
-                  <td className="whitespace-nowrap px-3 py-3 text-right tabular-nums">
+                  <td className="whitespace-nowrap px-4 py-4 text-right tabular-nums">
                     {formatAud(expense.gstMinor)}
                   </td>
-                  <td className="whitespace-nowrap px-3 py-3 text-right tabular-nums">
+                  <td className="whitespace-nowrap px-4 py-4 text-right tabular-nums">
                     {formatAud(expense.subtotalMinor + expense.gstMinor)}
                   </td>
                 </tr>
@@ -142,7 +151,7 @@ export function ReviewedExpenseTable({
             })}
             {!visible.length && !loading && !error ? (
               <tr>
-                <td className="px-3 py-5 text-muted-foreground" colSpan={5}>
+                <td className="px-4 py-6 text-muted-foreground" colSpan={5}>
                   {expenses.length
                     ? "No reviewed expenses match your search."
                     : "No reviewed expenses yet."}
@@ -152,8 +161,8 @@ export function ReviewedExpenseTable({
           </tbody>
         </table>
       </HorizontalScrollArea>
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <label className="grid w-[160px] gap-2 text-[13px] font-medium">
+      <div className="mx-5 flex flex-wrap items-end justify-between gap-4">
+        <label className="grid w-[160px] gap-1.5 text-[12px] font-semibold">
           Markup percentage
           <input
             className={`${invoiceFieldClass} text-right tabular-nums`}
@@ -169,6 +178,7 @@ export function ReviewedExpenseTable({
             <span className="tabular-nums">{formatAud(selectedCost)}</span> net cost
           </p>
           <Button
+            className="h-11 text-[13px]"
             disabled={busy || loading || !selected.length}
             onClick={onAdd}
             type="button"

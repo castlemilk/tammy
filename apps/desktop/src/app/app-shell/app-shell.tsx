@@ -7,9 +7,15 @@ interface AppShellProps {
   readonly activePath: string;
   readonly children: ReactNode;
   readonly onNavigate: (path: string) => void;
+  readonly organisationDisplayName?: string;
 }
 
-export function AppShell({ activePath, children, onNavigate }: AppShellProps) {
+export function AppShell({
+  activePath,
+  children,
+  onNavigate,
+  organisationDisplayName,
+}: AppShellProps) {
   const current = PRIMARY_NAVIGATION.find(
     (item) => activePath === item.href || activePath.startsWith(`${item.href}/`),
   );
@@ -38,7 +44,7 @@ export function AppShell({ activePath, children, onNavigate }: AppShellProps) {
             <LockKeyhole aria-hidden="true" className="size-3.5" />
             Local workspace
           </p>
-          <p className="mt-1 text-[11px] leading-5 text-muted-foreground">
+          <p className="mt-1 text-[12px] leading-5 text-muted-foreground">
             A little clarity, every day.
             <br />
             Your records stay on this device.
@@ -48,7 +54,9 @@ export function AppShell({ activePath, children, onNavigate }: AppShellProps) {
       <div className="min-w-0">
         <header className="flex min-h-16 flex-wrap items-center justify-between gap-2 border-b border-border px-8 py-3 max-[700px]:px-4 [-webkit-app-region:drag]">
           <div className="flex items-center gap-2 text-[12px] font-medium text-muted-foreground">
-            <span>Workspace</span>
+            <span className="max-w-[240px] truncate" title={organisationDisplayName}>
+              {organisationDisplayName ?? "Workspace"}
+            </span>
             <span aria-hidden="true">/</span>
             <span className="font-semibold text-foreground">{current?.label ?? "Workspace"}</span>
           </div>
@@ -58,7 +66,7 @@ export function AppShell({ activePath, children, onNavigate }: AppShellProps) {
           </div>
         </header>
         <main
-          className="min-h-[calc(100dvh-64px)] px-8 py-8 outline-none max-[700px]:px-4 max-[700px]:py-6"
+          className="mx-auto min-h-[calc(100dvh-64px)] w-full max-w-[1184px] px-8 py-8 outline-none max-[700px]:px-4 max-[700px]:py-6"
           id="workspace-content"
           tabIndex={-1}
         >

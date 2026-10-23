@@ -248,33 +248,33 @@ export function PurchaseLegacyReviewPanel({
   };
   return (
     <details
-      className="border-t border-border pt-3"
+      className="work-surface overflow-hidden"
       open={open}
       onToggle={(event) => setOpen(event.currentTarget.open)}
     >
-      <summary className="cursor-pointer text-[11px] font-semibold">
+      <summary className="cursor-pointer border-b border-border px-5 py-4 text-[14px] font-semibold">
         Review legacy purchase / opening provenance
       </summary>
-      <div className="mt-3 grid gap-3">
+      <div className="grid gap-4 p-5">
         {source?.source.case === "openingPayable" ? (
-          <p className="text-[10px] text-warning">
+          <p className="text-[14px] leading-6 text-warning">
             Opening payable {source.source.value.openingPayableId} has retained provenance without a
             document. Its settlement and GST credit allocation are unsupported; review the existing
             records.
           </p>
         ) : (
-          <p className="text-[10px] text-muted-foreground">
+          <p className="text-[14px] leading-6 text-muted-foreground">
             Older and undated sources need an explicit review. No recorded payment is not proof of
             an unpaid legacy balance.
           </p>
         )}
         {!mayPrepare(workspace) ? (
-          <p className="text-[10px]">
+          <p className="text-[14px] leading-6">
             Read-only role. An administrator or preparer must retain this decision.
           </p>
         ) : (
-          <fieldset disabled={busy} className="grid min-w-0 gap-3">
-            <div className="grid grid-cols-2 gap-2">
+          <fieldset disabled={busy} className="grid min-w-0 gap-4">
+            <div className="grid grid-cols-2 gap-3 max-[560px]:grid-cols-1">
               <PurchaseField
                 label="Legacy affected period start"
                 type="date"
@@ -348,13 +348,13 @@ export function PurchaseLegacyReviewPanel({
                   onPostingChange={setLinkedPosting}
                 />
               ) : (
-                <p className="text-[9px] text-warning" role="alert">
+                <p className="text-[14px] leading-6 text-warning" role="alert">
                   Owned posted purchase lookup is unavailable, so this source cannot be linked.
                 </p>
               )
             ) : null}
             {retained?.linkedPostingId && !linkedDocument ? (
-              <p className="text-[9px] text-muted-foreground">
+              <p className="text-[14px] leading-6 text-muted-foreground">
                 Retained linked posting {retained.linkedPostingId}. Select and verify its owned
                 posted document before submitting a corrected decision.
               </p>
@@ -412,13 +412,13 @@ export function PurchaseLegacyReviewPanel({
                     </option>
                   ))}
                 </PurchaseChoice>
-                <p className="text-[9px] text-muted-foreground">
+                <p className="text-[14px] leading-6 text-muted-foreground">
                   The core verifies that selected journals are owned, linked to this legacy source
                   and prove an actual cash movement.
                 </p>
                 <div className="flex gap-2">
                   <Button
-                    className="h-6 text-[9px]"
+                    className="text-[12px]"
                     type="button"
                     disabled={cursors.length < 2 || query.isFetching}
                     onClick={() => setCursors((current) => current.slice(0, -1))}
@@ -426,7 +426,7 @@ export function PurchaseLegacyReviewPanel({
                     Previous settlement proof page
                   </Button>
                   <Button
-                    className="h-6 text-[9px]"
+                    className="text-[12px]"
                     type="button"
                     disabled={!journals?.page?.nextCursor || query.isFetching}
                     onClick={() =>
@@ -437,7 +437,7 @@ export function PurchaseLegacyReviewPanel({
                   </Button>
                 </div>
                 {query.isError ? (
-                  <p role="alert" className="text-[10px]">
+                  <p role="alert" className="text-[14px] leading-6">
                     Settlement proof could not be loaded.
                   </p>
                 ) : null}

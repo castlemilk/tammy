@@ -167,8 +167,45 @@ function validatePage(pathname, html) {
     }
   } else if (pathname === "/privacy") {
     requireText(text, /Privacy policy/i, "privacy heading", pathname);
-    requireText(text, /30 August 2026/i, "policy effective date", pathname);
-    requireText(text, /does not transmit your accounting records/i, "data boundary", pathname);
+    requireText(text, /23 October 2026/i, "policy effective date", pathname);
+    requireText(
+      text,
+      /does not automatically send your workspace records/i,
+      "data boundary",
+      pathname,
+    );
+    requireText(text, /relationship authorisation manager/i, "RAM explanation", pathname);
+    requireText(text, /synthetic, network-disabled simulator/i, "SBR boundary", pathname);
+    requireText(
+      text,
+      /does not send BAS or other tax submissions/i,
+      "no-lodgement boundary",
+      pathname,
+    );
+    requireText(
+      text,
+      /hosting provider may process technical request information/i,
+      "hosting-provider privacy disclosure",
+      pathname,
+    );
+    for (const [label, href] of [
+      ["ABN Lookup", "https://abr.business.gov.au/"],
+      ["ABN Lookup web services", "https://abr.business.gov.au/Tools/WebServices"],
+      [
+        "RAM and machine credentials",
+        "https://softwaredevelopers.ato.gov.au/usingmygovidramandmachinecredentials",
+      ],
+      ["ATO DSP service", "https://softwaredevelopers.ato.gov.au/OnlineservicesforDSPs"],
+      [
+        "ATO security framework",
+        "https://softwaredevelopers.ato.gov.au/operational_framework/meeting-requirements",
+      ],
+      ["OAIC complaint information", "https://www.oaic.gov.au/privacy/privacy-complaints"],
+    ]) {
+      if (!html.includes(`href="${href}"`)) {
+        throw new Error(`/privacy is missing the official ${label} link`);
+      }
+    }
     if (!html.includes(`href="${TRUSTED_PUBLIC_ORIGIN}/support"`)) {
       throw new Error("/privacy is missing required canonical support link");
     }
@@ -176,6 +213,8 @@ function validatePage(pathname, html) {
     requireText(text, /Support/i, "support heading", pathname);
     requireText(html, /mailto:ben\.ebsworth@gmail\.com/i, "support email", pathname);
     requireText(text, /version 0\.1\.0/i, "app version", pathname);
+    requireText(text, /privacy, access, or correction request/i, "privacy support route", pathname);
+    requireText(text, /synthetic, network-disabled simulator/i, "SBR support boundary", pathname);
   }
 }
 

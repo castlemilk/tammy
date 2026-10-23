@@ -49,6 +49,30 @@ export default function SupportPage() {
             Do not send accounting data, source documents, passwords, recovery codes, machine
             credentials, or cryptographic keys.
           </p>
+          <p>
+            For a privacy, access, or correction request, use the subject line Privacy and describe
+            what you need without attaching accounting records or credentials. We will review the
+            request and respond; this page does not promise a response time. Read the{" "}
+            <a href="/privacy">privacy policy</a> for local data, RAM, ABN Lookup, and complaint
+            details.
+          </p>
+        </section>
+
+        <section className="policy-section">
+          <h2>ABN and SBR questions</h2>
+          <p>
+            Tammy checks an entered ABN locally. It does not query ABR in the background or prefill
+            organisation details. If you choose the setup link, the ABN in that field is sent to the
+            official ABN Lookup page in your browser; Tammy does not import the result. Entity
+            evidence in Tammy is reviewed and recorded by a workspace administrator. The current SBR
+            readiness flow uses a synthetic, network-disabled simulator; it does not lodge a BAS
+            with the ATO.
+          </p>
+          <p>
+            A customer's RAM authorisation, an imported machine credential, and a software
+            provider's ATO registration or security-framework status are separate matters. The
+            privacy policy explains those boundaries and links to current ATO information.
+          </p>
         </section>
 
         <section className="policy-section">

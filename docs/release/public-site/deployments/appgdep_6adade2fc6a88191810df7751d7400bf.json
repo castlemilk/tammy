@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "provider": "OpenAI Sites",
+  "access": "public",
+  "projectId": "appgprj_6a93f33631748191b7c064c033f72b53",
+  "versionId": "appgprj_6a93f33631748191b7c064c033f72b53~appgver_9dba1f967d208191bec1c979c7e67b60",
+  "deploymentId": "appgdep_6adade2fc6a88191810df7751d7400bf",
+  "origin": "https://tammy-accounting.castlemilk.chatgpt.site",
+  "deployedAt": "2026-10-23T04:10:41.042Z",
+  "sourceCommit": "3b95f29ca2d612bd9cb57e5ef713e53acef239ff",
+  "policySha256": "89ba97a12202fc29069f86827be12c00838d9550000e75d2e05b69322c6d7464",
+  "routes": [
+    {
+      "path": "/",
+      "status": 200,
+      "contentType": "text/html",
+      "check": "passed"
+    },
+    {
+      "path": "/privacy",
+      "status": 200,
+      "contentType": "text/html",
+      "check": "passed"
+    },
+    {
+      "path": "/support",
+      "status": 200,
+      "contentType": "text/html",
+      "check": "passed"
+    }
+  ]
+}

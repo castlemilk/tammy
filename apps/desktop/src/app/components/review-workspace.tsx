@@ -2,26 +2,20 @@ import { useComposedRefs } from "@radix-ui/react-compose-refs";
 import { AlertCircle, CheckCircle2, FileSearch, LoaderCircle, Search, X } from "lucide-react";
 import { type ReactNode, type Ref, useRef } from "react";
 import { Button } from "./ui/button";
+import { ScreenHeading } from "./workspace-primitives";
 
 export function WorkHeading({
+  area,
   title,
   description,
   action,
 }: {
+  readonly area: string;
   readonly title: string;
   readonly description: string;
   readonly action?: ReactNode;
 }) {
-  return (
-    <div className="flex flex-wrap items-end justify-between gap-5">
-      <div className="max-w-[650px]">
-        <p className="work-eyebrow mb-2">Your review workspace</p>
-        <h1 className="page-title">{title}</h1>
-        <p className="mt-2 text-[14px] leading-6 text-muted-foreground">{description}</p>
-      </div>
-      {action}
-    </div>
-  );
+  return <ScreenHeading area={area} title={title} description={description} action={action} />;
 }
 
 export function WorkNotice({
@@ -151,7 +145,7 @@ export function WorkFilters<T extends string>({
           className={`focus-ring flex min-h-11 items-center gap-2 rounded-xl px-3 text-[13px] font-semibold transition-colors ${value === option.value ? "bg-forest-soft text-forest" : "text-muted-foreground hover:bg-muted"}`}
         >
           {option.label}
-          <span className="rounded-md bg-surface px-1.5 py-0.5 text-[11px] tabular-nums">
+          <span className="rounded-md bg-surface px-1.5 py-0.5 text-[12px] tabular-nums">
             {option.count}
           </span>
         </button>

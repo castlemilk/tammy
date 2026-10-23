@@ -558,7 +558,7 @@ test("a timed-out command escalates and settles only after the child closes", as
   });
 });
 
-test("a timed-out command leaves no stubborn grandchild", async () => {
+test("a timed-out command leaves no stubborn grandchild", { timeout: 10_000 }, async () => {
   const root = await validRoot();
   const pidFile = path.join(root, "grandchild.pid");
   const stubbornScript = path.join(root, "stubborn-grandchild.mjs");
@@ -573,29 +573,55 @@ test("a timed-out command leaves no stubborn grandchild", async () => {
   );
   const parentScript = [
     'const { spawn } = require("node:child_process");',
-    "const child = spawn(process.execPath, [process.argv[2], process.argv[1]],",
+    "setTimeout(() => {",
+    "spawn(process.execPath, [process.argv[2], process.argv[1]],",
     '  { stdio: "ignore" });',
-    'require("node:fs").writeFileSync(process.argv[1], String(child.pid));',
+    "}, 750);",
     "setInterval(() => {}, 1000);",
   ].join("\n");
   let grandchildPid;
+  let triggerTimeout;
+  const observed = runBoundedProcess(
+    {
+      args: ["-e", parentScript, pidFile, stubbornScript],
+      cwd: root,
+      env: { PATH: process.env.PATH },
+      file: process.execPath,
+      maxOutputBytes: 1024,
+      reapTimeoutMs: 1000,
+      terminationGraceMs: 50,
+      timeoutMs: 500,
+    },
+    {
+      setTimer(callback, milliseconds) {
+        if (triggerTimeout === undefined) {
+          assert.equal(milliseconds, 500);
+          triggerTimeout = callback;
+          // Bound fixture startup separately; only the ready stubborn child can
+          // establish that the real process-group teardown was exercised.
+          return setTimeout(callback, 5_000);
+        }
+        return setTimeout(callback, milliseconds);
+      },
+    },
+  ).then(
+    () => null,
+    (error) => error,
+  );
 
   try {
-    await assert.rejects(
-      runBoundedProcess({
-        args: ["-e", parentScript, pidFile, stubbornScript],
-        cwd: root,
-        env: { PATH: process.env.PATH },
-        file: process.execPath,
-        maxOutputBytes: 1024,
-        reapTimeoutMs: 1000,
-        terminationGraceMs: 50,
-        timeoutMs: 500,
-      }),
-      /COMMAND_TIMED_OUT/,
-    );
-    grandchildPid = Number.parseInt(await readFile(pidFile, "utf8"), 10);
+    const startupDeadline = performance.now() + 4_000;
+    while (grandchildPid === undefined && performance.now() < startupDeadline) {
+      try {
+        grandchildPid = Number.parseInt(await readFile(pidFile, "utf8"), 10);
+      } catch (error) {
+        if (error?.code !== "ENOENT") throw error;
+        await delay(10);
+      }
+    }
     assert.ok(Number.isInteger(grandchildPid) && grandchildPid > 0);
+    triggerTimeout();
+    assert.equal((await observed)?.message, "COMMAND_TIMED_OUT");
 
     let alive = true;
     for (let attempt = 0; attempt < 100 && alive; attempt += 1) {
@@ -609,6 +635,8 @@ test("a timed-out command leaves no stubborn grandchild", async () => {
     }
     assert.equal(alive, false, `grandchild ${grandchildPid} survived timeout teardown`);
   } finally {
+    triggerTimeout?.();
+    await observed;
     if (grandchildPid !== undefined) {
       try {
         process.kill(grandchildPid, "SIGKILL");

@@ -226,23 +226,26 @@ export function OrganisationVerificationForm({
 
   const admin = workspace.roles.includes(Role.WORKSPACE_ADMIN);
   return (
-    <section aria-labelledby="entity-verification-heading" className="border-t border-border pt-4">
+    <section aria-labelledby="entity-verification-heading" className="work-surface grid gap-4 p-5">
       <div className="flex items-baseline justify-between gap-3">
-        <h2 id="entity-verification-heading" className="text-[12px] font-semibold">
+        <h2 id="entity-verification-heading" className="text-[16px] font-semibold">
           Independent entity verification
         </h2>
-        <span className="text-[10px] font-medium text-muted-foreground">
+        <span className="text-[12px] font-medium text-muted-foreground">
           {stateLabel(workspace.organisationVerificationState)}
         </span>
       </div>
-      <p className="mt-1 text-[10px] leading-5 text-muted-foreground">
+      <p className="text-[14px] leading-6 text-muted-foreground">
         Record bounded evidence from an independent ABR extract. The core retains it encrypted and
         authors the expiry.
       </p>
-      {expiry ? <p className="mt-2 text-[10px]">Evidence expiry: {expiry}</p> : null}
+      {expiry ? <p className="text-[12px]">Evidence expiry: {expiry}</p> : null}
       {admin ? (
-        <form className="mt-4 grid max-w-[520px] gap-3" onSubmit={submit}>
-          <label className="grid gap-1.5 text-[11px] font-medium">
+        <form
+          className="grid max-w-[520px] gap-4 rounded-xl border border-border bg-background p-4"
+          onSubmit={submit}
+        >
+          <label className="grid gap-2 text-[13px] font-medium">
             Verified legal name
             <input
               className={fieldClassName}
@@ -252,7 +255,7 @@ export function OrganisationVerificationForm({
               value={legalName}
             />
           </label>
-          <label className="grid gap-1.5 text-[11px] font-medium">
+          <label className="grid gap-2 text-[13px] font-medium">
             Verified entity type
             <input
               className={fieldClassName}
@@ -262,7 +265,7 @@ export function OrganisationVerificationForm({
               value={entityType}
             />
           </label>
-          <label className="grid gap-1.5 text-[11px] font-medium">
+          <label className="grid gap-2 text-[13px] font-medium">
             Verification outcome
             <select
               className={fieldClassName}
@@ -275,46 +278,37 @@ export function OrganisationVerificationForm({
               <option value={OrganisationVerificationState.FAILED}>Failed</option>
             </select>
           </label>
-          <label className="grid gap-1.5 text-[11px] font-medium">
+          <label className="grid gap-2 text-[13px] font-medium">
             Independent evidence
             <input
               accept="application/pdf,image/jpeg,image/png"
-              className="focus-ring block min-h-9 text-[11px]"
+              className="focus-ring block min-h-11 text-[13px]"
               onChange={(event) => selectEvidence(event.target.files?.[0])}
               ref={fileInputRef}
               type="file"
             />
           </label>
           {fileReady ? (
-            <p className="text-[10px] text-ready-foreground">
+            <p className="text-[12px] text-ready-foreground">
               Evidence selected and bounded. Contents are not displayed.
             </p>
           ) : null}
-          <Button className="h-9 w-fit text-[11px]" disabled={busy || !fileReady} type="submit">
+          <Button className="h-11 w-fit text-[13px]" disabled={busy || !fileReady} type="submit">
             {busy ? <LoaderCircle aria-hidden="true" className="size-3.5 animate-spin" /> : null}
             Record verification
           </Button>
         </form>
       ) : (
-        <p className="mt-3 text-[10px] text-muted-foreground">
+        <p className="text-[12px] text-muted-foreground">
           A workspace administrator records verification evidence.
         </p>
       )}
       {locked ? (
-        <Button
-          className="mt-3 h-9 text-[11px]"
-          onClick={onChanged}
-          type="button"
-          variant="outline"
-        >
+        <Button className="h-11 text-[13px]" onClick={onChanged} type="button" variant="outline">
           Refresh status
         </Button>
       ) : null}
-      <p
-        aria-live="polite"
-        className="mt-3 min-h-4 text-[11px] text-muted-foreground"
-        role="status"
-      >
+      <p aria-live="polite" className="min-h-5 text-[12px] text-muted-foreground" role="status">
         {notice ?? ""}
       </p>
     </section>
