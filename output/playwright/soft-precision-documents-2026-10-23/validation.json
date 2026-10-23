@@ -1,0 +1,16 @@
+{
+  "focusedDocuments": { "files": 5, "passed": 52, "failed": 0, "seconds": 10.86 },
+  "desktop": { "files": 111, "passed": 1306, "failed": 0, "seconds": 153.86 },
+  "typecheck": "passed",
+  "lint": { "passed": true, "warnings": 135, "infos": 12 },
+  "staticUiAudit": { "findings": 19, "sameAsPrecedingReviewHead": true, "policyChanged": false },
+  "amountSuggestionRegression": {
+    "base": "fails: expected Total 110.00; received 100.00",
+    "corrected": "passes, including partial-label Totalled rejection",
+    "scope": "suggestions only; review confirmation and purchase posting remain separate"
+  },
+  "baselineNativeJourney": { "passed": 1, "failed": 0, "seconds": 12.9, "retries": 0 },
+  "afterNativeJourney": "pending package and visual inspection",
+  "hostedExactHead": "pending push",
+  "qualificationBoundary": "Ordinary darwin-arm64 package only. No MAS, Windows 11, signing, upload, merge or publication claim."
+}

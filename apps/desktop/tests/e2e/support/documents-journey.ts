@@ -88,16 +88,26 @@ export async function runDocumentsReviewJourney(
   await expect(page.getByRole("heading", { name: "DOC-SYN-001.pdf", exact: true })).toBeVisible();
   await capture(page, "02-list-selected");
   await capture(page, "03-review-before-save", "review");
+  if (documentsCapturePhase !== "before") {
+    await expect(page.getByLabel("Total", { exact: true })).toHaveValue("110.00");
+    const source = page.getByRole("region", { name: "Retained source text", exact: true });
+    await source.focus();
+    await expect(source).toHaveCSS("outline-style", "solid");
+    await page.keyboard.press("ArrowDown");
+    await expect.poll(() => source.evaluate((node) => node.scrollTop)).toBeGreaterThan(0);
+  }
 
   const supplier = page.getByLabel("Supplier", { exact: true });
   await expect(supplier).toHaveValue(names[0] ?? "");
   await supplier.fill("Cancelled synthetic rename");
   await page.getByRole("button", { name: "Cancel changes", exact: true }).click();
   await expect(supplier).toHaveValue(names[0] ?? "");
-  await page.getByLabel("Total", { exact: true }).fill("999.00");
+  // Core limits supplier names to 256 characters; amounts are confirmed here,
+  // with posting validation owned by the separate purchase workflow.
+  await supplier.fill("S".repeat(257));
   await page.getByRole("button", { name: "Save review", exact: true }).click();
   await expect(page.getByRole("alert")).toContainText("The review could not be saved");
-  await expect(page.getByLabel("Total", { exact: true })).toHaveValue("999.00");
+  await expect(supplier).toHaveValue("S".repeat(257));
   const failed = (await readDocuments(page, workspace)).find(
     (d) => d.sourceDisplayName === "DOC-SYN-001.pdf",
   );
@@ -105,6 +115,7 @@ export async function runDocumentsReviewJourney(
   expect(failed?.status).toBe(DocumentStatus.NEEDS_REVIEW);
   await capture(page, "04-review-error", "review");
 
+  await supplier.fill(names[0] ?? "");
   await page.getByLabel("Total", { exact: true }).fill("110.00");
   await page.getByRole("button", { name: "Save review", exact: true }).dblclick();
   await expect(page.getByRole("button", { name: "Review saved", exact: true })).toBeDisabled();

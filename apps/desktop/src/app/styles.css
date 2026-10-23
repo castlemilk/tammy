@@ -397,6 +397,13 @@
     padding: 16px 20px;
     border-top: 1px solid var(--border);
   }
+  .document-index-table th,
+  .document-index-table td {
+    padding: 5px 12px;
+  }
+  .document-index-table th {
+    height: 38px;
+  }
   .invoice-index-table th,
   .invoice-index-table td {
     padding: 6px 12px;

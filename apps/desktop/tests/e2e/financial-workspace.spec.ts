@@ -460,6 +460,8 @@ test.describe("Soft Precision financial workspace", () => {
         expect(retained.accounting.outstandingMinor).toBe(82_000n);
       }
     }
+    if (!phase && !referencePhase && !detailPhase && !draftPhase && !overviewCapturePhase)
+      await runDocumentsReviewJourney(page, workspace);
     expect(electronHarness.consoleErrors).toEqual([]);
     expect(electronHarness.pageErrors).toEqual([]);
   });

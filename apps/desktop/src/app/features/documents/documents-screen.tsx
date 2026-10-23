@@ -24,6 +24,7 @@ import { type ChangeEvent, type FormEvent, useEffect, useMemo, useRef, useState 
 
 import type { TammyConveyorModule } from "../../../conveyor/client";
 import { createProtoMethodCodec } from "../../../shared/proto-ipc";
+import { HorizontalScrollArea } from "../../components/horizontal-scroll-area";
 import {
   WorkFilters,
   WorkHeading,
@@ -325,13 +326,15 @@ export function DocumentsScreen({
       <WorkHeading
         area="Documents"
         title="Documents"
-        description="Keep source documents close to their review, purchase posting, and retained evidence."
+        description="Keep the evidence close. Check source details before posting a purchase."
         action={
           <>
             <input
               ref={input}
               accept="application/pdf,image/png,image/jpeg"
               className="sr-only"
+              aria-label="Choose local document"
+              tabIndex={-1}
               onChange={upload}
               type="file"
             />
@@ -359,46 +362,44 @@ export function DocumentsScreen({
         </WorkNotice>
       ) : null}
       <section aria-label="Source documents" className="work-surface overflow-hidden">
-        <div className="flex flex-wrap items-end justify-between gap-3 border-b border-border p-4">
-          <div className="grid min-w-0 gap-3 max-[700px]:w-full">
-            <WorkFilters
-              label="Document status"
-              value={statusChoice}
-              onChange={(value) => {
-                setStatusChoice(value);
-                setStatusFilter(
-                  value === "review"
-                    ? DocumentStatus.NEEDS_REVIEW
-                    : value === "reviewed"
-                      ? DocumentStatus.REVIEWED
-                      : undefined,
-                );
+        <div className="flex flex-wrap items-center gap-3 border-b border-border p-3">
+          <WorkFilters
+            label="Document status"
+            value={statusChoice}
+            onChange={(value) => {
+              setStatusChoice(value);
+              setStatusFilter(
+                value === "review"
+                  ? DocumentStatus.NEEDS_REVIEW
+                  : value === "reviewed"
+                    ? DocumentStatus.REVIEWED
+                    : undefined,
+              );
+              setCursors([""]);
+            }}
+            options={[
+              { value: "all", label: "All documents", count: documents.length },
+              { value: "review", label: "Needs review", count: reviewCount },
+              { value: "reviewed", label: "Reviewed", count: documents.length - reviewCount },
+            ]}
+          />
+          <label className="block w-[180px] max-[700px]:w-full">
+            <span className="sr-only">Accounting state</span>
+            <select
+              className="focus-ring h-11 w-full rounded-xl border border-border bg-surface px-3 text-[13px]"
+              value={accountingFilter ?? 0}
+              onChange={(event) => {
+                setAccountingFilter(Number(event.target.value) || undefined);
                 setCursors([""]);
               }}
-              options={[
-                { value: "all", label: "All documents", count: documents.length },
-                { value: "review", label: "Needs review", count: reviewCount },
-                { value: "reviewed", label: "Reviewed", count: documents.length - reviewCount },
-              ]}
-            />
-            <label className="grid w-full max-w-[240px] gap-1 text-[12px] font-semibold">
-              Accounting state
-              <select
-                className="focus-ring h-11 rounded-xl border border-border bg-surface px-3 text-[14px] font-normal"
-                value={accountingFilter ?? 0}
-                onChange={(event) => {
-                  setAccountingFilter(Number(event.target.value) || undefined);
-                  setCursors([""]);
-                }}
-              >
-                <option value={0}>All accounting states</option>
-                <option value={DocumentAccountingFilter.UNPOSTED}>Not posted</option>
-                <option value={DocumentAccountingFilter.POSTED}>Posted purchases</option>
-                <option value={DocumentAccountingFilter.NEEDS_GST_REVIEW}>Needs GST review</option>
-              </select>
-            </label>
-          </div>
-          <div className="flex w-full min-w-0 max-w-[330px] items-center gap-2">
+            >
+              <option value={0}>All accounting states</option>
+              <option value={DocumentAccountingFilter.UNPOSTED}>Not posted</option>
+              <option value={DocumentAccountingFilter.POSTED}>Posted purchases</option>
+              <option value={DocumentAccountingFilter.NEEDS_GST_REVIEW}>Needs GST review</option>
+            </select>
+          </label>
+          <div className="ml-auto flex w-[270px] min-w-0 items-center gap-1 max-[700px]:w-full">
             <WorkSearch
               inputRef={searchInput}
               label="Search documents"
@@ -449,8 +450,11 @@ export function DocumentsScreen({
             }
           />
         ) : (
-          <div className="overflow-x-auto">
-            <table className="work-table min-w-[650px]" aria-label="Retained documents">
+          <HorizontalScrollArea label="Scrollable retained documents">
+            <table
+              className="work-table document-index-table min-w-[650px]"
+              aria-label="Retained documents"
+            >
               <thead>
                 <tr>
                   <th>Document & supplier</th>
@@ -484,22 +488,33 @@ export function DocumentsScreen({
                         }}
                         type="button"
                       >
-                        <span className="grid size-10 shrink-0 place-items-center rounded-xl border border-border bg-surface text-forest">
-                          <FileText aria-hidden="true" className="size-4" />
+                        <span
+                          aria-hidden="true"
+                          className={`inline-flex h-6 w-10 shrink-0 items-center justify-center rounded-md text-[10px] font-bold ${document.mimeType === "application/pdf" ? "bg-warning-soft text-warning" : "bg-forest-soft text-forest"}`}
+                        >
+                          {document.mimeType === "application/pdf"
+                            ? "PDF"
+                            : document.mimeType === "image/png"
+                              ? "PNG"
+                              : "JPEG"}
                         </span>
                         <span className="min-w-0">
                           <span className="block max-w-[260px] truncate font-semibold">
                             {document.sourceDisplayName}
                           </span>
-                          <span className="mt-1 block text-[12px] text-muted-foreground">
+                          <span className="block text-[12px] leading-5 text-muted-foreground">
                             {document.candidate?.supplierName || "Supplier to review"}
                           </span>
                         </span>
                       </button>
                     </td>
-                    <td>{document.candidate?.invoiceNumber || "—"}</td>
-                    <td className="tabular-nums">{formatDate(document.candidate?.documentDate)}</td>
-                    <td className="text-right font-semibold tabular-nums">
+                    <td className="whitespace-nowrap">
+                      {document.candidate?.invoiceNumber || "—"}
+                    </td>
+                    <td className="whitespace-nowrap tabular-nums">
+                      {formatDate(document.candidate?.documentDate)}
+                    </td>
+                    <td className="whitespace-nowrap text-right font-semibold tabular-nums">
                       {formatMoney(document.candidate?.total?.minorUnits)}
                     </td>
                     <td>
@@ -509,9 +524,9 @@ export function DocumentsScreen({
                 ))}
               </tbody>
             </table>
-          </div>
+          </HorizontalScrollArea>
         )}
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-5 py-3 text-[12px] text-muted-foreground">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border px-3 py-2 text-[12px] text-muted-foreground">
           <span>
             {state.status === "ready"
               ? `${visible.length} shown · ${documents.length} loaded (up to 200)`
@@ -520,15 +535,17 @@ export function DocumentsScreen({
           </span>
           <div className="flex flex-wrap gap-2">
             <Button
+              aria-label="Previous document page"
               className="min-h-11 text-[12px]"
               disabled={cursors.length < 2 || documentsQuery.isFetching}
               onClick={() => setCursors((current) => current.slice(0, -1))}
               type="button"
               variant="outline"
             >
-              Previous document page
+              Previous
             </Button>
             <Button
+              aria-label="Next document page"
               className="min-h-11 text-[12px]"
               disabled={state.status !== "ready" || !state.nextCursor || documentsQuery.isFetching}
               onClick={() => {
@@ -538,7 +555,7 @@ export function DocumentsScreen({
               type="button"
               variant="outline"
             >
-              Next document page
+              Next
             </Button>
           </div>
         </div>
@@ -673,13 +690,13 @@ function ReviewPanel({
     );
   return (
     <section aria-label="Document review" className="work-surface overflow-hidden">
-      <div className="flex items-start justify-between gap-3 border-b border-border p-5">
+      <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
         <div className="min-w-0">
-          <p className="work-eyebrow">{reviewed ? "Retained evidence" : "Review document"}</p>
-          <h2 className="mt-1 break-words font-serif text-[26px] leading-8">
+          <h2 className="break-words text-[14px] font-semibold leading-5">
             {document.sourceDisplayName}
           </h2>
-          <p className="mt-1 text-[14px] leading-5 text-muted-foreground">
+          <p className="mt-1 text-[12px] leading-4 text-muted-foreground">
+            {reviewed ? "Retained evidence" : "Review document"} ·{" "}
             {formatBytes(document.byteLength)} · retained locally
           </p>
         </div>
@@ -693,34 +710,37 @@ function ReviewPanel({
           <X aria-hidden="true" className="size-4" />
         </Button>
       </div>
-      <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] max-[1050px]:grid-cols-1">
-        <div className="border-r border-border bg-background p-6 max-[1050px]:border-b max-[1050px]:border-r-0 max-[700px]:p-4">
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+      <div className="grid grid-cols-[minmax(0,1.35fr)_minmax(320px,1fr)] max-[1050px]:grid-cols-1">
+        <div className="min-w-0 border-r border-border bg-background p-4 max-[1050px]:border-b max-[1050px]:border-r-0">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <h3 className="text-[14px] font-semibold">Extracted source text</h3>
             <span className="text-[12px] text-muted-foreground">
               {document.mimeType === "application/pdf" ? "Native PDF text" : "Image · manual entry"}
             </span>
           </div>
-          <div className="min-h-64 rounded-xl border border-border bg-surface p-6 max-[700px]:p-4">
-            <FileText aria-hidden="true" className="mb-5 size-6 text-forest" />
-            <pre className="whitespace-pre-wrap break-words font-sans text-[14px] leading-7 text-foreground">
+          <HorizontalScrollArea
+            label="Retained source text"
+            className="max-h-[420px] min-h-48 overflow-y-auto rounded-xl border border-border bg-surface p-4"
+          >
+            <FileText aria-hidden="true" className="mb-3 size-5 text-forest" />
+            <pre className="whitespace-pre-wrap break-words font-sans text-[13px] leading-6 text-foreground">
               {document.extractedText ||
                 "No native text was found. Enter the details from the source image manually."}
             </pre>
-          </div>
-          <p className="mt-4 text-[14px] leading-6 text-muted-foreground">
+          </HorizontalScrollArea>
+          <p className="mt-3 text-[12px] leading-5 text-muted-foreground">
             This is retained text, not an original-file preview. Check the source file when
             confirming details.
           </p>
         </div>
-        <form className="grid content-start gap-4 p-6 max-[700px]:p-4" onSubmit={save}>
+        <form className="grid min-w-0 content-start gap-3 p-4" onSubmit={save}>
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h3 className="text-[14px] font-semibold">
               {reviewed ? "Reviewed details" : "Check the details"}
             </h3>
             <DocumentStatusLabel reviewed={reviewed} />
           </div>
-          <p className="text-[14px] leading-6 text-muted-foreground">
+          <p className="text-[12px] leading-5 text-muted-foreground">
             {reviewed
               ? "Your review is saved. No accounting entries were posted by this action."
               : "Suggestions need your confirmation. Saving a review does not post accounting entries."}
@@ -731,7 +751,7 @@ function ReviewPanel({
             value={fields.supplierName}
             readOnly={reviewed || saving}
           />
-          <div className="grid grid-cols-2 gap-3 max-[700px]:grid-cols-1">
+          <div className="grid grid-cols-2 gap-3 max-[450px]:grid-cols-1">
             <Field
               label="Invoice number"
               onChange={(value) => setFields({ ...fields, invoiceNumber: value })}
@@ -746,7 +766,7 @@ function ReviewPanel({
               readOnly={reviewed || saving}
             />
           </div>
-          <div className="grid grid-cols-3 gap-3 max-[700px]:grid-cols-1">
+          <div className="grid grid-cols-3 gap-3 max-[450px]:grid-cols-1">
             {(
               [
                 ["Subtotal", "subtotal"],
@@ -806,7 +826,7 @@ function Field({
     <label className="grid gap-1.5 text-[12px] font-semibold">
       {label}
       <input
-        className="focus-ring h-11 min-w-0 w-full rounded-xl border border-border bg-surface px-3 text-[14px] font-normal read-only:bg-background"
+        className={`focus-ring h-11 min-w-0 w-full rounded-xl border border-border bg-surface px-3 text-[14px] font-normal read-only:bg-background ${type === "number" ? "tabular-nums" : ""}`}
         min={type === "number" ? "0" : undefined}
         step={type === "number" ? "0.01" : undefined}
         onChange={(event) => onChange(event.target.value)}
@@ -854,7 +874,7 @@ function inferCandidate(text: string, fileName: string) {
 
 function labelledAmount(text: string, label: string): bigint {
   const match = text.match(
-    new RegExp(`${label}[^$\\d]{0,16}\\$?\\s*([0-9][0-9,]*(?:\\.[0-9]{1,2})?)`, "i"),
+    new RegExp(`\\b${label}\\b[^$\\d]{0,16}\\$?\\s*([0-9][0-9,]*(?:\\.[0-9]{1,2})?)`, "i"),
   );
   return decimalToMinor(match?.[1] ?? "0");
 }

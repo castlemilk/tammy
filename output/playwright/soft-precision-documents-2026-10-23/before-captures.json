@@ -1,0 +1,118 @@
+{
+  "syntheticOnly": true,
+  "runtimeSource": "74e147431c950bb094dba57f1386bd3ed3840020",
+  "runtimeSourceDirty": false,
+  "appCodeIdenticalToReviewBase": "9265bb99cdee3f34f3ac5f9e03d1faa7d141a95c",
+  "instrumentationCommit": "544bcde8d5c0284fd18823104d56aa08ba90337d",
+  "instrumentationCorrection": "Core accepts human-reviewed amounts independently. The corrected error case uses a 257-character supplier rejected by the existing 256-character Core limit.",
+  "journey": {
+    "passed": 1,
+    "failed": 0,
+    "seconds": 12.9,
+    "testBodySeconds": 12.1,
+    "retries": 0,
+    "consoleErrors": 0,
+    "pageErrors": 0
+  },
+  "frames": [
+    {
+      "path": "before/01-import-validation.png",
+      "sha256": "104a6b4906f47447a103f576df9fcd667356c7470eae95b8b322d3bd1a0dec2a",
+      "bytes": 160250,
+      "viewport": [1440, 1100]
+    },
+    {
+      "path": "before/02-list-selected.png",
+      "sha256": "6ea4f5e3bedfc19072f6e24f91193f1da9dd497b86d73c4448423c2022c03883",
+      "bytes": 174801,
+      "viewport": [1440, 1100]
+    },
+    {
+      "path": "before/03-review-before-save.png",
+      "sha256": "4b66d02fab20eecf001e6947456f6aa352a61029b81ff1575ac55266b967b518",
+      "bytes": 167359,
+      "viewport": [1440, 1100]
+    },
+    {
+      "path": "before/04-review-error.png",
+      "sha256": "6a85b94244ef49e6e979189f0cc47552cd6e4c2439bef54eb9a62801fbce917e",
+      "bytes": 177007,
+      "viewport": [1440, 1100]
+    },
+    {
+      "path": "before/05-review-confirmed.png",
+      "sha256": "4a9f768b2eede76797328ddd022fd78a881652e6482cca4ab073fe66e39eaeb2",
+      "bytes": 164624,
+      "viewport": [1440, 1100]
+    },
+    {
+      "path": "before/06-close-retains-search.png",
+      "sha256": "7bb11117d4d34e184df81fc69a18ec5bfe7e09fb9838591de9976ce803ba48e7",
+      "bytes": 119068,
+      "viewport": [1440, 1100]
+    },
+    {
+      "path": "before/07-search-empty.png",
+      "sha256": "e1aa3e01ce0890a8979064bb2ac6a18e9039972b0065e6df2bc01554d2ae0dae",
+      "bytes": 147818,
+      "viewport": [1440, 1100]
+    },
+    {
+      "path": "before/08-manual-image.png",
+      "sha256": "3835a389937f72530b095f7fb37ab706e6bb297fcada0b229b008a34efd3b9ad",
+      "bytes": 173680,
+      "viewport": [1440, 1100]
+    },
+    {
+      "path": "before/09-document-list-320.png",
+      "sha256": "993cd84a3b4474e98043b57b76688f1704552bed2a9c7a7062bd2bca3c63a436",
+      "bytes": 64782,
+      "viewport": [320, 1000]
+    },
+    {
+      "path": "before/09-document-list-390.png",
+      "sha256": "94991a513f499ae13a9c3b47e61104c8ec23ef345ab8c8e3fe942602fa328c56",
+      "bytes": 67514,
+      "viewport": [390, 1000]
+    },
+    {
+      "path": "before/10-manual-fields-320.png",
+      "sha256": "993cd84a3b4474e98043b57b76688f1704552bed2a9c7a7062bd2bca3c63a436",
+      "bytes": 64782,
+      "viewport": [320, 1000]
+    },
+    {
+      "path": "before/10-manual-fields-390.png",
+      "sha256": "0e1fe70f854021a5d514612c60ccba82320df18dc6161a3733241e1764f7088e",
+      "bytes": 51124,
+      "viewport": [390, 1000]
+    }
+  ],
+  "retainedAttempt": {
+    "cause": "Original test incorrectly expected unbalanced document review amounts to fail. Core actually accepted that review. No application failure inferred. Its three frames are retained unchanged.",
+    "frames": [
+      {
+        "path": "baseline-attempts/original-test-assumption/01-import-validation.png",
+        "sha256": "104a6b4906f47447a103f576df9fcd667356c7470eae95b8b322d3bd1a0dec2a",
+        "bytes": 160250,
+        "viewport": [1440, 1100]
+      },
+      {
+        "path": "baseline-attempts/original-test-assumption/02-list-selected.png",
+        "sha256": "6ea4f5e3bedfc19072f6e24f91193f1da9dd497b86d73c4448423c2022c03883",
+        "bytes": 174801,
+        "viewport": [1440, 1100]
+      },
+      {
+        "path": "baseline-attempts/original-test-assumption/03-review-before-save.png",
+        "sha256": "4b66d02fab20eecf001e6947456f6aa352a61029b81ff1575ac55266b967b518",
+        "bytes": 167359,
+        "viewport": [1440, 1100]
+      }
+    ]
+  },
+  "knownBaselineDifferences": [
+    "Total suggestion reads 100.00 from Subtotal instead of explicit Total 110.00. The user corrects it to 110.00 before saving.",
+    "The table has no named focusable scroll region; before mode omits the newly added keyboard scroller assertions."
+  ]
+}
