@@ -753,6 +753,9 @@ test("covers workspace setup, recovery, accounting, and interaction journeys thr
   await openSavedBasWorkpaperPanel(page);
   await expect(page.getByText("Draft — not lodged", { exact: true }).first()).toBeVisible();
   await expect(page.getByText("Unresolved legacy source", { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Refresh exact history", exact: true }),
+  ).toBeEnabled();
   await captureJourney(page, "09-gst-draft");
   await assertRoute(page, "Overview", "/overview", "Overview");
   await expect(
@@ -1097,6 +1100,13 @@ async function interactionJourney(page: import("@playwright/test").Page) {
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
     true,
   );
+  const narrowReconciliation = page.getByRole("button", {
+    name: "Complete reconciliation",
+    exact: true,
+  });
+  await narrowReconciliation.scrollIntoViewIfNeeded();
+  await expect(narrowReconciliation).toBeVisible();
+  await expect(narrowReconciliation).toBeDisabled();
   await captureJourney(page, "25-match-review-narrow");
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.getByRole("button", { name: "Cancel match" }).click();

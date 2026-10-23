@@ -148,9 +148,11 @@ test("purchases/payments-gst: opening without a document and an earlier-period l
     name: "Purchase GST review outcomes",
     exact: true,
   });
-  const row = reviewRegion
-    .locator("div.grid.gap-2.border-b")
-    .filter({ hasText: seed.openingPayableId });
+  const reviewRows = reviewRegion
+    .locator(":scope > div")
+    .filter({ has: page.getByRole("heading", { level: 3 }) });
+  const row = reviewRows.filter({ hasText: seed.openingPayableId });
+  await expect(row).toHaveCount(1);
   await row
     .locator("summary")
     .filter({ hasText: /^Review legacy purchase \/ opening provenance$/ })
@@ -183,9 +185,8 @@ test("purchases/payments-gst: opening without a document and an earlier-period l
   await row.getByRole("button", { name: "Review legacy decision", exact: true }).click();
   await row.getByRole("button", { name: "Confirm legacy purchase review", exact: true }).click();
   await expect(row.getByRole("status")).toContainText("Decision retained:");
-  const legacyRow = reviewRegion
-    .locator("div.grid.gap-2.border-b")
-    .filter({ hasText: "Invoice 10/06/2026 · payment" });
+  const legacyRow = reviewRows.filter({ hasText: "Invoice 10/06/2026 · payment" });
+  await expect(legacyRow).toHaveCount(1);
   await legacyRow
     .locator("summary")
     .filter({ hasText: /^Review legacy purchase \/ opening provenance$/ })

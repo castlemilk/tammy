@@ -281,6 +281,10 @@ test("runs the packaged first-run journey offline and exits cleanly", async ({
   await page.getByRole("button", { name: "Back to Tammy" }).click();
   await expect(page.getByRole("heading", { name: "Create your local workspace" })).toBeVisible();
   await page.keyboard.press("Tab");
+  await expect(
+    page.getByRole("button", { name: "Privacy and support", exact: true }),
+  ).toBeFocused();
+  await page.keyboard.press("Tab");
   await expect(page.getByLabel("Your name")).toBeFocused();
 
   expect(consumeExpectedCspViolations(consoleErrors, probeUrls)).toEqual([]);
