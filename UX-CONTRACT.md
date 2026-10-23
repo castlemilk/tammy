@@ -177,3 +177,31 @@ receipt contracts or export/issue confirmations change.
 - The financial handlers, command keys, expected versions, loaded page size,
   reconciliation gate and financial/security boundaries are unchanged. Matching
   records a reviewed string only; no document link, journal or payment is created.
+
+## Journals workspace composition (2026-10-23)
+
+The manual journal command remains the existing two ordinary-account lines with
+one date, description and exact amount. The editor's debit/credit/difference strip
+previews those actual two lines; it does not add editable lines, reference numbering,
+a new review stage, draft persistence, reversal or automatic posting. Native date,
+amount, required-field and select behavior remain platform-owned.
+
+- The editor is the active work surface while open. Cancel and Escape preserve the
+  existing in-screen draft without a write; route changes do not promise persistence.
+  Escape respects composition, pending work and native select popup handling.
+- A synchronous in-flight guard prevents repeated submit events from creating
+  concurrent commands. Core request fields, exact amount parsing, command identity
+  generation, response handling and existing retry semantics remain unchanged.
+- Confirmed posting keeps the existing read-only detail destination. History actions
+  are semantic buttons; back returns focus to that action or the retained search.
+- Search is local to the explicitly labelled loaded projection, up to 200 journals.
+  Its transient in-screen query is preserved through detail/back and clears with
+  focus return. It does not claim complete-history or server filtering.
+- The shared HorizontalScrollArea owns narrow data/amount scrolling and keyboard
+  access. The editor keeps natural page scrolling and stacks fields at narrow widths.
+- Initial loading, empty, no results, unavailable list/detail and posting errors are
+  distinct. A posting error preserves inputs and receives focus. Retry controls only
+  reload reads; this visual block does not add automatic mutation replay.
+
+Existing strict supplementary audit exceptions and financial/platform release
+boundaries remain. No native validation is removed for this composition.

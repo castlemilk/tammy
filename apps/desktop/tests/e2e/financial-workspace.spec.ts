@@ -7,6 +7,7 @@ import { bankingCapturePhase, runBankingReviewJourney } from "./support/banking-
 import { setupAndRunCurrentAccountingWorkflow } from "./support/current-accounting-workflow";
 import { documentsCapturePhase, runDocumentsReviewJourney } from "./support/documents-journey";
 import { readInvoiceAccounting } from "./support/invoice-income-workflow";
+import { journalsCapturePhase, runJournalsJourney } from "./support/journals-journey";
 import {
   captureLocalOverview,
   overviewCapturePhase,
@@ -44,6 +45,12 @@ test.describe("Soft Precision financial workspace", () => {
     );
     const page = electronHarness.currentPage();
     await page.setViewportSize({ width: 1440, height: 1100 });
+    if (journalsCapturePhase) {
+      await runJournalsJourney(page, workspace);
+      expect(electronHarness.consoleErrors).toEqual([]);
+      expect(electronHarness.pageErrors).toEqual([]);
+      return;
+    }
     if (bankingCapturePhase) {
       await runBankingReviewJourney(page, workspace);
       expect(electronHarness.consoleErrors).toEqual([]);
@@ -470,6 +477,7 @@ test.describe("Soft Precision financial workspace", () => {
     if (!phase && !referencePhase && !detailPhase && !draftPhase && !overviewCapturePhase) {
       await runDocumentsReviewJourney(page, workspace);
       await runBankingReviewJourney(page, workspace);
+      await runJournalsJourney(page, workspace);
     }
     expect(electronHarness.consoleErrors).toEqual([]);
     expect(electronHarness.pageErrors).toEqual([]);

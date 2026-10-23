@@ -19,12 +19,14 @@ import {
   MoneySchema,
   PageRequestSchema,
 } from "@tammy/connect-client/tammy/v1/common_pb.js";
-import { ArrowLeft, LoaderCircle, Plus } from "lucide-react";
-import { type FormEvent, useMemo, useState } from "react";
+import { ArrowLeft, Plus, RefreshCw } from "lucide-react";
+import { type FormEvent, type Ref, useEffect, useMemo, useRef, useState } from "react";
 
 import type { TammyConveyorModule } from "../../../conveyor/client";
 import { createProtoMethodCodec } from "../../../shared/proto-ipc";
 import { HorizontalScrollArea } from "../../components/horizontal-scroll-area";
+import { WorkNotice, WorkSearch, WorkState } from "../../components/review-workspace";
+import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { ScreenHeading, SurfaceHeading } from "../../components/workspace-primitives";
 import type { AuthenticatedWorkspace } from "../setup/setup-screen";
@@ -89,6 +91,16 @@ export function JournalsScreen({
   const [amount, setAmount] = useState("");
   const [debitAccount, setDebitAccount] = useState("");
   const [creditAccount, setCreditAccount] = useState("");
+  const [query, setQuery] = useState("");
+  const [refreshing, setRefreshing] = useState(false);
+  const postingGuard = useRef(false);
+  const newJournalButton = useRef<HTMLButtonElement>(null);
+  const dateInput = useRef<HTMLInputElement>(null);
+  const errorRegion = useRef<HTMLElement>(null);
+  const searchInput = useRef<HTMLInputElement>(null);
+  const detailHeading = useRef<HTMLHeadingElement>(null);
+  const journalButtons = useRef(new Map<string, HTMLButtonElement>());
+  const wasAdding = useRef(false);
   const journalID = useMemo(
     () => new URL(path, "https://tammy.invalid").searchParams.get("journal"),
     [path],
@@ -172,6 +184,23 @@ export function JournalsScreen({
     }
   }, [journalQuery.data]);
 
+  const previousJournalID = useRef(journalID);
+  useEffect(() => {
+    if (journalID && selected?.id === journalID) detailHeading.current?.focus();
+    if (!journalID && previousJournalID.current) {
+      (journalButtons.current.get(previousJournalID.current) ?? searchInput.current)?.focus();
+    }
+    previousJournalID.current = journalID;
+  }, [journalID, selected?.id]);
+  useEffect(() => {
+    if (adding) dateInput.current?.focus();
+    else if (wasAdding.current) newJournalButton.current?.focus();
+    wasAdding.current = adding;
+  }, [adding]);
+  useEffect(() => {
+    if (error) errorRegion.current?.focus();
+  }, [error]);
+
   const ordinaryAccounts =
     state.status === "ready"
       ? state.accounts.filter((account) => account.designation === AccountDesignation.ORDINARY)
@@ -179,12 +208,13 @@ export function JournalsScreen({
 
   const postJournal = async (event: FormEvent) => {
     event.preventDefault();
-    if (!workspace?.organisationId) return;
+    if (!workspace?.organisationId || postingGuard.current) return;
     const minorUnits = amountToMinor(amount);
     if (minorUnits <= 0 || debitAccount === creditAccount) {
       setError("Choose two different accounts and enter a positive amount.");
       return;
     }
+    postingGuard.current = true;
     setPosting(true);
     setError(undefined);
     try {
@@ -227,42 +257,115 @@ export function JournalsScreen({
     } catch {
       setError("The journal could not be posted. Check the accounts and balance.");
     } finally {
+      postingGuard.current = false;
       setPosting(false);
     }
   };
 
-  if (journalID && selected) {
+  const closeEntry = () => {
+    if (postingGuard.current) return;
+    setAdding(false);
+    setError(undefined);
+  };
+  const refresh = async () => {
+    setRefreshing(true);
+    try {
+      await Promise.all([accountsQuery.refetch(), journalsQuery.refetch()]);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+  const filteredJournals =
+    state.status === "ready"
+      ? state.journals.filter((journal) =>
+          journal.memo.toLocaleLowerCase("en-AU").includes(query.trim().toLocaleLowerCase("en-AU")),
+        )
+      : [];
+
+  if (journalID) {
+    if (selected)
+      return (
+        <JournalDetail
+          accounts={state.status === "ready" ? state.accounts : []}
+          headingRef={detailHeading}
+          journal={selected}
+          onBack={() => onNavigate("/accounting/journals")}
+        />
+      );
+    const loading = journalQuery.isLoading || journalQuery.isFetching;
     return (
-      <JournalDetail
-        accounts={state.status === "ready" ? state.accounts : []}
-        journal={selected}
-        onBack={() => onNavigate("/accounting/journals")}
-      />
+      <div className="mx-auto grid w-full max-w-[1120px] gap-4">
+        <ScreenHeading
+          area="Accounting"
+          title="Journal"
+          description="Retained accounting entry."
+          action={
+            <Button
+              onClick={() => onNavigate("/accounting/journals")}
+              type="button"
+              variant="outline"
+            >
+              <ArrowLeft aria-hidden="true" className="size-4" /> Journals
+            </Button>
+          }
+        />
+        <section className="work-surface">
+          <WorkState
+            loading={loading}
+            title={loading ? "Loading journal" : "Journal unavailable"}
+            description={
+              loading
+                ? "Reading the retained entry."
+                : "This journal could not be loaded. Return to the list or try again."
+            }
+            action={
+              !loading ? (
+                <Button onClick={() => void journalQuery.refetch()} type="button" variant="outline">
+                  Retry journal
+                </Button>
+              ) : undefined
+            }
+          />
+        </section>
+      </div>
     );
   }
 
   return (
-    <div className="mx-auto grid w-full max-w-[1120px] gap-6">
+    <div className="mx-auto grid w-full max-w-[1120px] gap-4">
       <ScreenHeading
-        area="Accounting · Activity"
+        area="Accounting"
         title="Journals"
-        description="Balanced accounting entries and their retained sources."
+        description={
+          adding
+            ? "Review both sides before posting to your books."
+            : "Balanced accounting entries and their retained sources."
+        }
         action={
           <Button
-            className="h-11 text-[14px]"
-            disabled={ordinaryAccounts.length < 2}
+            ref={newJournalButton}
+            disabled={posting || ordinaryAccounts.length < 2}
             aria-expanded={adding}
-            onClick={() => setAdding((value) => !value)}
+            aria-controls={adding ? "manual-journal-entry" : undefined}
+            variant={adding ? "outline" : "default"}
+            onClick={() => {
+              if (adding) closeEntry();
+              else {
+                setError(undefined);
+                setAdding(true);
+              }
+            }}
             type="button"
           >
-            <Plus aria-hidden="true" className="size-3" /> {adding ? "Cancel" : "New journal"}
+            {adding ? null : <Plus aria-hidden="true" className="size-4" />}
+            {adding ? "Cancel" : "New journal"}
           </Button>
         }
       />
       {ordinaryAccounts.length < 2 && state.status === "ready" ? (
-        <p className="rounded-xl border border-warning-border bg-warning-soft px-4 py-3 text-[14px] leading-5 text-foreground">
+        <WorkNotice>
           Create at least two ordinary accounts before posting a manual journal.
-        </p>
+        </WorkNotice>
       ) : null}
       {adding ? (
         <JournalForm
@@ -270,9 +373,13 @@ export function JournalsScreen({
           amount={amount}
           creditAccount={creditAccount}
           date={date}
+          dateInput={dateInput}
           debitAccount={debitAccount}
+          error={error}
+          errorRegion={errorRegion}
           memo={memo}
           onAmount={setAmount}
+          onCancel={closeEntry}
           onCredit={setCreditAccount}
           onDate={setDate}
           onDebit={setDebitAccount}
@@ -280,57 +387,133 @@ export function JournalsScreen({
           onSubmit={postJournal}
           posting={posting}
         />
-      ) : null}
-      {error ? (
-        <p className="text-[14px] text-destructive" role="alert">
-          {error}
-        </p>
-      ) : null}
-      <section className="work-surface overflow-hidden">
-        <SurfaceHeading
-          title="Journal history"
-          description="Posted entries are retained as balanced accounting records."
-        />
-        {state.status === "ready" && state.journals.length > 0 ? (
-          <HorizontalScrollArea label="Journal history table">
-            <table className="w-full border-collapse text-left">
-              <thead className="border-b border-border bg-background/60 text-[12px] uppercase tracking-[0.075em] text-muted-foreground">
-                <tr>
-                  <th className="px-5 py-3">Date</th>
-                  <th className="px-5 py-3">Description</th>
-                  <th className="px-5 py-3 text-right">Amount</th>
-                  <th className="px-5 py-3">State</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border text-[14px]">
-                {state.journals.map((journal) => (
-                  <tr
-                    className="focus-ring cursor-pointer hover:bg-muted/50"
-                    key={journal.id}
-                    onClick={() => onNavigate(`/accounting/journals?journal=${journal.id}`)}
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter" || event.key === " ") {
-                        event.preventDefault();
-                        onNavigate(`/accounting/journals?journal=${journal.id}`);
-                      }
-                    }}
-                    tabIndex={0}
-                  >
-                    <td className="px-5 py-3.5">{civilDateLabel(journal)}</td>
-                    <td className="px-5 py-3.5 font-medium">{journal.memo || "Journal entry"}</td>
-                    <td className="px-5 py-3.5 text-right font-mono tabular-nums">
-                      {moneyLabel(journal.totalDebits?.minorUnits ?? 0n)}
-                    </td>
-                    <td className="px-5 py-3.5">{journal.state === 1 ? "Posted" : "Reversed"}</td>
+      ) : (
+        <section aria-label="Journal history" className="work-surface min-w-0 overflow-hidden">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3">
+            <h2 className="font-serif text-[24px] leading-8">Journal history</h2>
+            <div className="flex w-full max-w-[360px] min-w-0 items-center gap-2">
+              <WorkSearch
+                inputRef={searchInput}
+                label="Search journal descriptions"
+                value={query}
+                onChange={setQuery}
+              />
+              <Button
+                aria-label="Refresh journals"
+                disabled={refreshing || journalsQuery.isFetching || accountsQuery.isFetching}
+                onClick={() => void refresh()}
+                type="button"
+                variant="ghost"
+                className="size-11 shrink-0 p-0"
+              >
+                <RefreshCw
+                  aria-hidden="true"
+                  className={refreshing ? "size-4 animate-spin" : "size-4"}
+                />
+              </Button>
+            </div>
+          </div>
+          {state.status === "ready" && filteredJournals.length > 0 ? (
+            <HorizontalScrollArea label="Journal history table">
+              <table className="compact-ledger-table w-full min-w-[640px] border-collapse text-left">
+                <caption className="sr-only">Journal history</caption>
+                <thead className="border-b border-border text-[12px] text-muted-foreground">
+                  <tr>
+                    <th scope="col" className="w-[112px]">
+                      Date
+                    </th>
+                    <th scope="col">Description</th>
+                    <th scope="col" className="whitespace-nowrap text-right">
+                      Amount · AUD
+                    </th>
+                    <th scope="col" className="w-[100px]">
+                      State
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </HorizontalScrollArea>
-        ) : (
-          <EmptyState status={state.status} />
-        )}
-      </section>
+                </thead>
+                <tbody className="divide-y divide-border text-[14px]">
+                  {filteredJournals.map((journal) => (
+                    <tr className="hover:bg-muted/50" key={journal.id}>
+                      <td className="whitespace-nowrap tabular-nums">{civilDateLabel(journal)}</td>
+                      <td>
+                        <button
+                          type="button"
+                          aria-label={`Open journal: ${journal.memo || "Journal entry"}`}
+                          ref={(node) => {
+                            if (node) journalButtons.current.set(journal.id, node);
+                            else journalButtons.current.delete(journal.id);
+                          }}
+                          onClick={() => onNavigate(`/accounting/journals?journal=${journal.id}`)}
+                          className="focus-ring min-h-11 w-full cursor-pointer py-1 text-left font-medium hover:text-forest hover:underline active:text-foreground"
+                        >
+                          {journal.memo || "Journal entry"}
+                        </button>
+                      </td>
+                      <td className="whitespace-nowrap text-right font-semibold tabular-nums">
+                        {moneyLabel(journal.totalDebits?.minorUnits ?? 0n)}
+                      </td>
+                      <td>
+                        <Badge
+                          variant="outline"
+                          className={
+                            journal.state === 1
+                              ? "border-transparent bg-forest-soft text-forest"
+                              : "bg-muted"
+                          }
+                        >
+                          {journal.state === 1 ? "Posted" : "Reversed"}
+                        </Badge>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </HorizontalScrollArea>
+          ) : (
+            <WorkState
+              loading={state.status === "loading"}
+              title={
+                state.status === "loading"
+                  ? "Loading journals"
+                  : state.status === "unavailable"
+                    ? "Journals unavailable"
+                    : query
+                      ? "No matching journals"
+                      : "No journals yet"
+              }
+              description={
+                state.status === "unavailable"
+                  ? "The journal history could not be loaded. Try refreshing the list."
+                  : query
+                    ? "Try another description or clear your search."
+                    : state.status === "loading"
+                      ? "Reading your retained accounting entries."
+                      : "Create a balanced manual journal when you are ready."
+              }
+              action={
+                state.status === "unavailable" ? (
+                  <Button
+                    onClick={() => void refresh()}
+                    disabled={refreshing}
+                    type="button"
+                    variant="outline"
+                  >
+                    Retry journals
+                  </Button>
+                ) : undefined
+              }
+            />
+          )}
+          <p className="border-t border-border px-4 py-2 text-[12px] text-muted-foreground">
+            {state.status === "ready"
+              ? filteredJournals.length +
+                " of " +
+                state.journals.length +
+                " loaded journals · up to 200."
+              : "Showing the locally loaded journal history."}
+          </p>
+        </section>
+      )}
     </div>
   );
 }
@@ -340,9 +523,13 @@ function JournalForm(props: {
   readonly amount: string;
   readonly creditAccount: string;
   readonly date: string;
+  readonly dateInput: Ref<HTMLInputElement>;
   readonly debitAccount: string;
+  readonly error: string | undefined;
+  readonly errorRegion: Ref<HTMLElement>;
   readonly memo: string;
   readonly onAmount: (value: string) => void;
+  readonly onCancel: () => void;
   readonly onCredit: (value: string) => void;
   readonly onDate: (value: string) => void;
   readonly onDebit: (value: string) => void;
@@ -350,60 +537,146 @@ function JournalForm(props: {
   readonly onSubmit: (event: FormEvent) => void;
   readonly posting: boolean;
 }) {
+  const minor = amountToMinor(props.amount);
+  const value = minor > 0n ? moneyLabel(minor) : "—";
   return (
-    <form className="work-surface grid gap-4 p-5" onSubmit={props.onSubmit}>
-      <div className="grid grid-cols-2 gap-3 max-[700px]:grid-cols-1">
-        <label className="grid gap-1 text-[14px] font-medium">
-          Date
-          <input
-            className={fieldClassName()}
-            onChange={(event) => props.onDate(event.target.value)}
-            required
-            type="date"
-            value={props.date}
-          />
-        </label>
-        <label className="grid gap-1 text-[14px] font-medium">
-          Amount (AUD)
-          <input
-            className={fieldClassName()}
-            min="0.01"
-            onChange={(event) => props.onAmount(event.target.value)}
-            required
-            step="0.01"
-            type="number"
-            value={props.amount}
-          />
-        </label>
+    <form
+      id="manual-journal-entry"
+      aria-label="Manual journal entry"
+      aria-busy={props.posting}
+      className="work-surface min-w-0 overflow-hidden"
+      onSubmit={props.onSubmit}
+      onKeyDown={(event) => {
+        if (
+          event.key === "Escape" &&
+          !event.defaultPrevented &&
+          !event.nativeEvent.isComposing &&
+          !props.posting &&
+          !(event.target instanceof HTMLSelectElement) &&
+          !(event.target instanceof HTMLInputElement && event.target.type === "date")
+        ) {
+          event.preventDefault();
+          props.onCancel();
+        }
+      }}
+    >
+      <div className="border-b border-border px-4 py-3">
+        <h2 className="font-serif text-[24px] leading-8">Manual entry</h2>
       </div>
-      <label className="grid gap-1 text-[14px] font-medium">
-        Description
-        <input
-          className={fieldClassName()}
-          maxLength={512}
-          onChange={(event) => props.onMemo(event.target.value)}
-          required
-          value={props.memo}
-        />
-      </label>
-      <div className="grid grid-cols-2 gap-3 max-[700px]:grid-cols-1">
-        <AccountSelect
-          accounts={props.accounts}
-          label="Debit account"
-          onChange={props.onDebit}
-          value={props.debitAccount}
-        />
-        <AccountSelect
-          accounts={props.accounts}
-          label="Credit account"
-          onChange={props.onCredit}
-          value={props.creditAccount}
-        />
+      <fieldset disabled={props.posting} className="min-w-0">
+        <legend className="sr-only">Journal details</legend>
+        <div className="grid min-w-0 grid-cols-[180px_minmax(0,1fr)_180px] gap-4 border-b border-border p-4 max-[900px]:grid-cols-2 max-[700px]:grid-cols-1">
+          <label className="grid min-w-0 gap-1 text-[13px] font-medium">
+            Date
+            <input
+              ref={props.dateInput}
+              className={fieldClassName()}
+              onChange={(event) => props.onDate(event.target.value)}
+              required
+              type="date"
+              value={props.date}
+            />
+          </label>
+          <label className="grid min-w-0 gap-1 text-[13px] font-medium">
+            Description
+            <input
+              className={fieldClassName()}
+              maxLength={512}
+              onChange={(event) => props.onMemo(event.target.value)}
+              required
+              value={props.memo}
+            />
+          </label>
+          <label className="grid min-w-0 gap-1 text-[13px] font-medium">
+            Amount (AUD)
+            <input
+              className={fieldClassName()}
+              min="0.01"
+              onChange={(event) => props.onAmount(event.target.value)}
+              required
+              step="0.01"
+              type="number"
+              value={props.amount}
+            />
+          </label>
+        </div>
+        <div
+          className="grid grid-cols-[minmax(0,1fr)_140px_140px] gap-4 border-b border-border px-4 py-2 text-[12px] text-muted-foreground max-[700px]:hidden"
+          aria-hidden="true"
+        >
+          <span>Ordinary account</span>
+          <span className="text-right">Debit · AUD</span>
+          <span className="text-right">Credit · AUD</span>
+        </div>
+        <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_140px_140px] items-center gap-4 border-b border-border px-4 py-1 max-[700px]:grid-cols-2 max-[700px]:py-3">
+          <AccountSelect
+            accounts={props.accounts}
+            label="Debit account"
+            onChange={props.onDebit}
+            value={props.debitAccount}
+          />
+          <DraftAmount label="Debit line · debit amount" value={value} />
+          <DraftAmount label="Debit line · credit amount" value="—" />
+        </div>
+        <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_140px_140px] items-center gap-4 px-4 py-1 max-[700px]:grid-cols-2 max-[700px]:py-3">
+          <AccountSelect
+            accounts={props.accounts}
+            label="Credit account"
+            onChange={props.onCredit}
+            value={props.creditAccount}
+          />
+          <DraftAmount label="Credit line · debit amount" value="—" />
+          <DraftAmount label="Credit line · credit amount" value={value} />
+        </div>
+      </fieldset>
+      <dl className="grid min-w-0 grid-cols-3 gap-4 border-y border-border bg-forest-soft p-4 max-[700px]:grid-cols-1">
+        <AmountTotal label="Total debit · AUD" value={value} />
+        <AmountTotal label="Total credit · AUD" value={value} />
+        <AmountTotal label="Difference · AUD" value={minor > 0n ? moneyLabel(0n) : "—"} />
+      </dl>
+      {props.error ? (
+        <section
+          aria-label="Journal error"
+          ref={props.errorRegion}
+          tabIndex={-1}
+          className="focus-ring m-4 rounded-xl"
+        >
+          <WorkNotice>{props.error}</WorkNotice>
+        </section>
+      ) : null}
+      <div className="flex flex-wrap items-center justify-between gap-4 p-4">
+        <p className="max-w-[500px] text-[13px] leading-5 text-muted-foreground">
+          Two ordinary accounts. Posting records an equal debit and credit in your books.
+        </p>
+        <Button className="min-w-[128px]" disabled={props.posting} type="submit">
+          {props.posting ? "Posting…" : "Post journal"}
+        </Button>
       </div>
-      <Button className="justify-self-end" disabled={props.posting} type="submit">
-        {props.posting ? "Posting…" : "Post journal"}
-      </Button>
     </form>
+  );
+}
+function DraftAmount({ label, value }: { readonly label: string; readonly value: string }) {
+  return (
+    <div className="min-w-0 text-right text-[14px] tabular-nums">
+      <span className="sr-only max-[700px]:not-sr-only max-[700px]:block max-[700px]:text-[12px] max-[700px]:text-muted-foreground">
+        {label.includes("· debit") ? "Debit · AUD" : "Credit · AUD"}
+      </span>
+      <HorizontalScrollArea label={label} className="whitespace-nowrap">
+        {value}
+      </HorizontalScrollArea>
+    </div>
+  );
+}
+function AmountTotal({ label, value }: { readonly label: string; readonly value: string }) {
+  return (
+    <div className="min-w-0">
+      <dt className="text-[12px] text-muted-foreground">{label}</dt>
+      <dd className="mt-1 text-[20px] font-semibold leading-7 tabular-nums">
+        <HorizontalScrollArea label={label} className="whitespace-nowrap">
+          {value}
+        </HorizontalScrollArea>
+      </dd>
+    </div>
   );
 }
 
@@ -419,8 +692,8 @@ function AccountSelect({
   readonly value: string;
 }) {
   return (
-    <label className="grid gap-1 text-[14px] font-medium">
-      {label}
+    <label className="grid min-w-0 gap-1 text-[13px] font-medium max-[700px]:col-span-2">
+      <span className="min-[701px]:sr-only">{label}</span>
       <select
         className={fieldClassName()}
         onChange={(event) => onChange(event.target.value)}
@@ -441,20 +714,23 @@ function AccountSelect({
 function JournalDetail({
   accounts,
   journal,
+  headingRef,
   onBack,
 }: {
   readonly accounts: readonly Account[];
   readonly journal: Journal;
+  readonly headingRef: Ref<HTMLHeadingElement>;
   readonly onBack: () => void;
 }) {
   const names = new Map(
     accounts.map((account) => [account.id, `${account.code} — ${account.name}`]),
   );
   return (
-    <div className="mx-auto grid w-full max-w-[1120px] gap-6">
+    <div className="mx-auto grid w-full max-w-[1120px] gap-4">
       <ScreenHeading
         area="Accounting · Journal detail"
         title={journal.memo || "Journal entry"}
+        headingRef={headingRef}
         description={`${civilDateLabel(journal)} · ${journal.state === 1 ? "Posted" : "Reversed"}`}
         action={
           <Button onClick={onBack} type="button" variant="outline">
@@ -463,13 +739,10 @@ function JournalDetail({
         }
       />
       <section className="work-surface overflow-hidden">
-        <SurfaceHeading
-          title="Entry lines"
-          description="Debits and credits recorded in this journal."
-        />
+        <SurfaceHeading title="Entry lines" description="Read-only · amounts in AUD" />
         <HorizontalScrollArea label="Journal entry lines table">
-          <table className="w-full border-collapse text-left">
-            <thead className="border-b border-border bg-background/60 text-[12px] uppercase tracking-[0.075em] text-muted-foreground">
+          <table className="compact-ledger-table w-full min-w-[680px] border-collapse text-left">
+            <thead className="border-b border-border bg-background/60 text-[12px] text-muted-foreground">
               <tr>
                 <th className="px-5 py-3">Account</th>
                 <th className="px-5 py-3">Description</th>
@@ -484,24 +757,24 @@ function JournalDetail({
                     {names.get(line.accountId) ?? line.accountId}
                   </td>
                   <td className="px-5 py-3.5 text-muted-foreground">{line.description}</td>
-                  <td className="px-5 py-3.5 text-right font-mono tabular-nums">
+                  <td className="px-5 py-3.5 text-right whitespace-nowrap tabular-nums">
                     {line.debit?.minorUnits ? moneyLabel(line.debit.minorUnits) : "—"}
                   </td>
-                  <td className="px-5 py-3.5 text-right font-mono tabular-nums">
+                  <td className="px-5 py-3.5 text-right whitespace-nowrap tabular-nums">
                     {line.credit?.minorUnits ? moneyLabel(line.credit.minorUnits) : "—"}
                   </td>
                 </tr>
               ))}
             </tbody>
-            <tfoot className="border-t border-border text-[14px] font-semibold">
+            <tfoot className="border-t border-border bg-forest-soft text-[14px] font-semibold">
               <tr>
                 <td className="px-5 py-3.5" colSpan={2}>
                   Total
                 </td>
-                <td className="px-5 py-3.5 text-right font-mono tabular-nums">
+                <td className="px-5 py-3.5 text-right whitespace-nowrap tabular-nums">
                   {moneyLabel(journal.totalDebits?.minorUnits ?? 0n)}
                 </td>
-                <td className="px-5 py-3.5 text-right font-mono tabular-nums">
+                <td className="px-5 py-3.5 text-right whitespace-nowrap tabular-nums">
                   {moneyLabel(journal.totalCredits?.minorUnits ?? 0n)}
                 </td>
               </tr>
@@ -513,25 +786,8 @@ function JournalDetail({
   );
 }
 
-function EmptyState({ status }: { readonly status: JournalState["status"] }) {
-  return (
-    <div className="grid min-h-64 place-items-center text-center">
-      <div>
-        {status === "loading" ? (
-          <LoaderCircle className="mx-auto size-4 animate-spin text-forest" />
-        ) : null}
-        <p className="mt-2 text-[14px] font-semibold">
-          {status === "unavailable" ? "Journals unavailable" : "No journals yet"}
-        </p>
-        <p className="mt-1 text-[14px] text-muted-foreground">
-          Post a balanced manual journal to begin.
-        </p>
-      </div>
-    </div>
-  );
-}
 function fieldClassName(): string {
-  return "focus-ring h-11 w-full rounded-xl border border-border bg-surface px-3 text-[14px] outline-none";
+  return "focus-ring h-11 w-full min-w-0 rounded-xl border border-border bg-surface px-3 text-[14px] outline-none";
 }
 function amountToMinor(value: string): bigint {
   if (!/^\d+(?:\.\d{1,2})?$/.test(value)) return 0n;

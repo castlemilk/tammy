@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "baselineRevision": "22a97dc6a0c3790a0b404775196ae342f8e3d311",
+  "previousTrackedOutputPngs": 731,
+  "allPreviousPngsByteIdentical": true,
+  "configuredAuditFindings": 19,
+  "configuredRuleFileMultisetUnchanged": true,
+  "postHandlerUnchangedExceptSynchronousInFlightGuard": true,
+  "normalizedPostHandlerSha256": "5dbc78bfc720a67bf6115f7a8c0901d098dd388627310717af8e789199829ec4"
+}

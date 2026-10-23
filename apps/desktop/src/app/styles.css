@@ -414,6 +414,16 @@
   .banking-lines-table td {
     height: 56px;
   }
+  .compact-ledger-table th,
+  .compact-ledger-table td {
+    padding: 4px 12px;
+  }
+  .compact-ledger-table th {
+    height: 38px;
+  }
+  .compact-ledger-table td {
+    height: 56px;
+  }
   .invoice-index-table th,
   .invoice-index-table td {
     padding: 6px 12px;

@@ -1,0 +1,7 @@
+{
+  "sourceRevision": "4ce093a93422121cf7e0492456a20a7b0dcf2344",
+  "harnessDirty": true,
+  "harnessSha256": "5b986faca64d3c68c4e570072961145698f526e66de88b5d0fd48877de43fbc9",
+  "nativeSeconds": 39.1,
+  "error": "Playwright getByLabel exact could not resolve controlled Debit account select. Accessibility snapshot exposes combobox Debit account and actual expected options; role locator correction only. No posting occurred."
+}

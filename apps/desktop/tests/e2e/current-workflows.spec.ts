@@ -1138,7 +1138,10 @@ async function interactionJourney(page: import("@playwright/test").Page) {
   await expect(page.getByRole("cell", { name: "Cancelled synthetic account" })).toHaveCount(0);
 
   await assertRoute(page, "Journals", "/accounting/journals", "Journals");
-  await page.getByRole("cell", { name: "Office supplies paid personally", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Open journal: Office supplies paid personally", exact: true })
+    .focus();
+  await page.keyboard.press("Enter");
   await expect(
     page.getByRole("heading", { name: "Office supplies paid personally", exact: true }),
   ).toBeVisible();
