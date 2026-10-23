@@ -925,7 +925,7 @@ test("local Task front door preserves the safe development contract", async () =
     });
     if (actualSbrTarget === "darwin/arm64") {
       assert.notEqual(registration.code, 0);
-      const report = JSON.parse(registration.stdout);
+      const report = JSON.parse(stripVTControlCharacters(registration.stdout));
       assert.equal(report.status, "BLOCKED");
       assert.equal(report.code, "EVTE_SIGNED_INPUTS_REQUIRED");
       assert.equal(
