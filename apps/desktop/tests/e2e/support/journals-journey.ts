@@ -5,6 +5,8 @@ import { expect, type Page } from "@playwright/test";
 import {
   GetJournalRequestSchema,
   GetJournalResponseSchema,
+  JournalSource,
+  JournalState,
   ListJournalsRequestSchema,
   ListJournalsResponseSchema,
 } from "@tammy/connect-client/tammy/v1/accounting_pb.js";
@@ -111,6 +113,17 @@ export async function runJournalsJourney(page: Page, workspace: AuthenticatedAcc
       await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
     ).toBe(true);
     await capture(page, `05-entry-focus-${width}`, "focus");
+    if (width === 320 && journalsCapturePhase !== "before") {
+      const post = page.getByRole("button", { name: "Post journal", exact: true });
+      await post.scrollIntoViewIfNeeded();
+      await post.focus();
+      await page.keyboard.press("Shift+Tab");
+      await page.keyboard.press("Tab");
+      await expect(post).toBeFocused();
+      await expect(post).toHaveCSS("outline-style", "solid");
+      await expect(post).toBeInViewport({ ratio: 1 });
+      await capture(page, "11-post-action-320", "focus");
+    }
   }
   await page.setViewportSize({ width: 1440, height: 1100 });
   if (journalsCapturePhase === "before")
@@ -147,6 +160,11 @@ export async function runJournalsJourney(page: Page, workspace: AuthenticatedAcc
     ),
   );
   expect(response.journal?.lines).toHaveLength(2);
+  expect(response.journal).toMatchObject({
+    source: JournalSource.MANUAL,
+    state: JournalState.POSTED,
+    version: 1n,
+  });
   expect(response.journal?.totalDebits?.minorUnits).toBe(20000n);
   expect(response.journal?.totalCredits?.minorUnits).toBe(20000n);
   await expect(page.getByRole("button", { name: "Post journal", exact: true })).toHaveCount(0);
