@@ -212,6 +212,11 @@ export function ChartScreen({ api, workspace }: ChartScreenProps) {
         description="A clear structure for your business ledger."
         action={
           <div className="flex flex-wrap items-center gap-3">
+            {notice && !error ? (
+              <p className="text-[13px] text-forest" role="status">
+                {notice}
+              </p>
+            ) : null}
             <Button
               className="h-11 text-[14px]"
               aria-expanded={adding}
@@ -235,7 +240,6 @@ export function ChartScreen({ api, workspace }: ChartScreenProps) {
         }
       />
 
-      {notice && !error ? <WorkNotice success>{notice}</WorkNotice> : null}
       {error ? (
         <section
           aria-label="Account error"
@@ -357,7 +361,7 @@ export function ChartScreen({ api, workspace }: ChartScreenProps) {
           </div>
         </div>
         {chart.status === "ready" && matchingCount > 0 ? (
-          <HorizontalScrollArea label="Accounts table">
+          <HorizontalScrollArea className="chart-accounts-scroll" label="Accounts table">
             <table className="chart-accounts-table w-full min-w-[700px] border-collapse text-left text-[13px]">
               <thead className="border-b border-border bg-background/60 text-[12px] text-muted-foreground">
                 <tr>
@@ -419,12 +423,12 @@ export function ChartScreen({ api, workspace }: ChartScreenProps) {
                             {account.designation === AccountDesignation.CONTROL ||
                             account.designation === AccountDesignation.SYSTEM ? (
                               <Badge
-                                className="gap-1 border-warning-border bg-warning-soft text-warning"
+                                className="gap-1 whitespace-nowrap border-warning-border bg-warning-soft text-warning"
                                 variant="outline"
                               >
-                                <LockKeyhole aria-hidden="true" className="size-3" /> Protected
-                                <span className="font-normal">
-                                  ·{" "}
+                                <LockKeyhole aria-hidden="true" className="size-3 shrink-0" />
+                                <span>
+                                  Protected ·{" "}
                                   {account.designation === AccountDesignation.CONTROL
                                     ? "Control"
                                     : "System"}

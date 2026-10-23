@@ -437,6 +437,9 @@
   .chart-accounts-table td {
     height: 36px;
   }
+  .chart-accounts-scroll.focus-ring:focus-visible {
+    outline-offset: -2px;
+  }
   .invoice-index-table th,
   .invoice-index-table td {
     padding: 6px 12px;

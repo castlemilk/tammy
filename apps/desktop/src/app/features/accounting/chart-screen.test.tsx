@@ -128,8 +128,8 @@ it("groups every loaded type without dropping unknown classifications and separa
   const system = screen.getByText("Synthetic account 3000").closest("tr");
   const archived = screen.getByText("Synthetic account 6100").closest("tr");
   if (!control || !system || !archived) throw new Error("Expected account rows");
-  expect(control.textContent).toContain("Protected· Control");
-  expect(system.textContent).toContain("Protected· System");
+  expect(control.textContent).toContain("Protected · Control");
+  expect(system.textContent).toContain("Protected · System");
   expect(archived.textContent).toContain("OrdinaryArchived");
   expect(within(control).queryByRole("button")).toBeNull();
   expect(screen.getByText("Unclassified (1)")).toBeTruthy();

@@ -84,6 +84,27 @@ rule. Native validation and audit policy are unchanged; no exclusions are added.
 This initial implementation commit precedes the clean package and rendered after
 journey. It does not claim visual acceptance or current hosted qualification.
 
+## First rendered after and bounded density correction
+
+Clean source `3e9278190f3666a2c13893bb18f94b68570e0ab3` passed seven package
+checks/one expected skip and the actual native Chart journey **11.1s /11.9s**,
+zero retries, page errors and console errors. All **14 initial after frames** and
+DOM measurements remain unchanged in `after-initial/`, with exact provenance in
+[initial-after-captures.json](initial-after-captures.json).
+
+Original-size comparison exposed protected labels wrapping into two lines, making
+those rows **47px** versus **36px** for ordinary records. The full-width saved
+banner also adds a separate row above the list. The correction keeps each complete
+protected label on one line and moves persistent saved confirmation beside the
+primary action. The narrow table's outward outline is clipped by the containing
+surface; a Chart-only inset offset keeps that existing forest focus outline inside
+the clipped geometry. Shared keyboard behavior is unchanged.
+
+The expanded native assertions require all 18 known desktop fixture rows to be
+36px, keep 44px group actions, and verify full protected-label visibility through
+real keyboard horizontal scrolling at 390/320px. A second clean package is required
+for these source changes; initial images are not relabelled as corrected evidence.
+
 The preceding Journals head has terminal original first-attempt success in both
 [push run 40031390128](https://github.com/castlemilk/tammy/actions/runs/40031390128)
 and [PR run 40031395953](https://github.com/castlemilk/tammy/actions/runs/40031395953),

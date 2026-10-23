@@ -178,12 +178,37 @@ export async function runChartJourney(page: Page, workspace: AuthenticatedAccoun
     await page.keyboard.press("Tab");
     await expect(scroll).toBeFocused();
     await expect(scroll).toHaveCSS("outline-style", "solid");
+    if (chartCapturePhase !== "before") await expect(scroll).toHaveCSS("outline-offset", "-2px");
     await page.keyboard.press("ArrowRight");
     await expect.poll(() => scroll.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
       true,
     );
     await capture(page, `10-table-focus-${width}`, true);
+    if (chartCapturePhase !== "before") {
+      const control = page
+        .getByRole("row")
+        .filter({ has: page.getByRole("cell", { name: "Business bank", exact: true }) })
+        .getByText("Protected · Control", { exact: true });
+      await control.scrollIntoViewIfNeeded();
+      await scroll.evaluate((element) => {
+        element.scrollLeft = 0;
+      });
+      for (let step = 0; step < 24; step += 1) {
+        const [text, region] = await Promise.all([control.boundingBox(), scroll.boundingBox()]);
+        if (
+          text &&
+          region &&
+          text.x >= region.x + 2 &&
+          text.x + text.width <= region.x + region.width - 2
+        )
+          break;
+        await page.keyboard.press("ArrowRight");
+      }
+      await expect(control).toBeInViewport({ ratio: 1 });
+      await expect(scroll).toBeFocused();
+      await capture(page, `11-protection-focus-${width}`, true);
+    }
   }
   await page.setViewportSize({ width: 1440, height: 1100 });
   await page.getByRole("link", { name: "Overview", exact: true }).click();
@@ -266,6 +291,7 @@ async function capture(page: Page, name: string, focused = false) {
       };
     });
     expect(Math.min(...measurements.groupControlHeights)).toBeGreaterThanOrEqual(44);
+    expect(Math.max(...measurements.dataRowHeights)).toBe(36);
     expect(measurements.pageContainsHorizontalOverflow).toBe(false);
     await writeFile(
       path.join(directory, "measurements-1440.json"),
