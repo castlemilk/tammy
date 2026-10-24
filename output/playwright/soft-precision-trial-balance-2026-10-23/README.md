@@ -100,3 +100,30 @@ The corrected assertion checks visible date text and exact `<time datetime>`
 against the same fixture civil date. It strengthens date identity without changing
 the app, package, fixture date, deadline or financial checks. Only that corrected
 case is rerun; the failed original is not relabelled as an uninterrupted full pass.
+
+## Corrected targeted result and review delivery
+
+Only the corrected invoice/purchase/BAS case was rerun with clean harness
+`6d766433b9fb3492e62ad2b583abb5d839d17c97` against the unchanged clean `f82d9753`
+application package. It passed **21.7s /22.6s including runner**, zero retries.
+Thus each of the three relevant native cases has passed locally, with the original
+**two-pass/one-fail** run retained separately. No second package or full-suite
+retry was used for this test-only assertion correction. Current hosted checks are
+separate and must be read for the exact final pushed head.
+
+[Verified Library comparison archive](https://chatgpt.com/api/library/files/libfile_05d5759b0f8c81919c689ba57ca10e93/download)
+contains the original matched desktop before/after, unchanged generated board,
+320px credit/focus and separate large-value companion PNGs, manifest and README.
+Creation and local identity persistence succeeded. Archive **1,979,149 bytes**,
+SHA256 `ac70c8f3e4074e92ec1ee64b34a5bf076f5332f7f163a43355cafbbb31cbf8e8`.
+All unpacked images match repository originals. This is a materializable file
+source, not a claim of separately saved image attachments; individual-image
+preparation was unavailable in the preceding Chart block. [Delivery receipt](delivery.json).
+
+This folder spans the UTC midnight boundary of 23–24 October. It retains **18 real
+frames plus one unchanged generated concept**: seven before, ten after and the
+one safe original failure frame. All **841** predecessor PNGs, including the
+original 41 capture set, remain byte-identical; global total **860**. The 55 archived
+output files remain untouched. Source/harness and skipped-versus-passed counts are
+kept distinct. SBR remains with its functional owner. No next UI screen, ready
+transition, merge or publication action is included.
