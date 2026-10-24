@@ -37,3 +37,11 @@ Focused Audit/shared tests: **8 passed /two files /zero skips**. Desktop typeche
 ## Delivered archive
 
 Confirmed Library file `libfile_d40f31b9557081919393663fb0f102c9` — [materialize/download](https://chatgpt.com/api/library/files/libfile_d40f31b9557081919393663fb0f102c9/download). 2,805,448 bytes, SHA256 `50ae2c32bd655a0d0ecec6f3d009300dbe8b256a27cdd9bd3c07cbfe38c0b2fc`. All PNGs are unchanged source captures; a complete archive manifest is included. Archive documentation predates this delivery footer. No individual image upload is claimed.
+
+## Original hosted qualification and disclosure correction
+
+At head `b9252c42a75ccd5b39caead218f31027faed6ff8`, [original push job](https://github.com/castlemilk/tammy/actions/runs/40057933401/job/120764947458) failed in the connected financial journey because page-wide `getByText("Record ID", {exact: true})` matched eleven journal disclosures. Six packaged cases passed, one failed and thirteen were not run; no test retry was requested. The smaller isolated capture fixture had one journal and therefore did not expose this ambiguity. The failure is retained as a harness regression rather than erased by the prior local pass.
+
+The correction scopes record metadata assertions to the exact disclosure opened by Enter, requires exactly one open record and, when multiple journals exist, checks another record's metadata remains hidden. It changes no app code, request, fixture data or deadline and removes no coverage. All existing captures and the delivered ZIP remain byte-identical. Corrected exact-head hosted evidence is required before calling this block qualified.
+
+Original push/PR Ubuntu ASAR diagnostics completed in 5.315s /0.686s respectively. The earlier intermittent deadline failure remains unresolved; these successes do not establish a reliability fix.
