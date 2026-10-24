@@ -1,0 +1,185 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Tammy local SBR readiness mock \u2014 not an ATO API",
+    "version": "1.0.0",
+    "description": "Local-only, synthetic, stateless fixture selection conforming to Tammy simulator v1. Not AS4/XML emulation, BAS submission, EVTE, certification or official ATO responses. No credentials or destination URLs accepted."
+  },
+  "servers": [
+    {
+      "url": "http://127.0.0.1:{port}",
+      "variables": {
+        "port": {
+          "default": "8765"
+        }
+      }
+    }
+  ],
+  "paths": {
+    "/healthz": {
+      "get": {
+        "summary": "Read local simulator identity",
+        "responses": {
+          "200": {
+            "description": "Synthetic mode, contract, fixture/service IDs and canonical fixture hash."
+          },
+          "403": {
+            "description": "Non-loopback Host, browser Origin or credential header rejected."
+          }
+        }
+      }
+    },
+    "/v1/sbr/readiness/select": {
+      "post": {
+        "summary": "Select one existing synthetic readiness outcome",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SelectionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Fixture selected, not an ATO acceptance. TIMEOUT/HELPER_DEATH/MALFORMED_RESPONSE are outcome metadata, not HTTP lifecycle faults.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SelectionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed or extra fields, invalid identity/fixture, unsupported case (including business PENDING/REJECTED)."
+          },
+          "403": {
+            "description": "Credentials, browser Origin or non-loopback Host rejected."
+          },
+          "413": {
+            "description": "Body exceeds 4096 bytes."
+          },
+          "415": {
+            "description": "Application/json required."
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "SelectionRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["request_id", "fixture_id", "case"],
+        "properties": {
+          "request_id": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+          },
+          "fixture_id": {
+            "const": "SIM-SBR-READINESS-V1"
+          },
+          "case": {
+            "enum": [
+              "ACCEPTED",
+              "NOT_STARTED",
+              "MAYBE_SENT",
+              "MALFORMED_RESPONSE",
+              "HELPER_DEATH",
+              "TIMEOUT"
+            ]
+          }
+        }
+      },
+      "SelectionResponse": {
+        "type": "object",
+        "required": [
+          "mode",
+          "official_ato_response",
+          "request_id",
+          "fixture_id",
+          "service_id",
+          "fixture_sha256",
+          "replay_policy",
+          "simulator_outcome",
+          "case",
+          "helper_outcome",
+          "simulator_state",
+          "redacted_result",
+          "stable_error_code",
+          "fatal",
+          "malformed_payload_hex",
+          "contract"
+        ],
+        "properties": {
+          "mode": {
+            "const": "LOCAL_SIMULATOR_NOT_FOR_ATO_LODGMENT"
+          },
+          "official_ato_response": {
+            "const": false
+          },
+          "contract": {
+            "const": "TAMMY_SBR_READINESS_SIMULATOR_V1"
+          },
+          "request_id": {
+            "type": "string"
+          },
+          "fixture_id": {
+            "const": "SIM-SBR-READINESS-V1"
+          },
+          "service_id": {
+            "const": "SIM.READINESS.0001"
+          },
+          "fixture_sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "replay_policy": {
+            "const": "STATELESS_FIXTURE_SELECTION"
+          },
+          "simulator_outcome": {
+            "enum": [
+              "ACCEPTED",
+              "NOT_STARTED",
+              "MAYBE_SENT",
+              "MALFORMED_RESPONSE",
+              "HELPER_DEATH",
+              "TIMEOUT"
+            ]
+          },
+          "case": {
+            "type": "string"
+          },
+          "helper_outcome": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2
+          },
+          "simulator_state": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 5
+          },
+          "redacted_result": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 8
+          },
+          "stable_error_code": {
+            "enum": ["", "SBR_DEADLINE_EXPIRED"]
+          },
+          "fatal": {
+            "type": "boolean"
+          },
+          "malformed_payload_hex": {
+            "enum": ["", "0a0178"]
+          }
+        }
+      }
+    }
+  }
+}
