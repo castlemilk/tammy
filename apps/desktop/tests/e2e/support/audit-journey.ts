@@ -3,7 +3,10 @@ import path from "node:path";
 import { expect, type Page } from "@playwright/test";
 
 export const auditCapturePhase = process.env.TAMMY_AUDIT_CAPTURE;
-if (auditCapturePhase !== undefined && !["before", "after"].includes(auditCapturePhase))
+if (
+  auditCapturePhase !== undefined &&
+  !["before", "after", "after-verified"].includes(auditCapturePhase)
+)
   throw new Error("AUDIT_CAPTURE_PHASE_INVALID");
 
 export async function runAuditJourney(page: Page) {
@@ -25,7 +28,7 @@ export async function runAuditJourney(page: Page) {
     });
     const search = page.getByRole("searchbox", { name: "Search loaded activity", exact: true });
     await filter.selectOption("Journal");
-    const summaries = list.getByRole("button", { name: /^Record details: Journal/ });
+    const summaries = list.getByLabel(/^Record details: Journal/);
     await expect.poll(() => summaries.count()).toBeGreaterThan(0);
     const journalCount = await summaries.count();
     await filter.selectOption("Journal");
@@ -55,7 +58,7 @@ export async function runAuditJourney(page: Page) {
     const focus =
       auditCapturePhase === "before"
         ? page.getByRole("link", { name: "Audit trail", exact: true })
-        : list.getByRole("button", { name: /^Record details: Journal/ }).first();
+        : list.getByLabel(/^Record details: Journal/).first();
     await focus.focus();
     await page.keyboard.press("Tab");
     await page.keyboard.press("Shift+Tab");

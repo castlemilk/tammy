@@ -23,3 +23,17 @@ The separate `issue/ato-approval-2026-10-23` worktree at `2a75edc8` has active s
 All 901 prior PNGs and 55 archives remain unchanged. The unresolved ASAR reliability diagnosis remains open; ordinary CI only, with existing bounded diagnostics and no speculative repeat builds. The local macOS startup/unlock/teardown discrepancies are not erased by this baseline pass. Draft, merge and publication holds remain. No MAS, Windows 11 or official ATO qualification is claimed.
 
 Remaining dedicated visual blocks after Audit: workspace/recovery and Settings/Organisation.
+
+## Real after evidence and native correction
+
+Clean ordinary package source `132a0e9321167c0c1e5042c28713ada0ce6a919f`; exact runtime hashes are in contract-verification.json. Seven package checks passed /one expected Windows-only skip. `after/01-retained-records.png` is the original partial after attempt, which failed on the journey’s button-role locator for a native summary after 28.4s. It is preserved. The helper now selects the native disclosure by its accessible label; app source and package are unchanged. This was a test-locator correction, not an app failure or full-suite retry.
+
+The corrected journey passed **one case /zero skipped /zero retried in 13.1s (14.8s suite)**. Eight final `after-verified/` frames cover the actual four-family retained list, exact journal record disclosure by Enter, local type/repeated selection, no-match search and clearing with focus restoration, 900/390/320px keyboard disclosure/focus/containment, and browser back/forward returning to the unchanged record count. Reduced motion is requested and screenshot animations disabled. Console/page error lists are empty. No record is mutated by the Audit journey.
+
+Desktop before/reference/after comparison uses 1440×1100 and the same four synthetic source families. Record UUIDs differ because fixtures are isolated. Dates remain the supplied record dates: posting/transaction dates for journal/bank lines, creation dates for document/workpaper. Status is current retained state, not evidence of when an action occurred. The parent’s BAS technical-copy critique is retained above as unresolved fidelity debt. Exact parity with the concept’s event actors/time history is not claimed.
+
+Focused Audit/shared tests: **8 passed /two files /zero skips**. Desktop typecheck and lint pass (705 files at prepackage checkpoint, 135 existing warnings /12 infos); all 55 archived outputs verify. Partial/malformed source failures, empty and signed-out states are unit-tested; native partial-source fault injection was not captured. The signed int64 formatter boundary is covered in tests, not represented as a native capture. Actual image inspection confirms the status/date hierarchy and narrow wrapping; no generated picture is used as evidence.
+
+## Delivered archive
+
+Confirmed Library file `libfile_d40f31b9557081919393663fb0f102c9` — [materialize/download](https://chatgpt.com/api/library/files/libfile_d40f31b9557081919393663fb0f102c9/download). 2,805,448 bytes, SHA256 `50ae2c32bd655a0d0ecec6f3d009300dbe8b256a27cdd9bd3c07cbfe38c0b2fc`. All PNGs are unchanged source captures; a complete archive manifest is included. Archive documentation predates this delivery footer. No individual image upload is claimed.
