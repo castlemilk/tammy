@@ -1,0 +1,63 @@
+{
+  "checkedAt": "2026-10-24",
+  "repositoryBase": "8fde3884b8f2482fe673012476a66ee006843d0d",
+  "officialAS": {
+    "url": "https://www.sbr.gov.au/sites/default/files/2025-05/ATO_AS.0004_2025_Package_v1.0.zip",
+    "finalURL": "https://www.sbr.gov.au/sites/default/files/2025-05/ATO_AS.0004_2025_Package_v1.0.zip",
+    "contentType": "application/zip",
+    "bytes": 534444,
+    "sha256": "4c1cc7145bc2b1202eff1b590a5cb75a9eb40ac35e7f88b6548279e8c68ca385",
+    "entries": [
+      "ATO AS 2025 Message Repository.xml",
+      "ATO AS.0004 2025 C# Implementation.zip",
+      "ATO AS.0004 2025 Get Request Message Structure Table.xlsx",
+      "ATO AS.0004 2025 Get Response Message Structure Table.xlsx",
+      "ATO AS.0004 2025 Get Validation Rules.xlsx",
+      "ATO AS.0004 2025 Submit Request Message Structure Table.xlsx",
+      "ATO AS.0004 2025 Submit Response Message Structure Table.xlsx",
+      "ATO AS.0004 2025 Submit Validation Rules.xlsx",
+      "ATO AS.0004 2025 XML Schema.zip"
+    ]
+  },
+  "nestedSchemas": [
+    {
+      "archive": "ATO AS.0004 2025 XML Schema.zip",
+      "sha256": "62053dac1e97fe87862c1d3292793245e1c89d53017efb4d30a4d0bc5021f231",
+      "files": [
+        {
+          "name": "ato.as.0004.2025.get.01.00.xsd",
+          "bytes": 6144,
+          "sha256": "1abf6ba4e0ff3bc324a92735ea9a90d23f497da150612ea015392617207811ab",
+          "targetNamespace": "http://www.sbr.gov.au/ato/asgetrequest",
+          "elements": ["ASGetRequest"],
+          "references": []
+        },
+        {
+          "name": "ato.as.0004.2025.get.response.01.00.xsd",
+          "bytes": 120893,
+          "sha256": "364241d6e055c461182ac4f3414a37f4e76596ae8f33d526958685686f5fa0e8",
+          "targetNamespace": "http://www.sbr.gov.au/ato/asgetresponse",
+          "elements": ["ASGetResponse"],
+          "references": []
+        },
+        {
+          "name": "ato.as.0004.2025.submit.01.00.xsd",
+          "bytes": 63809,
+          "sha256": "fe86059936d558ed431943bc7f3c877347832a4e6dd947f28e9c6f90936187ef",
+          "targetNamespace": "http://www.sbr.gov.au/ato/assubmitrequest",
+          "elements": ["ASSubmitRequest"],
+          "references": []
+        },
+        {
+          "name": "ato.as.0004.2025.submit.response.01.00.xsd",
+          "bytes": 8308,
+          "sha256": "517e1676304ab47bcc78465736af8fd9882b55de1cc9e2a5d536f9cdba8f959a",
+          "targetNamespace": "http://www.sbr.gov.au/ato/assubmitresponse",
+          "elements": ["ASSubmitResponse"],
+          "references": []
+        }
+      ]
+    }
+  ],
+  "scope": "Public artefact metadata and inspected XSDs; not AS4, conformance or live integration qualification."
+}
