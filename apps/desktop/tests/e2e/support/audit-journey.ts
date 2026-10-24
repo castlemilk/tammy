@@ -34,11 +34,17 @@ export async function runAuditJourney(page: Page) {
     await filter.selectOption("Journal");
     await expect(summaries).toHaveCount(journalCount);
     const summary = summaries.first();
+    const openedRecord = summary.locator("..");
     await summary.focus();
     await page.keyboard.press("Enter");
-    await expect(summary.locator("..")).toHaveAttribute("open", "");
-    await expect(page.getByText("Record ID", { exact: true })).toBeVisible();
-    await expect(page.getByText("Posting date", { exact: true })).toBeVisible();
+    await expect(openedRecord).toHaveAttribute("open", "");
+    await expect(list.locator("details[open]")).toHaveCount(1);
+    await expect(openedRecord.getByText("Record ID", { exact: true })).toBeVisible();
+    await expect(openedRecord.getByText("Posting date", { exact: true })).toBeVisible();
+    if (journalCount > 1)
+      await expect(
+        summaries.nth(1).locator("..").getByText("Record ID", { exact: true }),
+      ).toBeHidden();
     await capture(page, "02-journal-source-details");
     await page.keyboard.press("Enter");
     await expect(summary.locator("..")).not.toHaveAttribute("open", "");
