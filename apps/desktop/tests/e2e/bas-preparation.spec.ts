@@ -2351,10 +2351,12 @@ test("BAS lifecycle: clean cash sources, blocked PAYGI resolution, frozen handof
     ["9", "9117/1", "91"],
   ] as const) {
     const row = revisionLabels.getByRole("row").filter({
-      has: page.getByRole("cell", { name: label, exact: true }),
+      has: page.getByRole("rowheader", { name: label, exact: true }),
     });
-    await expect(row.getByRole("cell").nth(2)).toHaveText(exactCents);
-    await expect(row.getByRole("cell").nth(3)).toHaveText(wholeDollars);
+    await expect(row).toHaveCount(1);
+    await expect(row.getByRole("cell")).toHaveCount(5);
+    await expect(row.getByRole("cell").nth(1)).toHaveText(exactCents);
+    await expect(row.getByRole("cell").nth(2)).toHaveText(wholeDollars);
   }
   screenshots.push(await captureScreenshot(page, testInfo, "bas-linked-revision-review.png"));
   await freezeCurrent(
