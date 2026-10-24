@@ -132,6 +132,7 @@ import {
   type BasPreparationExportRequest,
   reportExportMessage,
 } from "../../../shared/report-export";
+import { HorizontalScrollArea } from "../../components/horizontal-scroll-area";
 import { Button } from "../../components/ui/button";
 import { ScreenHeading, SurfaceHeading } from "../../components/workspace-primitives";
 import { assertFreshFactor, authentication, uuidV7 } from "../sbr/sbr-form-support";
@@ -1988,18 +1989,18 @@ export function BasPreparationLifecycle({
     );
 
   return (
-    <section aria-label="BAS preparation lifecycle" className="grid gap-6">
+    <section aria-label="BAS preparation lifecycle" className="bas-workspace grid gap-4">
       <ScreenHeading
         area="Reporting · Australian tax"
         title="BAS preparation"
-        description="Period-led preparation, exact review snapshots and purpose-bound manual approval. Tammy never submits BAS information to the ATO."
+        description="Prepare, validate and review exact local snapshots. Tammy never submits BAS information to the ATO."
         action={
-          <p className="work-surface max-w-[420px] px-4 py-3 text-[13px] leading-5">{lodgerCopy}</p>
+          <p className="max-w-[360px] text-[12px] leading-5 text-muted-foreground">{lodgerCopy}</p>
         }
       />
       <nav
         aria-label="BAS lifecycle stages"
-        className="flex flex-wrap items-center gap-2 rounded-2xl border border-border bg-surface p-3"
+        className="bas-stage-rail flex flex-wrap items-center gap-1 rounded-xl border border-border bg-surface p-2"
       >
         {tabs.map((tab) => (
           <Button
@@ -2008,7 +2009,7 @@ export function BasPreparationLifecycle({
             key={tab}
             onClick={() => setStage(tab)}
             type="button"
-            variant={stage === tab ? "default" : "outline"}
+            variant={stage === tab ? "default" : "ghost"}
           >
             {tab}
           </Button>
@@ -3055,8 +3056,8 @@ function ReviewStage(props: any) {
     .filter(Boolean) as Ref[];
   return (
     <div className="grid gap-4">
-      <section className="work-surface grid gap-4 p-5">
-        <div className="flex flex-wrap items-end justify-between gap-3">
+      <section className="work-surface grid gap-3 p-4">
+        <div className="grid items-end gap-3 md:grid-cols-[minmax(0,1fr)_minmax(240px,320px)]">
           <div>
             <h2 className="text-[17px] font-semibold">Exact review snapshot</h2>
             <p className="mt-1 max-w-3xl text-[12px] leading-5 text-muted-foreground">
@@ -3067,7 +3068,7 @@ function ReviewStage(props: any) {
           <label className="grid gap-1.5 text-[12px] font-semibold">
             Preparation history
             <select
-              className="work-input h-11 min-w-[340px] text-[14px]"
+              className="work-input h-11 w-full text-[14px]"
               onChange={(event) => setSelected(event.target.value)}
               value={selected ?? ""}
             >
@@ -3080,34 +3081,48 @@ function ReviewStage(props: any) {
           </label>
         </div>
         {preparation ? (
-          <dl className="grid grid-cols-[180px_minmax(0,1fr)] gap-x-4 gap-y-2 break-all text-[12px] max-[560px]:grid-cols-1">
-            <dt>Retained state</dt>
-            <dd>{preparationStateLabel(preparation.state)}</dd>
-            <dt>Live source currentness</dt>
-            <dd>{currentnessLabel(liveCurrentness)}</dd>
-            <dt>Preparation</dt>
-            <dd>
-              {preparation.preparationId} · v{preparation.version} · {hex(preparation.contentHash)}
-            </dd>
-            <dt>Input identity</dt>
-            <dd>
-              {preparation.inputRevision} · {hex(preparation.inputHash)}
-            </dd>
-            <dt>Source snapshot</dt>
-            <dd>{hex(preparation.sourceSnapshotHash)}</dd>
-            <dt>Calculation</dt>
-            <dd>
-              {calculation
-                ? `${calculation.calculationId} · ${hex(calculation.contentHash)}`
-                : "No calculation is attached."}
-            </dd>
-            <dt>Current validation</dt>
-            <dd>
-              {validation
-                ? `${validation.validationId} · ${hex(validation.contentHash)}`
-                : "Not validated yet."}
-            </dd>
-          </dl>
+          <div className="grid gap-3">
+            <dl className="bas-review-status grid grid-cols-2 gap-3 rounded-xl border border-border bg-background p-3 text-[12px] max-[560px]:grid-cols-1">
+              <div>
+                <dt className="text-muted-foreground">Retained state</dt>
+                <dd className="mt-1 font-semibold">{preparationStateLabel(preparation.state)}</dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">Live source currentness</dt>
+                <dd className="mt-1 font-semibold">{currentnessLabel(liveCurrentness)}</dd>
+              </div>
+            </dl>
+            <details className="rounded-xl border border-border text-[12px]">
+              <summary className="cursor-pointer px-3 py-3 font-semibold">
+                Exact snapshot identities
+              </summary>
+              <dl className="grid grid-cols-[150px_minmax(0,1fr)] gap-x-4 gap-y-2 break-all border-t border-border p-3 max-[560px]:grid-cols-1">
+                <dt>Preparation</dt>
+                <dd>
+                  {preparation.preparationId} · v{preparation.version} ·{" "}
+                  {hex(preparation.contentHash)}
+                </dd>
+                <dt>Input identity</dt>
+                <dd>
+                  {preparation.inputRevision} · {hex(preparation.inputHash)}
+                </dd>
+                <dt>Source snapshot</dt>
+                <dd>{hex(preparation.sourceSnapshotHash)}</dd>
+                <dt>Calculation</dt>
+                <dd>
+                  {calculation
+                    ? `${calculation.calculationId} · ${hex(calculation.contentHash)}`
+                    : "No calculation is attached."}
+                </dd>
+                <dt>Current validation</dt>
+                <dd>
+                  {validation
+                    ? `${validation.validationId} · ${hex(validation.contentHash)}`
+                    : "Not validated yet."}
+                </dd>
+              </dl>
+            </details>
+          </div>
         ) : (
           <p className="text-[13px]">Select a retained preparation to review.</p>
         )}
@@ -3126,19 +3141,31 @@ function ReviewStage(props: any) {
             title="Calculated BAS labels"
             description="Exact cents and separately reported whole dollars come from the retained calculation traces."
           />
-          <div className="overflow-x-auto">
+          <HorizontalScrollArea label="BAS calculation labels table" className="bas-table-scroll">
             <table
               aria-label="Exact BAS calculation labels"
-              className="work-table w-full min-w-[920px] text-left text-[12px]"
+              className="bas-label-table work-table w-full min-w-[920px] text-left text-[12px]"
             >
               <thead>
                 <tr className="border-b border-border">
-                  <th className="p-4">Label</th>
-                  <th className="p-4">State</th>
-                  <th className="p-4">Exact cents</th>
-                  <th className="p-4">Reported whole dollars</th>
-                  <th className="p-4">Rounding difference</th>
-                  <th className="p-4">Rule</th>
+                  <th scope="col" className="px-3.5 py-2">
+                    Label
+                  </th>
+                  <th scope="col" className="px-3.5 py-2">
+                    State
+                  </th>
+                  <th scope="col" className="px-3.5 py-2 text-right">
+                    Exact cents
+                  </th>
+                  <th scope="col" className="px-3.5 py-2 text-right">
+                    Reported whole dollars
+                  </th>
+                  <th scope="col" className="px-3.5 py-2 text-right">
+                    Rounding difference
+                  </th>
+                  <th scope="col" className="px-3.5 py-2">
+                    Rule
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -3147,29 +3174,31 @@ function ReviewStage(props: any) {
                     className="border-b border-border last:border-0"
                     key={`${item.label}:${item.ruleId}`}
                   >
-                    <td className="p-4 font-semibold">{formLabel(item.label)}</td>
-                    <td className="p-4">{amountStateLabel(item.state)}</td>
-                    <td className="p-4 font-mono tabular-nums">
+                    <th scope="row" className="px-3.5 py-2 font-semibold">
+                      {formLabel(item.label)}
+                    </th>
+                    <td className="px-3.5 py-2">{amountStateLabel(item.state)}</td>
+                    <td className="px-3.5 py-2 text-right tabular-nums">
                       {item.exactCentsNumerator
                         ? `${item.exactCentsNumerator}/${item.exactCentsDenominator}`
                         : item.exactRateNumerator
                           ? `${item.exactRateNumerator}/${item.exactRateDenominator} rate`
                           : "—"}
                     </td>
-                    <td className="p-4 tabular-nums">
+                    <td className="px-3.5 py-2 text-right tabular-nums">
                       {item.reportedWholeDollars?.toString() ?? "—"}
                     </td>
-                    <td className="p-4 font-mono tabular-nums">
+                    <td className="px-3.5 py-2 text-right tabular-nums">
                       {item.roundingDifferenceCentsNumerator
                         ? `${item.roundingDifferenceCentsNumerator}/${item.roundingDifferenceCentsDenominator} cents`
                         : "—"}
                     </td>
-                    <td className="p-4">{item.ruleId}</td>
+                    <td className="px-3.5 py-2">{item.ruleId}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
-          </div>
+          </HorizontalScrollArea>
         </section>
       ) : null}
       {validation ? (
@@ -3182,7 +3211,7 @@ function ReviewStage(props: any) {
           ) : (
             validation.findings.map((finding: BasValidationFinding) => (
               <label
-                className="flex items-start gap-3 rounded-xl border border-border bg-background p-4 text-[13px] leading-5"
+                className="flex items-start gap-3 rounded-lg border border-border bg-background p-3 text-[13px] leading-5"
                 key={finding.findingId}
               >
                 <input
@@ -3283,7 +3312,7 @@ function FreezeStage(props: any) {
           <label className="grid gap-1.5 text-[12px] font-semibold">
             Preparation
             <select
-              className="work-input h-11 min-w-[340px] text-[14px]"
+              className="work-input h-11 w-full text-[14px]"
               onChange={(event) => setSelected(event.target.value)}
               value={selected ?? ""}
             >

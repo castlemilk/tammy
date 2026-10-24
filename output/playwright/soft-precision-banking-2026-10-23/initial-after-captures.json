@@ -1,0 +1,111 @@
+{
+  "schemaVersion": 1,
+  "runtime": {
+    "sourceRevision": "790103164191f18b6ae95cc5499488dec8d2637c",
+    "sourceDirty": false,
+    "appSha256": "48f4f7d2d18e5f79f5a7db9d4054bb8059b6b5a5a41792ae69ff2eb4f2db6d1f",
+    "coreSha256": "078811e551eb5cd0c5f505e3282d82bc8f50be578c12a9d92e7bafb70d67562c",
+    "manifestSha256": "99a571be9b2a7368ef367c246c670a2310a587bb8171b9b6fd1a6e965676e192"
+  },
+  "captureJourneySeconds": 12.4,
+  "runnerSeconds": 13.2,
+  "connectedJourneySeconds": 14.4,
+  "connectedRunnerSeconds": 15,
+  "retries": 0,
+  "pageErrors": 0,
+  "consoleErrors": 0,
+  "reasonForFollowUp": "Actual pixels showed unsupported alpha styling on the existing custom forest-soft utility; corrected to the plain canonical class and exact 56px rows.",
+  "frames": [
+    {
+      "file": "after-attempt-1/01-import-error.png",
+      "sha256": "01c047f7ff55eede2e9761ff61193c2e9107c550a7a2980393b39b309ac5269e",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "file": "after-attempt-1/02-import-review.png",
+      "sha256": "64d8845f1735b1f1e43eded4e029ad0035bf6f7404850d2b9f2173ee9924a4ad",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "file": "after-attempt-1/03-statement-list.png",
+      "sha256": "797145f66856daed259240dafe3d16a891d5fe700188476baddbfef3dd8a7202",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "file": "after-attempt-1/04-selected-match.png",
+      "sha256": "d5d960ce3858ff2b3b4ac42b9a1cf3d5f52b79cc494accd69b8daaf389bab672",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "file": "after-attempt-1/05-match-detail.png",
+      "sha256": "d5d960ce3858ff2b3b4ac42b9a1cf3d5f52b79cc494accd69b8daaf389bab672",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "file": "after-attempt-1/06-statement-320.png",
+      "sha256": "3156f5e9d4c34cc3cc33127ecc6e6de6006d5648b426819f92b400b40c515443",
+      "width": 320,
+      "height": 1000
+    },
+    {
+      "file": "after-attempt-1/06-statement-390.png",
+      "sha256": "6f3ccd53cd069032675bad622bc117c9e4f4aa3127641f7a6ac2a8706376a403",
+      "width": 390,
+      "height": 1000
+    },
+    {
+      "file": "after-attempt-1/06-statement-900.png",
+      "sha256": "1b7edcf94bd9516ccef9d114f4b361bbb8bb25bdc0ed19f0db3bd493db7c061d",
+      "width": 900,
+      "height": 1000
+    },
+    {
+      "file": "after-attempt-1/07-match-focus-320.png",
+      "sha256": "7bc8b68bdc05bafc8152e066418788ce97c8f1192b4c6428f2cb395bf2a92e6e",
+      "width": 320,
+      "height": 1000
+    },
+    {
+      "file": "after-attempt-1/07-match-focus-390.png",
+      "sha256": "68475f8f8c96055aac022fd7aeb6eaae643c3fcc9741b69a79192d9ae5ce490a",
+      "width": 390,
+      "height": 1000
+    },
+    {
+      "file": "after-attempt-1/07-match-focus-900.png",
+      "sha256": "44e56c69aca33a7f50f4c407aede4cd151c9b9fc0b27b04d810f3f2a3aa9be23",
+      "width": 900,
+      "height": 1000
+    },
+    {
+      "file": "after-attempt-1/08-match-confirmed.png",
+      "sha256": "3e3d53e27efce9262e08eb9e230bf401e3c92e05579b972c4e4d5502fcf77986",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "file": "after-attempt-1/09-search-empty.png",
+      "sha256": "ac17928e549d839a1d59ec553206de81b7164315bc914c5290677638c3f1ca3c",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "file": "after-attempt-1/10-ready-to-reconcile.png",
+      "sha256": "0597d86c59bae7c18d929d6bbe7582bbf60a8a8ba4aef33135fd436c916c5272",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "file": "after-attempt-1/11-reconciled.png",
+      "sha256": "bec83bff98024433fea53e31254007b05e0a3d93814427e94d32ada1b71e3749",
+      "width": 1440,
+      "height": 1100
+    }
+  ],
+  "captureOriginClarification": "Standalone inspection confirms the original header was intact. The earlier apparent crop was a multi-image-preview interpretation; explicit origin reset is preventive capture setup, not a claimed product scroll fix."
+}

@@ -14,14 +14,16 @@ import {
   CommandContextSchema,
   PageRequestSchema,
 } from "@tammy/connect-client/tammy/v1/common_pb.js";
-import { LoaderCircle, Plus } from "lucide-react";
-import { type FormEvent, useMemo, useState } from "react";
+import { ChevronDown, LockKeyhole, Plus, RefreshCw } from "lucide-react";
+import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 
 import type { TammyConveyorModule } from "../../../conveyor/client";
 import { createProtoMethodCodec } from "../../../shared/proto-ipc";
 import { HorizontalScrollArea } from "../../components/horizontal-scroll-area";
+import { WorkNotice, WorkSearch, WorkState } from "../../components/review-workspace";
+import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
-import { ScreenHeading, SurfaceHeading } from "../../components/workspace-primitives";
+import { ScreenHeading } from "../../components/workspace-primitives";
 import type { AuthenticatedWorkspace } from "../setup/setup-screen";
 
 const codec = createProtoMethodCodec({
@@ -82,12 +84,83 @@ export function ChartScreen({ api, workspace }: ChartScreenProps) {
   const [type, setType] = useState<AccountType>(AccountType.EXPENSE);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string>();
+  const [notice, setNotice] = useState<string>();
+  const [refreshRequired, setRefreshRequired] = useState(false);
+  const [search, setSearch] = useState("");
+  const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
+  const createGuard = useRef(false);
+  const addButtonRef = useRef<HTMLButtonElement>(null);
+  const codeRef = useRef<HTMLInputElement>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
+  const errorRef = useRef<HTMLElement>(null);
+  const returnFocus = useRef(false);
+  useEffect(() => {
+    if (adding) codeRef.current?.focus();
+    else if (!saving && returnFocus.current) {
+      addButtonRef.current?.focus();
+      returnFocus.current = false;
+    }
+  }, [adding, saving]);
+  useEffect(() => {
+    if (error) errorRef.current?.focus();
+  }, [error]);
+  const groups = useMemo(() => {
+    if (chart.status !== "ready") return [];
+    const query = search.trim().toLocaleLowerCase("en-AU");
+    const accounts = chart.accounts
+      .filter((account) =>
+        `${account.code} ${account.name}`.toLocaleLowerCase("en-AU").includes(query),
+      )
+      .toSorted((a, b) => a.code.localeCompare(b.code, "en-AU", { numeric: true }));
+    return accountGroups
+      .map((group) => ({
+        ...group,
+        accounts: accounts.filter((account) =>
+          group.type === undefined
+            ? !knownAccountTypes.has(account.type)
+            : account.type === group.type,
+        ),
+      }))
+      .filter((group) => group.accounts.length > 0);
+  }, [chart, search]);
+  const matchingCount = groups.reduce((count, group) => count + group.accounts.length, 0);
+  const searchAccounts = (value: string) => {
+    setSearch(value);
+    setCollapsed(new Set());
+  };
+  const closeEntry = () => {
+    if (createGuard.current) return;
+    returnFocus.current = true;
+    setAdding(false);
+    setError(undefined);
+  };
+  const refreshAccounts = async () => {
+    if (!organisationId || createGuard.current) return;
+    try {
+      const result = await accountsQuery.refetch();
+      if (result.isError || !result.data) throw new Error("chart unavailable");
+      codec.decodeResponse(result.data);
+      setRefreshRequired(false);
+      setError(undefined);
+    } catch {
+      setError("The chart could not refresh. Your records remain on this device.");
+    }
+  };
 
   const addAccount = async (event: FormEvent) => {
     event.preventDefault();
-    if (!workspace?.organisationId) return;
+    if (
+      !workspace?.organisationId ||
+      createGuard.current ||
+      chart.status !== "ready" ||
+      refreshRequired
+    )
+      return;
+    createGuard.current = true;
     setSaving(true);
     setError(undefined);
+    setNotice(undefined);
+    let confirmed = false;
     try {
       const request = create(CreateAccountRequestSchema, {
         commandContext: create(CommandContextSchema, {
@@ -111,152 +184,341 @@ export function ChartScreen({ api, workspace }: ChartScreenProps) {
       if (!response.account || response.account.designation !== AccountDesignation.ORDINARY) {
         throw new Error("invalid account");
       }
+      confirmed = true;
+      setNotice("Account saved.");
       setCode("");
       setName("");
+      returnFocus.current = true;
       setAdding(false);
       await api.listAccounts.invalidate(listAccountsInput);
     } catch {
-      setError("The account could not be created. Check the code and try again.");
+      if (confirmed) setRefreshRequired(true);
+      setError(
+        confirmed
+          ? "Account saved, but the chart could not refresh. Refresh the chart before adding another account."
+          : "The account could not be created. Check the code and try again.",
+      );
     } finally {
+      createGuard.current = false;
       setSaving(false);
     }
   };
 
   return (
-    <div className="mx-auto grid w-full max-w-[1120px] gap-6">
+    <div className="mx-auto grid w-full max-w-[1120px] gap-4">
       <ScreenHeading
         area="Accounting · Structure"
         title="Chart of accounts"
-        description="Accounts installed for your Australian business ledger."
+        description="A clear structure for your business ledger."
         action={
           <div className="flex flex-wrap items-center gap-3">
-            {chart.status === "ready" ? (
-              <p className="text-[14px] font-medium text-muted-foreground">
-                {chart.accounts.length} accounts
+            {notice && !error ? (
+              <p className="text-[13px] text-forest" role="status">
+                {notice}
               </p>
             ) : null}
             <Button
               className="h-11 text-[14px]"
               aria-expanded={adding}
-              onClick={() => setAdding((value) => !value)}
+              disabled={saving || (!adding && (chart.status !== "ready" || refreshRequired))}
+              onClick={() => {
+                if (adding) closeEntry();
+                else {
+                  setError(undefined);
+                  setNotice(undefined);
+                  setAdding(true);
+                }
+              }}
+              ref={addButtonRef}
               type="button"
+              variant={adding ? "outline" : "default"}
             >
-              <Plus aria-hidden="true" className="size-3" /> {adding ? "Cancel" : "Add account"}
+              {adding ? null : <Plus aria-hidden="true" className="size-4" />}{" "}
+              {adding ? "Cancel" : "Add account"}
             </Button>
           </div>
         }
       />
 
+      {error ? (
+        <section
+          aria-label="Account error"
+          className="focus-ring rounded-xl"
+          ref={errorRef}
+          tabIndex={-1}
+        >
+          <WorkNotice>{error}</WorkNotice>
+        </section>
+      ) : null}
       {adding ? (
         <form
-          className="work-surface grid grid-cols-[120px_minmax(0,1fr)_160px_auto] items-end gap-4 p-5 max-[760px]:grid-cols-1"
+          aria-label="Create ordinary account"
+          className="work-surface overflow-hidden"
+          onKeyDown={(event) => {
+            if (
+              event.key === "Escape" &&
+              !event.nativeEvent.isComposing &&
+              !(event.target instanceof HTMLSelectElement)
+            ) {
+              event.preventDefault();
+              closeEntry();
+            }
+          }}
           onSubmit={addAccount}
         >
-          <label className="grid gap-1.5 text-[13px] font-semibold text-foreground">
-            Code
-            <input
-              className={fieldClassName()}
-              maxLength={32}
-              onChange={(event) => setCode(event.target.value.toUpperCase())}
-              required
-              value={code}
-            />
-          </label>
-          <label className="grid gap-1.5 text-[13px] font-semibold text-foreground">
-            Account name
-            <input
-              className={fieldClassName()}
-              maxLength={160}
-              onChange={(event) => setName(event.target.value)}
-              required
-              value={name}
-            />
-          </label>
-          <label className="grid gap-1.5 text-[13px] font-semibold text-foreground">
-            Type
-            <select
-              className={fieldClassName()}
-              onChange={(event) => setType(Number(event.target.value) as AccountType)}
-              value={type}
-            >
-              <option value={AccountType.ASSET}>Asset</option>
-              <option value={AccountType.LIABILITY}>Liability</option>
-              <option value={AccountType.EQUITY}>Equity</option>
-              <option value={AccountType.REVENUE}>Revenue</option>
-              <option value={AccountType.EXPENSE}>Expense</option>
-            </select>
-          </label>
-          <Button className="self-end" disabled={saving} type="submit">
-            {saving ? "Saving…" : "Save account"}
-          </Button>
+          <fieldset
+            className="min-w-0"
+            disabled={saving || chart.status !== "ready" || refreshRequired}
+          >
+            <legend className="sr-only">New ordinary account</legend>
+            <div className="border-b border-border px-4 py-3">
+              <h2 className="font-serif text-[24px] leading-8">New ordinary account</h2>
+              <p className="mt-1 text-[13px] leading-5 text-muted-foreground">
+                Creates an ordinary account. Installed system and control accounts stay protected.
+              </p>
+            </div>
+            <div className="grid grid-cols-[120px_minmax(0,1fr)_160px_auto] items-end gap-4 p-4 max-[760px]:grid-cols-1">
+              <label className="grid gap-1.5 text-[13px] font-semibold text-foreground">
+                Code
+                <input
+                  className={fieldClassName()}
+                  maxLength={32}
+                  onChange={(event) => {
+                    setError(undefined);
+                    setCode(event.target.value.toUpperCase());
+                  }}
+                  ref={codeRef}
+                  required
+                  value={code}
+                />
+              </label>
+              <label className="grid gap-1.5 text-[13px] font-semibold text-foreground">
+                Account name
+                <input
+                  className={fieldClassName()}
+                  maxLength={160}
+                  onChange={(event) => {
+                    setError(undefined);
+                    setName(event.target.value);
+                  }}
+                  required
+                  value={name}
+                />
+              </label>
+              <label className="grid gap-1.5 text-[13px] font-semibold text-foreground">
+                Type
+                <select
+                  className={fieldClassName()}
+                  onChange={(event) => {
+                    setError(undefined);
+                    setType(Number(event.target.value) as AccountType);
+                  }}
+                  value={type}
+                >
+                  <option value={AccountType.ASSET}>Asset</option>
+                  <option value={AccountType.LIABILITY}>Liability</option>
+                  <option value={AccountType.EQUITY}>Equity</option>
+                  <option value={AccountType.REVENUE}>Revenue</option>
+                  <option value={AccountType.EXPENSE}>Expense</option>
+                </select>
+              </label>
+              <Button className="self-end" disabled={saving} type="submit">
+                {saving ? "Saving…" : "Save account"}
+              </Button>
+            </div>
+          </fieldset>
         </form>
-      ) : null}
-      {error ? (
-        <p className="text-[14px] text-destructive" role="alert">
-          {error}
-        </p>
       ) : null}
 
       <section className="work-surface overflow-hidden">
-        <SurfaceHeading
-          title="Accounts"
-          description="Protected controls remain separate from ordinary accounts."
-        />
-        {chart.status === "ready" && chart.accounts.length > 0 ? (
-          <HorizontalScrollArea label="Accounts table">
-            <table className="w-full border-collapse text-left">
-              <thead className="border-b border-border bg-background/60 text-[12px] uppercase tracking-[0.075em] text-muted-foreground">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-3 py-3">
+          <div className="min-w-0 flex-1 basis-72">
+            <WorkSearch
+              label="Search accounts by code or name"
+              inputRef={searchRef}
+              value={search}
+              onChange={searchAccounts}
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            {chart.status === "ready" ? (
+              <span className="text-[13px] tabular-nums text-muted-foreground">
+                {chart.accounts.length} loaded accounts
+              </span>
+            ) : null}
+            <Button
+              aria-label="Refresh accounts"
+              className="size-11 p-0"
+              disabled={saving || accountsQuery.isFetching || !organisationId}
+              onClick={() => {
+                void refreshAccounts();
+              }}
+              type="button"
+              variant="ghost"
+            >
+              <RefreshCw aria-hidden="true" className="size-4" />
+            </Button>
+          </div>
+        </div>
+        {chart.status === "ready" && matchingCount > 0 ? (
+          <HorizontalScrollArea className="chart-accounts-scroll" label="Accounts table">
+            <table className="chart-accounts-table w-full min-w-[700px] border-collapse text-left text-[13px]">
+              <thead className="border-b border-border bg-background/60 text-[12px] text-muted-foreground">
                 <tr>
-                  <th className="px-5 py-3 font-semibold">Code</th>
-                  <th className="px-5 py-3 font-semibold">Account</th>
-                  <th className="px-5 py-3 font-semibold">Type</th>
-                  <th className="px-5 py-3 font-semibold">Status</th>
+                  <th className="w-24 font-semibold" scope="col">
+                    Code
+                  </th>
+                  <th className="font-semibold" scope="col">
+                    Account name
+                  </th>
+                  <th className="w-32 font-semibold" scope="col">
+                    Type
+                  </th>
+                  <th className="w-40 font-semibold" scope="col">
+                    Protection
+                  </th>
+                  <th className="w-24 font-semibold" scope="col">
+                    State
+                  </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border text-[14px]">
-                {chart.accounts.map((account) => (
-                  <tr key={account.id}>
-                    <td className="w-24 px-5 py-3.5 font-mono font-medium text-foreground">
-                      {account.code}
-                    </td>
-                    <td className="px-5 py-3.5 font-medium text-foreground">{account.name}</td>
-                    <td className="px-5 py-3.5 text-muted-foreground">
-                      {accountTypeLabel(account.type)}
-                    </td>
-                    <td className="px-5 py-3.5">
-                      <span className="rounded-full bg-success-soft px-2 py-1 text-[12px] font-semibold text-forest">
-                        {account.status === AccountStatus.ACTIVE ? "Active" : "Archived"}
-                      </span>
-                    </td>
+              {groups.map((group) => (
+                <tbody className="divide-y divide-border border-t border-border" key={group.label}>
+                  <tr className="bg-background/70">
+                    <th colSpan={5} scope="rowgroup">
+                      <Button
+                        aria-expanded={!collapsed.has(group.label)}
+                        className="h-11 w-full justify-start rounded-none px-0 text-[13px] font-semibold"
+                        onClick={() =>
+                          setCollapsed((value) => {
+                            const next = new Set(value);
+                            if (next.has(group.label)) next.delete(group.label);
+                            else next.add(group.label);
+                            return next;
+                          })
+                        }
+                        type="button"
+                        variant="ghost"
+                      >
+                        <ChevronDown
+                          aria-hidden="true"
+                          className={`size-3.5 ${collapsed.has(group.label) ? "-rotate-90" : ""}`}
+                        />
+                        {group.label} ({group.accounts.length})
+                      </Button>
+                    </th>
                   </tr>
-                ))}
-              </tbody>
+                  {collapsed.has(group.label)
+                    ? null
+                    : group.accounts.map((account) => (
+                        <tr key={account.id}>
+                          <td className="font-mono font-medium tabular-nums text-foreground">
+                            {account.code}
+                          </td>
+                          <td className="font-medium text-foreground">{account.name}</td>
+                          <td className="text-muted-foreground">
+                            {accountTypeLabel(account.type)}
+                          </td>
+                          <td>
+                            {account.designation === AccountDesignation.CONTROL ||
+                            account.designation === AccountDesignation.SYSTEM ? (
+                              <Badge
+                                className="gap-1 whitespace-nowrap border-warning-border bg-warning-soft text-warning"
+                                variant="outline"
+                              >
+                                <LockKeyhole aria-hidden="true" className="size-3 shrink-0" />
+                                <span>
+                                  Protected ·{" "}
+                                  {account.designation === AccountDesignation.CONTROL
+                                    ? "Control"
+                                    : "System"}
+                                </span>
+                              </Badge>
+                            ) : (
+                              <span className="text-muted-foreground">
+                                {account.designation === AccountDesignation.ORDINARY
+                                  ? "Ordinary"
+                                  : "Unknown"}
+                              </span>
+                            )}
+                          </td>
+                          <td className="text-muted-foreground">
+                            {account.status === AccountStatus.ACTIVE ? (
+                              "Active"
+                            ) : account.status === AccountStatus.ARCHIVED ? (
+                              <Badge variant="outline">Archived</Badge>
+                            ) : (
+                              "Unknown"
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                </tbody>
+              ))}
             </table>
           </HorizontalScrollArea>
         ) : (
-          <div className="grid min-h-64 place-items-center px-5 py-10 text-center">
-            <div>
-              {chart.status === "loading" ? (
-                <LoaderCircle
-                  aria-hidden="true"
-                  className="mx-auto size-4 animate-spin text-forest"
-                />
-              ) : null}
-              <p className="mt-2 text-[14px] font-semibold text-foreground">
-                {chart.status === "unavailable" ? "Chart unavailable" : "No accounts yet"}
-              </p>
-              <p className="mt-1 max-w-sm text-[14px] leading-4 text-muted-foreground">
-                {chart.status === "unavailable"
-                  ? "The local chart could not be read. Your data remains on this device."
-                  : "Accounts will appear here once they are installed."}
-              </p>
-            </div>
-          </div>
+          <WorkState
+            title={
+              chart.status === "loading"
+                ? "Loading accounts"
+                : chart.status === "unavailable"
+                  ? "Chart unavailable"
+                  : chart.accounts.length
+                    ? "No matching accounts"
+                    : "No accounts yet"
+            }
+            description={
+              chart.status === "loading"
+                ? "Reading the local chart."
+                : chart.status === "unavailable"
+                  ? "The local chart could not be read. Your records remain on this device."
+                  : chart.accounts.length
+                    ? "Search checks the codes and names of the loaded accounts."
+                    : "Add an ordinary account to extend your local chart."
+            }
+            loading={chart.status === "loading"}
+            action={
+              chart.status === "ready" && chart.accounts.length ? (
+                <Button
+                  onClick={() => {
+                    searchAccounts("");
+                    searchRef.current?.focus();
+                  }}
+                  type="button"
+                  variant="outline"
+                >
+                  Show all accounts
+                </Button>
+              ) : undefined
+            }
+          />
         )}
+        {chart.status === "ready" ? (
+          <footer className="border-t border-border px-3 py-2 text-[12px] leading-5 text-muted-foreground">
+            {matchingCount} of {chart.accounts.length} loaded accounts · up to 200. Protected system
+            and control accounts are read-only.
+          </footer>
+        ) : null}
       </section>
     </div>
   );
 }
+
+const accountGroups = [
+  { label: "Assets", type: AccountType.ASSET },
+  { label: "Liabilities", type: AccountType.LIABILITY },
+  { label: "Equity", type: AccountType.EQUITY },
+  { label: "Income", type: AccountType.REVENUE },
+  { label: "Other income", type: AccountType.OTHER_REVENUE },
+  { label: "Expenses", type: AccountType.EXPENSE },
+  { label: "Other expenses", type: AccountType.OTHER_EXPENSE },
+  { label: "Contra", type: AccountType.CONTRA },
+  { label: "Unclassified", type: undefined },
+] as const;
+const knownAccountTypes = new Set<number>(
+  accountGroups.flatMap((group) => (group.type === undefined ? [] : [group.type])),
+);
 
 function fieldClassName(): string {
   return "focus-ring h-11 w-full rounded-xl border border-border bg-surface px-3 text-[14px] text-foreground outline-none";

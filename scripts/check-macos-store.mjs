@@ -16,6 +16,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { isDeepStrictEqual, promisify } from "node:util";
 
 import Ajv2020 from "ajv/dist/2020.js";
+import plist from "plist";
 import { parse as parseYaml } from "yaml";
 
 import {
@@ -310,28 +311,32 @@ export function validateMacOSProvisioningProfile(profile, { mode, teamID, now = 
   }
 }
 
-async function extractProvisioningProfileValue(file, key, format) {
-  const { stdout } = await execFile("/usr/bin/plutil", ["-extract", key, format, "-o", "-", file]);
-  return format === "json" ? JSON.parse(stdout) : stdout.trim();
+async function extractProvisioningProfileValue(file, key) {
+  const { stdout } = await execFile("/usr/bin/plutil", ["-extract", key, "xml1", "-o", "-", file]);
+  const value = plist.parse(stdout);
+  if (key === "ExpirationDate") {
+    if (!(value instanceof Date) || !Number.isFinite(value.getTime())) {
+      fail("MACOS_RELEASE_PROVISIONING_PROFILE_INVALID");
+    }
+    return value.toISOString().replace(/\.000Z$/, "Z");
+  }
+  return value;
 }
 
 export async function readMacOSProvisioningProfilePlist(file) {
   try {
     const [ApplicationIdentifierPrefix, Entitlements, ExpirationDate, TeamIdentifier] =
       await Promise.all([
-        extractProvisioningProfileValue(file, "ApplicationIdentifierPrefix", "json"),
-        extractProvisioningProfileValue(file, "Entitlements", "json"),
-        extractProvisioningProfileValue(file, "ExpirationDate", "raw"),
-        extractProvisioningProfileValue(file, "TeamIdentifier", "json"),
+        extractProvisioningProfileValue(file, "ApplicationIdentifierPrefix"),
+        extractProvisioningProfileValue(file, "Entitlements"),
+        extractProvisioningProfileValue(file, "ExpirationDate"),
+        extractProvisioningProfileValue(file, "TeamIdentifier"),
       ]);
     const profile = { ApplicationIdentifierPrefix, Entitlements, ExpirationDate, TeamIdentifier };
-    for (const [key, format] of [
-      ["ProvisionedDevices", "json"],
-      ["ProvisionsAllDevices", "raw"],
-    ]) {
+    for (const key of ["ProvisionedDevices", "ProvisionsAllDevices"]) {
       try {
-        const value = await extractProvisioningProfileValue(file, key, format);
-        profile[key] = format === "raw" ? value === "true" : value;
+        const value = await extractProvisioningProfileValue(file, key);
+        profile[key] = key === "ProvisionsAllDevices" ? value === true || value === "true" : value;
       } catch {
         // Distribution profiles omit device-scoped fields.
       }

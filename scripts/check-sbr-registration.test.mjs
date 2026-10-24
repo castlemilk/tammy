@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
-import { mkdir, mkdtemp, symlink, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, realpath, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -23,11 +23,11 @@ const INSTALLED_FILES = [
 
 function run(arguments_ = []) {
   return new Promise((resolve, reject) => {
-    const child = spawn(
-      "mise",
-      ["exec", "--", "node", "scripts/check-sbr-registration.mjs", ...arguments_],
-      { cwd: repositoryRoot, shell: false, stdio: ["ignore", "pipe", "pipe"] },
-    );
+    const child = spawn(process.execPath, ["scripts/check-sbr-registration.mjs", ...arguments_], {
+      cwd: repositoryRoot,
+      shell: false,
+      stdio: ["ignore", "pipe", "pipe"],
+    });
     let stdout = "";
     let stderr = "";
     child.stdout.on("data", (chunk) => (stdout += chunk));
@@ -38,7 +38,7 @@ function run(arguments_ = []) {
 }
 
 test("reports missing exact installed inputs without claiming EVTE readiness", async () => {
-  const root = await mkdtemp(path.join(os.tmpdir(), "tammy-registration-check-"));
+  const root = await mkdtemp(path.join(await realpath(os.tmpdir()), "tammy-registration-check-"));
   assert.deepEqual(await checkInstalledSbrRegistration({ repositoryRoot: root }), {
     ...createSbrRegistrationHandoffReport(),
     installed_input_state: "MISSING",
@@ -54,7 +54,7 @@ test("reports missing exact installed inputs without claiming EVTE readiness", a
 });
 
 test("validates all exact installed inputs through the authenticated preflight", async () => {
-  const root = await mkdtemp(path.join(os.tmpdir(), "tammy-registration-check-"));
+  const root = await mkdtemp(path.join(await realpath(os.tmpdir()), "tammy-registration-check-"));
   const installed = path.join(root, "config/sbr/evte");
   await mkdir(installed, { recursive: true });
   for (const file of INSTALLED_FILES)
@@ -93,7 +93,7 @@ test("validates all exact installed inputs through the authenticated preflight",
 });
 
 test("rejects unsafe installed inputs without disclosing their path", async () => {
-  const root = await mkdtemp(path.join(os.tmpdir(), "tammy-registration-check-"));
+  const root = await mkdtemp(path.join(await realpath(os.tmpdir()), "tammy-registration-check-"));
   const installed = path.join(root, "config/sbr/evte");
   await mkdir(installed, { recursive: true });
   await symlink("/private/tmp/not-an-installed-input", path.join(installed, INSTALLED_FILES[0]));

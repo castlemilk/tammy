@@ -1,0 +1,30 @@
+[
+  {
+    "sourcePath": "before/01-invoice-list-1440.png",
+    "sha256": "3144eee7f9f2441e13ae6d289cc36e696641cdb8d961e7a219cee1e3b84b6509",
+    "bytes": 162270,
+    "library_file_id": "libfile_e272f95f461c81919af54bdec1d6eb54",
+    "version": 0
+  },
+  {
+    "sourcePath": "reference/07-sales-item-tracking.png",
+    "sha256": "96284946e17b516d42cd3d111a6c1ba37a1ac1b2172ed1cfac97dac152e6364c",
+    "bytes": 1743980,
+    "library_file_id": "libfile_a592441937c4819193f44f4203f425c4",
+    "version": 0
+  },
+  {
+    "sourcePath": "after/01-invoice-list-1440.png",
+    "sha256": "13ef3e551f6bc7ecc3fe656c168f0e329b11bb4c136ba9cc7cbce78c5c51d697",
+    "bytes": 121895,
+    "library_file_id": "libfile_37b01ab134488191a1fcf0658ce602c9",
+    "version": 0
+  },
+  {
+    "sourcePath": "after/03-invoice-list-320.png",
+    "sha256": "740eb7c8b94272c9b93cd2392d4e912492a6687f61669e36e440cba86d3d0652",
+    "bytes": 48308,
+    "library_file_id": "libfile_891e777c47288191b455d71bdfeaa668",
+    "version": 0
+  }
+]

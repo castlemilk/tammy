@@ -7,6 +7,7 @@ import {
   mkdir,
   mkdtemp,
   open,
+  readdir,
   readFile,
   realpath,
   rm,
@@ -122,10 +123,17 @@ function assertSharedCiProvisioning(job, shell) {
     "pnpm install --frozen-lockfile",
   );
   const taskInstall = requiredStep(job, "Install exact Task");
-  assert.equal(taskInstall.shell, shell, `${job.name}: Task install shell`);
-  assert.match(taskInstall.run, new RegExp(TASK_INSTALL.replaceAll(/[.*+?^${}()|[\]\\]/g, "\\$&")));
   const taskVersion = requiredStep(job, "Verify exact Task version");
   assert.equal(taskVersion.shell, shell, `${job.name}: Task version shell`);
+  if (job["runs-on"] === "macos-14") {
+    assert.equal(taskInstall.shell, "bash");
+    assert.match(taskInstall.run, /task_darwin_arm64\.tar\.gz/);
+    assert.equal(taskInstall["timeout-minutes"], 5);
+    assert.equal(taskVersion.run, 'test "$(task --version)" = "3.52.0"');
+    return;
+  }
+  assert.equal(taskInstall.shell, shell, `${job.name}: Task install shell`);
+  assert.match(taskInstall.run, new RegExp(TASK_INSTALL.replaceAll(/[.*+?^${}()|[\]\\]/g, "\\$&")));
   if (shell === "bash") {
     assert.match(taskInstall.run, /echo "\$\(go env GOPATH\)\/bin" >> "\$GITHUB_PATH"/);
     assert.equal(taskVersion.run, 'test "$(task --version)" = "3.52.0"');
@@ -169,7 +177,7 @@ test("retains runner provisioning, evidence classification, and artifacts around
     assert.match(workflow, /pnpm install --frozen-lockfile/);
   }
   assert.match(foundationWorkflow, /runs-on: ubuntu-24\.04[\s\S]*timeout-minutes: 30/);
-  assert.match(foundationWorkflow, /runs-on: macos-14[\s\S]*timeout-minutes: 30/);
+  assert.match(foundationWorkflow, /runs-on: macos-14\n\s*timeout-minutes: 40/);
   assert.match(foundationWorkflow, /runs-on: windows-2025[\s\S]*timeout-minutes: 30/);
   assert.match(foundationWorkflow, /name: Contracts and local foundation/);
   assert.match(foundationWorkflow, /name: macOS 14 arm64 packaged E2E/);
@@ -449,7 +457,7 @@ test("pins provisioning and evidence ownership independently for every CI job", 
   const macos = foundation.jobs["macos14-arm64-packaged"];
   assert.equal(macos.name, "macOS 14 arm64 packaged E2E");
   assert.equal(macos["runs-on"], "macos-14");
-  assert.equal(macos["timeout-minutes"], 30);
+  assert.equal(macos["timeout-minutes"], 40);
   assertSharedCiProvisioning(macos, "bash");
   assert.equal(
     requiredStep(macos, "Assert native Apple silicon").run,
@@ -523,6 +531,146 @@ test("pins provisioning and evidence ownership independently for every CI job", 
   assert.equal(windowsArtifact.with["retention-days"], 30);
 });
 
+test("macOS outer budget preserves the final SBR deadline after the observed slow comparison", async () => {
+  const evidence = JSON.parse(
+    await readFile(
+      new URL("../docs/development/ci-evidence/macos-budget-2026-10-23.json", import.meta.url),
+      "utf8",
+    ),
+  );
+  const workflow = YAML.parse(
+    await readFile(new URL("../.github/workflows/foundation-ci.yml", import.meta.url), "utf8"),
+  );
+  const sbr = await readFile(
+    new URL("../apps/desktop/tests/e2e/sbr-readiness.spec.ts", import.meta.url),
+    "utf8",
+  );
+  const sbrDeadline = Number(/test\.setTimeout\(([\d_]+)\)/u.exec(sbr)?.[1]?.replaceAll("_", ""));
+  assert.equal(
+    sbrDeadline,
+    480_000,
+    "the application test deadline must remain bounded and unchanged",
+  );
+  const slow = evidence.runs.find((run) => run.event === "pull_request");
+  const push = evidence.runs.find((run) => run.event === "push");
+  assert.equal(slow.ordinaryPassed, 19);
+  assert.equal(push.ordinaryPassed + push.sbrPassed, 20);
+  const elapsed = Date.parse(slow.ordinaryCasesCompletedAt) - Date.parse(slow.jobStartedAt);
+  const required = elapsed + sbrDeadline + evidence.retentionReserveSeconds * 1000;
+  assert.ok(
+    30 * 60_000 < required,
+    "the original envelope must reproduce the recorded budget starvation",
+  );
+  const actual = workflow.jobs["macos14-arm64-packaged"]["timeout-minutes"] * 60_000;
+  assert.ok(
+    actual >= required,
+    "the final test and failure-artifact reserve must fit after measured setup and ordinary cases",
+  );
+  assert.equal(
+    actual,
+    Math.ceil(required / (5 * 60_000)) * 5 * 60_000,
+    "round the measured requirement to a finite five-minute envelope",
+  );
+  assert.ok(
+    actual <= evidence.maximumMacosJobMinutes * 60_000,
+    "the outer envelope must stay finite",
+  );
+  assert.equal(evidence.maximumMacosJobMinutes, 40);
+  // Queue delay is observable, but does not consume GitHub's per-job execution budget.
+  assert.ok(Date.parse(slow.jobStartedAt) >= Date.parse(slow.createdAt));
+  assert.equal(workflow.jobs.contracts["timeout-minutes"], 30);
+  assert.equal(workflow.jobs["windows-server-x64-package-smoke"]["timeout-minutes"], 30);
+});
+
+test("bounds macOS Task acquisition separately and pins the official archive integrity", async () => {
+  const workflow = YAML.parse(
+    await readFile(new URL("../.github/workflows/foundation-ci.yml", import.meta.url), "utf8"),
+  );
+  const macos = workflow.jobs["macos14-arm64-packaged"];
+  const install = requiredStep(macos, "Install exact Task");
+  assert.equal(
+    install["timeout-minutes"],
+    5,
+    "tool acquisition must not consume the native acceptance envelope",
+  );
+  assert.equal(install.shell, "bash");
+  assert.equal(install.uses, undefined);
+  assert.equal(install.env, undefined, "do not override reserved runner variables");
+  assert.match(install.run, /set -euo pipefail/);
+  assert.match(install.run, /mktemp -d "\$\{RUNNER_TEMP%\/\}\/tammy-task\.XXXXXX"/);
+  assert.match(install.run, /trap 'rm -rf "\$task_install_dir"' EXIT/);
+  assert.match(install.run, /--proto '=https' --proto-redir '=https'/);
+  assert.match(install.run, /--connect-timeout 10 --max-time 120 --retry 0/);
+  assert.match(
+    install.run,
+    /https:\/\/github\.com\/go-task\/task\/releases\/download\/v3\.52\.0\/task_darwin_arm64\.tar\.gz/,
+  );
+  const verification = install.run.indexOf(
+    "debfa9a3bc06fcb5d5550b44725ecd22bb305499ce057bd6d7a774db5cdaa7b8",
+  );
+  assert.ok(verification > 0);
+  assert.match(install.run, /shasum -a 256 --check --status/);
+  assert.ok(verification < install.run.indexOf("tar -xzf"), "authenticate before extraction");
+  assert.match(install.run, /tar -xzf .* -C "\$task_install_dir" task/);
+  assert.match(install.run, /test -f .* && test ! -L/);
+  assert.match(install.run, /test "\$\("\$task_install_dir\/task" --version\)" = "3\.52\.0"/);
+  assert.ok(
+    install.run.indexOf('--version)" = "3.52.0"') < install.run.indexOf('>> "$GITHUB_PATH"'),
+    "publish PATH only after executable verification",
+  );
+  assert.equal(
+    requiredStep(macos, "Verify exact Task version").run,
+    'test "$(task --version)" = "3.52.0"',
+  );
+  assert.deepEqual(workflow.permissions, { contents: "read" });
+});
+
+test("macOS Task acquisition rejects corrupt downloads and transfer errors before extraction or PATH changes", {
+  skip: process.platform === "win32" ? "macOS installer requires a Unix shell and shasum" : false,
+}, async () => {
+  const workflow = YAML.parse(
+    await readFile(new URL("../.github/workflows/foundation-ci.yml", import.meta.url), "utf8"),
+  );
+  const install = requiredStep(workflow.jobs["macos14-arm64-packaged"], "Install exact Task");
+  for (const transferExit of [0, 7]) {
+    const root = await mkdtemp(path.join(tmpdir(), "tammy-task-installer-test-"));
+    try {
+      const githubPath = path.join(root, "github-path");
+      await writeFile(githubPath, "original-path\n");
+      const intercepted = `
+          curl() {
+            while [ "$1" != '--output' ]; do shift; done
+            printf 'corrupt archive' > "$2"
+            return "$TAMMY_TEST_TRANSFER_EXIT"
+          }
+          tar() { printf 'unexpected extraction' > "$RUNNER_TEMP/extracted"; }
+          ${install.run}
+        `;
+      await assert.rejects(
+        execFileAsync("bash", ["-c", intercepted], {
+          env: {
+            ...process.env,
+            RUNNER_TEMP: root,
+            GITHUB_PATH: githubPath,
+            TAMMY_TEST_TRANSFER_EXIT: String(transferExit),
+          },
+          timeout: 10_000,
+          maxBuffer: 32_768,
+        }),
+        (error) => error.code === (transferExit || 1),
+      );
+      assert.equal(await readFile(githubPath, "utf8"), "original-path\n");
+      assert.deepEqual(
+        await readdir(root),
+        ["github-path"],
+        "remove only the owned temporary install",
+      );
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  }
+});
+
 test("allows only ad-hoc signing for the ordinary macOS PR package check", async () => {
   const foundation = YAML.parse(
     await readFile(new URL("../.github/workflows/foundation-ci.yml", import.meta.url), "utf8"),
@@ -544,6 +692,7 @@ test("packaged Playwright stops after the first CI failure without retrying", as
   const configUrl = new URL("../apps/desktop/playwright.config.ts", import.meta.url).href;
   const expectedTests = [
     "foundation.spec.ts",
+    "financial-workspace.spec.ts",
     "current-workflows.spec.ts",
     "bas-lifecycle.spec.ts",
     "bas-preparation.spec.ts",

@@ -1,0 +1,8 @@
+{
+  "sourceRevision": "3a4dcfa4dcc8afe8b2639a56288c324081ec3e6e",
+  "result": "failed",
+  "elapsedSeconds": 22.9,
+  "failure": "Keyboard ArrowRight leaves the named region scrollLeft at zero",
+  "cause": "Grid child wrapper missing min-w-0 expands the page instead of constraining the table region. Selected-filter styling also loses to utility-layer styles.",
+  "resolution": "Constrain the grid child and use the canonical WorkFilters solid variant; no timeout or test assertion weakened."
+}

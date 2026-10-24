@@ -75,12 +75,12 @@ export function ReviewedExpenseTable({
         />
       </label>
       {loading ? (
-        <p className="px-5 text-[13px] text-muted-foreground" role="status">
+        <p className="px-5 text-[14px] text-muted-foreground" role="status">
           Loading reviewed expenses…
         </p>
       ) : null}
       {error ? (
-        <p className="px-5 text-[13px] text-destructive" role="alert">
+        <p className="px-5 text-[14px] text-destructive" role="alert">
           {error}
         </p>
       ) : null}
@@ -89,10 +89,10 @@ export function ReviewedExpenseTable({
         className="mx-5 rounded-xl border border-border bg-background"
       >
         <table
-          className="w-full min-w-[600px] border-collapse text-[13px]"
+          className="w-full min-w-[600px] border-collapse text-[14px]"
           aria-label="Reviewed expenses"
         >
-          <thead className="border-b border-border bg-muted/40 text-left text-[12px] text-muted-foreground">
+          <thead className="border-b border-border bg-muted/40 text-left text-[13px] text-muted-foreground">
             <tr>
               <th className="w-14 px-4 py-4 font-medium" scope="col">
                 <span className="sr-only">Select</span>
@@ -173,7 +173,7 @@ export function ReviewedExpenseTable({
           />
         </label>
         <div className="flex flex-wrap items-center gap-3">
-          <p className="text-[12px] text-muted-foreground" data-testid="selected-expense-summary">
+          <p className="text-[13px] text-muted-foreground" data-testid="selected-expense-summary">
             {selected.length} selected ·{" "}
             <span className="tabular-nums">{formatAud(selectedCost)}</span> net cost
           </p>

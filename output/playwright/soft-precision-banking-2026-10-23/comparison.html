@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en-AU">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Tammy Banking · before, reference, after</title>
+    <style>
+      :root { color-scheme: light; font-family: "Avenir Next", "Segoe UI", sans-serif; color: #302a25; background: #f7f3ea; }
+      * { box-sizing: border-box; }
+      body { max-width: 1900px; margin: auto; padding: 32px; }
+      h1, h2 { font-family: "Iowan Old Style", Georgia, serif; font-weight: 500; }
+      h1 { margin: 0 0 12px; font-size: clamp(30px, 4vw, 46px); }
+      h2 { margin: 0 0 12px; font-size: 26px; }
+      p { max-width: 1000px; line-height: 1.6; }
+      a { color: #235c4b; text-underline-offset: 3px; }
+      a:hover { text-decoration-thickness: 2px; }
+      :focus-visible { outline: 2px solid #235c4b; outline-offset: 4px; }
+      .eyebrow { color: #235c4b; font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+      .comparison { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin: 24px 0; }
+      .pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+      figure { min-width: 0; margin: 0; padding: 12px; border: 1px solid #dcd3c5; border-radius: 20px; background: #fffcf6; }
+      figcaption { min-height: 55px; font-size: 13px; line-height: 1.5; }
+      figcaption strong { display: block; color: #235c4b; font-size: 15px; }
+      img { display: block; width: 100%; height: auto; border-radius: 10px; }
+      .concept { background: #eee8dc; }
+      .facts { padding: 16px 20px; border-radius: 20px; background: #e7ede2; }
+      .facts p { margin: 0; }
+      details { margin: 20px 0; padding: 16px; border: 1px solid #dcd3c5; border-radius: 20px; background: #fffcf6; }
+      summary { cursor: pointer; min-height: 44px; padding: 8px 0; font-weight: 600; }
+      summary:hover { color: #235c4b; }
+      table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; }
+      td, th { padding: 12px 8px; border-bottom: 1px solid #dcd3c5; }
+      .table-scroll { overflow-x: auto; }
+      .narrow img { max-width: 390px; margin: auto; }
+      code { overflow-wrap: anywhere; font-size: 12px; }
+      footer { margin-top: 32px; font-size: 13px; color: #6c6258; }
+      @media (max-width: 900px) { body { padding: 16px; } .comparison, .pair { grid-template-columns: 1fr; } }
+      @media (forced-colors: active) { a { color: LinkText; } :focus-visible { outline-color: Highlight; } }
+    </style>
+  </head>
+  <body>
+    <header>
+      <p class="eyebrow">Tammy · Soft Precision · Banking</p>
+      <h1>Keep the statement and its review together.</h1>
+      <p>
+        The matched desktop pair uses the same 1440 × 1100 viewport, six synthetic
+        lines, selected Cedar Studio row and unconfirmed reference. The full,
+        unchanged board 08 is a generated design reference. Every before/after
+        image is a real local Electron render. Open an image for its full pixels.
+      </p>
+      <p><a href="README.md">Journey, provenance, tests and limits</a> · <a href="screen-board-inventory.md">Finite screen inventory</a></p>
+    </header>
+    <main>
+      <section class="comparison" aria-label="Matched before, reference and after">
+        <figure>
+          <figcaption><strong>Before · real app</strong>Large progress band; review below the complete list.</figcaption>
+          <a href="before/04-selected-match.png"><img src="before/04-selected-match.png" width="1440" height="1100" alt="Original Banking screen with the selected line near the bottom and review below the viewport" /></a>
+        </figure>
+        <figure class="concept">
+          <figcaption><strong>Reference · generated concept</strong>Board 08; Banking is the middle panel. Not app evidence.</figcaption>
+          <a href="reference/08-documents-banking-activity.png"><img src="reference/08-documents-banking-activity.png" width="1536" height="1024" alt="Approved board 08 showing Documents, Banking and Activity concepts" /></a>
+        </figure>
+        <figure>
+          <figcaption><strong>After · real app</strong>Compact list, adjacent non-modal review and actual reconciliation summary.</figcaption>
+          <a href="after-money-fix/04-selected-match.png"><img src="after-money-fix/04-selected-match.png" width="1440" height="1100" alt="Corrected Banking screen with six compact rows, review at the right and a pale forest reconciliation summary" /></a>
+        </figure>
+      </section>
+      <section class="facts" aria-label="Measured rendered result">
+        <p><strong>56px rows · 44px minimum controls · forest actions · explicit matching.</strong></p>
+        <p>The figures are actual global pending counts and the latest imported statement balance. The app adds no live feed, automatic match, document link, journal or payment. Financial handlers and the reconciliation gate are unchanged.</p>
+      </section>
+      <details>
+        <summary>Statement list before selecting a line</summary>
+        <div class="pair">
+          <figure><figcaption><strong>Before</strong>Same imported lines and balance.</figcaption><a href="before/03-statement-list.png"><img loading="lazy" src="before/03-statement-list.png" width="1440" height="1100" alt="Original six-line statement list" /></a></figure>
+          <figure><figcaption><strong>After</strong>Compact rows and a quiet forest summary.</figcaption><a href="after-money-fix/03-statement-list.png"><img loading="lazy" src="after-money-fix/03-statement-list.png" width="1440" height="1100" alt="Corrected six-line statement list with returned balance and pending counts" /></a></figure>
+        </div>
+      </details>
+      <details>
+        <summary>320px · visible focus and natural page scrolling</summary>
+        <div class="pair narrow">
+          <figure><figcaption><strong>Before · reference field focus</strong>Real narrow baseline.</figcaption><a href="before/07-match-focus-320.png"><img loading="lazy" src="before/07-match-focus-320.png" width="320" height="1000" alt="Original narrow match review with focused reference" /></a></figure>
+          <figure><figcaption><strong>After · reference field focus</strong>Stacked review; full input retained.</figcaption><a href="after-money-fix/07-match-focus-320.png"><img loading="lazy" src="after-money-fix/07-match-focus-320.png" width="320" height="1000" alt="Corrected narrow match review with a visible forest focus outline and explicit confirmation" /></a></figure>
+        </div>
+        <p><a href="after-money-fix/06-statement-320.png">320px keyboard table scrolling</a> · <a href="after-money-fix/06-statement-390.png">390px table</a> · <a href="after-money-fix/06-statement-900.png">900px layout</a></p>
+      </details>
+      <details>
+        <summary>Large balance · original regression journey</summary>
+        <p><a href="money-nowrap-regression/19-320-banking-import.png">Real 320px full-page capture: complete $123,456,679.01 balance with keyboard focus</a>. The viewport is 320 × 1000; the full-page PNG is 320 × 2162. <a href="ci-balance-followup.md">Original CI failure, retained assertion and correction</a>.</p>
+      </details>
+      <details>
+        <summary>Import, validation and confirmed states</summary>
+        <div class="table-scroll">
+          <table>
+            <thead><tr><th>Journey milestone</th><th>Before</th><th>After</th></tr></thead>
+            <tbody>
+              <tr><td>Malformed CSV; retained input</td><td><a href="before/01-import-error.png">Original</a></td><td><a href="after-money-fix/01-import-error.png">Corrected layout</a></td></tr>
+              <tr><td>Explicit import review</td><td><a href="before/02-import-review.png">Original</a></td><td><a href="after-money-fix/02-import-review.png">Corrected layout</a></td></tr>
+              <tr><td>Confirmed reviewed reference</td><td><a href="before/08-match-confirmed.png">Original</a></td><td><a href="after-money-fix/08-match-confirmed.png">Corrected layout</a></td></tr>
+              <tr><td>No search results</td><td><a href="before/09-search-empty.png">Original</a></td><td><a href="after-money-fix/09-search-empty.png">Corrected layout</a></td></tr>
+              <tr><td>All new lines matched</td><td><a href="before/10-ready-to-reconcile.png">Original</a></td><td><a href="after-money-fix/10-ready-to-reconcile.png">Corrected layout</a></td></tr>
+              <tr><td>Reconciliation confirmed</td><td><a href="before/11-reconciled.png">Original</a></td><td><a href="after-money-fix/11-reconciled.png">Corrected layout</a></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </details>
+    </main>
+    <footer>
+      <p>Corrected clean runtime: <code>4ce093a93422121cf7e0492456a20a7b0dcf2344</code>. Prior frames and intermediate attempts remain unchanged. The new after-money-fix set restores narrow balance no-wrap. This report does not qualify MAS, Windows 11, official ATO submission or an application release. The existing calendar-validation and extreme-value precision gaps and 19 supplementary audit findings are documented in README.md.</p>
+    </footer>
+  </body>
+</html>

@@ -1,5 +1,14 @@
 import assert from "node:assert/strict";
-import { lstat, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
+import {
+  lstat,
+  mkdir,
+  mkdtemp,
+  readFile,
+  realpath,
+  rm,
+  symlink,
+  writeFile,
+} from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -32,7 +41,7 @@ async function pathExists(target) {
 
 async function createFixture(context) {
   const isolatedHome = await mkdtemp(
-    path.join(process.env.TMPDIR ?? os.tmpdir(), "tammy-removal-"),
+    path.join(await realpath(process.env.TMPDIR ?? os.tmpdir()), "tammy-removal-"),
   );
   context.after(() => rm(isolatedHome, { recursive: true, force: true }));
 
@@ -165,7 +174,9 @@ test("refuses absolute isolated-home paths containing glob syntax", () => {
 for (const targetName of ["tammyContainer", "tammyGroup"]) {
   test(`refuses a symlinked ${targetName} before deleting any data`, async (context) => {
     const { isolatedHome, targets } = await createFixture(context);
-    const outside = await mkdtemp(path.join(process.env.TMPDIR ?? os.tmpdir(), "tammy-outside-"));
+    const outside = await mkdtemp(
+      path.join(await realpath(process.env.TMPDIR ?? os.tmpdir()), "tammy-outside-"),
+    );
     context.after(() => rm(outside, { recursive: true, force: true }));
     await rm(targets[targetName], { recursive: true });
     await symlink(outside, targets[targetName], "dir");
@@ -198,7 +209,9 @@ for (const targetName of ["tammyContainer", "tammyGroup"]) {
 
 test("refuses a target whose ancestor resolves outside the isolated home", async (context) => {
   const { isolatedHome, targets } = await createFixture(context);
-  const outside = await mkdtemp(path.join(process.env.TMPDIR ?? os.tmpdir(), "tammy-outside-"));
+  const outside = await mkdtemp(
+    path.join(await realpath(process.env.TMPDIR ?? os.tmpdir()), "tammy-outside-"),
+  );
   context.after(() => rm(outside, { recursive: true, force: true }));
   const containersDirectory = path.join(isolatedHome, "Library/Containers");
   await rm(containersDirectory, { recursive: true });
@@ -223,7 +236,9 @@ for (const [ancestorRelativePath, untouchedTargetName] of [
 ]) {
   test(`refuses symlinked ${ancestorRelativePath} when the Tammy leaf is absent`, async (context) => {
     const { isolatedHome, targets } = await createFixture(context);
-    const outside = await mkdtemp(path.join(process.env.TMPDIR ?? os.tmpdir(), "tammy-outside-"));
+    const outside = await mkdtemp(
+      path.join(await realpath(process.env.TMPDIR ?? os.tmpdir()), "tammy-outside-"),
+    );
     context.after(() => rm(outside, { recursive: true, force: true }));
     const ancestor = path.join(isolatedHome, ancestorRelativePath);
     await rm(ancestor, { recursive: true });

@@ -1,10 +1,12 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
-import { chmod, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import { chmod, mkdtemp, readdir, readFile, realpath, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
+import { stripVTControlCharacters } from "node:util";
 
 import YAML from "yaml";
 
@@ -177,13 +179,51 @@ function run(command, args, environment, { clearTaskEnvironment = false } = {}) 
   });
 }
 
-function runTask(taskName, environment, taskArguments, options) {
-  return run(
-    "mise",
-    ["exec", "--", "task", taskName, ...(taskArguments ?? [])],
-    environment,
-    options,
-  );
+let taskBinaryPromise;
+function pinnedTaskBinary() {
+  taskBinaryPromise ??= (async () => {
+    let binary = "task";
+    try {
+      const lookup = await run("mise", ["which", "task"]);
+      assert.equal(lookup.code, 0, lookup.stderr);
+      binary = lookup.stdout.trim();
+      assert.notEqual(binary, "");
+    } catch (error) {
+      if (error.code !== "ENOENT") throw error;
+      // Actions provisions the pinned Task directly, without the local mise bootstrap.
+    }
+    const version = await run(binary, ["--version"]);
+    assert.equal(version.code, 0, version.stderr);
+    assert.equal(version.stdout.trim(), "3.52.0");
+    return binary;
+  })();
+  return taskBinaryPromise;
+}
+
+async function runTask(taskName, environment, taskArguments, options) {
+  const binary = await pinnedTaskBinary();
+  const directory = await mkdtemp(path.join(await realpath(tmpdir()), "tammy-task-node-bridge-"));
+  try {
+    // Exercise real Task/precondition behavior with the already pinned Node. The
+    // test bridge cannot install tools or run builds/signing through pnpm.
+    const bridge = path.join(directory, "mise");
+    await writeFile(
+      bridge,
+      `#!/usr/bin/env node\nconst { spawnSync } = require("node:child_process");\nconst args = process.argv.slice(2);\nif (args[0] !== "exec" || args[1] !== "--" || args[2] !== "node") process.exit(64);\nconst result = spawnSync(process.execPath, args.slice(3), { stdio: "inherit", shell: false });\nprocess.exit(result.status ?? 1);\n`,
+      { mode: 0o700 },
+    );
+    return await run(
+      binary,
+      [taskName, ...(taskArguments ?? [])],
+      {
+        ...environment,
+        PATH: `${directory}:${environment?.PATH ?? process.env.PATH}`,
+      },
+      options,
+    );
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
 }
 
 function nodePrintScript(lines) {
@@ -195,10 +235,7 @@ function nodePrintCommand(lines) {
 }
 
 test("site deployment tasks pass adversarial origins as one literal argument", async (context) => {
-  const taskLookup = await run("mise", ["which", "task"]);
-  assert.equal(taskLookup.code, 0, taskLookup.stderr);
-  const taskBinary = taskLookup.stdout.trim();
-  assert.notEqual(taskBinary, "", "mise must resolve the pinned Task binary");
+  const taskBinary = await pinnedTaskBinary();
 
   const fixtureRoot = await mkdtemp(path.join("/private/tmp", "tammy-site-task-injection-"));
   context.after(() => rm(fixtureRoot, { recursive: true, force: true }));
@@ -415,14 +452,14 @@ const allowedNodeScripts = new Set([
 async function runTargetPrecondition(precondition, target, environment) {
   const match = precondition.sh.match(/^mise exec -- node -e '([\s\S]*)'$/);
   assert.ok(match, "the native precondition must be an extractable pinned Node command");
-  return run("mise", ["exec", "--", "node", "-e", match[1], target], environment);
+  return run(process.execPath, ["-e", match[1], target], environment);
 }
 
 async function runSbrTargetPrecondition(precondition, platform, architecture) {
   const match = precondition.sh.match(/^mise exec -- node -e '([\s\S]*)'$/);
   assert.ok(match, "the SBR precondition must be an extractable pinned Node command");
   const fixture = `Object.defineProperty(process, "platform", { value: ${JSON.stringify(platform)} }); Object.defineProperty(process, "arch", { value: ${JSON.stringify(architecture)} }); ${match[1]}`;
-  return run("mise", ["exec", "--", "node", "-e", fixture]);
+  return run(process.execPath, ["-e", fixture]);
 }
 
 const sensitiveSbrSurfacePattern =
@@ -778,18 +815,19 @@ test("local Task front door preserves the safe development contract", async () =
     [],
     "every SBR implementation leaf must be internal",
   );
-  const publicTaskList = await run("mise", ["exec", "--", "task", "--list"]);
+  const publicTaskList = await runTask("--list");
   assert.equal(publicTaskList.code, 0, "the public Task list renders");
+  const publicTaskText = stripVTControlCharacters(publicTaskList.stdout);
   for (const taskName of sbrLeaves.keys()) {
     assert.doesNotMatch(
-      publicTaskList.stdout,
+      publicTaskText,
       new RegExp(`\\* sbr:${taskName.replaceAll(":", "\\:")}:`),
       `sbr:${taskName} must be absent from the public Task list`,
     );
   }
   for (const taskName of expectedSbrAliases.keys()) {
     assert.match(
-      publicTaskList.stdout,
+      publicTaskText,
       new RegExp(`\\* ${taskName.replaceAll(":", "\\:")}:`),
       `${taskName} remains public`,
     );
@@ -882,24 +920,38 @@ test("local Task front door preserves the safe development contract", async () =
   const actualSbrTarget = `${process.platform}/${process.arch}`;
   const sbrOutputDirectory = await mkdtemp(path.join("/private/tmp", "tammy-sbr-task-output-"));
   try {
-    const registration = await runTask("sbr:registration:check", {
-      TAMMY_SBR_EVIDENCE_DIR: sbrOutputDirectory,
-    });
-    if (actualSbrTarget === "darwin/arm64") {
-      assert.notEqual(registration.code, 0);
-      const report = JSON.parse(registration.stdout);
-      assert.equal(report.status, "BLOCKED");
-      assert.equal(report.code, "EVTE_SIGNED_INPUTS_REQUIRED");
-      assert.equal(
-        registration.stderr,
-        'task: [sbr:run-registration-check] mise exec -- node scripts/check-sbr-registration.mjs\ntask: Failed to run task "sbr:registration:check": task: Failed to run task "sbr:run-registration-check": exit status 1\n',
-      );
-    } else {
-      assert.notEqual(registration.code, 0);
-      assert.match(
-        `${registration.stdout}${registration.stderr}`,
-        new RegExp(`UNSUPPORTED_SBR_TARGET:${actualSbrTarget}`),
-      );
+    for (const githubActions of ["", "true"]) {
+      const registration = await runTask("sbr:registration:check", {
+        GITHUB_ACTIONS: githubActions,
+        TAMMY_SBR_EVIDENCE_DIR: sbrOutputDirectory,
+      });
+      if (actualSbrTarget === "darwin/arm64") {
+        assert.notEqual(registration.code, 0);
+        let reportText = stripVTControlCharacters(registration.stdout);
+        if (githubActions === "true") {
+          const annotation =
+            "::error title=Task 'sbr:registration:check' failed::task: Failed to run task \"sbr:run-registration-check\": exit status 1\n";
+          assert.equal(
+            reportText.endsWith(annotation),
+            true,
+            "Task retains the exact expected failure annotation",
+          );
+          reportText = reportText.slice(0, -annotation.length);
+        }
+        const report = JSON.parse(reportText);
+        assert.equal(report.status, "BLOCKED");
+        assert.equal(report.code, "EVTE_SIGNED_INPUTS_REQUIRED");
+        assert.equal(
+          stripVTControlCharacters(registration.stderr),
+          'task: [sbr:run-registration-check] mise exec -- node scripts/check-sbr-registration.mjs\ntask: Failed to run task "sbr:registration:check": task: Failed to run task "sbr:run-registration-check": exit status 1\n',
+        );
+      } else {
+        assert.notEqual(registration.code, 0);
+        assert.match(
+          `${registration.stdout}${registration.stderr}`,
+          new RegExp(`UNSUPPORTED_SBR_TARGET:${actualSbrTarget}`),
+        );
+      }
     }
 
     const evte = await runTask("dev:sbr:evte", {
@@ -1465,6 +1517,7 @@ test("local Task front door preserves the safe development contract", async () =
   ]);
   assert.deepEqual(shellCommands(ciTasks.macos), [
     ...ciBaseCommands,
+    "node --test scripts/*.test.mjs",
     "TAMMY_SQLCIPHER_REPRODUCIBILITY=1 pnpm sqlcipher:test",
     "go test -race -tags tammy_sqlcipher ./services/core/internal/storage/sqlcipher/... -count=1",
     "pnpm desktop:e2e:dev",

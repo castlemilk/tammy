@@ -1,8 +1,8 @@
-import { type FormEvent, useEffect, useState } from "react";
+import { type FormEvent, type ReactNode, useEffect, useRef, useState } from "react";
 
 import type { InvoiceAccountingRecord } from "../../../shared/invoice-accounting";
+import { HorizontalScrollArea } from "../../components/horizontal-scroll-area";
 import { Button } from "../../components/ui/button";
-import { SurfaceHeading } from "../../components/workspace-primitives";
 import { invoiceFieldClass } from "./invoice-line-table";
 
 export interface InvoiceAccountingApi {
@@ -31,6 +31,8 @@ export function InvoiceAccountingPanel({
   issueDate,
   incomeMinor,
   gstMinor,
+  onBusyChange,
+  items,
 }: {
   readonly api: InvoiceAccountingApi;
   readonly invoiceId: string;
@@ -38,7 +40,15 @@ export function InvoiceAccountingPanel({
   readonly issueDate: string;
   readonly incomeMinor: number;
   readonly gstMinor: number;
+  readonly onBusyChange?: (busy: boolean) => void;
+  readonly items?: (accounting: InvoiceAccountingRecord | undefined) => ReactNode;
 }) {
+  const [view, setView] = useState<"items" | "payments">(items ? "items" : "payments");
+  const recordRef = useRef<HTMLButtonElement>(null);
+  const dateRef = useRef<HTMLInputElement>(null);
+  const errorRef = useRef<HTMLParagraphElement>(null);
+  const paymentHeadingRef = useRef<HTMLHeadingElement>(null);
+  const wasPaymentOpen = useRef(false);
   const [accounting, setAccounting] = useState<InvoiceAccountingRecord>();
   const [loading, setLoading] = useState(true);
   const [attempt, setAttempt] = useState(0);
@@ -56,6 +66,21 @@ export function InvoiceAccountingPanel({
     [],
   );
   const [banksLoading, setBanksLoading] = useState(false);
+
+  useEffect(() => {
+    onBusyChange?.(busy);
+    return () => onBusyChange?.(false);
+  }, [busy, onBusyChange]);
+
+  useEffect(() => {
+    if (paymentOpen) dateRef.current?.focus();
+    else if (wasPaymentOpen.current) (recordRef.current ?? paymentHeadingRef.current)?.focus();
+    wasPaymentOpen.current = paymentOpen;
+  }, [paymentOpen]);
+
+  useEffect(() => {
+    if (error) errorRef.current?.focus();
+  }, [error]);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: The retry counter reloads failed accounting reads.
   useEffect(() => {
@@ -168,201 +193,256 @@ export function InvoiceAccountingPanel({
 
   return (
     <section
-      className="work-surface grid gap-4 overflow-hidden pb-5"
+      className="grid min-w-0 gap-5"
       aria-label="Invoice accounting"
       aria-busy={loading || busy}
     >
-      <SurfaceHeading
-        title="Income &amp; payments"
-        description="Posted revenue, tax and receipt history for this invoice."
-        action={
-          <Button
-            className="h-11 text-[13px]"
-            disabled={busy || loading}
-            onClick={() => setAttempt((value) => value + 1)}
-            type="button"
-            variant="ghost"
-          >
-            Refresh accounting
-          </Button>
-        }
-      />
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border">
+        {items ? (
+          <fieldset className="flex min-w-0 gap-5" aria-label="Invoice view">
+            {(["items", "payments"] as const).map((value) => (
+              <button
+                aria-pressed={view === value}
+                className={`focus-ring min-h-11 rounded-t-lg border-b-2 px-1 text-[13px] font-medium transition-colors disabled:opacity-50 ${view === value ? "border-b-[var(--forest)] text-forest" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+                disabled={busy}
+                key={value}
+                onClick={() => setView(value)}
+                type="button"
+              >
+                {value === "items" ? "Items" : "Payments"}
+              </button>
+            ))}
+          </fieldset>
+        ) : (
+          <h2 className="py-3 text-[16px] font-semibold">Income &amp; payments</h2>
+        )}
+        <Button
+          className="h-11 text-[12px]"
+          disabled={busy || loading}
+          onClick={() => setAttempt((value) => value + 1)}
+          type="button"
+          variant="ghost"
+        >
+          Refresh accounting
+        </Button>
+      </div>
       {loading ? (
-        <p className="px-5 text-[13px] text-muted-foreground">Loading invoice accounting…</p>
+        <p className="text-[13px] text-muted-foreground">Loading invoice accounting…</p>
       ) : null}
       {error ? (
-        <p className="px-5 text-[13px] text-destructive" role="alert">
+        <p
+          className="focus-ring rounded-lg text-[13px] text-destructive"
+          ref={errorRef}
+          tabIndex={-1}
+          role="alert"
+        >
           {error}
         </p>
       ) : null}
       {notice ? (
-        <p className="px-5 text-[13px] text-forest" role="status">
+        <p className="text-[13px] text-forest" role="status">
           {notice}
         </p>
       ) : null}
+      {view === "items" && items ? items(accounting) : null}
       {accounting?.posted ? (
         <>
-          <p className="px-5 text-[12px] text-muted-foreground">
+          <p className="text-[12px] text-muted-foreground">
             {accounting.gstBasis === "cash"
               ? "Cash basis · GST follows recorded payments"
               : accounting.gstBasis === "non-cash"
                 ? "Non-cash basis · GST recorded on issue"
                 : "GST basis unavailable"}
           </p>
-          <dl className="grid grid-cols-4 gap-4 px-5 max-[760px]:grid-cols-2 max-[460px]:grid-cols-1">
-            <Metric label="Income (ex GST)" minor={incomeMinor} testId="posted-invoice-income" />
-            <Metric label="Invoice GST" minor={gstMinor} />
-            <Metric label="Received" minor={accounting.receivedMinor} testId="invoice-received" />
-            <Metric
-              label="Outstanding"
-              minor={accounting.outstandingMinor}
-              testId="invoice-outstanding"
-            />
-          </dl>
-          <p className="px-5 text-[12px] leading-5 text-muted-foreground">
-            Income is in the business ledger. Recording a receipt updates the bank and balance
-            owing; it does not add income again.
-          </p>
-          {!paymentOpen && accounting.outstandingMinor > 0 ? (
-            <Button
-              className="mx-5 h-11 justify-self-start text-[13px]"
-              disabled={busy}
-              onClick={openPayment}
-              type="button"
-              variant="outline"
-            >
-              Record payment
-            </Button>
-          ) : null}
-          {accounting.outstandingMinor === 0 ? (
-            <p className="px-5 text-[13px] font-medium text-forest">No outstanding balance.</p>
-          ) : null}
-          {paymentOpen ? (
-            <form
-              className="grid gap-4 border-t border-border p-5"
-              noValidate
-              onSubmit={savePayment}
-            >
-              <div className="grid grid-cols-2 gap-3 max-[620px]:grid-cols-1">
-                <label className="grid gap-1.5 text-[12px] font-semibold">
-                  Payment date
-                  <input
-                    className={invoiceFieldClass}
-                    disabled={busy}
-                    min={issueDate}
-                    onChange={(event) => setDate(event.target.value)}
-                    type="date"
-                    value={date}
-                  />
-                </label>
-                <label className="grid gap-1.5 text-[12px] font-semibold">
-                  Amount received (AUD)
-                  <input
-                    className={invoiceFieldClass}
-                    disabled={busy}
-                    inputMode="decimal"
-                    onChange={(event) => setAmount(event.target.value)}
-                    value={amount}
-                  />
-                </label>
-                <label className="grid gap-1.5 text-[12px] font-semibold">
-                  Bank account
-                  <select
-                    className={invoiceFieldClass}
-                    disabled={busy || banksLoading}
-                    onChange={(event) => setBankAccountId(event.target.value)}
-                    value={bankAccountId}
-                  >
-                    <option value="">
-                      {banksLoading ? "Loading bank accounts…" : "Choose a bank account"}
-                    </option>
-                    {banks.map((bank) => (
-                      <option key={bank.id} value={bank.id}>
-                        {bank.code} · {bank.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="grid gap-1.5 text-[12px] font-semibold">
-                  Payment reference (optional)
-                  <input
-                    className={invoiceFieldClass}
-                    disabled={busy}
-                    maxLength={200}
-                    onChange={(event) => setReference(event.target.value)}
-                    value={reference}
-                  />
-                </label>
-              </div>
-              {!banksLoading && banks.length === 0 ? (
-                <p className="text-[12px] leading-5 text-muted-foreground">
-                  No active cash or bank account is available. Review the chart of accounts before
-                  recording this receipt.
-                </p>
-              ) : null}
-              <p className="text-[12px] text-muted-foreground">
-                Record money actually received. This saves a local accounting receipt.
-              </p>
-              <div className="flex gap-2">
-                <Button
-                  className="h-11 text-[13px]"
-                  disabled={busy || banksLoading || banks.length === 0}
-                  type="submit"
+          <div
+            className={view === "payments" ? "grid min-w-0 gap-5" : "hidden"}
+            hidden={view !== "payments"}
+          >
+            <dl className="grid grid-cols-3 gap-3 max-[620px]:grid-cols-1">
+              <Metric label="Invoice total (AUD)" minor={incomeMinor + gstMinor} />
+              <Metric
+                label="Received"
+                minor={accounting.receivedMinor}
+                testId={view === "payments" ? "invoice-received" : undefined}
+              />
+              <Metric
+                label="Outstanding"
+                minor={accounting.outstandingMinor}
+                testId={view === "payments" ? "invoice-outstanding" : undefined}
+                highlight
+              />
+            </dl>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h2
+                  className="focus-ring w-fit rounded-lg text-[16px] font-semibold"
+                  ref={paymentHeadingRef}
+                  tabIndex={-1}
                 >
-                  {busy ? "Saving…" : "Save payment"}
-                </Button>
+                  Payments received
+                </h2>
+                <p className="mt-1 text-[13px] text-muted-foreground">
+                  Record money actually received against this invoice.
+                </p>
+              </div>
+              {!paymentOpen && accounting.outstandingMinor > 0 ? (
                 <Button
                   className="h-11 text-[13px]"
+                  ref={recordRef}
                   disabled={busy}
-                  onClick={() => setPaymentOpen(false)}
+                  onClick={openPayment}
                   type="button"
-                  variant="outline"
                 >
-                  Cancel payment
+                  Record payment
                 </Button>
-              </div>
-            </form>
-          ) : null}
-          {accounting.payments.length ? (
-            <div className="overflow-x-auto">
-              <table
-                aria-label="Recorded invoice payments"
-                className="w-full border-collapse text-left text-[12px]"
-              >
-                <thead>
-                  <tr className="border-b border-border text-muted-foreground">
-                    <th className="py-2 pr-3">Date</th>
-                    <th className="py-2 pr-3">Reference</th>
-                    <th className="py-2 text-right">Received</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {accounting.payments.map((payment) => (
-                    <tr className="border-b border-border last:border-0" key={payment.id}>
-                      <td className="py-2 pr-3">{payment.paymentDate}</td>
-                      <td className="py-2 pr-3">{payment.reference || "—"}</td>
-                      <td className="py-2 text-right">{money(payment.amountMinor)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              {accounting.paymentCount > accounting.payments.length ? (
-                <p className="mt-2 text-[12px] text-muted-foreground">
-                  Showing {accounting.payments.length} of {accounting.paymentCount} receipts. Totals
-                  include every receipt.
-                </p>
               ) : null}
             </div>
-          ) : null}
+            {accounting.outstandingMinor === 0 ? (
+              <p className="text-[13px] font-medium text-forest">No outstanding balance.</p>
+            ) : null}
+            {accounting.payments.length ? (
+              <HorizontalScrollArea
+                label="Scrollable recorded invoice payments"
+                className="min-w-0"
+              >
+                <table
+                  aria-label="Recorded invoice payments"
+                  className="w-full min-w-[520px] border-collapse text-left text-[14px]"
+                >
+                  <thead>
+                    <tr className="border-b border-border text-muted-foreground">
+                      <th className="py-2 pr-3">Date</th>
+                      <th className="py-2 pr-3">Reference</th>
+                      <th className="py-2 text-right">Received</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {accounting.payments.map((payment) => (
+                      <tr className="border-b border-border last:border-0" key={payment.id}>
+                        <td className="py-2 pr-3">{payment.paymentDate}</td>
+                        <td className="py-2 pr-3">{payment.reference || "—"}</td>
+                        <td className="whitespace-nowrap py-2 text-right tabular-nums">
+                          {money(payment.amountMinor)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {accounting.paymentCount > accounting.payments.length ? (
+                  <p className="mt-2 text-[12px] text-muted-foreground">
+                    Showing {accounting.payments.length} of {accounting.paymentCount} receipts.
+                    Totals include every receipt.
+                  </p>
+                ) : null}
+              </HorizontalScrollArea>
+            ) : (
+              <p className="border-b border-border py-4 text-[13px] text-muted-foreground">
+                No receipts recorded for this invoice.
+              </p>
+            )}
+            {paymentOpen ? (
+              <form
+                className="grid gap-4 rounded-xl bg-background p-4"
+                aria-label="Review payment"
+                noValidate
+                onSubmit={savePayment}
+              >
+                <h3 className="text-[14px] font-semibold">Review payment</h3>
+                <div className="grid grid-cols-2 gap-3 max-[620px]:grid-cols-1">
+                  <label className="grid gap-1.5 text-[12px] font-semibold">
+                    Payment date
+                    <input
+                      className={invoiceFieldClass}
+                      disabled={busy}
+                      ref={dateRef}
+                      min={issueDate}
+                      onChange={(event) => setDate(event.target.value)}
+                      type="date"
+                      value={date}
+                    />
+                  </label>
+                  <label className="grid gap-1.5 text-[12px] font-semibold">
+                    Amount received (AUD)
+                    <input
+                      className={invoiceFieldClass}
+                      disabled={busy}
+                      inputMode="decimal"
+                      onChange={(event) => setAmount(event.target.value)}
+                      value={amount}
+                    />
+                  </label>
+                  <label className="grid gap-1.5 text-[12px] font-semibold">
+                    Bank account
+                    <select
+                      className={invoiceFieldClass}
+                      disabled={busy || banksLoading}
+                      onChange={(event) => setBankAccountId(event.target.value)}
+                      value={bankAccountId}
+                    >
+                      <option value="">
+                        {banksLoading ? "Loading bank accounts…" : "Choose a bank account"}
+                      </option>
+                      {banks.map((bank) => (
+                        <option key={bank.id} value={bank.id}>
+                          {bank.code} · {bank.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="grid gap-1.5 text-[12px] font-semibold">
+                    Payment reference (optional)
+                    <input
+                      className={invoiceFieldClass}
+                      disabled={busy}
+                      maxLength={200}
+                      onChange={(event) => setReference(event.target.value)}
+                      value={reference}
+                    />
+                  </label>
+                </div>
+                {!banksLoading && banks.length === 0 ? (
+                  <p className="text-[12px] leading-5 text-muted-foreground">
+                    No active cash or bank account is available. Review the chart of accounts before
+                    recording this receipt.
+                  </p>
+                ) : null}
+                <p className="text-[12px] text-muted-foreground">
+                  Record money actually received. This saves a local accounting receipt.
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    className="h-11 text-[13px]"
+                    disabled={busy || banksLoading || banks.length === 0}
+                    type="submit"
+                  >
+                    {busy ? "Saving…" : "Save payment"}
+                  </Button>
+                  <Button
+                    className="h-11 text-[13px]"
+                    disabled={busy}
+                    onClick={() => setPaymentOpen(false)}
+                    type="button"
+                    variant="outline"
+                  >
+                    Cancel payment
+                  </Button>
+                </div>
+              </form>
+            ) : null}
+            <p className="text-[12px] leading-5 text-muted-foreground">
+              Income is in the business ledger. A receipt updates the bank and balance owing; it
+              does not add income again.
+            </p>
+          </div>
         </>
       ) : accounting ? (
         <>
-          <p className="px-5 text-[15px] font-semibold">Issued invoice needs accounting review</p>
-          <p className="px-5 text-[13px] leading-6 text-muted-foreground">
+          <p className="text-[15px] font-semibold">Issued invoice needs accounting review</p>
+          <p className="text-[13px] leading-6 text-muted-foreground">
             Older issued invoices have no automatic income entry. Check for an existing manual entry
             before adding this invoice to avoid recording the sale twice.
           </p>
-          <label className="mx-5 flex items-start gap-2 text-[13px]">
+          <label className="flex items-start gap-2 text-[13px]">
             <input
               checked={reviewed}
               disabled={busy}
@@ -372,7 +452,7 @@ export function InvoiceAccountingPanel({
             I checked this invoice has not already been entered manually.
           </label>
           <Button
-            className="mx-5 h-11 justify-self-start text-[13px]"
+            className="h-11 justify-self-start text-[13px]"
             disabled={!reviewed || busy}
             onClick={post}
             type="button"
@@ -389,15 +469,20 @@ function Metric({
   label,
   minor,
   testId,
+  highlight,
 }: {
   readonly label: string;
   readonly minor: number;
-  readonly testId?: string;
+  readonly testId?: string | undefined;
+  readonly highlight?: boolean;
 }) {
   return (
-    <div data-testid={testId}>
+    <div
+      data-testid={testId}
+      className={`min-w-0 rounded-xl border border-border px-4 py-3 ${highlight ? "bg-warning-soft" : "bg-surface"}`}
+    >
       <dt className="text-[12px] text-muted-foreground">{label}</dt>
-      <dd className="mt-1 text-[14px] font-semibold">{money(minor)}</dd>
+      <dd className="mt-1 break-words text-[20px] font-semibold tabular-nums">{money(minor)}</dd>
     </div>
   );
 }

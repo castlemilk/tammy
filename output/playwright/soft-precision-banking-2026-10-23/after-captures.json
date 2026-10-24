@@ -1,0 +1,114 @@
+{
+  "schemaVersion": 1,
+  "phase": "after",
+  "runtime": {
+    "sourceRevision": "220c5d77c607d67057922db09870c90fb1d797c5",
+    "sourceDirty": false,
+    "releaseKind": "ordinary-package",
+    "target": "darwin-arm64",
+    "appSha256": "03e2efdb83505df8d4133fa4080c6e0e92d99be051e7f1dd3e58c1ce98487a10",
+    "coreSha256": "078811e551eb5cd0c5f505e3282d82bc8f50be578c12a9d92e7bafb70d67562c",
+    "manifestSha256": "7121ae72b54d67babd2bfe6640cb9f84e55a530e38466f98c76ccdbceb6fbb2b"
+  },
+  "harnessSourceRevision": "220c5d77c607d67057922db09870c90fb1d797c5",
+  "nativeTestSeconds": 11.7,
+  "runnerSeconds": 12.4,
+  "connectedTestSeconds": 14,
+  "connectedRunnerSeconds": 14.7,
+  "retries": 0,
+  "consoleErrors": 0,
+  "pageErrors": 0,
+  "layoutMeasurements": "after/measurements-1440.json",
+  "frames": [
+    {
+      "file": "after/01-import-error.png",
+      "sha256": "58e1fb35dd94ffd531e2b115bc0ccfa70e0ec9391cf956bcf70ab795db2c3078",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "file": "after/02-import-review.png",
+      "sha256": "9975f0f6482805e2bed164183048bdeb1159f2a7872762ac094609c3b8349b3f",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "file": "after/03-statement-list.png",
+      "sha256": "d21dcc2059aa40332ca080302427bc15bc664b39fa6c12a8bb62334a4ea49b0f",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "file": "after/04-selected-match.png",
+      "sha256": "23e42263f18eb884c3ee52867d88eea65e65bbe9871a016efcfca3d5a9b68efd",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "file": "after/05-match-detail.png",
+      "sha256": "23e42263f18eb884c3ee52867d88eea65e65bbe9871a016efcfca3d5a9b68efd",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "file": "after/06-statement-320.png",
+      "sha256": "649241fb1b96e149436e32b36bac1bfed2f42a6302c6a15ab1c76eb770d29f67",
+      "width": 320,
+      "height": 1000
+    },
+    {
+      "file": "after/06-statement-390.png",
+      "sha256": "1bf825f493fddebe52c3d08af10304aebd5bfc4c6606515628a26e5b63b943d8",
+      "width": 390,
+      "height": 1000
+    },
+    {
+      "file": "after/06-statement-900.png",
+      "sha256": "4ec12d38dda2eb61e3c30b3ff8d0a217fe7fa2aaa898d7c0ca36b41846e6c9ae",
+      "width": 900,
+      "height": 1000
+    },
+    {
+      "file": "after/07-match-focus-320.png",
+      "sha256": "aa4eb208abd4d54065e62a3f699c451fed59362fd7ea7772f149182257cd140b",
+      "width": 320,
+      "height": 1000
+    },
+    {
+      "file": "after/07-match-focus-390.png",
+      "sha256": "38f72ee40bc2edd4831dca39047b4f110c1e03a6d7f449b7ca7d86ef08076ebe",
+      "width": 390,
+      "height": 1000
+    },
+    {
+      "file": "after/07-match-focus-900.png",
+      "sha256": "ce9c153639a9e316fb86b15bdc53c87d61bf58f74f00e18903913c8110434241",
+      "width": 900,
+      "height": 1000
+    },
+    {
+      "file": "after/08-match-confirmed.png",
+      "sha256": "a4be0fbb815feb961594d7ade4a7f100bc7732f8c1e79764225ede37cba399f0",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "file": "after/09-search-empty.png",
+      "sha256": "5be3c129d1a7c78b8e3582aeb377282ccf0cdbcc806afbec8d963ed229070579",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "file": "after/10-ready-to-reconcile.png",
+      "sha256": "75d85de757dbf017c54d5f3ca0453df3a076a9391aeb0e72d4ec0879996706d6",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "file": "after/11-reconciled.png",
+      "sha256": "e76081e2c2928ad73c4bca85c966dcd85aab17053b5bcc4b1bf05f81e766e24d",
+      "width": 1440,
+      "height": 1100
+    }
+  ]
+}

@@ -190,6 +190,7 @@ it("opens older invoices across pages and reads the full bounded Unicode payment
     expect.stringContaining("$2.01"),
   );
   expect(screen.getByTestId("invoice-outstanding").textContent).toContain("$107.99");
+  await userEvent.click(screen.getByRole("button", { name: "Payments" }));
   expect(screen.getByText(/Showing 200 of 201 receipts/)).toBeTruthy();
   expect(
     within(screen.getByRole("table", { name: "Recorded invoice payments" })).getAllByRole("row"),
@@ -259,6 +260,7 @@ it("loads and saves company defaults with organisation, authentication and optim
     },
   } as unknown as TammyConveyor;
   render(<ConnectedInvoicesScreen conveyor={conveyor} workspace={workspace} />);
+  await userEvent.click(screen.getByRole("button", { name: "New invoice" }));
   await waitFor(() => expect(calls.reads).toBe(1));
   await userEvent.click(screen.getByRole("button", { name: "Manage invoice template" }));
   const panel = screen.getByRole("region", { name: "Company invoice template" });
@@ -360,6 +362,7 @@ it("uploads local logo bytes, fetches the saved asset and explicitly removes inv
     },
   } as unknown as TammyConveyor;
   render(<ConnectedInvoicesScreen conveyor={conveyor} workspace={workspace} />);
+  await userEvent.click(screen.getByRole("button", { name: "New invoice" }));
   await userEvent.click(screen.getByRole("button", { name: "Manage invoice template" }));
   const panel = screen.getByRole("region", { name: "Company invoice template" });
   await waitFor(() =>

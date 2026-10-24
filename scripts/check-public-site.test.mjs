@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtemp, readdir, readFile, rm, symlink, writeFile } from "node:fs/promises";
+import { mkdtemp, readdir, readFile, realpath, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -370,7 +370,7 @@ test("validates the strict public Sites deployment record", () => {
 
 test("first deployment is immutable and creates no rollback event", async (context) => {
   const recordsRoot = await mkdtemp(
-    path.join(process.env.TMPDIR ?? os.tmpdir(), "tammy-public-site-records-"),
+    path.join(await realpath(process.env.TMPDIR ?? os.tmpdir()), "tammy-public-site-records-"),
   );
   context.after(() => rm(recordsRoot, { recursive: true, force: true }));
   const record = deployment();
@@ -388,7 +388,7 @@ test("first deployment is immutable and creates no rollback event", async (conte
 
 test("rollback event requires a distinct existing prior passing deployment", async (context) => {
   const recordsRoot = await mkdtemp(
-    path.join(process.env.TMPDIR ?? os.tmpdir(), "tammy-public-site-rollback-"),
+    path.join(await realpath(process.env.TMPDIR ?? os.tmpdir()), "tammy-public-site-rollback-"),
   );
   context.after(() => rm(recordsRoot, { recursive: true, force: true }));
   const prior = deployment({
@@ -434,10 +434,16 @@ test("rollback event requires a distinct existing prior passing deployment", asy
 
 test("deployment evidence rejects a symlinked deployments directory", async (context) => {
   const recordsRoot = await mkdtemp(
-    path.join(process.env.TMPDIR ?? os.tmpdir(), "tammy-public-site-deployment-link-"),
+    path.join(
+      await realpath(process.env.TMPDIR ?? os.tmpdir()),
+      "tammy-public-site-deployment-link-",
+    ),
   );
   const outside = await mkdtemp(
-    path.join(process.env.TMPDIR ?? os.tmpdir(), "tammy-public-site-deployment-outside-"),
+    path.join(
+      await realpath(process.env.TMPDIR ?? os.tmpdir()),
+      "tammy-public-site-deployment-outside-",
+    ),
   );
   context.after(() =>
     Promise.all([
@@ -456,11 +462,14 @@ test("deployment evidence rejects a symlinked deployments directory", async (con
 
 test("current pointer rejects a pre-existing symbolic link", async (context) => {
   const recordsRoot = await mkdtemp(
-    path.join(process.env.TMPDIR ?? os.tmpdir(), "tammy-public-site-pointer-link-"),
+    path.join(await realpath(process.env.TMPDIR ?? os.tmpdir()), "tammy-public-site-pointer-link-"),
   );
   const outside = path.join(
     await mkdtemp(
-      path.join(process.env.TMPDIR ?? os.tmpdir(), "tammy-public-site-pointer-outside-"),
+      path.join(
+        await realpath(process.env.TMPDIR ?? os.tmpdir()),
+        "tammy-public-site-pointer-outside-",
+      ),
     ),
     "outside.json",
   );
@@ -484,10 +493,13 @@ test("current pointer rejects a pre-existing symbolic link", async (context) => 
 
 test("rollback evidence rejects a symlinked events directory", async (context) => {
   const recordsRoot = await mkdtemp(
-    path.join(process.env.TMPDIR ?? os.tmpdir(), "tammy-public-site-event-link-"),
+    path.join(await realpath(process.env.TMPDIR ?? os.tmpdir()), "tammy-public-site-event-link-"),
   );
   const outside = await mkdtemp(
-    path.join(process.env.TMPDIR ?? os.tmpdir(), "tammy-public-site-event-outside-"),
+    path.join(
+      await realpath(process.env.TMPDIR ?? os.tmpdir()),
+      "tammy-public-site-event-outside-",
+    ),
   );
   context.after(() =>
     Promise.all([

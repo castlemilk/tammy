@@ -16,8 +16,9 @@ export function AppShell({
   onNavigate,
   organisationDisplayName,
 }: AppShellProps) {
+  const navigationPath = activePath.split("?", 1)[0] ?? activePath;
   const current = PRIMARY_NAVIGATION.find(
-    (item) => activePath === item.href || activePath.startsWith(`${item.href}/`),
+    (item) => navigationPath === item.href || navigationPath.startsWith(`${item.href}/`),
   );
   return (
     <div className="grid min-h-dvh grid-cols-[216px_minmax(0,1fr)] bg-background max-[900px]:grid-cols-[64px_minmax(0,1fr)]">
@@ -29,7 +30,7 @@ export function AppShell({
       </a>
       <aside className="sticky top-0 flex h-dvh flex-col border-r border-border bg-surface">
         <div className="flex h-20 shrink-0 items-center gap-2 px-6 max-[900px]:justify-center max-[900px]:px-2">
-          <span className="font-serif text-[36px] font-bold tracking-[-0.04em] text-foreground max-[900px]:hidden">
+          <span className="font-serif text-[36px] font-bold tracking-[-0.04em] text-forest max-[900px]:hidden">
             tammy
           </span>
           <Leaf
@@ -51,7 +52,7 @@ export function AppShell({
           </p>
         </div>
       </aside>
-      <div className="min-w-0">
+      <div className={`min-w-0 ${activePath === "/invoices" ? "bg-surface" : ""}`}>
         <header className="flex min-h-16 flex-wrap items-center justify-between gap-2 border-b border-border px-8 py-3 max-[700px]:px-4 [-webkit-app-region:drag]">
           <div className="flex items-center gap-2 text-[12px] font-medium text-muted-foreground">
             <span className="max-w-[240px] truncate" title={organisationDisplayName}>

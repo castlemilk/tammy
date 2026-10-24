@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en-AU">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Tammy Chart · board 09 comparison</title>
+    <style>
+      :root { color-scheme: light; color: #302a25; background: #f7f3ea; font-family: system-ui, sans-serif; }
+      body { margin: 0; padding: 32px; }
+      main { max-width: 1800px; margin: auto; }
+      h1, h2 { font-family: Georgia, serif; font-weight: 500; }
+      h1 { font-size: 36px; }
+      h2 { margin-top: 36px; }
+      p, figcaption { line-height: 1.6; }
+      a { color: #235c4b; text-underline-offset: 3px; }
+      a:focus-visible { outline: 2px solid #235c4b; outline-offset: 3px; }
+      .panels { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
+      .pair { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      figure { margin: 0; padding: 12px; background: #fffcf6; border: 1px solid #dcd3c5; border-radius: 20px; }
+      img { display: block; width: 100%; height: auto; }
+      figcaption { padding: 12px 4px 4px; font-size: 14px; }
+      .narrow img { max-width: 390px; margin: auto; }
+      @media (max-width: 1000px) { body { padding: 16px; } .panels { grid-template-columns: 1fr; } }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Chart of accounts · Soft Precision board 09</h1>
+      <p>One implemented screen, compared with the approved reference. Real before and after use the same isolated synthetic records and viewport. The board is an unchanged generated concept, with different example data; it is not app evidence or exact visual parity.</p>
+      <p>Final app: <code>9bf430a7</code>. Clean native harness: <code>4f202e73</code>. <a href="README.md">Journey, provenance, failed attempt and qualification limits</a>.</p>
+      <section aria-labelledby="installed">
+        <h2 id="installed">Matched installed chart · 14 accounts · 1440 × 1100</h2>
+        <div class="panels">
+          <figure><a href="before/01-installed-chart.png"><img src="before/01-installed-chart.png" alt="Real baseline Chart with a flat list and green Active labels" /></a><figcaption>Before: ungrouped rows; protection is not displayed. <a href="before/01-installed-chart.png">Open original size</a>.</figcaption></figure>
+          <figure><a href="reference/09-accounting-core.png"><img src="reference/09-accounting-core.png" alt="Approved generated board 09, with the Chart concept at upper left" /></a><figcaption>Reference: board 09, unchanged 1536 × 1024 concept sheet. <a href="reference/09-accounting-core.png">Open reference</a>.</figcaption></figure>
+          <figure><a href="after/01-installed-chart.png"><img src="after/01-installed-chart.png" alt="Real corrected Chart with grouped rows and distinct protected Control and System labels" /></a><figcaption>After: compact hierarchy, loaded-record search, explicit protection and separate lifecycle. <a href="after/01-installed-chart.png">Open original size</a>.</figcaption></figure>
+        </div>
+      </section>
+      <section aria-labelledby="seeded">
+        <h2 id="seeded">Same four UI-created accounts added · 18 loaded records</h2>
+        <div class="panels pair">
+          <figure><a href="before/02-grouped-chart.png"><img src="before/02-grouped-chart.png" alt="Baseline with 18 synthetic accounts after four ordinary account creations" /></a><figcaption>Before: the file name identifies the comparison point; these pixels remain ungrouped.</figcaption></figure>
+          <figure><a href="after/02-grouped-chart.png"><img src="after/02-grouped-chart.png" alt="Corrected grouped 18-account chart with compact saved confirmation beside Add account" /></a><figcaption>After: all desktop fixture rows measure 36px; group controls remain 44px. Additional records continue below the viewport.</figcaption></figure>
+        </div>
+      </section>
+      <section aria-labelledby="creation">
+        <h2 id="creation">Ordinary-account creation · same inputs and viewport</h2>
+        <div class="panels pair">
+          <figure><a href="before/06-ordinary-account-entry.png"><img src="before/06-ordinary-account-entry.png" alt="Original ordinary account form with code 6300 and synthetic studio insurance" /></a><figcaption>Before: existing ordinary account fields and Save contract.</figcaption></figure>
+          <figure><a href="after/06-ordinary-account-entry.png"><img src="after/06-ordinary-account-entry.png" alt="Corrected ordinary account form preserving the same code, name and Expense type" /></a><figcaption>After: explicit ordinary ownership, retained native constraints and forest Save action. <a href="after/09b-new-ordinary-row.png">Confirmed new ordinary record</a>.</figcaption></figure>
+        </div>
+      </section>
+      <section aria-labelledby="keyboard">
+        <h2 id="keyboard">320px · actual Tab focus and keyboard horizontal scrolling</h2>
+        <div class="panels narrow">
+          <figure><a href="before/08-entry-focus-320.png"><img src="before/08-entry-focus-320.png" alt="Real baseline narrow form with keyboard focus on the synthetic account name" /></a><figcaption>Before form focus, 320 × 1000.</figcaption></figure>
+          <figure><a href="after/08-entry-focus-320.png"><img src="after/08-entry-focus-320.png" alt="Corrected narrow form with visible account name focus and reachable Save account" /></a><figcaption>After form focus, same values and viewport. Rejected input remains and correction clears previous feedback.</figcaption></figure>
+          <figure><a href="after/11-protection-focus-320.png"><img src="after/11-protection-focus-320.png" alt="Chart table scrolled by keyboard to complete protected labels with a visible inset forest focus border" /></a><figcaption>Actual keyboard movement reveals the complete protected label. Other columns remain available through horizontal scrolling.</figcaption></figure>
+        </div>
+      </section>
+      <p><a href="after/03-collapsed-assets.png">Keyboard group disclosure</a> · <a href="after/04-search.png">Local search</a> · <a href="after/05-no-results.png">No-match recovery</a> · <a href="after/07-rejected-duplicate.png">Actual duplicate-code rejection</a> · <a href="after/measurements-1440.json">Measured geometry</a>.</p>
+      <p>All prior and intermediate captures remain intact. Draft, merge and publication holds remain. This comparison does not qualify MAS, Windows 11 or official ATO use.</p>
+    </main>
+  </body>
+</html>

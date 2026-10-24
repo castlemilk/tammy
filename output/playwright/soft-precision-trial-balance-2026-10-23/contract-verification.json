@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "reviewBase": "3defba913949b77500ea4f6ed704fcc27a1d26fb",
+  "requestAndStateBlockByteIdentical": true,
+  "requestAndStateSHA256": "38758d595f0dc21f7575a52de6f41a6e2798ea1ee682a6d0534e085bdb051375",
+  "moneyFormatterByteIdentical": true,
+  "moneyFormatterSHA256": "99e357166b7b645286c9ebd339f020e1beb7133f714478c70beb9f245bf6de12",
+  "authoritativeServerOrderPreserved": true,
+  "noDatePickerOrExportAdded": true,
+  "focusedTestsPassed": 11,
+  "focusedFiles": 2,
+  "focusedSeconds": 1.7,
+  "focusedSkipped": 0,
+  "oldSourceRegression": {
+    "failed": 1,
+    "unselectedSkipped": 7,
+    "seconds": 1.1
+  },
+  "typecheck": "passed",
+  "configuredAudit": {
+    "findings": 19,
+    "samePriorRuleFileSet": true,
+    "newExclusions": 0
+  },
+  "native": {
+    "beforeSeconds": 10.1,
+    "afterSeconds": 10.5,
+    "connectedFirstRun": {
+      "workspaceSeconds": 13.3,
+      "invoicePurchaseBasSeconds": 19.7,
+      "invoicePurchaseBasStatus": "failed_old_date_copy_assertion",
+      "financialWorkspaceSeconds": 17.2,
+      "passed": 2,
+      "failed": 1,
+      "runnerSeconds": 51.5
+    },
+    "correctedCaseOnly": {
+      "passed": 1,
+      "seconds": 21.7,
+      "runnerSeconds": 22.6
+    },
+    "playwrightRetries": 0
+  },
+  "package": {
+    "passed": 7,
+    "skipped": 1,
+    "skipReason": "Windows-only signature check on darwin-arm64"
+  }
+}

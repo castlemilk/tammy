@@ -19,7 +19,7 @@ import {
   MoneySchema,
   PageInfoSchema,
 } from "@tammy/connect-client/tammy/v1/common_pb.js";
-import { screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { expect, it } from "vitest";
 
@@ -123,6 +123,36 @@ function fixture() {
   return fixture;
 }
 
+it("keeps the complete large balance in a named keyboard-accessible region", async () => {
+  const testFixture = fixture();
+  testFixture.procedures.banking.getBankingSummary.mockResolvedValue(
+    summaryCodec.encodeResponse(
+      create(GetBankingSummaryResponseSchema, {
+        importedLineCount: 1,
+        unmatchedLineCount: 1,
+        unreconciledLineCount: 1,
+        latestClosingBalance: create(MoneySchema, {
+          currencyCode: "AUD",
+          minorUnits: 9_000_000_000_000_000n,
+        }),
+      }),
+    ),
+  );
+  const user = userEvent.setup();
+  render(<BankingScreen api={testFixture.conveyor.banking} workspace={workspace} />);
+  const balance = await screen.findByRole("region", {
+    name: "Latest imported statement balance",
+  });
+  await within(balance).findByText("$90,000,000,000,000.00", { exact: true });
+  balance.focus();
+  expect(document.activeElement).toBe(balance);
+  await user.tab();
+  expect(document.activeElement).not.toBe(balance);
+  expect(testFixture.procedures.banking.importBankStatement).not.toHaveBeenCalled();
+  expect(testFixture.procedures.banking.matchBankStatementLine).not.toHaveBeenCalled();
+  expect(testFixture.procedures.banking.completeBankReconciliation).not.toHaveBeenCalled();
+});
+
 it("requires an explicit reviewed reference and keeps matching distinct from reconciliation", async () => {
   const testFixture = fixture();
   const user = userEvent.setup();
@@ -189,6 +219,83 @@ it("retains a failed match draft and reuses its command key on an unchanged retr
   expect(requests[0]?.commandContext?.idempotencyKey).toBe(
     requests[1]?.commandContext?.idempotencyKey,
   );
+});
+
+it("returns keyboard review to its row or retained search when Escape closes the panel", async () => {
+  const testFixture = fixture();
+  const user = userEvent.setup();
+  render(<BankingScreen api={testFixture.conveyor.banking} workspace={workspace} />);
+  const match = await screen.findByRole("button", { name: "Match" });
+  await user.click(match);
+  expect(match.getAttribute("aria-expanded")).toBe("true");
+  expect(match.getAttribute("aria-controls")).toBe("bank-match-review");
+  await user.type(screen.getByLabelText("Reviewed source reference"), "Unconfirmed reference");
+  await user.click(match);
+  expect((screen.getByLabelText("Reviewed source reference") as HTMLInputElement).value).toBe(
+    "Unconfirmed reference",
+  );
+  fireEvent.keyDown(screen.getByLabelText("Reviewed source reference"), {
+    key: "Escape",
+    isComposing: true,
+  });
+  expect(screen.getByRole("form", { name: "Match review" })).toBeTruthy();
+  await user.keyboard("{Escape}");
+  expect(screen.queryByRole("form", { name: "Match review" })).toBeNull();
+  expect(document.activeElement).toBe(match);
+  expect(match.getAttribute("aria-expanded")).toBe("false");
+  await user.click(match);
+  expect((screen.getByLabelText("Reviewed source reference") as HTMLInputElement).value).toBe("");
+  const search = screen.getByRole("searchbox", { name: "Search statement lines" });
+  await user.type(search, "No statement row matches");
+  expect(await screen.findByText("No matching statement lines")).toBeTruthy();
+  screen.getByLabelText("Reviewed source reference").focus();
+  await user.keyboard("{Escape}");
+  expect(document.activeElement).toBe(search);
+  expect((search as HTMLInputElement).value).toBe("No statement row matches");
+  expect(testFixture.procedures.banking.matchBankStatementLine).not.toHaveBeenCalled();
+});
+
+it("announces and focuses a confirmed match after its original row action disappears", async () => {
+  const testFixture = fixture();
+  const user = userEvent.setup();
+  render(<BankingScreen api={testFixture.conveyor.banking} workspace={workspace} />);
+  await user.click(await screen.findByRole("button", { name: "Match" }));
+  await user.type(screen.getByLabelText("Reviewed source reference"), "Reviewed synthetic receipt");
+  await user.click(screen.getByRole("button", { name: "Confirm match" }));
+  const confirmation = await screen.findByRole("region", { name: "Banking confirmation" });
+  expect(document.activeElement).toBe(confirmation);
+  expect(within(confirmation).getByRole("status").textContent).toContain(
+    "no accounting entry or payment was created",
+  );
+  expect(screen.queryByRole("form", { name: "Match review" })).toBeNull();
+  expect(
+    (screen.getByRole("button", { name: "Complete reconciliation" }) as HTMLButtonElement).disabled,
+  ).toBe(false);
+  expect(testFixture.procedures.banking.matchBankStatementLine).toHaveBeenCalledOnce();
+});
+
+it("closes import by keyboard with retained rows while explicit cancel clears the draft", async () => {
+  const testFixture = fixture();
+  const user = userEvent.setup();
+  render(<BankingScreen api={testFixture.conveyor.banking} workspace={workspace} />);
+  const open = await screen.findByRole("button", { name: "Import statement" });
+  await user.click(open);
+  await user.type(screen.getByLabelText("Opening balance · AUD"), "1000.00");
+  await user.type(
+    screen.getByRole("textbox", { name: "CSV rows" }),
+    "2024-05-12,Synthetic payment,10.00",
+  );
+  await user.keyboard("{Escape}");
+  const returned = await screen.findByRole("button", { name: "Import statement" });
+  await waitFor(() => expect(document.activeElement).toBe(returned));
+  await user.click(returned);
+  expect((screen.getByRole("textbox", { name: "CSV rows" }) as HTMLTextAreaElement).value).toBe(
+    "2024-05-12,Synthetic payment,10.00",
+  );
+  await user.click(screen.getByRole("button", { name: "Cancel import" }));
+  await user.click(await screen.findByRole("button", { name: "Import statement" }));
+  expect((screen.getByRole("textbox", { name: "CSV rows" }) as HTMLTextAreaElement).value).toBe("");
+  expect(testFixture.procedures.banking.importBankStatement).not.toHaveBeenCalled();
 });
 
 it("keeps a confirmed import separate from refresh failure and blocks another write", async () => {

@@ -1,21 +1,42 @@
-import type { ReactNode } from "react";
+import type { ReactNode, Ref } from "react";
 
 export function ScreenHeading({
   area,
   title,
   description,
   action,
+  variant = "display",
+  headingRef,
+  status,
 }: {
   readonly area: string;
   readonly title: string;
   readonly description: ReactNode;
   readonly action?: ReactNode;
+  readonly variant?: "display" | "workspace";
+  readonly headingRef?: Ref<HTMLHeadingElement>;
+  readonly status?: ReactNode;
 }) {
   return (
-    <header className="flex flex-wrap items-end justify-between gap-4">
+    <header
+      className={`flex flex-wrap ${status ? "items-start" : "items-end"} justify-between gap-4`}
+    >
       <div className="max-w-[720px]">
-        <p className="work-eyebrow mb-2">{area}</p>
-        <h1 className="page-title">{title}</h1>
+        <p className={variant === "workspace" ? "sr-only" : "work-eyebrow mb-2"}>{area}</p>
+        <div className="flex flex-wrap items-center gap-3">
+          <h1
+            className={
+              variant === "workspace"
+                ? "text-[26px] font-semibold leading-8 tracking-[-0.025em] outline-none"
+                : "page-title"
+            }
+            ref={headingRef}
+            tabIndex={-1}
+          >
+            {title}
+          </h1>
+          {status}
+        </div>
         <p className="mt-2 text-[14px] leading-6 text-muted-foreground">{description}</p>
       </div>
       {action ? <div className="flex flex-wrap items-center gap-2">{action}</div> : null}
@@ -28,14 +49,18 @@ export function SurfaceHeading({
   headingId,
   description,
   action,
+  density = "default",
 }: {
   readonly title: string;
   readonly headingId?: string;
   readonly description?: string;
   readonly action?: ReactNode;
+  readonly density?: "default" | "compact";
 }) {
   return (
-    <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border px-5 py-4">
+    <div
+      className={`flex flex-wrap justify-between gap-3 border-b border-border ${density === "compact" ? "items-center py-2" : "items-start px-5 py-4"}`}
+    >
       <div className="min-w-0">
         <h2 className="text-[16px] font-semibold leading-6 text-foreground" id={headingId}>
           {title}

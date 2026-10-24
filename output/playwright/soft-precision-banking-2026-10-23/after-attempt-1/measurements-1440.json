@@ -1,0 +1,22 @@
+{
+  "viewport": {
+    "width": 1440,
+    "height": 1100
+  },
+  "table": {
+    "x": 269,
+    "y": 340.1875,
+    "width": 762,
+    "height": 378.5
+  },
+  "review": {
+    "x": 1048,
+    "y": 213.1875,
+    "width": 340,
+    "height": 384
+  },
+  "rowHeights": [56, 57, 57, 57, 57, 56.5],
+  "minimumControlHeight": 44,
+  "primaryBackground": "rgb(35, 92, 75)",
+  "summary": ["$1,678.10", "5", "5"]
+}

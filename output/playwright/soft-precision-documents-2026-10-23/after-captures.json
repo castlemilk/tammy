@@ -1,0 +1,120 @@
+{
+  "syntheticOnly": true,
+  "runtimeSource": "8ce3a2cc94f831d3be1cfbcde745d3e7fe63bf53",
+  "runtimeSourceDirty": false,
+  "runtimeKind": "ordinary-package",
+  "appSha256": "12d0b9c1ae8c2dbf396263e695755dd2621fa24808d10e2791b6100424cef7d1",
+  "coreSha256": "078811e551eb5cd0c5f505e3282d82bc8f50be578c12a9d92e7bafb70d67562c",
+  "coreUnchangedFromBaseline": true,
+  "manifestSha256": "33390a2f0bf1c609c893e032edfb81bc4ed34d586e14bf08dda1259ea63cfca3",
+  "journey": {
+    "passed": 1,
+    "failed": 0,
+    "seconds": 11.6,
+    "testBodySeconds": 10.9,
+    "retries": 0,
+    "consoleErrors": 0,
+    "pageErrors": 0
+  },
+  "connectedInvoiceOverviewDocumentsJourney": {
+    "passed": 1,
+    "failed": 0,
+    "seconds": 14.6,
+    "testBodySeconds": 13.9,
+    "retries": 0
+  },
+  "frames": [
+    {
+      "path": "after/01-import-validation.png",
+      "sha256": "531cb54438a3a3345b952a2f5d2d8c5403198884b95c0b7301c9fc0699088826",
+      "bytes": 166070,
+      "viewport": [1440, 1100]
+    },
+    {
+      "path": "after/02-list-selected.png",
+      "sha256": "7d4e3fea55ec903dd231e1484d0fc6d5c4fa08bdfadd08dc24ea09552a85f0a6",
+      "bytes": 200857,
+      "viewport": [1440, 1100]
+    },
+    {
+      "path": "after/03-review-before-save.png",
+      "sha256": "674429569aa2a4232a7b01d361c6092954fca1373c614d7e949b1490236a5afc",
+      "bytes": 210112,
+      "viewport": [1440, 1100]
+    },
+    {
+      "path": "after/04-review-error.png",
+      "sha256": "c5a49034cf90a5bf73a367ffb7a6203bb61865f648f9f43af730ac1c0dee78a3",
+      "bytes": 215683,
+      "viewport": [1440, 1100]
+    },
+    {
+      "path": "after/05-review-confirmed.png",
+      "sha256": "5dec802529c1b4591b0928b2b986ca52d487170f3ba91ffbcda28a5f83ee30f5",
+      "bytes": 199144,
+      "viewport": [1440, 1100]
+    },
+    {
+      "path": "after/06-close-retains-search.png",
+      "sha256": "b41f11bdb623ba28c7c476dfd2649d9203b7e6b0d7663fb7b7f20a16e6330458",
+      "bytes": 112995,
+      "viewport": [1440, 1100]
+    },
+    {
+      "path": "after/07-search-empty.png",
+      "sha256": "ff1c231fc609dbaa737c58b2611cb17241fbe0a7aff086f98ea3bcd02126f7ef",
+      "bytes": 160308,
+      "viewport": [1440, 1100]
+    },
+    {
+      "path": "after/08-manual-image.png",
+      "sha256": "9f5295cafc0d0875668d1fe6a316ae14cb5c17ea2bca984f229a228f368f665e",
+      "bytes": 185105,
+      "viewport": [1440, 1100]
+    },
+    {
+      "path": "after/09-document-list-320.png",
+      "sha256": "e8775eacee1615000aa9d5c99a99eebdad30d34b595efc4bd74221340b0cb9fd",
+      "bytes": 71394,
+      "viewport": [320, 1000]
+    },
+    {
+      "path": "after/09-document-list-390.png",
+      "sha256": "1327c3d81b460a7450be428f9894e975f426ebef3ad1b52b24da8c62cf87f880",
+      "bytes": 77184,
+      "viewport": [390, 1000]
+    },
+    {
+      "path": "after/10-manual-fields-320.png",
+      "sha256": "1245b581d135940e402c3d1677724b0f8b2d1fa3fc4f9cb6239f9cec5d5bc3d2",
+      "bytes": 48191,
+      "viewport": [320, 1000]
+    },
+    {
+      "path": "after/10-manual-fields-390.png",
+      "sha256": "178099c56163dd443126205917e7b38188eccedcd051cb027f203f9d5e1d186b",
+      "bytes": 52611,
+      "viewport": [390, 1000]
+    }
+  ],
+  "approvedConcept": {
+    "commit": "19533020422b6ea2f0c77dc3117a051483f9f9ce",
+    "sha256": "1ff7a89366290bd31c7a4747b51e81cc9820db9eeaf15bbbc489e08f9210b301",
+    "unchangedBytes": true
+  },
+  "commandGuards": {
+    "reviewCommand": {
+      "byteIdentical": true,
+      "sha256": "363aad48373e08a598a636f7dde1945e3c76ae254a415af4adab152287ca6ae5"
+    },
+    "uploadCommand": {
+      "byteIdentical": true,
+      "sha256": "d114cfcee33a0de2fb415e68fc9d2c82e37077408990be7ecad0f4317a92b329"
+    }
+  },
+  "pixelReview": [
+    "Inspected full 1440x1100 list and selected review against board 08; approximately 55px rows replace approximately 77px baseline rows.",
+    "Inspected 390px keyboard-scrolled table and 320px manual-entry fields; page containment and solid focus verified by native test.",
+    "Source is retained text, not an original PDF/image preview. Unsupported viewer controls remain absent."
+  ]
+}

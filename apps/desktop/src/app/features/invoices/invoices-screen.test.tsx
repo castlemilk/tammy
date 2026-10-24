@@ -102,11 +102,13 @@ async function useProposal() {
   await screen.findByDisplayValue("INV-100");
 }
 
-it("starts with an editable invoice and no implied GST registration", async () => {
+it("starts on the invoice list and opens an explicit new draft without implied GST registration", async () => {
   render(<InvoicesScreen api={fixture().api} />);
   expect(screen.getByRole("heading", { name: "Invoices" })).toBeTruthy();
+  expect(screen.queryByRole("button", { name: "Save draft" })).toBeNull();
+  await userEvent.click(screen.getByRole("button", { name: "New invoice" }));
   expect((screen.getByLabelText("Registered for GST") as HTMLInputElement).checked).toBe(false);
-  expect(await screen.findByText("No saved invoices yet.")).toBeTruthy();
+  expect(screen.queryByRole("table", { name: "Saved invoices" })).toBeNull();
   expect((screen.getByRole("button", { name: "Export PDF" }) as HTMLButtonElement).disabled).toBe(
     true,
   );
@@ -193,6 +195,7 @@ it("rejects excessive decimal precision without silently rounding or losing edit
   );
   expect(calls.saved).toEqual([]);
   expect(screen.getByDisplayValue("12.345")).toBeTruthy();
+  expect(document.activeElement).toBe(screen.getByRole("alert").parentElement);
 });
 
 it("imports a reviewed expense as a cost with an explicit markup", async () => {
@@ -265,9 +268,11 @@ it("requires an explicit issue confirmation and keeps issued invoices immutable"
   await userEvent.click(screen.getByRole("button", { name: "Confirm issue" }));
   await screen.findByText("Invoice issued.");
   expect(calls.issued).toEqual(["saved-1"]);
-  expect(screen.getByLabelText("Customer name").matches(":disabled")).toBe(true);
-  await userEvent.type(screen.getByLabelText("Customer name"), "cannot change");
-  expect(screen.getByDisplayValue("Cambridge Services")).toBeTruthy();
+  expect(screen.queryByLabelText("Customer name")).toBeNull();
+  const detail = screen.getByRole("region", { name: "Issued invoice items" });
+  expect(detail.querySelector("input, select, textarea")).toBeNull();
+  expect(detail.textContent).toContain("Cambridge Services");
+  expect(calls.saved).toEqual([]);
   expect(screen.queryByRole("button", { name: "Save draft" })).toBeNull();
   expect((screen.getByRole("button", { name: "Export PDF" }) as HTMLButtonElement).disabled).toBe(
     false,
@@ -296,6 +301,7 @@ it("preserves draft input if saving fails", async () => {
 
 it("adds and removes manual line items", async () => {
   render(<InvoicesScreen api={fixture().api} />);
+  await userEvent.click(screen.getByRole("button", { name: "New invoice" }));
   await userEvent.click(screen.getByRole("button", { name: "Add line item" }));
   const table = screen.getByRole("table", { name: "Invoice line items" });
   expect(within(table).getAllByRole("textbox", { name: /Description/ })).toHaveLength(2);
@@ -306,6 +312,7 @@ it("adds and removes manual line items", async () => {
 
 it("uses an expense as the first line instead of leaving an empty placeholder", async () => {
   render(<InvoicesScreen api={fixture().api} />);
+  await userEvent.click(screen.getByRole("button", { name: "New invoice" }));
   await userEvent.click(await screen.findByRole("checkbox", { name: "Select Printing" }));
   await userEvent.click(screen.getByRole("button", { name: "Add selected expenses" }));
   expect(screen.getAllByRole("textbox", { name: /Description/ })).toHaveLength(1);
@@ -450,8 +457,10 @@ it("keeps unsupported PDF text editable instead of confirming an irreversible is
 
 it("presents editable semantic tables with private costs and explicit GST column labels", async () => {
   render(<InvoicesScreen api={fixture().api} />);
+  await userEvent.click(screen.getByRole("button", { name: "New invoice" }));
   const table = screen.getByRole("table", { name: "Invoice line items" });
-  expect(within(table).getByRole("columnheader", { name: "Unit cost Private" })).toBeTruthy();
+  expect(within(table).queryByRole("columnheader", { name: "Unit cost Private" })).toBeNull();
+  expect(within(table).getByText("Private estimates · never on the PDF")).toBeTruthy();
   expect(within(table).getByRole("columnheader", { name: "Selling price Ex GST" })).toBeTruthy();
   expect(within(table).getByRole("columnheader", { name: "Line total Incl GST" })).toBeTruthy();
   expect(within(table).getByText("Manual line")).toBeTruthy();
@@ -471,6 +480,7 @@ it("presents editable semantic tables with private costs and explicit GST column
 it("imports multiple selections with exact markup and clears selection", async () => {
   const { api, calls } = fixture([], [printing, supplies]);
   render(<InvoicesScreen api={api} />);
+  await userEvent.click(screen.getByRole("button", { name: "New invoice" }));
   await userEvent.click(await screen.findByRole("checkbox", { name: "Select Printing" }));
   await userEvent.click(screen.getByRole("checkbox", { name: "Select Office supplies" }));
   expect(screen.getByTestId("selected-expense-summary").textContent).toContain("2 selected");
@@ -496,6 +506,7 @@ it("imports multiple selections with exact markup and clears selection", async (
 it("rounds markup half-up in cents and uses registration rather than source GST for a sale", async () => {
   const { api } = fixture([], [{ ...printing, subtotalMinor: 4, gstMinor: 0 }]);
   render(<InvoicesScreen api={api} />);
+  await userEvent.click(screen.getByRole("button", { name: "New invoice" }));
   await userEvent.click(screen.getByLabelText("Registered for GST"));
   await userEvent.click(await screen.findByRole("checkbox", { name: "Select Printing" }));
   fireEvent.change(screen.getByLabelText("Markup percentage"), { target: { value: "12.50" } });
@@ -533,6 +544,7 @@ it("keeps selected expenses across search and prevents duplicate links until a l
 
 it("preserves a previously edited blank line when importing an expense", async () => {
   render(<InvoicesScreen api={fixture().api} />);
+  await userEvent.click(screen.getByRole("button", { name: "New invoice" }));
   fireEvent.change(screen.getByLabelText("Description 1"), { target: { value: "Work" } });
   fireEvent.change(screen.getByLabelText("Description 1"), { target: { value: "" } });
   await userEvent.click(await screen.findByRole("checkbox", { name: "Select Printing" }));
@@ -543,6 +555,7 @@ it("preserves a previously edited blank line when importing an expense", async (
 
 it("rejects invalid markup atomically while retaining all selected expenses", async () => {
   render(<InvoicesScreen api={fixture([], [printing, supplies]).api} />);
+  await userEvent.click(screen.getByRole("button", { name: "New invoice" }));
   await userEvent.click(await screen.findByRole("checkbox", { name: "Select Printing" }));
   await userEvent.click(screen.getByRole("checkbox", { name: "Select Office supplies" }));
   fireEvent.change(screen.getByLabelText("Markup percentage"), { target: { value: "12.345" } });
@@ -586,6 +599,7 @@ it("rejects a batch containing an excessive marked-up price without partial inse
       api={fixture([], [printing, { ...supplies, subtotalMinor: 100_000_000 }]).api}
     />,
   );
+  await userEvent.click(screen.getByRole("button", { name: "New invoice" }));
   await userEvent.click(await screen.findByRole("checkbox", { name: "Select Printing" }));
   await userEvent.click(screen.getByRole("checkbox", { name: "Select Office supplies" }));
   fireEvent.change(screen.getByLabelText("Markup percentage"), { target: { value: "1" } });
@@ -609,13 +623,81 @@ it("updates inclusive row totals, private cost and profit while preserving parti
   expect(screen.getByTestId("invoice-margin").textContent).toContain("$48.82");
   fireEvent.change(screen.getByLabelText("Unit price 1"), { target: { value: "." } });
   expect((screen.getByLabelText("Unit price 1") as HTMLInputElement).value).toBe(".");
-  expect(
-    within(screen.getByRole("table", { name: "Invoice line items" })).getByText("—"),
-  ).toBeTruthy();
+  const body = screen.getByRole("table", { name: "Invoice line items" }).querySelector("tbody");
+  if (!body) throw new Error("Expected the editable invoice line rows");
+  expect(within(body).getByText("—")).toBeTruthy();
   expect(screen.getByTestId("invoice-total").textContent).toContain("—");
+  const preview = screen.getByRole("region", { name: "Draft invoice preview" });
+  expect(preview.textContent).not.toContain("$152.77");
+  expect(preview.textContent).toContain("Check the invoice details");
   await userEvent.click(screen.getByRole("button", { name: "Save draft" }));
   expect(screen.getByRole("alert").textContent).toContain("Unit price 1");
   expect(calls.saved).toEqual([]);
+});
+
+it("keeps typing focus when editing closes an unconfirmed issue review", async () => {
+  const record: InvoiceRecord = {
+    id: "review-draft",
+    version: 1,
+    state: "draft",
+    sellerName: "Synthetic studio",
+    sellerAbn: "51824753556",
+    draft: draft(),
+  };
+  const { api, calls } = fixture([record]);
+  render(<InvoicesScreen api={api} />);
+  await userEvent.click(await screen.findByRole("button", { name: "Open INV-100" }));
+  await userEvent.click(screen.getByRole("button", { name: "Issue invoice" }));
+  expect(document.activeElement).toBe(screen.getByRole("button", { name: "Keep as draft" }));
+  const customer = screen.getByLabelText("Customer name");
+  await userEvent.type(customer, " revised");
+  expect(document.activeElement).toBe(customer);
+  expect(customer).toHaveProperty("value", "Cambridge Services revised");
+  expect(screen.queryByRole("button", { name: "Confirm issue" })).toBeNull();
+  expect(calls.issued).toEqual([]);
+});
+
+it("updates the public preview without saving and retains it after a failed explicit save", async () => {
+  const record: InvoiceRecord = {
+    id: "preview-draft",
+    version: 1,
+    state: "draft",
+    sellerName: "Synthetic studio",
+    sellerAbn: "51824753556",
+    draft: draft(),
+  };
+  const { api, calls } = fixture([record]);
+  let attempts = 0;
+  render(
+    <InvoicesScreen
+      api={{
+        ...api,
+        save: async () => {
+          attempts += 1;
+          throw new Error("Unavailable");
+        },
+      }}
+    />,
+  );
+  await userEvent.click(await screen.findByRole("button", { name: "Open INV-100" }));
+  fireEvent.change(screen.getByLabelText("Customer name"), {
+    target: { value: "Changed synthetic customer" },
+  });
+  const preview = screen.getByRole("region", { name: "Draft invoice preview" });
+  expect(preview.textContent).toContain("Changed synthetic customer");
+  expect(attempts).toBe(0);
+  expect(screen.getByText("Not saved")).toBeTruthy();
+  expect(screen.getByRole("button", { name: "Export PDF" })).toHaveProperty("disabled", true);
+  await userEvent.click(screen.getByRole("button", { name: "Save draft" }));
+  await screen.findByText(/The draft could not be saved/);
+  expect(attempts).toBe(1);
+  expect(screen.getByLabelText("Customer name")).toHaveProperty(
+    "value",
+    "Changed synthetic customer",
+  );
+  expect(preview.textContent).toContain("Changed synthetic customer");
+  expect(screen.getByText("Not saved")).toBeTruthy();
+  expect(calls.issued).toEqual([]);
 });
 
 it("recognises a known zero cost and keeps profit unknown if another line is uncosted", async () => {
@@ -629,6 +711,7 @@ it("recognises a known zero cost and keeps profit unknown if another line is unc
 
 it("distinguishes an empty reviewed list from a search with no matching expenses", async () => {
   render(<InvoicesScreen api={fixture().api} />);
+  await userEvent.click(screen.getByRole("button", { name: "New invoice" }));
   await screen.findByRole("checkbox", { name: "Select Printing" });
   fireEvent.change(screen.getByLabelText("Search reviewed expenses"), {
     target: { value: "unknown" },
@@ -661,6 +744,7 @@ it("retains prior rows and manual editing during refresh, then reconciles select
       }}
     />,
   );
+  await userEvent.click(screen.getByRole("button", { name: "New invoice" }));
   await userEvent.click(await screen.findByRole("checkbox", { name: "Select Printing" }));
   await userEvent.click(screen.getByRole("checkbox", { name: "Select Office supplies" }));
   await userEvent.click(screen.getByRole("button", { name: "Refresh expenses" }));
@@ -697,6 +781,7 @@ it("retains rows and selection after refresh failure and exposes a retry without
       }}
     />,
   );
+  await userEvent.click(screen.getByRole("button", { name: "New invoice" }));
   await userEvent.click(await screen.findByRole("checkbox", { name: "Select Printing" }));
   await userEvent.click(screen.getByRole("button", { name: "Refresh expenses" }));
   expect(await screen.findByRole("alert")).toHaveProperty(
@@ -726,6 +811,7 @@ it("shows initial expense loading and failure without claiming a successfully em
       }}
     />,
   );
+  await userEvent.click(screen.getByRole("button", { name: "New invoice" }));
   expect(screen.getByText("Loading reviewed expenses…")).toBeTruthy();
   expect(screen.queryByText("No reviewed expenses yet.")).toBeNull();
   failLoad?.(new Error("unavailable"));
@@ -734,7 +820,7 @@ it("shows initial expense loading and failure without claiming a successfully em
   expect(screen.getByRole("button", { name: "Retry expenses" })).toBeTruthy();
 });
 
-it("uses the same read-only line table for issued invoices and offers no expense import", async () => {
+it("shows issued line values without editor fields or expense import", async () => {
   const record: InvoiceRecord = {
     id: "issued-1",
     version: 2,
@@ -746,17 +832,61 @@ it("uses the same read-only line table for issued invoices and offers no expense
   render(<InvoicesScreen api={fixture([record]).api} />);
   await userEvent.click(await screen.findByRole("button", { name: "Open INV-100" }));
   const table = screen.getByRole("table", { name: "Invoice line items" });
-  for (const name of [
-    "Description 1",
-    "Quantity 1",
-    "Unit cost 1",
-    "Unit price 1",
-    "GST treatment 1",
-  ]) {
-    expect(within(table).getByLabelText(name).matches(":disabled")).toBe(true);
-  }
+  expect(table.querySelector("input, select, textarea")).toBeNull();
+  expect(table.textContent).toContain("Consulting");
+  expect(table.textContent).toContain("$100.00");
+  expect(table.textContent).toContain("$10.00");
+  expect(table.textContent).toContain("$110.00");
   expect(screen.queryByRole("button", { name: "Add line item" })).toBeNull();
   expect(screen.queryByRole("button", { name: "Remove line 1" })).toBeNull();
   expect(screen.queryByRole("table", { name: "Reviewed expenses" })).toBeNull();
   expect(screen.queryByRole("button", { name: "Add selected expenses" })).toBeNull();
+});
+
+it("keeps list search and keyboard focus when returning from an invoice", async () => {
+  const record: InvoiceRecord = {
+    id: "invoice-existing",
+    version: 1,
+    state: "draft",
+    sellerName: "Synthetic studio",
+    sellerAbn: "51824753556",
+    draft: draft(),
+  };
+  const { api } = fixture([record]);
+  render(<InvoicesScreen api={api} />);
+  await screen.findByRole("button", { name: "Open INV-100" });
+  expect(screen.queryByRole("button", { name: "Save draft" })).toBeNull();
+  await userEvent.type(screen.getByLabelText("Search saved invoices"), "Cambridge");
+  await userEvent.click(screen.getByRole("button", { name: "Open INV-100" }));
+  expect(screen.queryByRole("table", { name: "Saved invoices" })).toBeNull();
+  expect(screen.getByRole("heading", { name: "INV-100" })).toBe(document.activeElement);
+  await userEvent.click(screen.getByRole("button", { name: "Back to invoices" }));
+  expect(screen.getByLabelText("Search saved invoices")).toHaveProperty("value", "Cambridge");
+  expect(screen.getByRole("button", { name: "Open INV-100" })).toBe(document.activeElement);
+});
+
+it("keeps unsaved changes on Back until discard is explicit, without writing", async () => {
+  const record: InvoiceRecord = {
+    id: "invoice-existing",
+    version: 1,
+    state: "draft",
+    sellerName: "Synthetic studio",
+    sellerAbn: "51824753556",
+    draft: draft(),
+  };
+  const { api, calls } = fixture([record]);
+  render(<InvoicesScreen api={api} />);
+  await userEvent.click(await screen.findByRole("button", { name: "Open INV-100" }));
+  fireEvent.change(screen.getByLabelText("Customer name"), {
+    target: { value: "Unsaved customer" },
+  });
+  await userEvent.click(screen.getByRole("button", { name: "Back to invoices" }));
+  await userEvent.click(screen.getByRole("button", { name: "Keep editing" }));
+  expect(screen.getByLabelText("Customer name")).toHaveProperty("value", "Unsaved customer");
+  await userEvent.click(screen.getByRole("button", { name: "Back to invoices" }));
+  await userEvent.click(screen.getByRole("button", { name: "Discard changes and continue" }));
+  expect(screen.getByRole("table", { name: "Saved invoices" })).toBeTruthy();
+  expect(calls.saved).toEqual([]);
+  await userEvent.click(screen.getByRole("button", { name: "Open INV-100" }));
+  expect(screen.getByLabelText("Customer name")).toHaveProperty("value", "Cambridge Services");
 });

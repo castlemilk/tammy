@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "library_file_id": "libfile_05d5759b0f8c81919c689ba57ca10e93",
+  "filename": "Tammy Trial balance verified comparison 2026-10-24.zip",
+  "archiveSHA256": "ac70c8f3e4074e92ec1ee64b34a5bf076f5332f7f163a43355cafbbb31cbf8e8",
+  "archiveBytes": 1979149,
+  "confirmed": true,
+  "localIdentityPersisted": true,
+  "syntheticOnly": true,
+  "nativeIndividualImages": false,
+  "files": [
+    "before/01-trial-balance.png",
+    "reference/09-accounting-core.png",
+    "after/01-trial-balance.png",
+    "after/04-credit-and-total-320.png",
+    "after/07-large-credit-focus-320.png"
+  ]
+}

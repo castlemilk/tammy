@@ -1,0 +1,185 @@
+{
+  "screenshots": [
+    {
+      "path": "after/01-new-invoice.png",
+      "sha256": "98b4bc790ded65e5162b8bc205ab3525d6a6fab7c26bd8d009a97571e4e58550",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "path": "after/02-validation-preserves-edit.png",
+      "sha256": "cf1bc1ca088fe6b57858a34001a39db4283cd51d1ac2869a54bd5048d22682d3",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "path": "after/03-saved-draft.png",
+      "sha256": "f2fd5dded572a18b8d6191c4ff6adf1e432dbd40d10d2910178e239d705b1331",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "path": "after/03b-unsaved-replacement.png",
+      "sha256": "638d9a72de2fd61c4feb0c2c6764989fee704af9bc24177b9016ee7fc0db1211",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "path": "after/04-template-editor.png",
+      "sha256": "3b78a0123fd740703c4ab04b9c4d66dde4c00e7600d50c35f3bacdd6fcb7e42b",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "path": "after/05-issue-confirmation.png",
+      "sha256": "d58b4e603033467943a7f32ea850cfe2bf41bcf3d4b028c2067bf4b12f613182",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "path": "after/06-issued-read-only.png",
+      "sha256": "11c80fdef968ba0f5207113186ef2ef4c8b4f1e66afd314bce320c26f72828dd",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "path": "after/07-payment-review.png",
+      "sha256": "68af8a648c7353ed07c52f1a795703c980b1bec50636292f244f3f1720e2b4a1",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "path": "after/08-recorded-receipt.png",
+      "sha256": "194e374c9d82557200ccb2625e93f5f4cc5e40921a195fa4cbe99bb49cac316d",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "path": "after/09-invoice-no-results.png",
+      "sha256": "e77ccaaf37c385491b9e2723df41453a7294cba709fdd04402c85009de2491f3",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "path": "after/10-keyboard-focus.png",
+      "sha256": "e78d2fca240c72fc2b562ec527929c0ada7683ed199a2931686e8c1e16b84a18",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "path": "after/11-invoices-320.png",
+      "sha256": "69495c2f1ad364d73a06571fe47d68a4c7f101a3628cebd2cb71e86dc5a950ce",
+      "width": 320,
+      "height": 900
+    },
+    {
+      "path": "after/11-invoices-390.png",
+      "sha256": "98a0433cda4599d4fcb3c9fa4938aae76bfafcb6ccf80c31e0be99f2c87a785e",
+      "width": 390,
+      "height": 900
+    },
+    {
+      "path": "after/12-lines-320.png",
+      "sha256": "e18707277603a9e652f3a00c21c0edd45bcb5ec3b98727adb3c8d7190c291400",
+      "width": 320,
+      "height": 900
+    },
+    {
+      "path": "after/12-lines-390.png",
+      "sha256": "6f28dc5a1183d4029968f40759814033e20823eb0e9ddad17c4ae4b918fb0287",
+      "width": 390,
+      "height": 900
+    },
+    {
+      "path": "after/12b-line-amounts-320.png",
+      "sha256": "365a0952757bb976c1a5b1049d818132fda7db83c2332567797b653f0bc13dd6",
+      "width": 320,
+      "height": 900
+    },
+    {
+      "path": "after/12b-line-amounts-390.png",
+      "sha256": "d80727a257cd111afe9a7404639bffd1cedc8255e0dd8a48936f927b880d6939",
+      "width": 390,
+      "height": 900
+    },
+    {
+      "path": "before/01-new-invoice.png",
+      "sha256": "6d7e73c26f0235a5d092c21546f16f6d5f81cb926cf7f5927f420f937916c4d9",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "path": "before/02-validation-preserves-edit.png",
+      "sha256": "9be80c5c6a40d2efecd75c1085775c4ed7e9c98d46defb6434ddc35e37eb6b8d",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "path": "before/03-saved-draft.png",
+      "sha256": "2b310801090dc42c14b0afca9e79942ca65bf162d603a3ddb61871db883f35fd",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "path": "before/03b-unsaved-replacement.png",
+      "sha256": "4960bb7b948f654eaad9f668e7febbf8ef8976bb59b473dba35e2025b2451509",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "path": "before/04-template-editor.png",
+      "sha256": "f8fd81cc2cf13c99c3e6917f5e0d39eee4348f36996ef817cf0b03c8ab7ce322",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "path": "before/05-issue-confirmation.png",
+      "sha256": "50367e4f3be4906d4bebcda3d5ba2fc0be2e59485bad73ceb0408109dcfb15e7",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "path": "before/06-issued-read-only.png",
+      "sha256": "1d014aa5a65d8b7d2ad1b720c41bfb07a9e3389b714a7bbf0eb38b4716bd6bc8",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "path": "before/07-payment-review.png",
+      "sha256": "7ff3c6c9370a3e17b7c968a39715143eb010c040e2aa7a2a378ab3c10431867f",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "path": "before/08-recorded-receipt.png",
+      "sha256": "197ee0bc6bd5be404ef6cd7fb52fbadc9d21f3b0ad63c301e4af8fc34613572b",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "path": "before/11-invoices-320.png",
+      "sha256": "53806af8490c8b6de4310e79744798a7f580c8be3ed9a1e4823bbd996ab4566c",
+      "width": 320,
+      "height": 900
+    },
+    {
+      "path": "before/11-invoices-390.png",
+      "sha256": "1ba843aba6a30ec311bcc92b4f3f48809a3cf0cacbc63cc65974d9fdf36fb857",
+      "width": 390,
+      "height": 900
+    },
+    {
+      "path": "before/12-lines-320.png",
+      "sha256": "307518ed966b7d6a988a1308a75aaaf85e178d22700052ca316c728ad7d0f374",
+      "width": 320,
+      "height": 900
+    },
+    {
+      "path": "before/12-lines-390.png",
+      "sha256": "5dbc4e2573cde78db090fa1cedb12ec317db0f49dac1293c907d0ad327453853",
+      "width": 390,
+      "height": 900
+    }
+  ],
+  "generatedConceptImages": false
+}

@@ -24,6 +24,53 @@ const codec = createProtoMethodCodec({
   output: GetAttentionSummaryResponseSchema,
 });
 
+const workspace = {
+  sessionId: "018f0000-0000-7000-8000-000000000003",
+  userId: "018f0000-0000-7000-8000-000000000002",
+  workspaceId: "018f0000-0000-7000-8000-000000000001",
+  organisationId: "018f0000-0000-7000-8000-000000000004",
+};
+
+it("keeps BAS action-needed status distinct from an empty additional-item list", async () => {
+  const fixture = createConveyorFixture();
+  fixture.procedures.reporting.getAttentionSummary.mockResolvedValue(
+    codec.encodeResponse(
+      create(GetAttentionSummaryResponseSchema, {
+        documentsNeedingReview: 3,
+        bankingLinesNeedingReconciliation: 2,
+        basStatus: BasAttentionStatus.ACTION_NEEDED,
+      }),
+    ),
+  );
+  render(
+    <QueryClientProvider client={fixture.queryClient}>
+      <OverviewScreen api={fixture.conveyor.reporting} workspace={workspace} />
+    </QueryClientProvider>,
+  );
+  expect(await screen.findByText("No additional review items")).toBeTruthy();
+  expect(screen.getByText("Action needed · review this exact BAS preparation")).toBeTruthy();
+  expect(screen.getByText("3", { exact: true })).toBeTruthy();
+  expect(screen.getByText("2", { exact: true })).toBeTruthy();
+  expect(screen.queryByText("Nothing needs review")).toBeNull();
+  expect(screen.queryByText(/workflows are up to date/)).toBeNull();
+});
+
+it("does not display zero counts or an all-clear result when the attention projection fails", async () => {
+  const fixture = createConveyorFixture();
+  fixture.procedures.reporting.getAttentionSummary.mockRejectedValue(
+    new Error("Synthetic summary unavailable"),
+  );
+  render(
+    <QueryClientProvider client={fixture.queryClient}>
+      <OverviewScreen api={fixture.conveyor.reporting} workspace={workspace} />
+    </QueryClientProvider>,
+  );
+  expect(await screen.findByText("Attention summary unavailable")).toBeTruthy();
+  expect(screen.queryByText("0", { exact: true })).toBeNull();
+  expect(screen.queryByText("No additional review items")).toBeNull();
+  expect(fixture.procedures.reporting.getAttentionSummary).toHaveBeenCalledOnce();
+});
+
 it("renders the live local attention summary through the named protobuf method", async () => {
   const fixture = createConveyorFixture();
   const preparationId = "018f0000-0000-7000-8000-000000000020";

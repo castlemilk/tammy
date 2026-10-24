@@ -1,0 +1,57 @@
+[
+  {
+    "path": "output/playwright/soft-precision-bas-2026-10-24/before/01-prepare-arrival.png",
+    "sha256": "6b398ba14dd03d998717c33ba8348633687135dfe713f13cb04b744de811b05d",
+    "size": [1440, 1100]
+  },
+  {
+    "path": "output/playwright/soft-precision-bas-2026-10-24/before/02-profile-saved.png",
+    "sha256": "97c7c382e8c7b10b07b98253b84ed6bcdacaffd65c363d1e49de56a058fd8ef7",
+    "size": [1440, 1100]
+  },
+  {
+    "path": "output/playwright/soft-precision-bas-2026-10-24/before/03-exact-review.png",
+    "sha256": "4e549c5319a48bf7bcc5af284c3466b94c9f29f600a7ea68c37aff356ed79694",
+    "size": [1440, 1100]
+  },
+  {
+    "path": "output/playwright/soft-precision-bas-2026-10-24/before/04-validation-findings.png",
+    "sha256": "35723abd4a9950f213dd00ab60b11d41bdebe2f3911b562571edc2edc151e73a",
+    "size": [1440, 1100]
+  },
+  {
+    "path": "output/playwright/soft-precision-bas-2026-10-24/before/05-review-nav-focus-320.png",
+    "sha256": "3e1423c5afac148497d05364cd80928d3331d02f540ea16cf4321e2a52a41dd4",
+    "size": [320, 1000]
+  },
+  {
+    "path": "output/playwright/soft-precision-bas-2026-10-24/before/05-review-nav-focus-390.png",
+    "sha256": "b3d8bd6811e8d3d1d0a8204d393230a6caff55613467a130341e4141ae2c6188",
+    "size": [390, 1000]
+  },
+  {
+    "path": "output/playwright/soft-precision-bas-2026-10-24/before/05-review-nav-focus-900.png",
+    "sha256": "5d4bfb0350c985e8b2d0c3577fbe0cb6639efb789a8588cb0fe8b1d191c9c07d",
+    "size": [900, 1000]
+  },
+  {
+    "path": "output/playwright/soft-precision-bas-2026-10-24/before/07-freeze-permission-boundary.png",
+    "sha256": "0d97aabe0afd2cde9db4ce4e5eed64cf3a774c9cc37d329e3fc5aa2352ea8256",
+    "size": [1440, 1100]
+  },
+  {
+    "path": "output/playwright/soft-precision-bas-2026-10-24/before/08-retained-calculation-export.png",
+    "sha256": "5d73c439522fdae1207320c4b26a80b05136f0cadfaa14e22a2ab1f9e114f828",
+    "size": [1440, 1100]
+  },
+  {
+    "path": "output/playwright/soft-precision-bas-2026-10-24/before/09-export-cancelled.png",
+    "sha256": "97e137b8a9cafcb0ad285ebe372791d918954c872bbb6a3851c8f96788853bb1",
+    "size": [1440, 1100]
+  },
+  {
+    "path": "output/playwright/soft-precision-bas-2026-10-24/before/10-unverified-external-record.png",
+    "sha256": "7af72cf1d1db40132edff2071ba5179d5f38cb3bf924144ca893f2ef756b9332",
+    "size": [1440, 1100]
+  }
+]

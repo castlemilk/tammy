@@ -775,7 +775,7 @@ test("covers workspace setup, recovery, accounting, and interaction journeys thr
   ] as const) {
     await assertRoute(page, link, route, heading);
     if (route === "/invoices")
-      await expect(page.getByLabel("Invoice number", { exact: true })).toBeVisible();
+      await expect(page.getByRole("button", { name: "New invoice", exact: true })).toBeVisible();
     if (route === "/audit")
       await expect(page.getByRole("main").getByRole("list").first()).toBeVisible();
     if (route === "/settings/organisation")
@@ -1138,7 +1138,10 @@ async function interactionJourney(page: import("@playwright/test").Page) {
   await expect(page.getByRole("cell", { name: "Cancelled synthetic account" })).toHaveCount(0);
 
   await assertRoute(page, "Journals", "/accounting/journals", "Journals");
-  await page.getByRole("cell", { name: "Office supplies paid personally", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Open journal: Office supplies paid personally", exact: true })
+    .focus();
+  await page.keyboard.press("Enter");
   await expect(
     page.getByRole("heading", { name: "Office supplies paid personally", exact: true }),
   ).toBeVisible();
@@ -1209,6 +1212,20 @@ async function interactionJourney(page: import("@playwright/test").Page) {
         ).toBe(true);
         const balance = page.getByText("$123,456,679.01", { exact: true });
         await expect(balance).toHaveCSS("white-space", "nowrap");
+        await expect(balance).toHaveCSS("font-size", "18px");
+        const balanceRegion = page.getByRole("region", {
+          name: "Latest imported statement balance",
+          exact: true,
+        });
+        await expect(balanceRegion).toContainText("$123,456,679.01");
+        await balanceRegion.focus();
+        await page.keyboard.press("Shift+Tab");
+        await page.keyboard.press("Tab");
+        await expect(balanceRegion).toBeFocused();
+        await expect(balanceRegion).toHaveCSS("outline-style", "solid");
+        expect(
+          await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+        ).toBe(true);
         await captureJourney(page, "19-320-banking-import");
         await page.getByRole("button", { name: "Cancel import" }).click();
       }
@@ -1261,7 +1278,7 @@ test("runs invoice, purchase, and BAS workflows through the packaged app", async
   );
   await mkdir(incomeEvidenceDirectory, { recursive: true });
   const targets = [
-    { heading: "Overview", link: "Overview", ready: "Nothing needs review" },
+    { heading: "Overview", link: "Overview", ready: "No additional review items" },
     {
       heading: "Documents",
       link: "Documents",
@@ -1321,16 +1338,26 @@ test("runs invoice, purchase, and BAS workflows through the packaged app", async
       contentType: "image/png",
     });
     switch (target.heading) {
-      case "Overview":
+      case "Overview": {
+        const attention = page.getByRole("region", { name: "Local attention", exact: true });
         await expect(
           page.getByRole("heading", { name: "Needs review", exact: true }),
         ).toBeVisible();
-        await expect(page.getByText("Nothing needs review", { exact: true })).toBeVisible();
         await expect(
-          page.getByText("Your retained local workflows are up to date.", { exact: true }),
+          attention.getByText("No additional review items", { exact: true }),
+        ).toBeVisible();
+        await expect(
+          attention.getByText(
+            "Document and bank counts are shown above. Check the separate BAS status before continuing.",
+            { exact: true },
+          ),
+        ).toBeVisible();
+        await expect(
+          attention.getByText("Action needed · review this exact BAS preparation", { exact: true }),
         ).toBeVisible();
         await expect(page.getByText("1 reviewed this quarter", { exact: true })).toBeVisible();
         break;
+      }
       case "Documents": {
         const retainedDocuments = page.getByRole("table", {
           name: "Retained documents",
@@ -1346,10 +1373,16 @@ test("runs invoice, purchase, and BAS workflows through the packaged app", async
         break;
       }
       case "Trial balance": {
-        const postingDateLabel = fixture.period.postingDate.split("-").reverse().join("/");
-        await expect(
-          page.getByText(`Debit and credit balances as at ${postingDateLabel}.`, { exact: true }),
-        ).toBeVisible();
+        const date = page.locator("time");
+        await expect(date).toBeVisible();
+        await expect(date).toHaveAttribute("datetime", fixture.period.postingDate);
+        await expect(date).toHaveText(
+          new Date(`${fixture.period.postingDate}T12:00:00`).toLocaleDateString("en-AU", {
+            day: "numeric",
+            month: "short",
+            year: "numeric",
+          }),
+        );
         await expect(
           page.getByText(fixture.accounts[0]?.name ?? "", { exact: true }),
         ).toBeVisible();
@@ -1662,18 +1695,21 @@ test("runs invoice, purchase, and BAS workflows through the packaged app", async
   expect(updatedPdf).toContain("Updated template customer");
   expect(updatedPdf).not.toContain(ORIGINAL_COMPANY_TEMPLATE.paymentInstructions);
   await page.getByRole("button", { name: "Close template editor", exact: true }).click();
+  await page.getByRole("button", { name: "Back to invoices", exact: true }).click();
   await page.getByRole("button", { name: "Open INV-MCP-001", exact: true }).click();
   await expectInvoiceTemplateSnapshot(page, ORIGINAL_COMPANY_TEMPLATE, "2026-10-30", true);
   await page.getByRole("button", { name: "Issue invoice", exact: true }).click();
   await page.getByRole("button", { name: "Confirm issue", exact: true }).click();
   await expect(page.getByText("Invoice issued.", { exact: true })).toBeVisible();
-  await expect(page.getByLabel("Customer name", { exact: true })).toBeDisabled();
-  await expect(lineTable.getByLabel(`Unit price ${expenseLine}`, { exact: true })).toBeDisabled();
-  await expect(page.getByRole("textbox", { name: "Seller address", exact: true })).toBeDisabled();
-  await expect(page.getByRole("textbox", { name: "Notes", exact: true })).toBeDisabled();
-  await expect(
-    page.getByRole("textbox", { name: "Payment instructions", exact: true }),
-  ).toBeDisabled();
+  const issuedItems = page.getByRole("region", { name: "Issued invoice items", exact: true });
+  await expect(issuedItems).toBeVisible();
+  await expect(page.getByLabel("Customer name", { exact: true })).toHaveCount(0);
+  await expect(issuedItems.locator("input, select, textarea")).toHaveCount(0);
+  await expect(lineTable.getByRole("row").nth(expenseLine)).toContainText("$375.25");
+  await page.getByText("Invoice information & private estimates", { exact: true }).click();
+  await expect(issuedItems).toContainText(ORIGINAL_COMPANY_TEMPLATE.sellerAddress);
+  await expect(issuedItems).toContainText(ORIGINAL_COMPANY_TEMPLATE.notes);
+  await expect(issuedItems).toContainText(ORIGINAL_COMPANY_TEMPLATE.paymentInstructions);
   await expect(page.getByRole("button", { name: "Remove invoice logo", exact: true })).toHaveCount(
     0,
   );
@@ -1695,9 +1731,13 @@ test("runs invoice, purchase, and BAS workflows through the packaged app", async
   await expect(page.getByTestId("business-invoice-income")).toContainText("$600.33");
   await expect(page.getByTestId("business-outstanding")).toContainText("$660.37");
   await page.getByRole("link", { name: "Journals", exact: true }).click();
-  await expect(
-    page.getByRole("row", { name: "30/09/2026 Invoice INV-MCP-001 $660.37 Posted", exact: true }),
-  ).toBeVisible();
+  const invoiceJournalRow = page.getByRole("row").filter({
+    has: page.getByRole("button", { name: "Open journal: Invoice INV-MCP-001", exact: true }),
+  });
+  await expect(invoiceJournalRow).toHaveCount(1);
+  for (const value of ["30/09/2026", "$660.37", "Posted"]) {
+    await expect(invoiceJournalRow.getByRole("cell", { name: value, exact: true })).toBeVisible();
+  }
   await regenerateInvoiceBas(page, "2026-07-01", "2026-09-30", "$660.37", "$60.04");
   await expect(page.getByRole("table", { name: "BAS sales sources", exact: true })).toContainText(
     "Issued invoice",
@@ -1747,16 +1787,20 @@ test("runs invoice, purchase, and BAS workflows through the packaged app", async
   await unlockCurrentWorkflowWorkspace(restarted);
   await restarted.getByRole("link", { name: "Invoices", exact: true }).click();
   await restarted.getByRole("button", { name: "Open INV-MCP-001" }).click();
-  await expect(restarted.getByLabel("Customer name", { exact: true })).toHaveValue(
-    "Reviewed invoice customer",
-  );
-  await expect(restarted.getByLabel("Customer name", { exact: true })).toBeDisabled();
-  await expect(restarted.getByLabel(`Unit price ${expenseLine}`, { exact: true })).toHaveValue(
-    "375.25",
-  );
-  await expect(restarted.getByLabel(`Unit price ${trainingLine}`, { exact: true })).toHaveValue(
-    "75.00",
-  );
+  const retainedItems = restarted.getByRole("region", {
+    name: "Issued invoice items",
+    exact: true,
+  });
+  await expect(restarted.getByRole("heading", { name: "INV-MCP-001", exact: true })).toBeVisible();
+  await expect(retainedItems.locator("input, select, textarea")).toHaveCount(0);
+  await expect(
+    restarted.getByText("Reviewed invoice customer", { exact: true }).first(),
+  ).toBeVisible();
+  const retainedRows = retainedItems
+    .getByRole("table", { name: "Invoice line items", exact: true })
+    .getByRole("row");
+  await expect(retainedRows.nth(expenseLine)).toContainText("$375.25");
+  await expect(retainedRows.nth(trainingLine)).toContainText("$75.00");
   await expect(restarted.getByTestId("invoice-total")).toContainText("$660.37");
   await expect(restarted.getByTestId("invoice-received")).toContainText("$330.18");
   await expect(restarted.getByTestId("invoice-outstanding")).toContainText("$330.19");
@@ -1767,7 +1811,14 @@ test("runs invoice, purchase, and BAS workflows through the packaged app", async
   );
   expect(retainedAccounting.accounting.paymentCount).toBe(1n);
   expect(retainedAccounting.accounting.payments[0]?.reference).toBe("First actual receipt");
-  await expectInvoiceTemplateSnapshot(restarted, ORIGINAL_COMPANY_TEMPLATE, "2026-10-30", true);
+  await expectInvoiceTemplateSnapshot(
+    restarted,
+    ORIGINAL_COMPANY_TEMPLATE,
+    "2026-10-30",
+    true,
+    "issued",
+  );
+  await restarted.getByText("Company defaults for new invoices", { exact: true }).click();
   await restarted.getByRole("button", { name: "Manage invoice template", exact: true }).click();
   await expectCompanyTemplate(restarted, UPDATED_COMPANY_TEMPLATE, false);
   await expect(

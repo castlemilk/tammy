@@ -1,0 +1,28 @@
+{
+  "files": [
+    {
+      "path": "before/03-saved-draft.png",
+      "library_file_id": "libfile_3c65efea8ca48191823dddd3ed021b55",
+      "file_id": "file_0000000064b081fa9c585050e796a0f0",
+      "version": 0,
+      "sha256": "2b310801090dc42c14b0afca9e79942ca65bf162d603a3ddb61871db883f35fd",
+      "download": "https://chatgpt.com/api/library/files/libfile_3c65efea8ca48191823dddd3ed021b55/download"
+    },
+    {
+      "path": "after/03-saved-draft.png",
+      "library_file_id": "libfile_7058fe37fe7c8191be10bffea0f95d38",
+      "file_id": "file_00000000d8c081fa9ecad9a9cc89c2ea",
+      "version": 0,
+      "sha256": "f2fd5dded572a18b8d6191c4ff6adf1e432dbd40d10d2910178e239d705b1331",
+      "download": "https://chatgpt.com/api/library/files/libfile_7058fe37fe7c8191be10bffea0f95d38/download"
+    },
+    {
+      "path": "after/08-recorded-receipt.png",
+      "library_file_id": "libfile_34f5d08665748191b013fc53af530cd7",
+      "file_id": "file_0000000003d481fab1ffa92736f36ed1",
+      "version": 0,
+      "sha256": "194e374c9d82557200ccb2625e93f5f4cc5e40921a195fa4cbe99bb49cac316d",
+      "download": "https://chatgpt.com/api/library/files/libfile_34f5d08665748191b013fc53af530cd7/download"
+    }
+  ]
+}

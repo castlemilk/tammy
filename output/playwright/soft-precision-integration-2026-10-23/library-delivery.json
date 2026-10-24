@@ -1,0 +1,25 @@
+{
+  "sourceRevision": "7aa28d4e243a1bde1006234f013e3c468469ae2c",
+  "verifiedByteIdentical": true,
+  "generatedConceptImages": false,
+  "files": [
+    {
+      "path": "after/03-saved-draft.png",
+      "libraryFileId": "libfile_9752d2e0a3bc819187e6bad998028acf",
+      "bytes": 134955,
+      "sha256": "6dd0348dae1d54d6519e25b7f8b43bf23ce363d70a6d44b869caf13b903347ca"
+    },
+    {
+      "path": "after/08-recorded-receipt.png",
+      "libraryFileId": "libfile_43ee5f6006a88191a0a6c325d8f96224",
+      "bytes": 144477,
+      "sha256": "65c1b5be0140299e30e9ee5b3bd8203b822d916c6dfd64246a2e6bbe87e570df"
+    },
+    {
+      "path": "after/12b-line-amounts-320.png",
+      "libraryFileId": "libfile_0871dfce9ed88191942df1e9f8e3dd4f",
+      "bytes": 50871,
+      "sha256": "b081f66f4054b172f9352228e446f3c0f9377ee6750402d02c0112f90e829096"
+    }
+  ]
+}

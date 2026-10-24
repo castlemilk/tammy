@@ -1,0 +1,39 @@
+{
+  "reviewBase": "5b615033b693a67bdc7dd2e12ae6defa64463bfc",
+  "designCommit": "19533020422b6ea2f0c77dc3117a051483f9f9ce",
+  "referenceSha256": "1ff7a89366290bd31c7a4747b51e81cc9820db9eeaf15bbbc489e08f9210b301",
+  "baselineRuntime": {
+    "sourceRevision": "fe0d0123bfb1ffcc933fc2b38cdd064f917844f4",
+    "sourceDirty": false,
+    "appSha256": "05f7b63111203f21a71dc139e5d3c623b68bdd8e69321037a9a7695f44bc66be",
+    "manifestSha256": "b47d974e5bbd08f59deec117d2cd1651e3a0a91b9060496f1224ac2743a075d8",
+    "auditSourceIdenticalThroughReviewBase": true,
+    "captureHarnessCommittedAtCapture": false,
+    "nativeCasesPassed": 1,
+    "nativeCaseSeconds": 13.7,
+    "suiteSeconds": 15.0,
+    "skipped": 0,
+    "retried": 0
+  },
+  "originalAuditSourceSha256": "fafdf6f9c21f32cefafd26b2f32b93d432f48f4ca400cd689f0c398f1e096bfc",
+  "preservedRequestStateBlockSha256": "8a58e6d12139c9acf1af016f3f6358ae4b83bd9c451800608560d86a417964e5",
+  "preservedCodecsSha256": "7a8ef67662168c567abc650f4e9e3836021eeaa0ef6bbb0802d01cae7d69fdce",
+  "existingDateHelpersUnchanged": true,
+  "moneyDisplayCorrection": "Reuse existing exact AUD bigint formatter; retain all signed int64 cents. No stored amount, calculations, or request payloads change.",
+  "priorTrackedPNGsVerified": 901,
+  "afterRuntime": {
+    "sourceRevision": "132a0e9321167c0c1e5042c28713ada0ce6a919f",
+    "sourceDirty": false,
+    "appSha256": "eee66e9839492d80f5df2f1a0082b239827b962017e2124f0f614b05c2723aa4",
+    "manifestSha256": "2b15ea70fe51d39c9c3f175a3fbfec765d1201267cf0269f5fb341e14008b6cf",
+    "coreSha256": "078811e551eb5cd0c5f505e3282d82bc8f50be578c12a9d92e7bafb70d67562c",
+    "helperSha256": "8dbfb2b0708d1c61ebc07cd8c8b5ee6a626d73dad490b90667b3794d61edb201",
+    "releaseKind": "ordinary-package",
+    "nativeCasesPassed": 1,
+    "nativeCaseSeconds": 13.1,
+    "suiteSeconds": 14.8,
+    "skipped": 0,
+    "retried": 0,
+    "captureHarnessCorrection": "Native summary selected by accessible label rather than button role; original after/partial frame and 28.4s failed locator run retained, no app rebuild."
+  }
+}

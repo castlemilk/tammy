@@ -14,9 +14,16 @@ vi.mock("./bas-lifecycle", () => ({
 }));
 
 vi.mock("./bas-screen", () => ({
-  BasScreen: ({ purchaseReviewOnly }: { readonly purchaseReviewOnly?: boolean }) => (
+  BasScreen: ({
+    purchaseReviewOnly,
+    embedded,
+  }: {
+    readonly purchaseReviewOnly?: boolean;
+    readonly embedded?: boolean;
+  }) => (
     <section
       data-purchase-review-only={purchaseReviewOnly ? "true" : "false"}
+      data-embedded={embedded ? "true" : "false"}
       data-testid="legacy-bas-screen"
     >
       <button type="button">Regenerate local draft</button>
@@ -49,6 +56,12 @@ it("keeps the lifecycle primary and retains full legacy workpaper controls in a 
 
   expect(screen.getByRole("region", { name: "BAS lifecycle stages" })).toBeTruthy();
   expect(screen.getAllByRole("region", { name: "BAS approval authority" })).toHaveLength(1);
+  expect(
+    screen
+      .getByRole("region", { name: "BAS lifecycle stages" })
+      .compareDocumentPosition(screen.getByRole("region", { name: "BAS approval authority" })) &
+      Node.DOCUMENT_POSITION_FOLLOWING,
+  ).toBeTruthy();
   const details = screen
     .getByText("Saved workpapers and exports", { exact: true })
     .closest("details");
@@ -56,6 +69,7 @@ it("keeps the lifecycle primary and retains full legacy workpaper controls in a 
   expect(details?.open).toBe(false);
   const legacyScreen = screen.getByTestId("legacy-bas-screen");
   expect(legacyScreen.getAttribute("data-purchase-review-only")).toBe("false");
+  expect(legacyScreen.getAttribute("data-embedded")).toBe("true");
   const user = userEvent.setup();
   await user.click(screen.getByText("Saved workpapers and exports", { exact: true }));
   expect(details?.open).toBe(true);

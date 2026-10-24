@@ -137,12 +137,12 @@ export function InvoiceTemplatePanel({
     }
   }
 
-  const labelClass = "grid min-w-0 gap-1.5 text-[12px] font-semibold text-foreground";
+  const labelClass = "grid min-w-0 gap-1.5 text-[13px] font-medium text-foreground";
   return (
     <section
       aria-busy={loading || busy}
       aria-label="Company invoice template"
-      className="work-surface grid gap-4 overflow-hidden pb-5"
+      className="work-surface grid min-w-0 gap-4 overflow-hidden pb-5"
     >
       <SurfaceHeading
         title="Company invoice template"
@@ -165,7 +165,7 @@ export function InvoiceTemplatePanel({
         <p className="px-5 text-[13px] text-muted-foreground">Loading company template…</p>
       ) : null}
       {error ? (
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="mx-5 flex flex-wrap items-center gap-3">
           <p className="text-[13px] text-destructive" role="alert">
             {error}
           </p>
@@ -187,7 +187,7 @@ export function InvoiceTemplatePanel({
               <label className={labelClass}>
                 Template seller address
                 <textarea
-                  className={`${invoiceFieldClass} h-16 py-2`}
+                  className={`${invoiceFieldClass} min-h-24 max-h-80 field-sizing-content resize-none py-3`}
                   maxLength={1000}
                   onChange={(event) => edit({ sellerAddress: event.target.value })}
                   value={editor?.sellerAddress ?? ""}
@@ -217,7 +217,7 @@ export function InvoiceTemplatePanel({
               <label className={labelClass}>
                 Default notes
                 <textarea
-                  className={`${invoiceFieldClass} h-20 py-2`}
+                  className={`${invoiceFieldClass} min-h-24 max-h-80 field-sizing-content resize-none py-3`}
                   maxLength={2000}
                   onChange={(event) => edit({ notes: event.target.value })}
                   value={editor?.notes ?? ""}
@@ -226,7 +226,7 @@ export function InvoiceTemplatePanel({
               <label className={labelClass}>
                 Default payment instructions
                 <textarea
-                  className={`${invoiceFieldClass} h-20 py-2`}
+                  className={`${invoiceFieldClass} min-h-24 max-h-80 field-sizing-content resize-none py-3`}
                   maxLength={1000}
                   onChange={(event) => edit({ paymentInstructions: event.target.value })}
                   value={editor?.paymentInstructions ?? ""}
@@ -238,7 +238,7 @@ export function InvoiceTemplatePanel({
                 Company logo
                 <input
                   accept="image/png,image/jpeg"
-                  className="focus-ring min-h-11 w-full text-[13px] text-muted-foreground file:mr-3 file:rounded-xl file:border file:border-border file:bg-background file:px-3 file:py-2 file:text-[13px] file:text-foreground"
+                  className="focus-ring min-h-11 w-full text-[13px] text-muted-foreground file:mr-3 file:rounded-xl file:border file:border-border file:bg-background file:px-3 file:py-3 file:text-[13px] file:text-foreground"
                   onChange={(event) => {
                     const file = event.target.files?.[0];
                     event.target.value = "";

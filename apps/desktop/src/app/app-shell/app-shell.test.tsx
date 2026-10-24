@@ -5,6 +5,7 @@ import { afterEach, expect, it } from "vitest";
 import type { SystemDiagnostics } from "../../shared/conveyor-contract";
 import { App as ActualApp } from "../app";
 import { createConveyorFixture, renderWithConveyor as render } from "../test/conveyor-fixtures";
+import { AppShell } from "./app-shell";
 
 const diagnostics: SystemDiagnostics = {
   apiVersion: "tammy.v1",
@@ -43,6 +44,25 @@ afterEach(() => {
   window.localStorage.clear();
 });
 
+it("keeps the Journals breadcrumb aligned with query-based journal navigation", () => {
+  installConveyorFixture();
+  render(
+    <AppShell
+      activePath="/accounting/journals?journal=018f0000-0000-7000-8000-000000000210"
+      onNavigate={() => {}}
+      organisationDisplayName="Synthetic Studio"
+    >
+      <p>Retained journal</p>
+    </AppShell>,
+  );
+  expect(within(screen.getByRole("banner")).getByText("Journals", { exact: true })).toBeTruthy();
+  expect(
+    within(screen.getByRole("navigation", { name: "Primary" }))
+      .getByRole("link", { name: "Journals" })
+      .getAttribute("aria-current"),
+  ).toBe("page");
+});
+
 it("renders the walkthrough app shell", async () => {
   installConveyorFixture();
   const user = userEvent.setup();
@@ -73,9 +93,11 @@ it("renders the walkthrough app shell", async () => {
 
   expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
   expect(screen.getByRole("heading", { level: 1, name: "Overview" })).toBeTruthy();
-  expect(screen.getByRole("heading", { level: 2, name: "Documents" })).toBeTruthy();
-  expect(screen.getByRole("heading", { level: 2, name: "Banking" })).toBeTruthy();
-  expect(screen.getByRole("heading", { level: 2, name: "GST & BAS" })).toBeTruthy();
+  expect(screen.getByRole("heading", { level: 2, name: "Needs review" })).toBeTruthy();
+  const attention = within(screen.getByRole("region", { name: "Local attention" }));
+  expect(attention.getByText("Documents", { exact: true })).toBeTruthy();
+  expect(attention.getByText("Banking", { exact: true })).toBeTruthy();
+  expect(attention.getByRole("heading", { level: 3, name: "GST & BAS" })).toBeTruthy();
   expect(screen.queryByText("Workspace setup comes next")).toBeNull();
 
   await user.click(within(navigation).getByRole("link", { name: "Settings" }));

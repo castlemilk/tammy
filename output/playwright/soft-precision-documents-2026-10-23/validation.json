@@ -1,0 +1,59 @@
+{
+  "focusedDocuments": {
+    "files": 5,
+    "passed": 52,
+    "failed": 0,
+    "seconds": 10.86
+  },
+  "desktop": {
+    "files": 111,
+    "passed": 1306,
+    "failed": 0,
+    "seconds": 153.86
+  },
+  "typecheck": "passed",
+  "lint": {
+    "passed": true,
+    "warnings": 135,
+    "infos": 12
+  },
+  "staticUiAudit": {
+    "findings": 19,
+    "sameAsPrecedingReviewHead": true,
+    "policyChanged": false
+  },
+  "amountSuggestionRegression": {
+    "base": "fails: expected Total 110.00; received 100.00",
+    "corrected": "passes, including partial-label Totalled rejection",
+    "scope": "suggestions only; review confirmation and purchase posting remain separate"
+  },
+  "baselineNativeJourney": {
+    "passed": 1,
+    "failed": 0,
+    "seconds": 12.9,
+    "retries": 0
+  },
+  "afterNativeJourney": {
+    "passed": 1,
+    "failed": 0,
+    "seconds": 11.6,
+    "retries": 0
+  },
+  "hostedExactHead": "Initial d1174: five green jobs, one PR macOS keyboard-scroll failure; see ci-followup.md. Final corrected exact-head outcomes are in draft PR #11.",
+  "qualificationBoundary": "Ordinary darwin-arm64 package only. No MAS, Windows 11, signing, upload, merge or publication claim.",
+  "connectedNativeJourney": {
+    "passed": 1,
+    "failed": 0,
+    "seconds": 14.6,
+    "retries": 0
+  },
+  "ordinaryPackage": {
+    "source": "8ce3a2cc94f831d3be1cfbcde745d3e7fe63bf53",
+    "sourceDirty": false,
+    "passed": 7,
+    "failed": 0,
+    "skipped": 1,
+    "coreUnchanged": true
+  },
+  "scope": "Initial Documents block. Latest correction outcomes are in keyboard-fix-captures.json."
+}

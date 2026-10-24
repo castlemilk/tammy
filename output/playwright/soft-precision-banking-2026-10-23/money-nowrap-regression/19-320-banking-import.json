@@ -1,0 +1,11 @@
+{
+  "sourceRevision": "4ce093a93422121cf7e0492456a20a7b0dcf2344",
+  "milestone": "19-320-banking-import",
+  "viewport": {
+    "width": 320,
+    "height": 1000
+  },
+  "sha256": "ba5a96cea260a60a5f5d52087f269aeba18de0383575017a9b3d0721f738522c",
+  "secretInputsMasked": true,
+  "recoveryMasked": false
+}

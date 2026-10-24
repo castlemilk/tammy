@@ -1,0 +1,108 @@
+{
+  "schemaVersion": 1,
+  "phase": "after-initial",
+  "runtime": {
+    "sourceRevision": "3e9278190f3666a2c13893bb18f94b68570e0ab3",
+    "sourceDirty": false,
+    "appSha256": "87fd3e4de6739b77aa3afbb5575b69f8dbea24b074fbe848c1210647232116ff",
+    "coreSha256": "078811e551eb5cd0c5f505e3282d82bc8f50be578c12a9d92e7bafb70d67562c",
+    "helperSha256": "8dbfb2b0708d1c61ebc07cd8c8b5ee6a626d73dad490b90667b3794d61edb201",
+    "manifestSha256": "293e2104503ccc0c9530d7bfcf4fc07aaafa9fe3fed26f1d36eeffc1015c416b",
+    "releaseKind": "ordinary-package",
+    "target": "darwin-arm64"
+  },
+  "harnessSourceRevision": "3e9278190f3666a2c13893bb18f94b68570e0ab3",
+  "nativeSeconds": 11.1,
+  "runnerSeconds": 11.9,
+  "retries": 0,
+  "consoleErrors": 0,
+  "pageErrors": 0,
+  "frames": [
+    {
+      "file": "after-initial/01-installed-chart.png",
+      "sha256": "5f296406b21dab4db428b071d165f405153b8593826ac3c2e88c23bbc8234427",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "file": "after-initial/02-grouped-chart.png",
+      "sha256": "90bc9f8e4f1138f3db4b94e1ed350097cc1244d3e1e8392ddb58bc12d0dd718c",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "file": "after-initial/03-collapsed-assets.png",
+      "sha256": "38bf750486db2674fbf9fced996e8b8b3099757a862fea600f4aaa5f0b1b6c07",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "file": "after-initial/04-search.png",
+      "sha256": "ee9768ed8ee54155ecb2d138d5be6ec053ac8797b352962a70460dd285a9a6a0",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "file": "after-initial/05-no-results.png",
+      "sha256": "113a60236dd3fa7dddd1633fce0dac6640fa59bda8532757ae9aa12e4d682115",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "file": "after-initial/06-ordinary-account-entry.png",
+      "sha256": "5e9b0991d0d213f8866a730e7ed573c2ab369f89553120d70b2a03e783c65085",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "file": "after-initial/07-rejected-duplicate.png",
+      "sha256": "e6de083498fa7a74991a5f14135bdd1fb21b1cdfd3b73839ce7b2e507409ad50",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "file": "after-initial/08-entry-focus-320.png",
+      "sha256": "0bfbcf1825cd1024bf5fb900f43da244363fe0e9152fb3582d5232ade10da68a",
+      "width": 320,
+      "height": 1000
+    },
+    {
+      "file": "after-initial/08-entry-focus-390.png",
+      "sha256": "211b88ac9760437cac3bf139d843f07a3ae9c29285068db09ee8951fbe052de4",
+      "width": 390,
+      "height": 1000
+    },
+    {
+      "file": "after-initial/08-entry-focus-900.png",
+      "sha256": "82a5014dfee3f8e30c3fc77e5c46499dd76ee36771a38503b44b876a3527a49c",
+      "width": 900,
+      "height": 1000
+    },
+    {
+      "file": "after-initial/09-account-saved.png",
+      "sha256": "18f5a9460cca6da7bee632e4f58f7aaf760f85565b01d4e984b7f436d6fffa1d",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "file": "after-initial/09b-new-ordinary-row.png",
+      "sha256": "38cf4023e2847527bd846308b5c75b6242a2bd3552d619bd04d3f0fc0ecabfaf",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "file": "after-initial/10-table-focus-320.png",
+      "sha256": "a023a6f52c1e133082058ea0323d135098a8ed1909b26c9e4383bb1db0942708",
+      "width": 320,
+      "height": 1000
+    },
+    {
+      "file": "after-initial/10-table-focus-390.png",
+      "sha256": "53e55440197cf3a9f784c98094b13bec339504fd9d5993e9436b05802fced358",
+      "width": 390,
+      "height": 1000
+    }
+  ],
+  "measurements": "after-initial/measurements-1440.json",
+  "observedMismatch": "Protected badges wrap, producing 47px rows; full saved banner adds a separate row. Retained before correction."
+}

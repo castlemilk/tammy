@@ -1,0 +1,95 @@
+{
+  "schemaVersion": 1,
+  "phase": "before",
+  "reviewBase": "22a97dc6a0c3790a0b404775196ae342f8e3d311",
+  "runtime": {
+    "sourceRevision": "4ce093a93422121cf7e0492456a20a7b0dcf2344",
+    "sourceDirty": false,
+    "applicationSourceByteIdenticalToReviewBase": true,
+    "appSha256": "325b0d0ee103f165ea339821602cfab662c5173e82b82ffdaf01eb96092055a9",
+    "coreSha256": "078811e551eb5cd0c5f505e3282d82bc8f50be578c12a9d92e7bafb70d67562c",
+    "manifestSha256": "d10f735a165a6e3bd80d19ad465ec7c1bb87034f08656f71e6ac3322f54411f3"
+  },
+  "harnessDirty": true,
+  "harnessSha256": "6578adb96d817b253dc1db1b46deb63d73460011c4a8621184b7806ca6303767",
+  "nativeSeconds": 10.9,
+  "runnerSeconds": 11.7,
+  "retries": 0,
+  "pageErrors": 0,
+  "consoleErrors": 0,
+  "originalPostHandlerSha256": "5dbc78bfc720a67bf6115f7a8c0901d098dd388627310717af8e789199829ec4",
+  "reference": {
+    "commit": "19533020422b6ea2f0c77dc3117a051483f9f9ce",
+    "file": "reference/09-accounting-core.png",
+    "sha256": "38de0e2dfb8397d95b1337d57ccb5e039298cbdd774d04824e0b9eba8ced76eb",
+    "kind": "Unchanged generated concept; not app evidence"
+  },
+  "frames": [
+    {
+      "file": "before/01-initial-list.png",
+      "sha256": "b0f4613fedad24d5cf6e840db00e1f57711da9e72e206bd884d9b457f2aba8f7",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "file": "before/02-loaded-history.png",
+      "sha256": "f958369627a7319515d178da1a818af265eec1ec5cb2a93f08302a68149f3708",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "file": "before/03-entry-review.png",
+      "sha256": "9180cc6bb09cdbfa248d403ea869aca8320e16a30523bf29596766f2c25da8a2",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "file": "before/04-invalid-accounts.png",
+      "sha256": "076d9b7e4c9a508dcd910d70e64c0f066528e97c73faef944f3c847cc5be91c9",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "file": "before/05-entry-focus-320.png",
+      "sha256": "838c6e88c65d86cc0eb3d2364ba5c706d88f1c60b2ce9925515d295038957c00",
+      "width": 320,
+      "height": 1000
+    },
+    {
+      "file": "before/05-entry-focus-390.png",
+      "sha256": "77f9b680b61bc9629d19acdeacbc6f01f63d7a6021469b65389702afb7363d42",
+      "width": 390,
+      "height": 1000
+    },
+    {
+      "file": "before/05-entry-focus-900.png",
+      "sha256": "3a8b5b7c4054ce40fd2da62c85ec7afe4d0ba4fa92309678e50ff839e1a8b9a4",
+      "width": 900,
+      "height": 1000
+    },
+    {
+      "file": "before/06-posted-detail.png",
+      "sha256": "d37ef46d3c3ec291f75b5bd51b88b870b402f88f75cb136819d241015bb22a17",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "file": "before/07-detail-scroll-320.png",
+      "sha256": "4f42e36a73d2f37dafe2ecf0beaae27a15f1b9d433bd8b01f60ba7f7511328fb",
+      "width": 320,
+      "height": 1000
+    },
+    {
+      "file": "before/07-detail-scroll-390.png",
+      "sha256": "8c4d2c0143bb5a6d6929019dc25ffd2a46ef2bf6a07621ca6b59743317aa9a38",
+      "width": 390,
+      "height": 1000
+    },
+    {
+      "file": "before/08-returned-history.png",
+      "sha256": "4ba8460b810f6db1aab88796f488fa4fe49b3fc92012c0626ecd7581c4d4a397",
+      "width": 1440,
+      "height": 1100
+    }
+  ]
+}
