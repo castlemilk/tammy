@@ -68,3 +68,35 @@ its delayed phase remains unresolved, and this screen does not fix it.
 
 Remaining after this one block: workspace/recovery, GST/BAS, Audit,
 Settings/Organisation. Draft, merge and publication holds remain.
+
+## Rendered after and connected regression
+
+The ordinary package binds clean application source `f82d9753` and passes seven
+package checks /one expected Windows-only skip. Core and SBR helper hashes are
+unchanged. Clean harness `f2a8c563` captured ten real after frames in **10.5s /11.4s**
+including runner, zero retries/page/console errors. [Matched comparison](comparison.html)
+and [exact runtime/frame provenance](after-captures.json) retain the real desktop,
+900/390/320px focus, credit scrolling, refresh and back/forward states. The separate
+large fixture posts exact 9,007,199,254,740,991 minor units and verifies the returned
+amounts/total at 320px; it is not the matched four-row primary comparison.
+
+Original-size pixels were inspected against board 09. The duplicate heading is
+removed, the read-only date sits beside the display heading, rows are compact and
+exact debit/credit figures align above a restrained forest total band. Narrow
+keyboard scrolling retains a visible inset border and a complete credit-column
+value. The concept's date selector/export functionality is not copied. This is
+representative improvement, not exact visual parity.
+
+The first connected run passed workspace/recovery/accounting **13.3s** and the full
+invoice → Overview → Documents → Banking → Journals → Chart → Trial balance
+journey **17.2s**. The existing invoice/purchase/BAS case failed **19.7s**, giving
+**two passes /one failure, 51.5s including runner**. Its original date assertion
+waited ten seconds for the former sentence `Debit and credit balances as at
+12/05/2024.`. The [retained safe failure frame](retained-copy-assertion-failure/01-trial-balance.png)
+shows the correct new read-only date and authoritative AUD 319 totals. No runtime
+logs, accessibility setup records, traces or videos are committed.
+
+The corrected assertion checks visible date text and exact `<time datetime>`
+against the same fixture civil date. It strengthens date identity without changing
+the app, package, fixture date, deadline or financial checks. Only that corrected
+case is rerun; the failed original is not relabelled as an uninterrupted full pass.

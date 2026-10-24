@@ -1373,10 +1373,16 @@ test("runs invoice, purchase, and BAS workflows through the packaged app", async
         break;
       }
       case "Trial balance": {
-        const postingDateLabel = fixture.period.postingDate.split("-").reverse().join("/");
-        await expect(
-          page.getByText(`Debit and credit balances as at ${postingDateLabel}.`, { exact: true }),
-        ).toBeVisible();
+        const date = page.locator("time");
+        await expect(date).toBeVisible();
+        await expect(date).toHaveAttribute("datetime", fixture.period.postingDate);
+        await expect(date).toHaveText(
+          new Date(`${fixture.period.postingDate}T12:00:00`).toLocaleDateString("en-AU", {
+            day: "numeric",
+            month: "short",
+            year: "numeric",
+          }),
+        );
         await expect(
           page.getByText(fixture.accounts[0]?.name ?? "", { exact: true }),
         ).toBeVisible();
