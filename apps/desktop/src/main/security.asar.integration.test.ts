@@ -1,11 +1,13 @@
+import { writeSync } from "node:fs";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { availableParallelism, release, tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
 import {
+  HarnessPhaseTimings,
   HarnessProcessError,
   productionHarnessTimers,
   runHarnessProcess,
@@ -66,22 +68,57 @@ async function runElectron(
   environment.TAMMY_TEST_SECURITY_SOURCE = SECURITY_SOURCE;
   environment.TAMMY_TEST_USER_DATA_ROOT = userDataPath;
   const platformArguments = process.platform === "linux" ? ["--no-sandbox"] : [];
-  return runHarnessProcess({
-    closeConfirmationTimeoutMs: CLOSE_CONFIRMATION_TIMEOUT_MS,
-    electronArguments: [
-      ...platformArguments,
-      `--user-data-dir=${userDataPath}`,
-      "--enable-logging=stderr",
-      resolve(HARNESS_PATH, ".."),
-    ],
-    environment,
-    executable,
-    platform: process.platform,
-    spawnProcess: spawnHarnessProcess,
-    terminateProcess: terminateHarnessProcess,
-    timeoutMs: HARNESS_TIMEOUT_MS,
-    timers: productionHarnessTimers,
-  });
+  const phaseTimings = new HarnessPhaseTimings();
+  try {
+    return await runHarnessProcess({
+      phaseTimings,
+      closeConfirmationTimeoutMs: CLOSE_CONFIRMATION_TIMEOUT_MS,
+      electronArguments: [
+        ...platformArguments,
+        `--user-data-dir=${userDataPath}`,
+        "--enable-logging=stderr",
+        resolve(HARNESS_PATH, ".."),
+      ],
+      environment,
+      executable,
+      platform: process.platform,
+      spawnProcess: spawnHarnessProcess,
+      terminateProcess: terminateHarnessProcess,
+      timeoutMs: HARNESS_TIMEOUT_MS,
+      timers: productionHarnessTimers,
+    });
+  } finally {
+    // Bypass Vitest's successful-console suppression with one fixed, bounded summary.
+    // Failure to deliver diagnostics must not replace the original process outcome.
+    try {
+      writeSync(
+        1,
+        `TAMMY_ASAR_TIMING ${JSON.stringify({
+          platform: process.platform,
+          arch: process.arch,
+          node: process.version,
+          kernel: release(),
+          availableParallelism: availableParallelism(),
+          event: ["push", "pull_request"].includes(process.env.GITHUB_EVENT_NAME ?? "")
+            ? process.env.GITHUB_EVENT_NAME
+            : "other",
+          displayPresent: Boolean(environment.DISPLAY),
+          dbusTransport:
+            environment.DBUS_SESSION_BUS_ADDRESS === undefined
+              ? "absent"
+              : environment.DBUS_SESSION_BUS_ADDRESS.startsWith("unix:")
+                ? "unix"
+                : environment.DBUS_SESSION_BUS_ADDRESS.startsWith("tcp:")
+                  ? "tcp"
+                  : "other",
+          nodeOptionsPresent: Boolean(environment.NODE_OPTIONS),
+          nodeCompileCachePresent: Boolean(environment.NODE_COMPILE_CACHE),
+          nodeCompileCacheDisabled: environment.NODE_DISABLE_COMPILE_CACHE === "1",
+          timings: phaseTimings.snapshot(),
+        })}\n`,
+      );
+    } catch {}
+  }
 }
 
 describe("packaged ASAR renderer protocol", () => {

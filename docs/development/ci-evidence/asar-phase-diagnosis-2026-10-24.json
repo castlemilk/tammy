@@ -1,0 +1,177 @@
+{
+  "schemaVersion": 1,
+  "reviewBase": "a11cf9f210936fffa7b4a742691873be971c34d5",
+  "originalAttempts": [
+    {
+      "head": "3defba913949b77500ea4f6ed704fcc27a1d26fb",
+      "event": "push",
+      "run": 40037731966,
+      "job": 120701216864,
+      "queueSeconds": 2,
+      "setupSeconds": 88,
+      "canonicalSeconds": 359,
+      "suiteSeconds": 204.74,
+      "asarMs": 20051,
+      "conclusion": "failure",
+      "url": "https://github.com/castlemilk/tammy/actions/runs/40037731966/job/120701216864"
+    },
+    {
+      "head": "3defba913949b77500ea4f6ed704fcc27a1d26fb",
+      "event": "pull_request",
+      "run": 40037736157,
+      "job": 120701230105,
+      "queueSeconds": 2,
+      "setupSeconds": 82,
+      "canonicalSeconds": 304,
+      "suiteSeconds": 163.28,
+      "asarMs": 5707,
+      "conclusion": "success",
+      "url": "https://github.com/castlemilk/tammy/actions/runs/40037736157/job/120701230105"
+    },
+    {
+      "head": "a11cf9f210936fffa7b4a742691873be971c34d5",
+      "event": "push",
+      "run": 40043885505,
+      "job": 120721010351,
+      "queueSeconds": 2,
+      "setupSeconds": 98,
+      "canonicalSeconds": 367,
+      "suiteSeconds": 207.13,
+      "asarMs": 20047,
+      "conclusion": "failure",
+      "url": "https://github.com/castlemilk/tammy/actions/runs/40043885505/job/120721010351"
+    },
+    {
+      "head": "a11cf9f210936fffa7b4a742691873be971c34d5",
+      "event": "pull_request",
+      "run": 40043890584,
+      "job": 120721028082,
+      "queueSeconds": 3,
+      "setupSeconds": 99,
+      "canonicalSeconds": 432,
+      "suiteSeconds": 237.49,
+      "asarMs": 3287,
+      "conclusion": "success",
+      "url": "https://github.com/castlemilk/tammy/actions/runs/40043890584/job/120721028082"
+    }
+  ],
+  "runnerVersion": "2.338.0",
+  "runnerImage": "ubuntu-24.04",
+  "imageVersion": "20261012.334.1",
+  "pairProvisionerVersions": {
+    "3defba91": "20261012.601",
+    "a11cf9f2": "20261021.618"
+  },
+  "sameASARSourcesAndDependenciesSince": "8cb09e34d16ebacbf610eead1cb8494546b2a13f",
+  "harnessDeadlineMs": 20000,
+  "closeConfirmationDeadlineMs": 5000,
+  "outerCaseDeadlineMs": 30000,
+  "workerLimit": 1,
+  "retryRequested": false,
+  "rootCause": "Unresolved; original phase markers lack timestamps. No source reliability fix is claimed.",
+  "localValidation": {
+    "passed": 23,
+    "skipped": 0,
+    "files": 2,
+    "seconds": 1.77,
+    "linuxReproduced": false,
+    "observation": {
+      "platform": "darwin",
+      "arch": "arm64",
+      "node": "v24.18.0",
+      "kernel": "25.5.0",
+      "availableParallelism": 12,
+      "event": "other",
+      "displayPresent": false,
+      "dbusTransport": "absent",
+      "nodeOptionsPresent": false,
+      "nodeCompileCachePresent": false,
+      "nodeCompileCacheDisabled": false,
+      "timings": {
+        "elapsedMs": 503.176,
+        "events": {
+          "launch": 0.125,
+          "spawn-return": 1.261,
+          "deadline-armed": 1.346,
+          "first-stderr": 308.843,
+          "first-stdout": 479.13,
+          "exit": 502.969,
+          "close": 503.012
+        },
+        "phases": [
+          {
+            "phase": "harness-start",
+            "childElapsedMs": 0.303,
+            "parentReceivedMs": 309.311
+          },
+          {
+            "phase": "import-start",
+            "childElapsedMs": 2.717,
+            "parentReceivedMs": 311.028
+          },
+          {
+            "phase": "import-done",
+            "childElapsedMs": 48.312,
+            "parentReceivedMs": 356.691
+          },
+          {
+            "phase": "ready-wait",
+            "childElapsedMs": 48.607,
+            "parentReceivedMs": 356.983
+          },
+          {
+            "phase": "ready",
+            "childElapsedMs": 116.909,
+            "parentReceivedMs": 425.391
+          },
+          {
+            "phase": "protocol-start",
+            "childElapsedMs": 116.919,
+            "parentReceivedMs": 425.42
+          },
+          {
+            "phase": "protocol-ready",
+            "childElapsedMs": 132.745,
+            "parentReceivedMs": 441.076
+          },
+          {
+            "phase": "fetch-start",
+            "childElapsedMs": 132.765,
+            "parentReceivedMs": 441.083
+          },
+          {
+            "phase": "fetch-headers",
+            "childElapsedMs": 170.244,
+            "parentReceivedMs": 478.627
+          },
+          {
+            "phase": "body-read",
+            "childElapsedMs": 170.691,
+            "parentReceivedMs": 479.002
+          },
+          {
+            "phase": "result-write",
+            "childElapsedMs": 170.709,
+            "parentReceivedMs": 479.05
+          },
+          {
+            "phase": "result-flushed",
+            "childElapsedMs": 170.813,
+            "parentReceivedMs": 479.069
+          },
+          {
+            "phase": "exit-requested",
+            "childElapsedMs": 170.82,
+            "parentReceivedMs": 479.154
+          }
+        ],
+        "runtime": {
+          "electron": "43.1.1",
+          "node": "24.18.0",
+          "platform": "darwin",
+          "arch": "arm64"
+        }
+      }
+    }
+  }
+}
