@@ -61,8 +61,10 @@ export function BasScreen({
   accountingApi,
   onReviewDocument,
   purchaseReviewOnly = false,
+  embedded = false,
 }: {
   readonly api: BasAPI;
+  readonly embedded?: boolean;
   readonly organisationApi?: ReportOrganisationApi;
   readonly roleControlApi?: Pick<
     TammyConveyorModule<"organisation">,
@@ -183,13 +185,14 @@ export function BasScreen({
   };
 
   const exportBas = api.exportBas;
+  const Heading = embedded ? "h2" : "h1";
   return (
     <div className="mx-auto grid w-full max-w-[1120px] gap-4">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="page-title">
+          <Heading className="page-title">
             {purchaseReviewOnly ? "Purchase source review" : "GST & BAS"}
-          </h1>
+          </Heading>
           <p className="mt-1 text-[14px] text-muted-foreground">
             {purchaseReviewOnly
               ? "Review purchase evidence and GST-credit blockers in the retained legacy workpaper."

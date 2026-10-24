@@ -179,7 +179,8 @@
     outline-offset: 2px;
   }
   .chart-accounts-scroll.focus-ring:focus-visible,
-  .trial-balance-scroll.focus-ring:focus-visible {
+  .trial-balance-scroll.focus-ring:focus-visible,
+  .bas-table-scroll.focus-ring:focus-visible {
     outline-offset: -2px;
   }
 
@@ -497,5 +498,51 @@
   .invoice-draft-lines th:last-child,
   .invoice-draft-lines td:last-child {
     padding-right: 0;
+  }
+}
+
+@layer components {
+  .bas-page {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .bas-page :where(section, .grid, .flex, label) {
+    min-width: 0;
+  }
+  .bas-page select {
+    min-width: 0;
+    width: 100%;
+    max-width: 100%;
+  }
+  .bas-page :where(input:not([type="checkbox"]), textarea) {
+    min-width: 0;
+    max-width: 100%;
+  }
+  .bas-page button {
+    max-width: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .bas-stage-rail button {
+    padding-inline: 14px;
+  }
+  .bas-label-table th,
+  .bas-label-table td {
+    padding: 8px 14px;
+    height: 40px;
+  }
+  .bas-label-table thead th {
+    height: 38px;
+    font-size: 12px;
+  }
+  .bas-label-table tbody th,
+  .bas-label-table tbody td {
+    font-size: 13px;
+  }
+  .bas-label-table tbody th {
+    color: var(--forest);
+  }
+  .bas-label-table tbody tr:hover {
+    background: var(--background);
   }
 }

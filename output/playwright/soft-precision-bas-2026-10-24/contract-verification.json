@@ -1,0 +1,29 @@
+{
+  "reviewBase": "80c62705b2480203e0808f044224f164b9cb47ed",
+  "baselineRuntimeSource": "f82d9753e2dd9f5678b943fcb283adff6eb3f44b",
+  "baselineRuntimeSourceDirty": false,
+  "baselineRuntimeAppSha256": "23ecefcb2b9a941293719eae3da1cef3a991fe7658ac948ef5863ef1a2ab0935",
+  "baselineRuntimeManifestSha256": "0743dbe37cb9371033c6fa78d6e71820bcd102ef54d86c5d09db6d07f457da07",
+  "designCommit": "19533020422b6ea2f0c77dc3117a051483f9f9ce",
+  "referenceSha256": "c69bd6ad6ad4ee130132ae5c14ef3459343e1167842972d428c3fd3df1ba2ff0",
+  "before": {
+    "frames": 11,
+    "phase": "before",
+    "outcome": "All journey assertions completed; final teardown failed ELECTRON_CLOSE_TIMEOUT. Initial Review desktop frames were captured during refresh and are not loaded-calculation evidence."
+  },
+  "beforeReadyAttempt": {
+    "outcome": "Failed before reaching BAS, at Overview after synthetic workspace unlock; no captures. Core unlock deadline and Electron final teardown timeout. No retry or permission change."
+  },
+  "preservedRequestStateBlocks": [
+    {
+      "file": "bas-lifecycle.tsx",
+      "sha256": "156d7e95e99d93711c24b13d9d1a7b971b1e2de2213319bd676f3087ad6b85d4",
+      "byteIdentical": true
+    },
+    {
+      "file": "bas-screen.tsx",
+      "sha256": "ca8a3715f3db9d86260e6f39b11bfdf592477be7c45b8e861f6fad602eb05d4d",
+      "byteIdentical": true
+    }
+  ]
+}
