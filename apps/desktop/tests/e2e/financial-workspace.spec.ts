@@ -14,6 +14,7 @@ import {
   overviewCapturePhase,
   runOverviewReviewJourney,
 } from "./support/overview-journey";
+import { runTrialBalanceJourney, trialBalanceCapturePhase } from "./support/trial-balance-journey";
 
 const phase = process.env.TAMMY_FINANCIAL_UI_CAPTURE;
 const referencePhase = process.env.TAMMY_INVOICE_REFERENCE_CAPTURE;
@@ -46,6 +47,12 @@ test.describe("Soft Precision financial workspace", () => {
     );
     const page = electronHarness.currentPage();
     await page.setViewportSize({ width: 1440, height: 1100 });
+    if (trialBalanceCapturePhase) {
+      await runTrialBalanceJourney(page, workspace);
+      expect(electronHarness.consoleErrors).toEqual([]);
+      expect(electronHarness.pageErrors).toEqual([]);
+      return;
+    }
     if (chartCapturePhase) {
       await runChartJourney(page, workspace);
       expect(electronHarness.consoleErrors).toEqual([]);
@@ -486,6 +493,7 @@ test.describe("Soft Precision financial workspace", () => {
       await runBankingReviewJourney(page, workspace);
       await runJournalsJourney(page, workspace);
       await runChartJourney(page, workspace);
+      await runTrialBalanceJourney(page, workspace);
     }
     expect(electronHarness.consoleErrors).toEqual([]);
     expect(electronHarness.pageErrors).toEqual([]);

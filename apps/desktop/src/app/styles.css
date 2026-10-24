@@ -178,7 +178,8 @@
     outline: 2px solid var(--ring);
     outline-offset: 2px;
   }
-  .chart-accounts-scroll.focus-ring:focus-visible {
+  .chart-accounts-scroll.focus-ring:focus-visible,
+  .trial-balance-scroll.focus-ring:focus-visible {
     outline-offset: -2px;
   }
 
@@ -426,6 +427,29 @@
   }
   .compact-ledger-table td {
     height: 56px;
+  }
+  .trial-balance-table th,
+  .trial-balance-table td {
+    padding: 6px 16px;
+  }
+  .trial-balance-table thead th {
+    height: 38px;
+  }
+  .trial-balance-table tbody th,
+  .trial-balance-table tbody td {
+    height: 40px;
+    border-top: 1px solid var(--border);
+    font-size: 14px;
+    font-weight: 400;
+  }
+  .trial-balance-table tfoot th,
+  .trial-balance-table tfoot td {
+    height: 48px;
+    border-top: 1px solid var(--border);
+    font-size: 14px;
+  }
+  .trial-balance-table tfoot th {
+    color: inherit;
   }
   .chart-accounts-table th,
   .chart-accounts-table td {

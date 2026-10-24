@@ -301,3 +301,13 @@ not a book/cash balance, a computed difference, or totals over the bounded table
 CSV import remains explicit and does not imply a live feed. The concept's filename,
 account/period controls and automatic document links have no supported UI contract
 here and are omitted. Real matched before/reference/after captures are required.
+
+## Trial balance composition — board 09 (2026-10-23)
+
+The report keeps its authoritative server order and exact bigint figures in one
+compact ledger surface. A read-only as-of civil date sits beside the serif heading;
+there is no editable-date or export capability on this screen. Debit/credit columns
+align in tabular sans, and a restrained forest totals band labels equality only
+when both supplied totals exist and agree. Shared WorkState distinguishes loading,
+empty and unavailable reads; Refresh repeats the same read without a financial
+write. The report uses the existing keyboard scroller with a scoped inset outline.

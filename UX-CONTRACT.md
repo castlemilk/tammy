@@ -221,3 +221,14 @@ boundaries remain. No native validation is removed for this composition.
 Editing a Journals draft clears feedback from the previous attempt without
 posting or replaying a command. Other entered values remain. The next explicit
 Post journal still follows native validation and the existing Core command.
+
+## Trial balance read workspace (2026-10-23)
+
+Source: `GetTrialBalance` in `proto/tammy/v1/accounting.proto`. The existing
+authenticated request uses the renderer's local civil date, with no editable date
+or export control added. Server line order, authoritative totals, bigint formatter
+and response decoding remain unchanged. Total equality is a comparison of returned
+column totals, not a client sum or validity certificate. Shared Button/WorkState/
+HorizontalScrollArea own refresh, loading/empty/unavailable feedback and narrow
+keyboard access. Pending refresh is disabled; failure offers the same explicit
+read retry. This screen performs no accounting mutation.
