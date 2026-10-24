@@ -1,0 +1,24 @@
+{
+  "reviewBase": "5b615033b693a67bdc7dd2e12ae6defa64463bfc",
+  "designCommit": "19533020422b6ea2f0c77dc3117a051483f9f9ce",
+  "referenceSha256": "1ff7a89366290bd31c7a4747b51e81cc9820db9eeaf15bbbc489e08f9210b301",
+  "baselineRuntime": {
+    "sourceRevision": "fe0d0123bfb1ffcc933fc2b38cdd064f917844f4",
+    "sourceDirty": false,
+    "appSha256": "05f7b63111203f21a71dc139e5d3c623b68bdd8e69321037a9a7695f44bc66be",
+    "manifestSha256": "b47d974e5bbd08f59deec117d2cd1651e3a0a91b9060496f1224ac2743a075d8",
+    "auditSourceIdenticalThroughReviewBase": true,
+    "captureHarnessCommittedAtCapture": false,
+    "nativeCasesPassed": 1,
+    "nativeCaseSeconds": 13.7,
+    "suiteSeconds": 15.0,
+    "skipped": 0,
+    "retried": 0
+  },
+  "originalAuditSourceSha256": "fafdf6f9c21f32cefafd26b2f32b93d432f48f4ca400cd689f0c398f1e096bfc",
+  "preservedRequestStateBlockSha256": "8a58e6d12139c9acf1af016f3f6358ae4b83bd9c451800608560d86a417964e5",
+  "preservedCodecsSha256": "7a8ef67662168c567abc650f4e9e3836021eeaa0ef6bbb0802d01cae7d69fdce",
+  "existingDateHelpersUnchanged": true,
+  "moneyDisplayCorrection": "Reuse existing exact AUD bigint formatter; retain all signed int64 cents. No stored amount, calculations, or request payloads change.",
+  "priorTrackedPNGsVerified": 901
+}

@@ -3,6 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Page } from "@playwright/test";
 import { expect, test } from "./fixtures";
+import { auditCapturePhase, runAuditJourney } from "./support/audit-journey";
 import { bankingCapturePhase, runBankingReviewJourney } from "./support/banking-journey";
 import { chartCapturePhase, runChartJourney } from "./support/chart-journey";
 import { setupAndRunCurrentAccountingWorkflow } from "./support/current-accounting-workflow";
@@ -47,6 +48,12 @@ test.describe("Soft Precision financial workspace", () => {
     );
     const page = electronHarness.currentPage();
     await page.setViewportSize({ width: 1440, height: 1100 });
+    if (auditCapturePhase) {
+      await runAuditJourney(page);
+      expect(electronHarness.consoleErrors).toEqual([]);
+      expect(electronHarness.pageErrors).toEqual([]);
+      return;
+    }
     if (trialBalanceCapturePhase) {
       await runTrialBalanceJourney(page, workspace);
       expect(electronHarness.consoleErrors).toEqual([]);
@@ -494,6 +501,7 @@ test.describe("Soft Precision financial workspace", () => {
       await runJournalsJourney(page, workspace);
       await runChartJourney(page, workspace);
       await runTrialBalanceJourney(page, workspace);
+      await runAuditJourney(page);
     }
     expect(electronHarness.consoleErrors).toEqual([]);
     expect(electronHarness.pageErrors).toEqual([]);

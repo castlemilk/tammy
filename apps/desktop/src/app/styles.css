@@ -546,3 +546,22 @@
     background: var(--background);
   }
 }
+
+@layer components {
+  .audit-workspace {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .audit-workspace :where(section, .grid, .flex, label) {
+    min-width: 0;
+  }
+  .audit-summary.focus-ring:focus-visible {
+    outline-offset: -2px;
+  }
+  .audit-record summary:hover {
+    background-color: var(--background);
+  }
+  .audit-record details[open] summary {
+    background-color: var(--background);
+  }
+}
