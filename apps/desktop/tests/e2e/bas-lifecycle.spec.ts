@@ -13,7 +13,11 @@ import {
   ListDocumentsResponseSchema,
 } from "@tammy/connect-client/tammy/v1/documents_pb.js";
 import { expect, test } from "./fixtures";
-import { captureBas, reviewBasAtNarrowWidths } from "./support/bas-journey-capture";
+import {
+  basCapturePhase,
+  captureBas,
+  reviewBasAtNarrowWidths,
+} from "./support/bas-journey-capture";
 import {
   authenticatedWorkspace,
   setupAndRunCurrentAccountingWorkflow,
@@ -226,6 +230,15 @@ test("prepares and reviews an exact BAS period in the packaged app", async ({
   await expectLifecycleStatus(page, "Created review validation");
   await expect(page.getByRole("heading", { name: "Review findings", exact: true })).toBeVisible();
   await captureBas(page, "04-validation-findings");
+  if (!basCapturePhase?.startsWith("before")) {
+    const identities = page.getByText("Exact snapshot identities", { exact: true });
+    await identities.focus();
+    await page.keyboard.press("Enter");
+    await expect(identities.locator("..")).toHaveAttribute("open", "");
+    await captureBas(page, "04b-identities-expanded");
+    await page.keyboard.press("Enter");
+    await expect(identities.locator("..")).not.toHaveAttribute("open", "");
+  }
   await reviewBasAtNarrowWidths(page);
 
   await lifecycle.getByRole("button", { name: "Freeze", exact: true }).click();
@@ -241,6 +254,13 @@ test("prepares and reviews an exact BAS period in the packaged app", async ({
     page.getByRole("button", { name: "Approve and freeze exact snapshot" }),
   ).toBeDisabled();
   await captureBas(page, "07-freeze-permission-boundary");
+  await lifecycle.getByRole("button", { name: "Review", exact: true }).click();
+  await lifecycle.getByRole("button", { name: "Review", exact: true }).click();
+  await expect(page.getByRole("table", { name: "Exact BAS calculation labels" })).toBeVisible();
+  await lifecycle.getByRole("button", { name: "Freeze", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "Approve and freeze exact snapshot" }),
+  ).toBeDisabled();
 
   await lifecycle.getByRole("button", { name: "Export", exact: true }).click();
   await expect(

@@ -3056,8 +3056,8 @@ function ReviewStage(props: any) {
     .filter(Boolean) as Ref[];
   return (
     <div className="grid gap-4">
-      <section className="work-surface grid gap-4 p-5">
-        <div className="flex flex-wrap items-end justify-between gap-3">
+      <section className="work-surface grid gap-3 p-4">
+        <div className="grid items-end gap-3 md:grid-cols-[minmax(0,1fr)_minmax(240px,320px)]">
           <div>
             <h2 className="text-[17px] font-semibold">Exact review snapshot</h2>
             <p className="mt-1 max-w-3xl text-[12px] leading-5 text-muted-foreground">
@@ -3148,22 +3148,22 @@ function ReviewStage(props: any) {
             >
               <thead>
                 <tr className="border-b border-border">
-                  <th scope="col" className="p-4">
+                  <th scope="col" className="px-3.5 py-2">
                     Label
                   </th>
-                  <th scope="col" className="p-4">
+                  <th scope="col" className="px-3.5 py-2">
                     State
                   </th>
-                  <th scope="col" className="p-4 text-right">
+                  <th scope="col" className="px-3.5 py-2 text-right">
                     Exact cents
                   </th>
-                  <th scope="col" className="p-4 text-right">
+                  <th scope="col" className="px-3.5 py-2 text-right">
                     Reported whole dollars
                   </th>
-                  <th scope="col" className="p-4 text-right">
+                  <th scope="col" className="px-3.5 py-2 text-right">
                     Rounding difference
                   </th>
-                  <th scope="col" className="p-4">
+                  <th scope="col" className="px-3.5 py-2">
                     Rule
                   </th>
                 </tr>
@@ -3174,26 +3174,26 @@ function ReviewStage(props: any) {
                     className="border-b border-border last:border-0"
                     key={`${item.label}:${item.ruleId}`}
                   >
-                    <th scope="row" className="p-4 font-semibold">
+                    <th scope="row" className="px-3.5 py-2 font-semibold">
                       {formLabel(item.label)}
                     </th>
-                    <td className="p-4">{amountStateLabel(item.state)}</td>
-                    <td className="p-4 text-right tabular-nums">
+                    <td className="px-3.5 py-2">{amountStateLabel(item.state)}</td>
+                    <td className="px-3.5 py-2 text-right tabular-nums">
                       {item.exactCentsNumerator
                         ? `${item.exactCentsNumerator}/${item.exactCentsDenominator}`
                         : item.exactRateNumerator
                           ? `${item.exactRateNumerator}/${item.exactRateDenominator} rate`
                           : "—"}
                     </td>
-                    <td className="p-4 text-right tabular-nums">
+                    <td className="px-3.5 py-2 text-right tabular-nums">
                       {item.reportedWholeDollars?.toString() ?? "—"}
                     </td>
-                    <td className="p-4 text-right tabular-nums">
+                    <td className="px-3.5 py-2 text-right tabular-nums">
                       {item.roundingDifferenceCentsNumerator
                         ? `${item.roundingDifferenceCentsNumerator}/${item.roundingDifferenceCentsDenominator} cents`
                         : "—"}
                     </td>
-                    <td className="p-4">{item.ruleId}</td>
+                    <td className="px-3.5 py-2">{item.ruleId}</td>
                   </tr>
                 ))}
               </tbody>

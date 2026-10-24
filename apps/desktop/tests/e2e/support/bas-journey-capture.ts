@@ -3,7 +3,10 @@ import path from "node:path";
 import { expect, type Page } from "@playwright/test";
 
 export const basCapturePhase = process.env.TAMMY_BAS_CAPTURE;
-if (basCapturePhase !== undefined && !["before", "before-ready", "after"].includes(basCapturePhase))
+if (
+  basCapturePhase !== undefined &&
+  !["before", "before-ready", "after", "after-compact"].includes(basCapturePhase)
+)
   throw new Error("BAS_CAPTURE_PHASE_INVALID");
 
 export async function captureBas(page: Page, name: string, focused = false) {
@@ -73,6 +76,9 @@ export async function reviewBasAtNarrowWidths(page: Page) {
           (element) => element.scrollLeft + element.clientWidth >= element.scrollWidth - 1,
         ),
       ).toBe(true);
+      await scroll.evaluate((element) =>
+        element.scrollIntoView({ block: "start", behavior: "instant" }),
+      );
       await captureBas(page, `06-calculation-keyboard-${width}`, true);
     }
   }

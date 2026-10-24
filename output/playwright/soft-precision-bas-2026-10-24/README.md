@@ -17,3 +17,9 @@ The baseline package is the clean ordinary darwin-arm64 package from `f82d9753`;
 The ASAR reliability issue remains open. The prior diagnostic head’s six original hosted jobs passed, but that did not reproduce or repair the two earlier push failures. This block will use only its ordinary automatic CI to observe recurrence.
 
 Remaining finite UI inventory after GST/BAS: workspace/recovery, Audit, Settings/Organisation. This draft is not app-wide visual acceptance, Windows 11/MAS/ATO qualification or permission to merge/publish.
+
+## First rendered after check
+
+Clean runtime source `0e975c6365abfa27a6063dbd0be410828d3829ae`, app SHA256 `65ac8bc88b985e86f2be931ec6353ceeaca27c2e44f77546aa56c49c7edac6d8`, manifest `4adac772ed507940b7c4e494587038a7ea6cb48c277d37a0a3b968f01587a43b`, Core `078811e551eb5cd0c5f505e3282d82bc8f50be578c12a9d92e7bafb70d67562c`, helper `8dbfb2b0708d1c61ebc07cd8c8b5ee6a626d73dad490b90667b3794d61edb201`; source dirty false, ordinary-package/darwin-arm64, simulator enabled. Package checks: 7 passed /one expected Windows-only skip. Native BAS case passed in 27.4s (28.5s suite), zero skips/retries, all 14 `after/` frames retained.
+
+Actual image review found utility padding still won over compact table CSS, and the Review history selector wrapped below its heading. The focused keyboard frame also scrolled a tall table into the centre, omitting its header. A small follow-up corrects table utility spacing and header columns; capture scrolling now aligns the actual focused table to its start. These initial after frames remain unmodified and are not represented as the refined runtime.
