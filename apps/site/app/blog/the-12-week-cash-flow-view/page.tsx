@@ -32,7 +32,7 @@ export default function CashFlowArticlePage() {
     <section id="a-simple-weekly-table">
       <h2>A simple weekly worksheet</h2>
       <p>Here is a four-week extract from a fictional twelve-week forecast. It starts with $10,000 and records expected inflows and outflows by week. The closing balance becomes the following week’s opening balance.</p>
-      <div className="blog-table-scroll" tabIndex={0} role="region" aria-label="Illustrative weekly cash-flow worksheet">
+      <section className="blog-table-scroll" aria-label="Illustrative weekly cash-flow worksheet">
         <table className="blog-data-table">
           <caption>Worked example, AUD. Not real customer data.</caption>
           <thead><tr><th scope="col">Week</th><th scope="col">Opening</th><th scope="col">Receipts</th><th scope="col">Payments</th><th scope="col">Closing</th></tr></thead>
@@ -43,7 +43,7 @@ export default function CashFlowArticlePage() {
             <tr><th scope="row">4</th><td>$2,000</td><td>$7,000</td><td>$3,000</td><td>$6,000</td></tr>
           </tbody>
         </table>
-      </div>
+      </section>
       <p>The business ends week four with $6,000, but week three bottoms out at $2,000. A monthly sum alone can obscure that tighter week. Extend the columns through week twelve and review any projected negative closing balance before the payments fall due.</p>
       <div className="blog-example"><strong>Simple rolling formula</strong><p>Closing cash = opening cash + receipts − payments. The following week’s opening cash equals the previous week’s closing cash.</p></div>
     </section>
