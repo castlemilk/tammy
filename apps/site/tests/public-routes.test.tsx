@@ -8,21 +8,40 @@ import SupportPage from "../app/support/page";
 afterEach(cleanup);
 
 describe("Tammy public routes", () => {
-  it("states the supported platform and preparation-only boundary", () => {
-    render(<Home />);
+  it("shows local-first workflows and honest release boundaries", () => {
+    const { container } = render(<Home />);
 
-    expect(screen.getByRole("heading", { name: "Local accounting for Australia" })).toBeTruthy();
-    expect(screen.getByText(/macOS 14 or later.*Apple silicon/i)).toBeTruthy();
-    expect(screen.getByText(/preparation-only.*not lodged/i)).toBeTruthy();
-    expect(screen.getByText("Gamma Systems Pty Ltd")).toBeTruthy();
-    expect(
-      screen.getByText(
-        /encrypted workspace.*journals.*source documents.*bank transactions.*GST workpaper/i,
-      ),
-    ).toBeTruthy();
+    expect(screen.getByRole("heading", { level: 1 }).textContent).toMatch(
+      /Your books\.\s*On your Mac\./,
+    );
+    expect(screen.getAllByText(/macOS 14 or later, Apple silicon/i).length).toBeGreaterThan(0);
+    expect(screen.getByText("BAS drafts, not lodgement")).toBeTruthy();
+    expect(screen.getAllByText(/Gamma Systems Pty Ltd/).length).toBeGreaterThan(0);
+    expect(screen.getByRole("heading", { name: "From source records to a balanced ledger." }))
+      .toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Prepared is not lodged." })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "See how it works" }).getAttribute("href")).toBe(
+      "#workflow",
+    );
+    expect(screen.getByRole("link", { name: "Enquire about Tammy" }).getAttribute("href"))
+      .toMatch(/^mailto:/);
     expect(screen.queryByText(/company (?:EOFY|tax return)/i)).toBeNull();
-    expect(String(metadata.description)).not.toMatch(/company\s+EOFY/i);
+    expect(screen.queryByRole("link", { name: /download for mac|get started for free/i }))
+      .toBeNull();
+    expect(container.querySelector('script[type="application/ld+json"]')?.textContent)
+      .toContain('"@type":"SoftwareApplication"');
     expect(String(metadata.description)).not.toMatch(/tax return preparation/i);
+  });
+
+  it("provides accurate answers without suggesting unsupported integrations", () => {
+    render(<Home />);
+    expect(screen.getByText("Can Tammy lodge my BAS with the ATO?")).toBeTruthy();
+    expect(screen.getByText(/Automatic bank feeds and bank-account syncing are not part/i))
+      .toBeTruthy();
+    expect(screen.getByText(/Issuing does not send an email/i)).toBeTruthy();
+    expect(screen.getByText(/There is no Tammy cloud workspace/i)).toBeTruthy();
+    expect(screen.getByRole("navigation", { name: "Primary navigation" })).toBeTruthy();
+    expect(screen.getByRole("navigation", { name: "Footer navigation" })).toBeTruthy();
   });
 
   it("renders the canonical app/site/support privacy boundaries", () => {

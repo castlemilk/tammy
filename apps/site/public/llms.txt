@@ -1,0 +1,22 @@
+# Tammy Accounting
+
+> Local-first accounting desktop software for Australian small businesses, published by Gamma Systems Pty Ltd.
+
+Official website: https://tammy-accounting.castlemilk.chatgpt.site/
+Privacy: https://tammy-accounting.castlemilk.chatgpt.site/privacy
+Support: https://tammy-accounting.castlemilk.chatgpt.site/support
+
+## Supported development capabilities
+
+- Encrypted on-device macOS workspace (Apple silicon, macOS 14 or later).
+- Manual journals, trial balance, retained documents and review workflows.
+- File-based bank-statement import and reconciliation, not automatic bank feeds.
+- Customer invoice drafts, issue action and exported PDFs. Issuing does not send email, record receivables or collect payments.
+- Local GST/BAS workpaper drafts for review, not ATO lodgement.
+- Optional, session-scoped, permission-limited local API/MCP adapter.
+
+## Release boundaries
+
+Tammy is development software, not a publicly qualified Mac App Store release. It does not offer a hosted business account, cloud sync, online bank feeds, automated tax lodgement or ATO-approved production SBR submission.
+
+For access enquiries use the Support page. The public website contains no account signup or application download.
