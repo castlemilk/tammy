@@ -68,3 +68,17 @@ Site changes do not change Tammy's desktop application, ATO/EVTE/SBR readiness, 
 - Existing canonical origin remains the ChatGPT Sites host pending verified production routing and HTTPS for `tammy.tax`.
 
 These changes do not alter desktop software, issue real invoices, contact any remote business service, add monitoring, or claim ATO qualification. All example figures are synthetic and disclosed as such.
+
+## Four new Journal articles and image kit (5 November 2026)
+
+- `/blog/when-to-register-for-gst-australia` covers $75,000 GST turnover threshold, rolling current/projected 12-month tests, 21-day registration deadline and applicable exceptions, referencing ATO guidance.
+- `/blog/business-receipts-five-year-record-keeping` covers receipt/source evidence, commonly required records, five-year baseline and longer exceptions, digital integrity and backups.
+- `/blog/simpler-bas-g1-1a-1b-explained` covers Simpler BAS fields G1, 1A and 1B using a consistent fictional $22,000 taxable-sales / $7,150 purchase example. Clearly distinguishes the GST amount from other BAS obligations and from actual lodgement.
+- `/blog/bank-statement-reconciliation-steps` covers matching source statement rows and ledger entries, verifying an illustrative $40 bank fee difference, then retaining the review trail.
+- Each route has distinct canonical metadata, a shared BlogPosting JSON-LD article template, four semantic section anchors and sourced references.
+- New indexed illustrations are `public/assets/journal-gst-threshold.svg`, `journal-records-archive.svg`, `journal-bas-workpaper.svg`, `journal-bank-reconciliation.svg`; all vector, local, text-free, decorative, without external embeds.
+- `lib/blog/posts.ts` is the curated article inventory. Blog index, RSS feed, sitemap, `llms.txt`, homepage journal links and site tests are updated.
+- A separate set of 4 original editorial raster illustrations (PNG and WebP plus thumbnails) is available as an asset package for future visual exploration; blog source remains crisp self-contained SVG until an intentional raster integration.
+
+### Review boundaries
+The tax content was checked against relevant ATO and Australian Government sources on 5 November 2026. Examples are hypothetical, not client data. Neither the blog nor Tammy's development app submits a BAS, syncs with bank accounts, automatically backs up an encrypted workspace or verifies GST registration.

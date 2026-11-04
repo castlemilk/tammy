@@ -394,13 +394,14 @@ export default function Home() {
             <div className="landing-journal-intro">
               <p className="landing-kicker">The Tammy Journal</p>
               <h2 id="landing-journal-heading">Better questions, clearer numbers.</h2>
-              <p>Carefully worked notes on pricing, payment terms and the timing of cash.</p>
+              <p>Carefully worked notes on GST, source records, BAS and the everyday work of bookkeeping.</p>
               <a className="landing-text-link" href="/blog">Explore the journal <span aria-hidden="true">↗</span></a>
             </div>
             <div className="landing-journal-stories">
-              <a href="/blog/margin-is-not-markup"><span>Pricing</span><strong>Margin is not markup.</strong><span aria-hidden="true">↗</span></a>
-              <a href="/blog/an-invoice-is-not-cash"><span>Invoicing</span><strong>An invoice is not cash.</strong><span aria-hidden="true">↗</span></a>
-              <a href="/blog/the-12-week-cash-flow-view"><span>Cash flow</span><strong>See the next twelve weeks.</strong><span aria-hidden="true">↗</span></a>
+              <a href="/blog/when-to-register-for-gst-australia"><span>GST</span><strong>When GST registration becomes necessary.</strong><span aria-hidden="true">↗</span></a>
+              <a href="/blog/business-receipts-five-year-record-keeping"><span>Records</span><strong>Keep the evidence behind the entry.</strong><span aria-hidden="true">↗</span></a>
+              <a href="/blog/simpler-bas-g1-1a-1b-explained"><span>BAS</span><strong>Three BAS labels. One clear workpaper.</strong><span aria-hidden="true">↗</span></a>
+              <a href="/blog/bank-statement-reconciliation-steps"><span>Bookkeeping</span><strong>Make the bank and ledger agree.</strong><span aria-hidden="true">↗</span></a>
             </div>
           </section>
 

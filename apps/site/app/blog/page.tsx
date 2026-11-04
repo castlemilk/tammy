@@ -6,11 +6,11 @@ import { blogPath, blogPosts } from "../../lib/blog/posts";
 
 export const metadata: Metadata = {
   title: "Tammy Journal | Australian accounting, invoicing and cash flow",
-  description: "Thoughtful Australian small-business articles on margins, invoice payment terms and cash-flow forecasting. Practical examples and free tools, without the jargon.",
+  description: "Australian small-business articles on GST registration, record keeping, BAS labels, bank reconciliation, cash flow, invoicing and margins, with worked examples.",
   alternates: { canonical: "/blog" },
   openGraph: {
     type: "website", title: "The Tammy Journal",
-    description: "Pricing, cash flow and invoicing in plain language.",
+    description: "Australian tax, pricing, cash flow and bookkeeping in plain language.",
     url: "/blog",
   },
 };
@@ -33,23 +33,23 @@ export default function BlogPage() {
         <p>{lead.description}</p>
         <a className="blog-story-link" href={blogPath(lead)}>Read the article <span aria-hidden="true">↗</span></a>
       </div>
-      <div className="blog-feature-figure" aria-label="Illustrative pricing calculation">
-        <img src="/assets/tammy-margin-orbit.svg" className="blog-feature-watermark" alt="" aria-hidden="true" width="540" height="500" />
-        <div className="blog-feature-ledger">
-          <span>In the example</span>
-          <div><span>Cost</span><strong>$80</strong></div>
-          <div><span>Sale</span><strong>$120</strong></div>
-          <div><span>Gross profit</span><strong>$40</strong></div>
-          <div className="blog-feature-summary"><span>Margin</span><strong>33.33%</strong></div>
+      <div className="blog-feature-figure" aria-label="Featured article illustration and key figure">
+        {lead.cover && <img className="blog-feature-hero-art" src={lead.cover} alt={lead.coverAlt ?? ""} width="1200" height="720" loading="eager" />}
+        <div className="blog-feature-key-figure">
+          <span>What matters</span><strong>{lead.figure}</strong>
+          <p>{lead.figureLabel}</p><small>{lead.figureFoot}</small>
         </div>
       </div>
     </section>
     <section className="blog-archive" aria-labelledby="blog-latest">
-      <div className="blog-archive-heading"><h2 id="blog-latest">From the journal</h2><p>Invoicing and cash flow, with worked examples.</p></div>
+      <div className="blog-archive-heading"><h2 id="blog-latest">From the journal</h2><p>GST, record keeping, BAS, bookkeeping and finance, with worked examples.</p></div>
       <div className="blog-archive-list">
         {others.map((post) => <a key={post.slug} href={blogPath(post)} className="blog-archive-item">
           <div><span className="blog-archive-category">{post.category}</span><time dateTime={post.publishedAt}>{post.publishedLabel}</time></div>
-          <div><h3>{post.title}</h3><p>{post.description}</p></div>
+          <div className="blog-archive-story">
+            {post.cover && <img className="blog-archive-art" src={post.cover} alt="" width="240" height="145" loading="lazy" />}
+            <div><h3>{post.title}</h3><p>{post.description}</p></div>
+          </div>
           <span className="blog-archive-symbol" aria-hidden="true">↗</span>
         </a>)}
       </div>

@@ -80,9 +80,9 @@ describe("new calculators and articles are usable and indexable", () => {
   it("renders a curated journal with working article links", () => {
     render(<BlogIndex />);
     expect(screen.getByRole("heading", { level: 1 }).textContent).toContain("Keeping the books");
-    expect(screen.getByRole("link", { name: "Margin is not markup." })).toBeTruthy();
+    expect(screen.getByRole("link", { name: /Margin is not markup/ })).toBeTruthy();
     expect(screen.getByRole("link", { name: /An invoice is not cash/i })).toBeTruthy();
-    expect(blogPosts).toHaveLength(3);
+    expect(blogPosts).toHaveLength(7);
     expect(new Set(blogPosts.map(blogPath)).size).toBe(blogPosts.length);
     expect(blogMetadata.alternates).toEqual({ canonical: "/blog" });
   });
