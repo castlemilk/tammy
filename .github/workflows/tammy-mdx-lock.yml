@@ -1,0 +1,32 @@
+name: Generate Tammy MDX lockfile for review
+on:
+  push:
+    branches: ["feat/tammy-editorial-mdx-skill-2026-11-05"]
+    paths:
+      - "apps/site/package.json"
+      - ".github/workflows/tammy-mdx-lock.yml"
+permissions:
+  contents: read
+jobs:
+  generate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
+        with:
+          node-version: 24.18.0
+          package-manager-cache: false
+      - name: Use pinned pnpm
+        run: |
+          corepack enable pnpm
+          corepack prepare pnpm@11.15.0 --activate
+      - name: Regenerate lockfile without installing dependencies
+        run: pnpm install --lockfile-only --no-frozen-lockfile --ignore-scripts --filter sites-project...
+      - name: Output lockfile patch for deterministic GitHub commit
+        run: |
+          echo '=== TAMMY LOCK DIFF START ==='
+          git --no-pager diff -- pnpm-lock.yaml
+          echo '=== TAMMY LOCK DIFF END ==='

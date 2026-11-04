@@ -14,7 +14,8 @@
     "lint": "oxlint .",
     "typecheck": "tsc --noEmit",
     "format": "oxfmt",
-    "seo:check": "node scripts/seo-check.mjs"
+    "seo:check": "node scripts/seo-check.mjs",
+    "editorial:lint": "node scripts/editorial-lint.mjs"
   },
   "dependencies": {
     "@tammy/invoices": "workspace:*",
@@ -46,7 +47,9 @@
     "typescript": "5.9.3",
     "vite": "8.0.13",
     "vitest": "4.1.10",
-    "wrangler": "4.92.0"
+    "wrangler": "4.92.0",
+    "@mdx-js/rollup": "3.1.1",
+    "remark-gfm": "4.0.1"
   },
   "type": "module"
 }
