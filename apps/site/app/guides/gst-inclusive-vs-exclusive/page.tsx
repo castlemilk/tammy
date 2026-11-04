@@ -18,7 +18,7 @@ export default function GstGuidePage() {
       <header className="tools-editorial-heading">
         <p className="tools-overline">Australian GST explained</p>
         <h1>Inclusive, exclusive. One clear difference.</h1>
-        <p className="tools-editorial-lede">A price that includes GST is not the same as one before GST. Here's how the numbers work for an ordinary fully taxable sale in Australia.</p>
+        <p className="tools-editorial-lede">A price that includes GST is not the same as one before GST. This is how the numbers work for an ordinary fully taxable sale in Australia.</p>
         <div className="tools-editorial-meta"><span>Standard GST: 10%</span><span>Cent rounding examples</span></div>
       </header>
       <div className="tools-editorial-grid">
