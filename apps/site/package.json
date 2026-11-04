@@ -16,6 +16,7 @@
     "format": "oxfmt"
   },
   "dependencies": {
+    "@tammy/invoices": "workspace:*",
     "react": "19.2.6",
     "react-dom": "19.2.6",
     "react-server-dom-webpack": "19.2.6",
