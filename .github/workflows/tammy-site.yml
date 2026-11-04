@@ -44,5 +44,7 @@ jobs:
         run: pnpm --dir apps/site lint
       - name: Site tests
         run: pnpm --dir apps/site test
+      - name: SEO and canonical audit
+        run: pnpm --dir apps/site seo:check
       - name: Site build
         run: pnpm --dir apps/site build

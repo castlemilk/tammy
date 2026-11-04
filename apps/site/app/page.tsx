@@ -3,6 +3,7 @@
 import type { Metadata } from "next";
 import { publicContent } from "../content/public-content.generated";
 import "./landing.css";
+import { SITE_ORIGIN } from "../lib/site-config";
 
 const { identity, marketingVersion } = publicContent;
 const minimumMacOSLabel = identity.minimumMacOSVersion.replace(/\.0$/, "");
@@ -117,7 +118,7 @@ const structuredData = {
   softwareVersion: marketingVersion,
   description:
     "Local-first Australian accounting software for journals, source-document review, imported bank-statement reconciliation, invoicing and GST/BAS workpaper drafts.",
-  url: "https://tammy-accounting.castlemilk.chatgpt.site/",
+  url: SITE_ORIGIN + "/",
   publisher: { "@type": "Organization", name: identity.publisher },
 };
 
@@ -373,13 +374,16 @@ export default function Home() {
             <div className="landing-tools-intro">
               <p className="landing-kicker">For the everyday numbers</p>
               <h2 id="landing-tools-heading">Little tools. <br />Big clarity.</h2>
-              <p>Create an Australian invoice, calculate GST or work out a payment due date. Simple, free tools that keep your information in your browser.</p>
+              <p>Create invoices, calculate GST, check an ABN, or understand pricing margins. Free utilities that keep your information in this browser tab.</p>
               <a className="landing-text-link" href="/tools">Explore all free tools <span aria-hidden="true">↗</span></a>
+              <a className="landing-text-link landing-guides-link" href="/guides">Read the Australian accounting guides <span aria-hidden="true">↗</span></a>
             </div>
             <div className="landing-tools-list">
               <a href="/tools/invoice-generator"><span className="landing-tools-number">01</span><strong>Australian invoice generator</strong><span>Make and download an invoice PDF</span><span aria-hidden="true">↗</span></a>
               <a href="/tools/gst-calculator"><span className="landing-tools-number">02</span><strong>GST calculator</strong><span>Add or remove 10% GST</span><span aria-hidden="true">↗</span></a>
               <a href="/tools/invoice-due-date-calculator"><span className="landing-tools-number">03</span><strong>Invoice due-date calculator</strong><span>Work out payment terms</span><span aria-hidden="true">↗</span></a>
+              <a href="/tools/abn-checker"><span className="landing-tools-number">04</span><strong>ABN format checker</strong><span>Check the number before the register</span><span aria-hidden="true">↗</span></a>
+              <a href="/tools/profit-margin-calculator"><span className="landing-tools-number">05</span><strong>Profit margin calculator</strong><span>Understand markup and gross margin</span><span aria-hidden="true">↗</span></a>
             </div>
           </section>
 
@@ -404,6 +408,7 @@ export default function Home() {
             <a href="#workflow">How it works</a>
             <a href="#features">Features</a>
             <a href="/tools">Free tools</a>
+            <a href="/guides">Guides</a>
             <a href="/privacy">Privacy policy</a>
             <a href="/support">Support</a>
           </nav>
