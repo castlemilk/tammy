@@ -95,8 +95,8 @@ export function InvoiceGenerator() {
       setPdfStatus("generating");
       // Shared, pdfcn-adapted Forme renderer from the Tammy desktop invoice package.
       // Dynamic import keeps its WASM out of the initial page load.
-      const { renderInvoicePdf } = await import("@tammy/invoices/pdf");
-      const pdf = await renderInvoicePdf({
+      const { renderBrowserInvoicePdf } = await import("@tammy/invoices/pdf-browser");
+      const pdf = await renderBrowserInvoicePdf({
         ...draft,
         sellerName: sellerName.trim(),
         sellerAbn: normalizedAbn,

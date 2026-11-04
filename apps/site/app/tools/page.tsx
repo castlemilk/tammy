@@ -1,4 +1,5 @@
 /* oxlint-disable next/no-html-link-for-pages -- Vinext handles static same-origin routes. */
+/* oxlint-disable next/no-img-element -- Local decorative SVG icons are not raster content. */
 import type { Metadata } from "next";
 import { ToolsShell, origin } from "../../components/tools-shell";
 
@@ -11,9 +12,9 @@ export const metadata: Metadata = {
 };
 
 const items = [
-  { number: "01", href: "/tools/invoice-generator", icon: "▤", title: "Invoice generator", detail: "Create an Australian invoice with line items, 10% GST and a PDF you can keep.", meta: "Tax invoices and regular invoices" },
-  { number: "02", href: "/tools/gst-calculator", icon: "%", title: "GST calculator", detail: "Add or remove 10% GST with cent-accurate totals and a clear breakdown.", meta: "Inclusive and exclusive" },
-  { number: "03", href: "/tools/invoice-due-date-calculator", icon: "↗", title: "Invoice due-date calculator", detail: "Work out when payment is due from an invoice date and agreed terms.", meta: "7, 14, 30, 45 or 60 days" },
+  { number: "01", href: "/tools/invoice-generator", icon: "invoices", title: "Invoice generator", detail: "Create an Australian invoice with line items, 10% GST and a PDF you can keep.", meta: "Tax invoices and regular invoices" },
+  { number: "02", href: "/tools/gst-calculator", icon: "gst-bas", title: "GST calculator", detail: "Add or remove 10% GST with cent-accurate totals and a clear breakdown.", meta: "Inclusive and exclusive" },
+  { number: "03", href: "/tools/invoice-due-date-calculator", icon: "review", title: "Invoice due-date calculator", detail: "Work out when payment is due from an invoice date and agreed terms.", meta: "7, 14, 30, 45 or 60 days" },
 ] as const;
 
 export default function ToolsPage() {
@@ -40,7 +41,7 @@ export default function ToolsPage() {
         <div className="tools-card-grid">
           {items.map(item => <a className="tools-card" href={item.href} key={item.href}>
             <span className="tools-card-number">{item.number}</span>
-            <span className="tools-card-icon" aria-hidden="true">{item.icon}</span>
+            <span className="tools-card-icon" aria-hidden="true"><img src={"/assets/" + item.icon + ".svg"} alt="" aria-hidden="true" /></span>
             <h3>{item.title}</h3><p>{item.detail}</p>
             <span className="tools-card-foot">{item.meta}<span aria-hidden="true">↗</span></span>
           </a>)}

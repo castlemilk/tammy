@@ -262,3 +262,5 @@
 }
 
 .tools-form-actions output { display: block; margin-top: 12px; }
+
+.tools-card-icon img { width: 29px; height: 29px; object-fit: contain; }

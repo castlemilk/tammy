@@ -34,7 +34,7 @@ Review desktop and mobile at 320/390/768/1280/1440. Validate canonical, Open Gra
 
 Tools are at `/tools`, with individual canonical routes for Australian invoices, GST and due dates.
 
-- The invoice generator imports the same validated `@tammy/invoices/model` and pdfcn-adapted `@tammy/invoices/pdf` used by desktop. It imports Forme dynamically in a browser click handler. It does not call any server route or save data.
+- The invoice generator imports the same validated `@tammy/invoices/model` and pdfcn-adapted `@tammy/invoices/pdf` used by desktop. It loads a browser-only Forme worker build and WASM URL on demand, then uses the original desktop PDF formatter. It does not call any server route or save data.
 - The invoice PDF requires business name, valid ABN checksum, addresses, dates, customer and valid line amounts. Its PDF engine uses bundled fonts and declines unsupported characters. The browser may need time to load the WASM chunk on first export.
 - The calculator uses integer AUD cents and half-up rounding for standard GST. The date calculator uses UTC date arithmetic to avoid DST transitions and intentionally uses calendar days, not business days.
 - Tool pages have canonical metadata and WebApplication JSON-LD; the index has CollectionPage markup, and each URL appears in sitemap.xml and llms.txt.
