@@ -68,8 +68,8 @@ describe("new calculators and articles are usable and indexable", () => {
   });
 
   it("shows runway and the no-net-burn state", () => {
-    render(<CashRunwayPage />);
-    expect(screen.getByText("6.0 months")).toBeTruthy();
+    const { container } = render(<CashRunwayPage />);
+    expect(container.querySelector(".tools-result-total dd")?.textContent).toBe("6.0 months");
     fireEvent.change(screen.getByLabelText("Expected cash payments per month (AUD)"), {
       target: { value: "6000.00" },
     });
