@@ -16,7 +16,8 @@ export function ToolLibrary() {
 
   return <>
     <div className="tools-library-controls">
-      <div className="tools-library-filters" role="group" aria-label="Filter by business task">
+      <fieldset className="tools-library-filter-group"><legend>Filter by business task</legend>
+        <div className="tools-library-filters">
         {toolCategories.map((item) => {
           const count = item.id === "all"
             ? publicTools.length
@@ -27,6 +28,7 @@ export function ToolLibrary() {
           </button>;
         })}
       </div>
+      </fieldset>
       <label className="tools-library-search">
         <span>Find a tool</span>
         <span className="tools-library-search-input">
@@ -41,10 +43,10 @@ export function ToolLibrary() {
       </label>
     </div>
 
-    <p className="tools-library-count" role="status" aria-live="polite">
+    <output className="tools-library-count" aria-live="polite">
       {results.length === 1 ? "1 tool" : results.length + " tools"} available
       {category !== "all" || query.trim() ? " for this selection" : ""}
-    </p>
+    </output>
     {results.length > 0 ? <div className="tools-card-grid tools-library-grid" id="tool-results">
       {results.map((tool) => <a className="tools-card tools-library-item"
           key={tool.href} href={tool.href} data-featured={tool.featured && category === "all" && !query.trim() ? "true" : undefined}>
