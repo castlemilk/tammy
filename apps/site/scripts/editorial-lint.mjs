@@ -38,7 +38,7 @@ for (const filename of entries) {
   const body = mdx
     .replace(/<[^>]*>/g, " ")
     .replace(/https?:\/\/[^\s]+/g, " ")
-    .replace(/[\{\}\[\]"']/g, " ");
+    .replace(/[{}"']/g, " ").replaceAll("[", " ").replaceAll("]", " ");
   const words = body.match(/[\w'-]+/g)?.length ?? 0;
   if (words < 350) failuresForFile.push("too thin: " + words + " words (minimum 350)");
   const sections = [...mdx.matchAll(/<h2 id="([a-z0-9-]+)">/g)].map((m) => m[1]);

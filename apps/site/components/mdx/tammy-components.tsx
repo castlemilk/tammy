@@ -136,7 +136,7 @@ export function SourceNote({ url, label, context }: {
   readonly label: string;
   readonly context?: string;
 }) {
-  if (!/^https:\/\//.test(url)) throw new Error("SourceNote URL must be HTTPS");
+  if (!url.startsWith("https://")) throw new Error("SourceNote URL must be HTTPS");
   return <aside className="tammy-mdx-source">
     <span>Source</span>
     <a href={url} target="_blank" rel="noopener noreferrer">{label}</a>
