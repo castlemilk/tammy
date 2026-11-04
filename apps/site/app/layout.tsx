@@ -9,6 +9,7 @@ const socialImage = `${publicOrigin}/og.png`;
 
 export const metadata: Metadata = {
   metadataBase: new URL(publicOrigin),
+  alternates: { types: { "application/rss+xml": "/rss.xml" } },
   title: {
     default: `${identity.appStoreName} — Local accounting for Australia`,
     template: `%s — ${identity.appStoreName}`,

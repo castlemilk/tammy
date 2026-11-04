@@ -42,8 +42,15 @@ const robots = readFileSync(join(root, "public/robots.txt"), "utf8");
 if (!robots.includes("Sitemap: " + origin + "/sitemap.xml"))
   throw new Error("SEO: robots.txt sitemap location does not match canonical origin");
 const llms = readFileSync(join(root, "public/llms.txt"), "utf8");
-for (const route of routes.filter(route => route.startsWith("/tools") || route.startsWith("/guides"))) {
+for (const route of routes.filter(route => route.startsWith("/tools") || route.startsWith("/guides") || route.startsWith("/blog"))) {
   if (!llms.includes(origin + route))
     throw new Error(`SEO: llms.txt does not link to ${route}`);
+}
+const feed = readFileSync(join(root, "public/rss.xml"), "utf8");
+if (!feed.includes("<rss version=\"2.0\">") || !feed.includes(origin + "/blog"))
+  throw new Error("SEO: journal RSS feed is missing or uses a different canonical origin");
+for (const route of routes.filter(route => route.startsWith("/blog/"))) {
+  if (!feed.includes(origin + route))
+    throw new Error("SEO: RSS feed does not index journal post " + route);
 }
 console.log(`SEO checks passed for ${routes.length} canonical routes on ${origin}`);

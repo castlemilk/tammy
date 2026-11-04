@@ -203,6 +203,7 @@ export default function Home() {
             <a href="#workflow">How it works</a>
             <a href="#features">Features</a>
             <a href="/tools">Free tools</a>
+            <a href="/blog">Journal</a>
             <a href="#privacy-first">Local-first</a>
             <a href="#questions">Questions</a>
           </nav>
@@ -384,6 +385,22 @@ export default function Home() {
               <a href="/tools/invoice-due-date-calculator"><span className="landing-tools-number">03</span><strong>Invoice due-date calculator</strong><span>Work out payment terms</span><span aria-hidden="true">↗</span></a>
               <a href="/tools/abn-checker"><span className="landing-tools-number">04</span><strong>ABN format checker</strong><span>Check the number before the register</span><span aria-hidden="true">↗</span></a>
               <a href="/tools/profit-margin-calculator"><span className="landing-tools-number">05</span><strong>Profit margin calculator</strong><span>Understand markup and gross margin</span><span aria-hidden="true">↗</span></a>
+              <a href="/tools/break-even-calculator"><span className="landing-tools-number">06</span><strong>Break-even calculator</strong><span>Know the unit sales target</span><span aria-hidden="true">↗</span></a>
+              <a href="/tools/cash-runway-calculator"><span className="landing-tools-number">07</span><strong>Cash runway calculator</strong><span>Estimate monthly cash coverage</span><span aria-hidden="true">↗</span></a>
+            </div>
+          </section>
+
+          <section className="landing-section landing-journal" aria-labelledby="landing-journal-heading">
+            <div className="landing-journal-intro">
+              <p className="landing-kicker">The Tammy Journal</p>
+              <h2 id="landing-journal-heading">Better questions, clearer numbers.</h2>
+              <p>Carefully worked notes on pricing, payment terms and the timing of cash.</p>
+              <a className="landing-text-link" href="/blog">Explore the journal <span aria-hidden="true">↗</span></a>
+            </div>
+            <div className="landing-journal-stories">
+              <a href="/blog/margin-is-not-markup"><span>Pricing</span><strong>Margin is not markup.</strong><span aria-hidden="true">↗</span></a>
+              <a href="/blog/an-invoice-is-not-cash"><span>Invoicing</span><strong>An invoice is not cash.</strong><span aria-hidden="true">↗</span></a>
+              <a href="/blog/the-12-week-cash-flow-view"><span>Cash flow</span><strong>See the next twelve weeks.</strong><span aria-hidden="true">↗</span></a>
             </div>
           </section>
 
@@ -409,6 +426,7 @@ export default function Home() {
             <a href="#features">Features</a>
             <a href="/tools">Free tools</a>
             <a href="/guides">Guides</a>
+            <a href="/blog">Journal</a>
             <a href="/privacy">Privacy policy</a>
             <a href="/support">Support</a>
           </nav>

@@ -57,3 +57,14 @@ Validation: `pnpm --filter sites-project typecheck`, `pnpm --filter sites-projec
 
 ### Release boundaries
 Site changes do not change Tammy's desktop application, ATO/EVTE/SBR readiness, public download availability, tax eligibility or business registration. Generated illustration is decorative; no synthetic financial evidence is claimed as customer data or performance proof.
+
+## Tammy Journal and extended calculator library (4 November 2026)
+
+- `/blog` and three original articles explain margin versus markup, invoice payment timing, and rolling 12-week cash-flow forecasting. Each has a worked example, source references, in-page navigation, and BlogPosting JSON-LD with a real publication date.
+- `/tools/break-even-calculator` estimates contribution, minimum whole units and revenue with integer AUD cents and BigInt for potentially large whole-unit results. If contribution is non-positive and fixed costs are positive, it explains that break-even is not reachable.
+- `/tools/cash-runway-calculator` estimates a constant-rate cash runway using integer cents, with explicit no-net-burn and input-error states. It is not a dated cash forecast.
+- `/blog` maintains a curated post inventory in `lib/blog/posts.ts` used by the index and BlogPosting structured data. The visual system has editorial paper-like layouts, responsive examples, an accessible reading index, and no invented metrics, quotes, or product guarantees.
+- Sitemap, `llms.txt`, and an XML RSS feed index all public journal pages. The existing `seo:check` audit also checks those links.
+- Existing canonical origin remains the ChatGPT Sites host pending verified production routing and HTTPS for `tammy.tax`.
+
+These changes do not alter desktop software, issue real invoices, contact any remote business service, add monitoring, or claim ATO qualification. All example figures are synthetic and disclosed as such.

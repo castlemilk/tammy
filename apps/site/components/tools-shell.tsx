@@ -14,8 +14,8 @@ export function ToolsShell({ children }: { readonly children: ReactNode }) {
           <a href="/tools">All tools</a>
           <a href="/tools/invoice-generator">Invoices</a>
           <a href="/tools/gst-calculator">GST</a>
-          <a href="/tools/abn-checker">ABN checker</a>
           <a href="/guides">Guides</a>
+          <a href="/blog">Journal</a>
         </nav>
         <a href="/" className="tools-back">About Tammy</a>
       </header>
@@ -23,7 +23,7 @@ export function ToolsShell({ children }: { readonly children: ReactNode }) {
       <footer className="tools-footer">
         <div><a className="tools-logo" href="/">Tammy</a><p>Thoughtful tools for Australian businesses.</p></div>
         <nav aria-label="Tools footer">
-          <a href="/tools">All tools</a><a href="/guides">Guides</a><a href="/privacy">Privacy</a><a href="/support">Support</a>
+          <a href="/tools">All tools</a><a href="/guides">Guides</a><a href="/blog">Journal</a><a href="/privacy">Privacy</a><a href="/support">Support</a>
         </nav>
         <small>Tools run locally in your browser. Nothing here files a BAS, issues an invoice in Tammy, or sends business records to a server.</small>
       </footer>

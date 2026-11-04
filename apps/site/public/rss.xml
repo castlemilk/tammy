@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>Tammy Journal</title>
+    <link>https://tammy-accounting.castlemilk.chatgpt.site/blog</link>
+    <description>Australian small-business accounting, pricing, cash-flow and invoicing notes.</description>
+    <language>en-au</language>
+    <lastBuildDate>Wed, 04 Nov 2026 00:00:00 GMT</lastBuildDate>
+    <item>
+      <title>Margin is not markup.</title>
+      <link>https://tammy-accounting.castlemilk.chatgpt.site/blog/margin-is-not-markup</link>
+      <guid isPermaLink="true">https://tammy-accounting.castlemilk.chatgpt.site/blog/margin-is-not-markup</guid>
+      <description>The difference between gross margin and markup, with a concrete Australian small-business break-even example.</description>
+      <pubDate>Wed, 04 Nov 2026 00:00:00 GMT</pubDate>
+    </item>
+    <item>
+      <title>An invoice is not cash.</title>
+      <link>https://tammy-accounting.castlemilk.chatgpt.site/blog/an-invoice-is-not-cash</link>
+      <guid isPermaLink="true">https://tammy-accounting.castlemilk.chatgpt.site/blog/an-invoice-is-not-cash</guid>
+      <description>Issue date, due date and actual cash receipts are different events. A practical guide to payment terms.</description>
+      <pubDate>Wed, 04 Nov 2026 00:00:00 GMT</pubDate>
+    </item>
+    <item>
+      <title>See the next twelve weeks.</title>
+      <link>https://tammy-accounting.castlemilk.chatgpt.site/blog/the-12-week-cash-flow-view</link>
+      <guid isPermaLink="true">https://tammy-accounting.castlemilk.chatgpt.site/blog/the-12-week-cash-flow-view</guid>
+      <description>Build a weekly cash-flow view with opening balance, receipts, payments and closing cash.</description>
+      <pubDate>Wed, 04 Nov 2026 00:00:00 GMT</pubDate>
+    </item>
+  </channel>
+</rss>

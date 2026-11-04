@@ -42,3 +42,17 @@ These public tools do not upload customer records or modify local Tammy desktop 
 - [GST inclusive versus exclusive](https://tammy-accounting.castlemilk.chatgpt.site/guides/gst-inclusive-vs-exclusive) - 10% versus 1/11 GST formulas, rounding and exceptions.
 
 The guides cite ATO/ABR primary sources. Neither the calculator nor the guide certifies a supplier, tax registration or a lodged BAS.
+
+## Break-even and cash flow
+
+- [Break-even calculator](https://tammy-accounting.castlemilk.chatgpt.site/tools/break-even-calculator) - calculate units and revenue needed to cover fixed costs under a single-product model.
+- [Cash runway calculator](https://tammy-accounting.castlemilk.chatgpt.site/tools/cash-runway-calculator) - estimate cash runway at a constant monthly net cash burn, excluding uneven payment timing.
+
+## Tammy Journal
+
+- [Journal index](https://tammy-accounting.castlemilk.chatgpt.site/blog) - Australian small-business editorial notes, worked examples and sources.
+- [Margin is not markup](https://tammy-accounting.castlemilk.chatgpt.site/blog/margin-is-not-markup) - the difference between margin and markup, with a break-even example.
+- [An invoice is not cash](https://tammy-accounting.castlemilk.chatgpt.site/blog/an-invoice-is-not-cash) - issue dates, payment terms, due dates and actual receipts.
+- [See the next twelve weeks](https://tammy-accounting.castlemilk.chatgpt.site/blog/the-12-week-cash-flow-view) - a rolling weekly cash forecast and a worked four-week example.
+
+Posts are authored explanatory material, not tax filing services, consumer testimonials, or a claim that Tammy automatically sends invoices or collects payments.
