@@ -1,3 +1,4 @@
+/* oxlint-disable next/no-html-link-for-pages -- Vinext serves these static same-origin routes. */
 import type { Metadata } from "next";
 import { ToolStructuredData, ToolsBreadcrumb, ToolsShell } from "../../../components/tools-shell";
 import { InvoiceGenerator } from "../../../components/invoice-generator";

@@ -169,8 +169,8 @@ export function InvoiceGenerator() {
 
       <div className="tools-form-actions">
         <button type="button" className="tools-download" onClick={() => void downloadPdf()} disabled={pdfStatus === "generating"}>{pdfStatus === "generating" ? "Generating PDF..." : "Download invoice PDF"}</button>
-        {compiled.error && <p className="tools-error" role="status">{compiled.error}</p>}
-        {pdfMessage && <p className={pdfStatus === "ready" ? "tools-success" : "tools-error"} role="status">{pdfMessage}</p>}
+        {compiled.error && <output className="tools-error">{compiled.error}</output>}
+        {pdfMessage && <output className={pdfStatus === "ready" ? "tools-success" : "tools-error"}>{pdfMessage}</output>}
         <p className="tools-help">No login, no upload, no saved data. A PDF is created only after you supply valid invoice details. You are responsible for sending it to the customer.</p>
       </div>
     </div>

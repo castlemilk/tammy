@@ -260,3 +260,5 @@
 @media (prefers-reduced-motion: reduce) {
   .tools-shell :is(a,button) { transition: none !important; transform: none !important; }
 }
+
+.tools-form-actions output { display: block; margin-top: 12px; }
