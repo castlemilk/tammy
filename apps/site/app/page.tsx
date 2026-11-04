@@ -211,7 +211,7 @@ export default function Home() {
           <section className="landing-hero" aria-labelledby="landing-heading">
             <div className="landing-hero-copy">
               <p className="landing-introduction">Private accounting for Australian businesses.</p>
-              <h1 id="landing-heading">Your books.<br /><span>On your Mac.</span></h1>
+              <h1 id="landing-heading">Your books.{" "}<br /><span>On your Mac.</span></h1>
               <p className="landing-hero-description">
                 The records behind your business, kept local. Review documents,
                 reconcile statements, post journals and prepare GST/BAS drafts in
@@ -245,7 +245,7 @@ export default function Home() {
             <div className="landing-section-heading landing-section-heading-split">
               <div>
                 <p className="landing-kicker">A clear accounting process</p>
-                <h2 id="workflow-heading">From source records<br />to a balanced ledger.</h2>
+                <h2 id="workflow-heading">From source records{" "}<br />to a balanced ledger.</h2>
               </div>
               <p>Bring evidence into view, make deliberate accounting decisions, and keep the result inspectable.</p>
             </div>
@@ -282,7 +282,7 @@ export default function Home() {
           <section className="landing-section landing-product" id="product" aria-labelledby="product-heading">
             <div className="landing-product-copy">
               <p className="landing-kicker">Designed to be understood</p>
-              <h2 id="product-heading">Know what changed.<br />Know why.</h2>
+              <h2 id="product-heading">Know what changed.{" "}<br />Know why.</h2>
               <p>Keep a close eye on the books, with source evidence, explicit review states and financial records that remain available to inspect.</p>
               <a className="landing-text-link" href="#workflow">Explore the accounting process <span aria-hidden="true">↗</span></a>
             </div>
@@ -328,7 +328,7 @@ export default function Home() {
             </div>
             <div className="landing-privacy-copy">
               <p className="landing-kicker">Local by design</p>
-              <h2 id="privacy-heading">Your data stays<br />in your hands.</h2>
+              <h2 id="privacy-heading">Your data stays{" "}<br />in your hands.</h2>
               <p>Tammy stores accounting records in an encrypted workspace on your Mac. Some credentials live in macOS Keychain. There is no hosted Tammy business account or cloud sync in this release.</p>
               <ul>
                 <li>SQLCipher-encrypted local workspace</li>
@@ -342,7 +342,7 @@ export default function Home() {
           <section className="landing-section landing-australia" aria-labelledby="australia-heading">
             <div className="landing-australia-heading">
               <p className="landing-kicker">Made for the way you work</p>
-              <h2 id="australia-heading">Australian by design.<br />Focused by choice.</h2>
+              <h2 id="australia-heading">Australian by design.{" "}<br />Focused by choice.</h2>
             </div>
             <div className="landing-australia-content">
               <p>AUD amounts, GST workflows, Australian chart-of-accounts conventions and local reporting drafts are part of Tammy’s current accounting foundation.</p>
@@ -371,7 +371,7 @@ export default function Home() {
             <img src="/assets/contour-lines.svg" className="landing-closing-contours" alt="" aria-hidden="true" />
             <div>
               <p className="landing-kicker">Tammy is in development</p>
-              <h2 id="closing-heading">Your books deserve<br />a quieter home.</h2>
+              <h2 id="closing-heading">Your books deserve{" "}<br />a quieter home.</h2>
               <p>Explore the local-first approach and contact the publisher about development access. A public Mac download is not available from this site yet.</p>
               <div className="landing-closing-actions">
                 <a className="landing-button landing-button-light" href={"mailto:" + identity.supportEmail + "?subject=Tammy%20development%20access"}>Enquire about Tammy <span aria-hidden="true">↗</span></a>
@@ -390,7 +390,7 @@ export default function Home() {
             <a href="/privacy">Privacy policy</a>
             <a href="/support">Support</a>
           </nav>
-          <p>{identity.publisher}<br />{identity.copyright}</p>
+          <p>{identity.publisher}{" "}<br />{identity.copyright}</p>
         </footer>
       </div>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }} />
