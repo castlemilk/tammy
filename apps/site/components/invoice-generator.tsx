@@ -109,7 +109,7 @@ export function InvoiceGenerator() {
       const link = document.createElement("a");
       link.href = url;
       link.download = filename(number);
-      document.body.append(link);
+      document.body.appendChild(link);
       link.click();
       link.remove();
       window.setTimeout(() => URL.revokeObjectURL(url), 1000);
