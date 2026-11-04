@@ -47,18 +47,18 @@ describe("search entry routes for Tammy", () => {
     fireEvent.change(field, { target: { value: "51 824 753 556" } });
     expect(screen.getByText("Valid format")).toBeTruthy();
     expect(screen.getByText("51 824 753 556")).toBeTruthy();
-    expect(screen.getByRole("link", { name: /ABN Lookup/i })).toBeTruthy();
+    expect(screen.getAllByRole("link", { name: /ABN Lookup/i }).length).toBeGreaterThan(0);
     expect(abnMetadata.alternates).toEqual({ canonical: "/tools/abn-checker" });
   });
 
   it("renders a functional margin/markup comparison", () => {
-    render(<ProfitMarginPage />);
+    const { container } = render(<ProfitMarginPage />);
     expect(screen.getByText("$40.00")).toBeTruthy();
     expect(screen.getAllByText("33.33%").length).toBeGreaterThan(0);
     expect(screen.getAllByText("50.00%").length).toBeGreaterThan(0);
     const input = screen.getByLabelText("Selling price, excluding GST (AUD)");
     fireEvent.change(input, { target: { value: "160.00" } });
-    expect(screen.getByText("$80.00")).toBeTruthy();
+    expect(container.querySelector(".tools-result-list dd")?.textContent).toBe("$80.00");
     expect(marginMetadata.alternates).toEqual({ canonical: "/tools/profit-margin-calculator" });
   });
 
