@@ -1,4 +1,5 @@
-/* oxlint-disable next/no-html-link-for-pages -- Vinext serves these static same-origin routes without a Next runtime. */
+/* oxlint-disable next/no-html-link-for-pages -- Vinext serves static same-origin routes. */
+/* oxlint-disable next/no-img-element -- These local SVGs are vector assets, not raster photos; Vinext does not require Next image optimization. */
 import type { Metadata } from "next";
 import { publicContent } from "../content/public-content.generated";
 import "./landing.css";
