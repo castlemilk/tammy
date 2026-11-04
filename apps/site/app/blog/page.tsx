@@ -1,4 +1,5 @@
 /* oxlint-disable next/no-html-link-for-pages -- Vinext serves static same-origin routes. */
+/* oxlint-disable next/no-img-element -- Static abstract vector artwork. */
 import type { Metadata } from "next";
 import { ToolsShell, origin } from "../../components/tools-shell";
 import { blogPath, blogPosts } from "../../lib/blog/posts";
@@ -33,6 +34,7 @@ export default function BlogPage() {
         <a className="blog-story-link" href={blogPath(lead)}>Read the article <span aria-hidden="true">↗</span></a>
       </div>
       <div className="blog-feature-figure" aria-label="Illustrative pricing calculation">
+        <img src="/assets/tammy-margin-orbit.svg" className="blog-feature-watermark" alt="" aria-hidden="true" width="540" height="500" />
         <div className="blog-feature-ledger">
           <span>In the example</span>
           <div><span>Cost</span><strong>$80</strong></div>

@@ -438,3 +438,13 @@ h1 {
     scroll-behavior: auto !important;
   }
 }
+
+/* Browser-native finish for the Soft Precision publication surface. */
+:root { color-scheme: light; }
+html, body { overflow-x: clip; }
+html { scroll-behavior: smooth; scroll-padding-top: 24px; scrollbar-color: var(--sage) var(--background); }
+::selection { background: var(--sage-soft); color: var(--forest); }
+:where(button, input, select, textarea) { accent-color: var(--forest); }
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+}
