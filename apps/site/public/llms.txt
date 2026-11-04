@@ -65,3 +65,11 @@ Posts are authored explanatory material, not tax filing services, consumer testi
 - [Make the bank and ledger agree.](https://tammy-accounting.castlemilk.chatgpt.site/blog/bank-statement-reconciliation-steps) - Trace statement rows, resolve unexplained differences, and retain a verifiable reconciliation.
 
 Each article includes an original locally hosted illustration, an explicitly illustrative numerical example, and links to Australian government or ATO primary sources. These are educational articles, not evidence that Tammy offers ATO lodgement, cloud sync, bank feeds or customer payment collection.
+
+## New MDX Journal features and stories (5 November 2026)
+
+- [The price rise that didn't fix the margin.](https://tammy-accounting.castlemilk.chatgpt.site/blog/the-price-rise-that-didnt-fix-margin) - Why a $10 rise in variable cost moves break-even volume from 75 to 100 units in a transparent pricing example.
+- [The ageing report is using the wrong clock.](https://tammy-accounting.castlemilk.chatgpt.site/blog/the-invoice-ageing-trap) - An overdue-invoice ageing example that distinguishes the due date from the issue date and groups $7,100 in receivables.
+- [When profit and cash part ways.](https://tammy-accounting.castlemilk.chatgpt.site/blog/when-profit-and-cash-part-ways) - An $8,000 accrual-profit and $5,000 net-cash example that reconciles unpaid invoices and bills.
+
+These stories are authored in .mdx, using registered local components for source notes, worked examples, readable financial tables, audited bars and links to available Tammy tools. Charts use explicitly illustrative figures and retain accessible data. All published metadata remains attached to the corresponding explicit route.

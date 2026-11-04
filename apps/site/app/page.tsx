@@ -398,10 +398,10 @@ export default function Home() {
               <a className="landing-text-link" href="/blog">Explore the journal <span aria-hidden="true">↗</span></a>
             </div>
             <div className="landing-journal-stories">
+              <a href="/blog/the-price-rise-that-didnt-fix-margin"><span>Pricing</span><strong>The price rise that didn't fix the margin.</strong><span aria-hidden="true">↗</span></a>
+              <a href="/blog/the-invoice-ageing-trap"><span>Invoicing</span><strong>The ageing report is using the wrong clock.</strong><span aria-hidden="true">↗</span></a>
+              <a href="/blog/when-profit-and-cash-part-ways"><span>Cash flow</span><strong>When profit and cash part ways.</strong><span aria-hidden="true">↗</span></a>
               <a href="/blog/when-to-register-for-gst-australia"><span>GST</span><strong>When GST registration becomes necessary.</strong><span aria-hidden="true">↗</span></a>
-              <a href="/blog/business-receipts-five-year-record-keeping"><span>Records</span><strong>Keep the evidence behind the entry.</strong><span aria-hidden="true">↗</span></a>
-              <a href="/blog/simpler-bas-g1-1a-1b-explained"><span>BAS</span><strong>Three BAS labels. One clear workpaper.</strong><span aria-hidden="true">↗</span></a>
-              <a href="/blog/bank-statement-reconciliation-steps"><span>Bookkeeping</span><strong>Make the bank and ledger agree.</strong><span aria-hidden="true">↗</span></a>
             </div>
           </section>
 

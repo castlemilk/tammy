@@ -1,7 +1,5 @@
 declare module "*.mdx" {
-  import type { ComponentType } from "react";
-  const MDXContent: ComponentType<{
-    components?: Record<string, React.ComponentType<any> | keyof React.JSX.IntrinsicElements>;
-  }>;
+  import type { ComponentType, ElementType } from "react";
+  const MDXContent: ComponentType<{ components?: Record<string, ElementType> }>;
   export default MDXContent;
 }

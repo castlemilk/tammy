@@ -82,3 +82,16 @@ These changes do not alter desktop software, issue real invoices, contact any re
 
 ### Review boundaries
 The tax content was checked against relevant ATO and Australian Government sources on 5 November 2026. Examples are hypothetical, not client data. Neither the blog nor Tammy's development app submits a BAS, syncs with bank accounts, automatically backs up an encrypted workspace or verifies GST registration.
+
+## Tammy Blog MDX system (5 November 2026)
+
+- Reused the registered MDX approach from `castlemilk/benebsworth.com`, adapted to Tammy's Vinext/Vite stack through the official `@mdx-js/rollup` plugin and `remark-gfm`.
+- Authored MDX source in `apps/site/content/blog/*.mdx`; three new explicit routes import static MDX and register only curated local components.
+- `components/mdx/tammy-components.tsx` provides Callout, WorkedExample, Formula, MoneyTable, BarChart, Figure, ToolLink and SourceNote. The accessible chart contains a machine-readable table of its underlying numeric values.
+- Site-specific `app/blog/mdx.css` preserves Soft Precision colour/type tokens and the deliberate long-form article reading measure.
+- `.claude/skills/tammy-blog/SKILL.md` contains authoring, fact-checking, citation, de-slop, design and quality gates; supporting references include voice, block grammar and a real MDX template.
+- `scripts/editorial-lint.mjs` fails new articles that lack substantive text, official sources, numeric examples, true tool links or stable section anchors and catches repeated generative clichés. Marketing CI runs it after Vitest.
+- New stories: contribution sensitivity, accounts receivable ageing and profit-to-cash reconciliation. Every numerical scenario is hypothetical and reconciled. The blog inventory, RSS, sitemap, llms.txt and homepage links are updated.
+- No external chart service, fake company testimonials, automatic ATO lodgement, bank syncing, public Mac app downloads or third-party tracking has been introduced.
+
+**Release:** These repository edits are not a ChatGPT Sites deployment. Keep the original Sites host canonical until `tammy.tax` is confirmed live with TLS and the intended content.

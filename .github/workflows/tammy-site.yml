@@ -44,6 +44,8 @@ jobs:
         run: pnpm --dir apps/site lint
       - name: Site tests
         run: pnpm --dir apps/site test
+      - name: Editorial MDX prose audit
+        run: pnpm --dir apps/site editorial:lint
       - name: SEO and canonical audit
         run: pnpm --dir apps/site seo:check
       - name: Site build

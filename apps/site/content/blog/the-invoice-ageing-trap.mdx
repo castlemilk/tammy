@@ -1,0 +1,55 @@
+The customer asks why their invoice is marked late. You open the accounting screen. It says the invoice is 28 days old.
+
+That's not enough information. An invoice can be 28 days old and still have two days before payment is due. An ageing report built from the wrong date creates the wrong conversation.
+
+<h2 id="which-clock">Which clock is the report using?</h2>
+
+Invoice **age** measures time since issue. **Days overdue** measure time after the agreed due date. Those are different clocks, even when the same customer and amount are involved.
+
+A typical receivables ageing view groups outstanding balances by how long they have been overdue: current, 1–30 days, 31–60 days and more than 60 days, for example. But the bucket labels are not a law, and the report's usefulness depends on the chosen as-of date and consistent overdue definitions.
+
+The agreed payment terms determine the due date. [business.gov.au's payment terms guidance](https://business.gov.au/finance/payments-and-invoicing/payment-terms) explains why terms belong in the contract and on the invoice, rather than being inferred afterwards.
+
+<Callout tone="method" title="Use the due date, not the invoice date">
+
+For an overdue-ageing view, count from the agreed due date to the report's as-of date. On the due date itself, the invoice is due today, not yet one day overdue.
+
+</Callout>
+
+<h2 id="four-invoices">Four invoices on the fifth of November</h2>
+
+Here is a fictional accounts-receivable list reviewed as at **5 November 2026**. It is a static example, not Tammy customer data. The dates are deliberately spread across buckets.
+
+<MoneyTable caption="Illustrative unpaid invoices, as at 5 November 2026; AUD amounts" columns={["Invoice due date", "Outstanding", "Overdue", "Bucket"]} rows={[["20 Nov 2026", "$1,200", "Not due", "Current"],["8 Oct 2026", "$3,500", "28 days", "1–30 days"],["12 Sep 2026", "$1,800", "54 days", "31–60 days"],["12 Aug 2026", "$600", "85 days", "61+ days"]]} />
+
+Outstanding invoices total $7,100. Of that, $1,200 is still within terms and **$5,900 is overdue**. The overdue portion is not a bad-debt write-off; it is a list requiring attention. Whether a customer will pay, and when, is a separate judgement.
+
+<BarChart title="Outstanding receivables by days overdue" unit="AUD" items={[{label:"Not yet due",value:1200,detail:"Due 20 November"},{label:"1–30 days",value:3500,detail:"28 days overdue"},{label:"31–60 days",value:1800,detail:"54 days overdue"},{label:"61+ days",value:600,detail:"85 days overdue"}]} />
+
+<WorkedExample title="One report, two useful questions">
+
+First: which invoices are overdue and need follow-up? Here, $5,900.
+
+Second: what cash can the business safely plan around? The full $7,100 should not automatically appear as this week's receipts. A collection forecast must consider known customer behaviour, disputes and real payment commitments.
+
+</WorkedExample>
+
+<h2 id="follow-up-with-context">Follow up with context, not a mass reminder</h2>
+
+A missing payment can have an ordinary explanation: the invoice went to the wrong address, the customer's purchase order wasn't attached, a duplicate confused their accounts team, or a genuine disagreement was never resolved. Check the underlying document and correspondence before sending another automated nudge.
+
+For an invoice just a few days overdue, a short and specific reminder may be enough. For older items, confirm whether a payment arrangement or dispute exists and record the next action. Clear terms and a consistent follow-up process help protect cash flow without treating every customer as a delinquent.
+
+<Figure src="/assets/journal-invoice-ageing.svg" alt="Four overlapping document panels arranged along a brass timeline, representing unpaid invoices at different stages" caption="Original illustration of the ageing concept; balances and bucket values are in the accessible table and chart above." />
+
+<h2 id="forecast-the-receipt">An ageing report isn't a cash forecast</h2>
+
+Receivables tell you what remains unpaid. Cash forecasting asks when money is likely to arrive. A 60-day overdue invoice might still be collectible; a current invoice might not be paid on its expected date. The bucket alone doesn't settle either question.
+
+Check the invoice's due date with Tammy's calculator and use the result as one input to a realistic weekly cash forecast.
+
+<ToolLink href="/tools/invoice-due-date-calculator" label="Calculate an invoice due date" description="Work with explicit calendar-day terms before assigning an ageing bucket." />
+
+<ToolLink href="/tools/cash-runway-calculator" label="Estimate your cash runway" description="Understand the impact of receipts and payments at an assumed monthly rate." />
+
+<SourceNote url="https://business.gov.au/finance/payments-and-invoicing/payment-terms" label="Australian Government: Payment terms" context="Guidance on agreeing terms, offering credit and managing overdue payments." />

@@ -1,0 +1,57 @@
+The quote still says $120. The supplier has quietly increased the input cost by $10. Nobody has changed the price list, and the business is still selling the same product.
+
+The sale looks unchanged. Its economics aren't.
+
+<h2 id="contribution-is-what-counts">Start with what one sale contributes</h2>
+
+A business needs each sale to cover its direct, variable costs before it can contribute anything towards rent, insurance, software and the other bills that arrive whether or not a unit sells. That remainder is the **contribution per unit**.
+
+<Formula label="Contribution per unit, excluding GST" expression="Selling price − variable unit cost" result="$120 − $80 = $40" />
+
+Suppose a small business sells a product for $120, has $80 of variable cost per unit, and carries $3,000 in fixed costs each month. All amounts here exclude GST. A sale contributes $40 to fixed costs; $3,000 divided by $40 gives a break-even point of 75 whole units.
+
+A break-even target is not a sales forecast. Seventy-five is what the model needs to happen, not what customers have agreed to buy.
+
+<WorkedExample title="The original monthly model">
+
+<MoneyTable caption="Illustrative unit economics in AUD, excluding GST" columns={["Item", "Amount"]} rows={[["Selling price", "$120.00"], ["Variable cost per unit", "$80.00"], ["Contribution per unit", "$40.00"], ["Monthly fixed costs", "$3,000.00"], ["Break-even quantity", "75 units"]]} />
+
+</WorkedExample>
+
+<h2 id="cost-change">A ten-dollar cost increase moves the target</h2>
+
+Now the supplier raises the variable unit cost to $90. The price stays at $120.
+
+Contribution falls to $30, and the same $3,000 of monthly fixed costs now requires **100 units** to break even. That's 25 more sales, or one-third more units, to cover unchanged overheads. The extra ten dollars consumed a quarter of the original $40 contribution.
+
+<MoneyTable caption="Same monthly fixed costs; all prices exclude GST" columns={["Measure", "Before", "After cost rise"]} rows={[["Sale price", "$120", "$120"], ["Variable cost", "$80", "$90"], ["Unit contribution", "$40", "$30"], ["Break-even units", "75", "100"]]} />
+
+<BarChart title="Whole units needed to cover $3,000 in monthly fixed costs" unit="units" items={[{label:"Original costs",value:75,detail:"$120 selling price, $80 unit cost"},{label:"Higher unit cost",value:100,detail:"$120 selling price, $90 unit cost"},{label:"Price adjusted to $130",value:75,detail:"$130 selling price, $90 unit cost"}]} />
+
+A price increase to $130 would restore $40 contribution per unit, assuming demand holds and the higher selling price is achievable. That assumption matters. A spreadsheet does not know whether the customer will accept the new quote.
+
+<Callout tone="caution" title="Break-even is sensitive to the inputs">
+
+The calculation assumes a single product, constant prices and costs, and units that can actually be sold. Different products, discounts, minimum order quantities and capacity limits can change the answer substantially.
+
+</Callout>
+
+<h2 id="price-and-demand">Price and demand have to be checked together</h2>
+
+There's no universal instruction to raise prices. A business might renegotiate supplier terms, change its product mix, improve throughput, stop an unprofitable offer or accept a lower margin for a strategic reason. The question is which option leaves a credible contribution after the real costs of fulfilling the sale.
+
+Cost-plus pricing is one option, but the buyer's alternatives and perception of value matter too. The [Australian Government's pricing strategy guidance](https://business.gov.au/products-and-services/choose-a-pricing-strategy) recommends considering both costs and what customers value, rather than applying a fixed markup by reflex.
+
+<Figure src="/assets/journal-price-sensitivity.svg" alt="Four ledger-height columns and a rising brass arc, representing a comparison of changing cost and contribution assumptions" caption="Original artwork. The accompanying chart above, not this illustration, carries the numerical comparison." />
+
+<h2 id="run-a-scenario">Run the scenario before sending the next quote</h2>
+
+Start with your current unit costs, including relevant labour and materials. Identify which costs vary with an extra sale and which remain fixed for the period. Recalculate contribution whenever a major cost or selling price changes. Compare the result with actual sales capacity and orders, not an aspirational monthly target.
+
+<ToolLink href="/tools/break-even-calculator" label="Calculate your break-even volume" description="Change fixed costs, sale price or variable cost and inspect the units required." />
+
+<ToolLink href="/tools/profit-margin-calculator" label="Compare margin and markup" description="Check the two percentages before writing a price list." />
+
+<SourceNote url="https://business.vic.gov.au/business-information/finance/pricing-for-profit/calculate-your-breakeven-point-margin-and-markup" label="Business Victoria: break-even point, margin and markup" context="Primary formulas for unit contribution, gross margin and break-even quantities." />
+
+<SourceNote url="https://business.gov.au/products-and-services/choose-a-pricing-strategy" label="Australian Government: Choose a pricing strategy" context="Approaches to setting and reviewing business prices." />
