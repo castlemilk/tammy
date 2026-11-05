@@ -58,6 +58,7 @@ Inspect the redacted Mac App Store state with `mise exec -- task release:state` 
 ## Documentation
 
 - [Current technical state](docs/development/tech-state.md) — implemented, development-only, deferred, and external boundaries.
+- [Xero replacement roadmap](docs/roadmap/xero-replacement-roadmap.md) — 259-feature parity matrix, milestone gates, and first engineering backlog.
 - [Developer handbook](docs/development/foundation.md) — setup, commands, repository map, local data, and safe changes.
 - [Local SBR readiness](docs/development/sbr-local-readiness.md) — accounting, simulator, credential handling, and external registration scenarios.
 - [Local API and MCP](docs/development/local-api-mcp.md) — private connection-file pairing, read coverage, revocation, and stdio client setup.
