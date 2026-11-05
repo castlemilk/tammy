@@ -16,10 +16,10 @@ const audWhole = (amount: number) =>
   }).format(amount);
 
 const quarters = [
-  { value: "1", label: "Q1", description: "July through September" },
-  { value: "2", label: "Q2", description: "October through December" },
-  { value: "3", label: "Q3", description: "January through March" },
-  { value: "4", label: "Q4", description: "April through June" },
+  { value: "1", label: "Q1", ariaLabel: "Q1", description: "July through September" },
+  { value: "2", label: "Q2", ariaLabel: "Q2", description: "October through December" },
+  { value: "3", label: "Q3", ariaLabel: "Q3", description: "January through March" },
+  { value: "4", label: "Q4", ariaLabel: "Q4", description: "April through June" },
 ];
 
 export function BasWorkpaper() {
