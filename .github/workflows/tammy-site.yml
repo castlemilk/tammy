@@ -21,7 +21,7 @@ jobs:
   verify-site:
     name: Typecheck, lint, test and build
     if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
-    runs-on: [self-hosted, Linux, ARM64, cuttlefish, container]
+    runs-on: [self-hosted, linux, ARM64, tammy-linux-ci]
     timeout-minutes: 20
     steps:
       - name: Verify Cuttlefish Linux runner identity
@@ -32,7 +32,7 @@ jobs:
           test "${RUNNER_ARCH}" = ARM64
           test "$(uname -m)" = aarch64
           case "${RUNNER_NAME}" in
-            cuttlefish-linux-*) ;;
+            cf-vm-*) ;;
             *) printf 'RUNNER_NOT_CUTTLEFISH: %s\n' "${RUNNER_NAME}" >&2; exit 1 ;;
           esac
       - name: Check out source

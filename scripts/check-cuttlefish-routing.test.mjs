@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import { test } from "node:test";
 import YAML from "yaml";
 
-const TARGET = Object.freeze(["self-hosted", "Linux", "ARM64", "cuttlefish", "container"]);
+const TARGET = Object.freeze(["self-hosted", "linux", "ARM64", "tammy-linux-ci"]);
 const workflowPaths = [
   [".github/workflows/foundation-ci.yml", "contracts"],
   [".github/workflows/tammy-site.yml", "verify-site"],
@@ -23,7 +23,7 @@ test("all portable Linux CI jobs require a Cuttlefish repo-scoped runner", async
     assert.equal(job.steps[0].name, "Verify Cuttlefish Linux runner identity", path);
     const verify = job.steps[0].run;
     assert.match(verify, /RUNNER_NAME/, path);
-    assert.match(verify, /cuttlefish-linux-/, path);
+    assert.match(verify, /cf-vm-/, path);
     assert.match(verify, /RUNNER_ARCH/, path);
     assert.match(verify, /aarch64/, path);
   }
@@ -46,5 +46,5 @@ test("Cuttlefish readiness probe cannot be satisfied by a GitHub-hosted machine"
   assert.match(probe, /RUNNER_NOT_CUTTLEFISH/);
   assert.ok(probe.includes("castlemilk/tammy"));
   assert.match(probe, /RUNNER_ARCH/);
-  assert.match(probe, /cuttlefish-linux-/);
+  assert.match(probe, /cf-vm-/);
 });
