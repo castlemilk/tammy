@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "contract": "TAMMY_SBR_READINESS_SIMULATOR_V1",
+  "mode": "LOCAL_SIMULATOR_NOT_FOR_ATO_LODGMENT",
+  "fixture_id": "SIM-SBR-READINESS-V1",
+  "service_id": "SIM.READINESS.0001",
+  "fixture_sha256": "d4b7b2991b21eff234e272015d39eeed8d332afeb95104dc2117a2c4484ef416",
+  "cases": [
+    {
+      "case": "ACCEPTED",
+      "helper_outcome": 1,
+      "simulator_state": 1,
+      "redacted_result": 7,
+      "stable_error_code": "",
+      "fatal": false,
+      "malformed_payload_hex": ""
+    },
+    {
+      "case": "NOT_STARTED",
+      "helper_outcome": 1,
+      "simulator_state": 2,
+      "redacted_result": 8,
+      "stable_error_code": "",
+      "fatal": false,
+      "malformed_payload_hex": ""
+    },
+    {
+      "case": "MAYBE_SENT",
+      "helper_outcome": 1,
+      "simulator_state": 3,
+      "redacted_result": 6,
+      "stable_error_code": "",
+      "fatal": false,
+      "malformed_payload_hex": ""
+    },
+    {
+      "case": "MALFORMED_RESPONSE",
+      "helper_outcome": 0,
+      "simulator_state": 0,
+      "redacted_result": 0,
+      "stable_error_code": "",
+      "fatal": false,
+      "malformed_payload_hex": "0a0178"
+    },
+    {
+      "case": "HELPER_DEATH",
+      "helper_outcome": 0,
+      "simulator_state": 0,
+      "redacted_result": 0,
+      "stable_error_code": "",
+      "fatal": true,
+      "malformed_payload_hex": ""
+    },
+    {
+      "case": "TIMEOUT",
+      "helper_outcome": 2,
+      "simulator_state": 3,
+      "redacted_result": 0,
+      "stable_error_code": "SBR_DEADLINE_EXPIRED",
+      "fatal": false,
+      "malformed_payload_hex": ""
+    }
+  ]
+}
