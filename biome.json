@@ -68,7 +68,8 @@
       "!output/tammy-purchase-payments-gst-preacceptance-755a36d6-2026-10-10/artifacts/non-cash/journal-vectors.json",
       "!output/tammy-purchase-payments-gst-preacceptance-755a36d6-2026-10-10/artifacts/non-cash/reconciliation.json",
       "!output/tammy-purchase-payments-gst-preacceptance-755a36d6-2026-10-10/sbr-e2e-result.json",
-      "!apps/site/content/public-content.generated.ts"
+      "!apps/site/content/public-content.generated.ts",
+      "!apps/site/**"
     ]
   },
   "formatter": {
