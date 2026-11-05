@@ -110,3 +110,12 @@ The tax content was checked against relevant ATO and Australian Government sourc
 - Journal: `how-to-lodge-bas-yourself-australia`, `lodge-sole-trader-tax-return-mytax`, `quarterly-bas-due-dates-australia`; each includes ATO primary source, worked examples, article metadata and local SVG.
 - Updated catalogue, home navigation, RSS, sitemap, llms.txt and tests. Existing Sites canonical remains unchanged until the publication and custom-domain move are verified.
 - These free tools are **not** an authorised ATO submission channel and **not** a tax/BAS agent service.
+
+## Shared shadcn + Gamma + Tailwind foundations (November continuation)
+
+- `components/ui/`: reusable shadcn-style Button, Input, Textarea, Card and semantic Table primitives using Tailwind v4 token utilities and `cn`.
+- `components/gamma/empty-state.tsx`: Gamma catalogue's validated Empty State composition, adapted to Tailwind and a scoped Gamma Atelier/Ledger-style token bridge in `app/tools/gamma-theme.css`. Tammy's existing Soft Precision palette and fonts remain authoritative.
+- `/tools/cash-flow-forecast`: fully client-side, dated 12-week receipts/payments worksheet, no bank feeds or persistence, exact AUD cent arithmetic, lowest closing cash and CSV export with formula-injection guards.
+- Quotes now use direct Forme/PDFcn PDF generation from the shared invoice engine but render a true QUOTE (never an issued invoice); an explicit local JSON draft download/import allows reuse without cloud accounts, backend calls or automatic storage. JSON draft files contain user-entered customer data and are not encrypted.
+- Existing print and Save as PDF route remains as a fallback. Tests cover renderer identity, money, draft formats, forecast, CSV and the component system.
+- These code changes are not a ChatGPT Sites deployment or a Vercel project configuration change.

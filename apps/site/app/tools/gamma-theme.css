@@ -1,0 +1,26 @@
+/*
+ * Gamma Atelier / Ledger-derived token adapter for Tammy Tools.
+ * Source: Gamma catalogue design systems. This is not a wholesale copy;
+ * the palette and font families intentionally preserve Tammy Soft Precision.
+ * Scoped to the tool shell; no global Gamma palette overrides.
+ */
+.tools-shell {
+  --gamma-bg: var(--t-ivory);
+  --gamma-surface: var(--t-paper);
+  --gamma-surface-2: var(--t-sage);
+  --gamma-ink: var(--t-ink);
+  --gamma-muted: var(--t-muted);
+  --gamma-border: var(--t-line);
+  --gamma-accent: var(--t-forest);
+  --gamma-accent-soft: var(--t-sage);
+  --gamma-font-ui: var(--t-body);
+  --gamma-font-display: var(--t-display);
+  --gamma-tracking-display: -.015em;
+  --gamma-radius-small: 3px;
+  --gamma-radius-control: 6px;
+  --gamma-radius-panel: 8px;
+  --gamma-duration-fast: 140ms;
+  --gamma-duration-base: 260ms;
+  --gamma-ease-standard: cubic-bezier(.25,.1,.25,1);
+  --gamma-selection: rgba(47,111,78,.22);
+}

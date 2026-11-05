@@ -87,6 +87,13 @@ export const publicTools: readonly PublicTool[] = [
     note: "Units and revenue", keywords: "fixed variable costs units contribution",
   },
   {
+    href: "/tools/cash-flow-forecast",
+    name: "12-week cash flow forecast",
+    summary: "Plan dated receipts and payments, inspect weekly closing cash and export a CSV.",
+    category: "cashflow", categoryLabel: "Cash flow", icon: "reconciliation",
+    note: "Weekly plan and CSV export", keywords: "12 week dated cash forecast receipts payments worksheet",
+  },
+  {
     href: "/tools/cash-runway-calculator",
     name: "Cash runway calculator",
     summary: "Estimate months of cash cover at your current monthly net burn.",
