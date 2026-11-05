@@ -22,7 +22,7 @@ export default function BasWorkpaperPage() {
       <h2>What this calculation covers</h2>
       <p>For eligible businesses using Simpler BAS, G1 is total reportable sales, 1A is GST on sales and 1B is eligible GST credits on purchases. The calculator assumes taxable sale and creditable purchase totals already belong in the selected period under your accounting basis, then extracts standard GST as one-eleventh of their inclusive amounts.</p>
       <p>The ATO tells businesses to enter whole dollar BAS labels without cents and not to round up. Actual GST reporting may require line-by-line rounding, adjustments, different tax treatments or other reporting labels. This workpaper cannot decide which transactions qualify or which attribution period applies.</p>
-      <p>Use your original invoices, receipts and ledger. Verify the generated BAS inside the <a href="https://www.ato.gov.au/" target="_blank" rel="noopener noreferrer">ATO's official online services</a> before lodging. Tammy does not submit it.</p>
+      <p>Use your original invoices, receipts and ledger. Verify the generated BAS inside the <a href="https://www.ato.gov.au/" target="_blank" rel="noopener noreferrer">ATO&apos;s official online services</a> before lodging. Tammy does not submit it.</p>
     </section>
     <aside className="tools-related" aria-label="Related resources">
       <a href="/blog/how-to-lodge-bas-yourself-australia">How to lodge your own BAS <span aria-hidden="true">↗</span></a>
