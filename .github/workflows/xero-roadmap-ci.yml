@@ -1,18 +1,21 @@
-name: Tammy Xero replacement roadmap
+name: Tammy product roadmaps
 
 on:
   pull_request:
     paths:
       - 'docs/roadmap/**'
       - 'scripts/check-xero-roadmap.mjs'
+      - 'scripts/check-growth-backlog.mjs'
       - '.github/workflows/xero-roadmap-ci.yml'
   push:
     branches:
       - master
       - 'docs/xero-replacement-roadmap-*'
+      - 'docs/tammy-growth-funnel-*'
     paths:
       - 'docs/roadmap/**'
       - 'scripts/check-xero-roadmap.mjs'
+      - 'scripts/check-growth-backlog.mjs'
       - '.github/workflows/xero-roadmap-ci.yml'
 
 permissions:
@@ -32,3 +35,5 @@ jobs:
           package-manager-cache: false
       - name: Validate roadmap data, dependencies, evidence and scope
         run: node scripts/check-xero-roadmap.mjs
+      - name: Validate growth backlog, dependencies, SEO intent and release boundaries
+        run: node scripts/check-growth-backlog.mjs
