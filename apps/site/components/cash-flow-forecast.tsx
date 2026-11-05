@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState, useSyncExternalStore } from "react";
 import { addCalendarDays, aud } from "../lib/tools/calculations";
 import {
   computeCashForecast, exampleForecast, forecastToCsv, parseForecastMoney,
@@ -30,12 +30,19 @@ function downloadCsv(content: string, name: string) {
   link.href=url;link.download=name;document.body.appendChild(link);link.click();link.remove();
   window.setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
+const subscribeLocalDate = () => () => {};
+const serverLocalDate = () => "";
+const browserLocalDate = () => {
+  const now = new Date();
+  return new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+};
+
 export function CashFlowForecast() {
-  const [start,setStart]=useState("");
-  useEffect(()=>{
-    const now=new Date();
-    setStart(new Date(now.getTime()-now.getTimezoneOffset()*60000).toISOString().slice(0,10));
-  },[]);
+  // Stable empty SSR snapshot, then read the browser's local date on hydration.
+  // An explicit user selection takes precedence and can intentionally be blank.
+  const currentLocalDate = useSyncExternalStore(subscribeLocalDate, browserLocalDate, serverLocalDate);
+  const [selectedStart,setSelectedStart]=useState<string|null>(null);
+  const start = selectedStart ?? currentLocalDate;
   const [opening,setOpening]=useState("12000.00");
   const [lines,setLines]=useState<EditableMovement[]>([]);
   const [notice,setNotice]=useState("");
@@ -83,7 +90,7 @@ export function CashFlowForecast() {
       <CardContent className="space-y-5 pt-5">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <label className="space-y-2 text-sm font-medium" htmlFor="forecast-start">First week begins
-            <Input id="forecast-start" type="date" value={start} onChange={(e)=>{setStart(e.target.value);setNotice("");}} />
+            <Input id="forecast-start" type="date" value={start} onChange={(e)=>{setSelectedStart(e.target.value);setNotice("");}} />
           </label>
           <label className="space-y-2 text-sm font-medium" htmlFor="forecast-opening">Available opening cash (AUD)
             <Input id="forecast-opening" inputMode="decimal" value={opening} onChange={(e)=>{setOpening(e.target.value);setNotice("");}} />
