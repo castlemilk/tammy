@@ -2,7 +2,6 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { computeCashForecast, exampleForecast, forecastToCsv } from "../lib/tools/cash-forecast";
 import { parseQuoteDraft, serializeQuoteDraft } from "../lib/tools/local-quote-draft";
-import { CashFlowForecast } from "../components/cash-flow-forecast";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { GammaEmptyState } from "../components/gamma/empty-state";

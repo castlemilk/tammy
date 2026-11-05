@@ -22,7 +22,7 @@ export default function CashFlowForecastPage() {
     <CashFlowForecast />
     <section className="tools-explain" aria-labelledby="forecast-explain">
       <h2 id="forecast-explain">Why a weekly view?</h2>
-      <p>Monthly averages hide the week when a supplier invoice or GST payment is due before customers pay. A weekly forecast starts with available cash, adds expected receipts and subtracts payments at their likely dates. Each closing balance becomes the next week's opening balance.</p>
+      <p>Monthly averages hide the week when a supplier invoice or GST payment is due before customers pay. A weekly forecast starts with available cash, adds expected receipts and subtracts payments at their likely dates. Each closing balance becomes the next week&apos;s opening balance.</p>
       <p>This is a scenario based only on dates and amounts you enter. It does not connect to bank feeds, predict payment behaviour, calculate GST or store your records. Save the generated CSV in a suitable private location if you want to retain your work.</p>
       <p>See <a href="https://business.gov.au/finance/cash-flow/set-up-a-cash-flow-statement" rel="noopener noreferrer" target="_blank">business.gov.au guidance on cash flow statements</a> and the <a href="/blog/the-12-week-cash-flow-view">Tammy twelve-week cash flow guide</a>.</p>
     </section>

@@ -145,7 +145,7 @@ export function CashFlowForecast() {
               <div className="rounded-lg bg-secondary p-4"><span className="text-xs text-muted-foreground">Lowest closing</span><strong className="mt-2 block font-[family-name:var(--t-display)] text-2xl tabular-nums">{aud(result.lowestClosingCents)}</strong></div>
               <div className="col-span-2 rounded-lg bg-secondary p-4 sm:col-span-1"><span className="text-xs text-muted-foreground">Cash out</span><strong className="mt-2 block font-[family-name:var(--t-display)] text-2xl tabular-nums">{aud(result.totalPaymentsCents)}</strong></div>
             </div>
-            {result.lowestClosingCents<0 && <p role="status" className="rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950">One or more weeks closes below zero. Check the timing and feasibility of forecast receipts.</p>}
+            {result.lowestClosingCents<0 && <output className="block rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950">One or more weeks closes below zero. Check the timing and feasibility of forecast receipts.</output>}
             <div className="overflow-x-auto overscroll-x-contain">
               <Table className="min-w-[640px]">
                 <TableCaption>Illustrative twelve-week cash forecast. Amounts in AUD, based on the entered expected dates.</TableCaption>

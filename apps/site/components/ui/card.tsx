@@ -7,8 +7,8 @@ export function Card({ className, ...props }: ComponentProps<"div">) {
 export function CardHeader({ className, ...props }: ComponentProps<"div">) {
   return <div className={cn("flex flex-col gap-1 p-5 pb-3",className)} {...props}/>;
 }
-export function CardTitle({ className, ...props }: ComponentProps<"h3">) {
-  return <h3 className={cn("font-semibold text-xl leading-tight text-foreground",className)} {...props}/>;
+export function CardTitle({ className, children, ...props }: ComponentProps<"h3">) {
+  return <h3 className={cn("font-semibold text-xl leading-tight text-foreground",className)} {...props}>{children}</h3>;
 }
 export function CardDescription({ className, ...props }: ComponentProps<"p">) {
   return <p className={cn("text-sm leading-6 text-muted-foreground",className)} {...props}/>;
