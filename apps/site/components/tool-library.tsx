@@ -31,14 +31,14 @@ export function ToolLibrary() {
         })}
       </div>
       </fieldset>
-      <label className="tools-library-search">
+      <label className="tools-library-search" htmlFor="tammy-tool-search">
         <span>Find a tool</span>
         <span className="tools-library-search-input">
           <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" width="19" height="19">
             <circle cx="10.5" cy="10.5" r="6.5" stroke="currentColor" strokeWidth="1.7"/>
             <path d="m15.3 15.3 4.4 4.4" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/>
           </svg>
-          <Input type="search" name="tool-search" value={query}
+          <Input id="tammy-tool-search" type="search" name="tool-search" value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="GST, pricing, invoices..." autoComplete="off" />
         </span>
