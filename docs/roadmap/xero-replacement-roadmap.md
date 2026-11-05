@@ -186,3 +186,20 @@ The long-term goal is not “259 green checkmarks” by itself. It is a successi
 - **Finally:** accounting firms can serve many clients without reverting to Xero for practice, tax or collaboration.
 
 Tammy should earn those claims through reconciliation, recovery and verified data migration, not design mockups or feature-count marketing.
+
+## 12. Issue-level implementation tracker
+
+[Roadmap parent issue #30](https://github.com/castlemilk/tammy/issues/30) owns the acceptance gates and initial dependency-ordered work:
+
+| Issue | First work package |
+| --- | --- |
+| [#22](https://github.com/castlemilk/tammy/issues/22) | Encrypted backup, restore and audit verification (G0) |
+| [#23](https://github.com/castlemilk/tammy/issues/23) | Opening balances, GL drill-down, periods and audited corrections (G1) |
+| [#24](https://github.com/castlemilk/tammy/issues/24) | Shared customer/supplier register and deterministic import (G1) |
+| [#25](https://github.com/castlemilk/tammy/issues/25) | Credit notes, receipts, refunds and aged receivables (G1) |
+| [#26](https://github.com/castlemilk/tammy/issues/26) | Complete AP bill and supplier-credit workflow (G1) |
+| [#27](https://github.com/castlemilk/tammy/issues/27) | Bank import formats, duplicates, transfer and AR/AP matching (G1) |
+| [#28](https://github.com/castlemilk/tammy/issues/28) | Complete financial statements and source-backed reports (G1) |
+| [#29](https://github.com/castlemilk/tammy/issues/29) | Dry-run Xero importer, cutover verification and rollback (G2) |
+
+These are *proposed work packages*, not evidence that those capabilities have been completed. Start with #22, then #23 and #24 where dependencies permit. Keep the parent issue's checkboxes current with real acceptance artifacts, not GitHub PR count.
