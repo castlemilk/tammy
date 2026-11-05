@@ -1,0 +1,26 @@
+name: Temporary Biome baseline diagnostics
+on:
+  push:
+    branches:
+      - fix/biome-site-owner-boundary-2026-11-05
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
+        with:
+          node-version: 24.18.0
+          package-manager-cache: false
+      - run: |
+          corepack enable pnpm
+          corepack prepare pnpm@11.15.0 --activate
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Emit complete Biome diagnostics for targeted remediation
+        continue-on-error: true
+        run: pnpm exec biome check --max-diagnostics=300 .
