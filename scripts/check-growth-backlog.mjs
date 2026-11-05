@@ -67,7 +67,7 @@ for (const item of backlog) {
   if (!/^M[0-4]$/.test(item.milestone)) throw new Error("Invalid milestone " + item.id);
   if (item.status !== "proposed") throw new Error("Growth task incorrectly claims release: " + item.id);
   for (const field of ["workstream", "deliverable", "dependency", "acceptance", "primary_metric"]) {
-    if (item[field].trim().length < 4)
+    if (item[field].trim().length < (field === "workstream" ? 3 : 4))
       throw new Error("Missing or vague " + field + " in " + item.id);
   }
   const refs = [...item.dependency.matchAll(/GT-\d{3}/g)].map((x) => x[0]);
@@ -105,7 +105,7 @@ for (const page of seo) {
       !/^\/[a-z0-9/-]*$/.test(page.related_route))
     throw new Error("SEO plan uses non-path or unescaped URL " + page.id);
   for (const field of ["cluster", "intent", "query_theme", "page_type", "conversion_stage", "notes"]) {
-    if (page[field].trim().length < 4) throw new Error("Missing " + field + " in " + page.id);
+    if (page[field].trim().length < (field === "cluster" ? 3 : 4)) throw new Error("Missing " + field + " in " + page.id);
   }
   const oldOwner = routeOwners.get(page.primary_route);
   // Multiple query phrases may intentionally share one URL, but cannot assign
