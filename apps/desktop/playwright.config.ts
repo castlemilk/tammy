@@ -14,6 +14,7 @@ export default defineConfig({
       name: target,
       testMatch: [
         "foundation.spec.ts",
+        "financial-workspace.spec.ts",
         "current-workflows.spec.ts",
         "bas-lifecycle.spec.ts",
         "bas-preparation.spec.ts",

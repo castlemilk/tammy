@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 1,
+  "phase": "before",
+  "runtime": {
+    "sourceRevision": "9bf430a77f2783dc07084f03b550b5857b3800e4",
+    "sourceDirty": false,
+    "appSha256": "2231ed5682cf0615aa34ea738491fe889f99cbdee4efe13cdc7571bcca53cd9d",
+    "coreSha256": "078811e551eb5cd0c5f505e3282d82bc8f50be578c12a9d92e7bafb70d67562c",
+    "helperSha256": "8dbfb2b0708d1c61ebc07cd8c8b5ee6a626d73dad490b90667b3794d61edb201",
+    "manifestSha256": "40860dc36d73113cd7791512791e44ef31eccc7cfabd1f5d26fc0ec5feedef34",
+    "releaseKind": "ordinary-package",
+    "target": "darwin-arm64"
+  },
+  "harnessBaseRevision": "3defba913949b77500ea4f6ed704fcc27a1d26fb",
+  "harnessDirty": true,
+  "harnessNote": "Uncommitted Trial balance fixture and capture branch. Its before mode excludes later after-only assertions. No clean-harness revision or capture-time harness hash is claimed.",
+  "nativeSeconds": 10.1,
+  "runnerSeconds": 10.9,
+  "retries": 0,
+  "syntheticOnly": true,
+  "pageErrors": 0,
+  "consoleErrors": 0,
+  "frames": [
+    {
+      "file": "before/01-trial-balance.png",
+      "sha256": "7d77e2283a4df388e1f409b045113335b88222bd56a3a81968abd36266bd1995",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "file": "before/03-report-focus-320.png",
+      "sha256": "9dab66546d1c98dcf5d619c3497f6c5d234942a00fea67aa28a8053a8046b0d8",
+      "width": 320,
+      "height": 1000
+    },
+    {
+      "file": "before/03-report-focus-390.png",
+      "sha256": "941e494dacc3a2b28c819c5ee69f308916d89b32358c0119d32da653952c2c64",
+      "width": 390,
+      "height": 1000
+    },
+    {
+      "file": "before/03-report-focus-900.png",
+      "sha256": "f294b65381c2bef0262a25a6c803c9275be7c2ef61fdb4911c9f3e87ebb19612",
+      "width": 900,
+      "height": 1000
+    },
+    {
+      "file": "before/04-credit-and-total-320.png",
+      "sha256": "3874452b911f061739269b896d2be17afb71e62e82951aff0f7059066f688c84",
+      "width": 320,
+      "height": 1000
+    },
+    {
+      "file": "before/04-credit-and-total-390.png",
+      "sha256": "f5e31d21b02ec447d7b46b6dace1b6c02fcf71f874b3b6966996b2fda13d0a27",
+      "width": 390,
+      "height": 1000
+    },
+    {
+      "file": "before/05-returned-report.png",
+      "sha256": "7d77e2283a4df388e1f409b045113335b88222bd56a3a81968abd36266bd1995",
+      "width": 1440,
+      "height": 1100
+    }
+  ]
+}

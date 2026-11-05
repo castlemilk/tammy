@@ -1,0 +1,61 @@
+{
+  "desktop": {
+    "passed": 1305,
+    "failed": 0,
+    "skipped": 0,
+    "files": 111,
+    "seconds": 223.53,
+    "scope": "Full semantic implementation; followed by CSS-only date layout and amount alignment adjustments."
+  },
+  "focusedAfterFinalCss": {
+    "passed": 38,
+    "failed": 0,
+    "files": 5,
+    "seconds": 6.7
+  },
+  "originalFullRun": {
+    "passed": 1304,
+    "failed": 1,
+    "cause": "Stale Documents/Banking H2 expectations; corrected to Needs review H2, retained count labels and GST/BAS H3. Navigation assertions retained."
+  },
+  "exportFocusRegressionAtBase": {
+    "passed": 5,
+    "failed": 1,
+    "cause": "Completion loses native button focus after pending disable; corrected source restores only if focus fell back to page."
+  },
+  "typecheck": "passed",
+  "lint": {
+    "errors": 0,
+    "warnings": 135,
+    "infos": 2
+  },
+  "strictAudit": {
+    "findings": 19,
+    "unchangedByFileRuleMessage": true,
+    "exclusionsChanged": false
+  },
+  "finalRuntimeSource": "74e147431c950bb094dba57f1386bd3ed3840020",
+  "finalNativeCapture": {
+    "passed": 1,
+    "seconds": 20.6,
+    "retries": 0,
+    "pageErrors": 0,
+    "consoleErrors": 0
+  },
+  "connectedNativeCases": "Three pass at a3e4b3cd before CSS-only alignment; exact timings in first-after-attempt.json. Final capture at 74e14743 rechecks Overview, cancel/focus, responsive geometry and native balances.",
+  "byteIdenticalToReviewBase": [
+    "attention request, card/status and BAS target helpers",
+    "income query/date selection handlers",
+    "income export arguments and expected financial revision gate"
+  ],
+  "financialAssertionsRemoved": 0,
+  "timeoutsChanged": 0,
+  "retries": 0,
+  "runtimeCodeChangesAfterFinalPackage": 0,
+  "remainingLocalDiscrepancies": [
+    "Earlier macOS 26.5.2 SBR startup failure remains paused/unexplained.",
+    "Earlier second-unlock failure remains unexplained; not retried or erased by these other cases."
+  ],
+  "hostedCI": "Pre-push checkpoint; preceding c1bf895d green runs do not validate this new source. Latest exact-head results belong in the PR evidence note.",
+  "releaseActions": 0
+}

@@ -1,0 +1,61 @@
+{
+  "runtimeSource": "9b559fea66a4e8821f3719975d0dbfabce0501e4",
+  "desktop": {
+    "passed": 1297,
+    "failed": 0,
+    "skipped": 0,
+    "files": 110,
+    "seconds": 135.75,
+    "sourceBeforeCssOnlyCorrection": "9589110bf464f56179924e55a9c3a502d50d1a20"
+  },
+  "focusedAfterCssCorrection": {
+    "passed": 71,
+    "failed": 0,
+    "files": 5,
+    "seconds": 10.35
+  },
+  "nativeFinalCases": [
+    {
+      "name": "financial visual/interaction",
+      "passed": 1,
+      "seconds": 15.0
+    },
+    {
+      "name": "BAS lifecycle",
+      "passed": 1,
+      "seconds": 14.5
+    },
+    {
+      "name": "invoice/purchase/BAS",
+      "passed": 1,
+      "seconds": 20.9
+    },
+    {
+      "name": "cash mixed-GST receipts and restart",
+      "passed": 1,
+      "seconds": 15.3
+    }
+  ],
+  "originalNativeFailures": [
+    {
+      "case": "invoice/purchase/BAS",
+      "cause": "Restart template snapshot helper expected disabled editor inputs; now explicitly verifies issued display values, due date and logo."
+    },
+    {
+      "case": "cash mixed-GST receipts and restart",
+      "cause": "Receipt-history assertion expected Payments content on initial Items view; now explicitly chooses Payments."
+    }
+  ],
+  "financialAssertionsRemoved": 0,
+  "timeoutsChanged": 0,
+  "retryCount": 0,
+  "typecheck": "passed",
+  "lint": {
+    "errors": 0,
+    "warnings": 135,
+    "infos": 2
+  },
+  "strictAudit": "19 unchanged findings; no exclusions",
+  "runtimeCodeChangesAfterFinalPackage": 0,
+  "releaseActions": 0
+}

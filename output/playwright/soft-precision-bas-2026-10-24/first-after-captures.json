@@ -1,0 +1,72 @@
+[
+  {
+    "file": "after/01-prepare-arrival.png",
+    "sha256": "886bab783b87e6a1524893fb40f35c2649c1850538e4277c833deac82dfa8b4b",
+    "viewport": [1440, 1100]
+  },
+  {
+    "file": "after/02-profile-saved.png",
+    "sha256": "f2c269e8b86828aab255a26157effc615161e5d38995ed071bbb20a6b3d2fc6d",
+    "viewport": [1440, 1100]
+  },
+  {
+    "file": "after/03-exact-review.png",
+    "sha256": "f506c67a08224c936cc7af500b91094b8b358fb908eeb81ad97874e15d94146c",
+    "viewport": [1440, 1100]
+  },
+  {
+    "file": "after/04-validation-findings.png",
+    "sha256": "7c8773f69dd66f4bf027e9377bf3f757a1742369c63ba7320566e165a218d611",
+    "viewport": [1440, 1100]
+  },
+  {
+    "file": "after/05-review-nav-focus-320.png",
+    "sha256": "2510ee3c11e1334f23dfb7c9e219dbfad4a0dab1d39acef9da7a498418032175",
+    "viewport": [320, 1000]
+  },
+  {
+    "file": "after/05-review-nav-focus-390.png",
+    "sha256": "b369a14c23a92f96072d6397455a288bf87fa350a2a7beb0dcdfbe1cdea29067",
+    "viewport": [390, 1000]
+  },
+  {
+    "file": "after/05-review-nav-focus-900.png",
+    "sha256": "bebaf31ec3441d7b5ea11ebdb7508ebdd51e128ccc093582614d64533f1fb647",
+    "viewport": [900, 1000]
+  },
+  {
+    "file": "after/06-calculation-keyboard-320.png",
+    "sha256": "f352383ac535373c1cc916a6f1494cb37600903462451366462783b8dd218f00",
+    "viewport": [320, 1000]
+  },
+  {
+    "file": "after/06-calculation-keyboard-390.png",
+    "sha256": "79c35186f05186a5cd99026f265b0eb1e7113516a8b2aa905bafb53fcd783f65",
+    "viewport": [390, 1000]
+  },
+  {
+    "file": "after/06-calculation-keyboard-900.png",
+    "sha256": "27a91630951aecf61c1aab61edfccb51d14a3f5f8db525ec93802b9f03f7e13b",
+    "viewport": [900, 1000]
+  },
+  {
+    "file": "after/07-freeze-permission-boundary.png",
+    "sha256": "e1585de8bb5e45109c78157ac3e8fe820b547885f2e033e5ea6982204587275f",
+    "viewport": [1440, 1100]
+  },
+  {
+    "file": "after/08-retained-calculation-export.png",
+    "sha256": "bed7c88685a56eec6162d7d5e45ae9297accbcdd15c63b308e3a893f0e4b8b08",
+    "viewport": [1440, 1100]
+  },
+  {
+    "file": "after/09-export-cancelled.png",
+    "sha256": "c94907fea68070345ba6f6c6ee89c292ee674c80290f924cfb0c67763810d3ea",
+    "viewport": [1440, 1100]
+  },
+  {
+    "file": "after/10-unverified-external-record.png",
+    "sha256": "785a61044afd79cb4263550d75bca45bb82633fa9db6913e8a89225ef91292f0",
+    "viewport": [1440, 1100]
+  }
+]

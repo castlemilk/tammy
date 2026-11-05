@@ -109,8 +109,8 @@ test("CLI accepts no inputs and does not invoke Playwright", async () => {
   );
   assert.doesNotMatch(source, /(?:pnpm|npx).*playwright|test:e2e:packaged/iu);
   const child = spawn(
-    "mise",
-    ["exec", "--", "node", "scripts/write-sbr-evidence.mjs", "--result=/private/tmp/result.json"],
+    process.execPath,
+    ["scripts/write-sbr-evidence.mjs", "--result=/private/tmp/result.json"],
     { cwd: realRepositoryRoot, shell: false, stdio: ["ignore", "pipe", "pipe"] },
   );
   let output = "";

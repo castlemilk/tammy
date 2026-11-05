@@ -19,6 +19,9 @@
   --color-border: var(--border);
   --color-input: var(--border);
   --color-ring: var(--sage);
+  --color-gamma-surface: var(--gamma-surface);
+  --color-gamma-muted: var(--gamma-muted);
+  --color-gamma-accent: var(--gamma-accent);
   --radius-sm: 0.25rem;
   --radius-md: 0.4rem;
   --radius-lg: 0.55rem;

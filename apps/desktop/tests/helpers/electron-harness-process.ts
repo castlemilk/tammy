@@ -1,7 +1,117 @@
 import { spawn } from "node:child_process";
+import { performance } from "node:perf_hooks";
 
 export const MAX_HARNESS_OUTPUT_BYTES = 256 * 1024;
 const TRUNCATION_MARKER = "\n[output truncated]";
+export const HARNESS_CHILD_PHASES = [
+  "harness-start",
+  "import-start",
+  "import-done",
+  "ready-wait",
+  "ready",
+  "protocol-start",
+  "protocol-ready",
+  "fetch-start",
+  "fetch-headers",
+  "body-read",
+  "result-write",
+  "result-flushed",
+  "exit-requested",
+  "failure",
+] as const;
+type HarnessEvent =
+  | "launch"
+  | "spawn-return"
+  | "first-stdout"
+  | "first-stderr"
+  | "spawn-error"
+  | "exit"
+  | "close"
+  | "deadline-armed"
+  | "deadline"
+  | "terminate-request"
+  | "close-confirmation-deadline";
+
+export class HarnessPhaseTimings {
+  readonly #now: () => number;
+  readonly #start: number;
+  readonly #events = new Map<HarnessEvent, number>();
+  readonly #phases = new Map<
+    string,
+    { phase: string; childElapsedMs: number; parentReceivedMs: number }
+  >();
+  readonly #line: number[] = [];
+  #runtime: { electron: string; node: string; platform: string; arch: string } | undefined;
+  #discarding = false;
+
+  constructor(now: () => number = () => performance.now()) {
+    this.#now = now;
+    this.#start = now();
+  }
+
+  #elapsed(): number {
+    return Math.round(Math.max(0, this.#now() - this.#start) * 1000) / 1000;
+  }
+
+  mark(event: HarnessEvent): void {
+    if (!this.#events.has(event)) this.#events.set(event, this.#elapsed());
+  }
+
+  stderr(chunk: Buffer | string): void {
+    this.mark("first-stderr");
+    const bytes = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+    for (const byte of bytes) {
+      if (byte === 10) {
+        if (!this.#discarding) {
+          const line = Buffer.from(this.#line).toString("ascii");
+          const runtime =
+            /^TAMMY_ASAR_RUNTIME (\d+\.\d+\.\d+) (\d+\.\d+\.\d+) (linux|darwin|win32) (x64|arm64)\r?$/.exec(
+              line,
+            );
+          if (!this.#runtime && runtime?.[1] && runtime[2] && runtime[3] && runtime[4])
+            this.#runtime = {
+              electron: runtime[1],
+              node: runtime[2],
+              platform: runtime[3],
+              arch: runtime[4],
+            };
+          const match = /^TAMMY_ASAR_PHASE ([a-z-]+) (\d+(?:\.\d+)?)\r?$/.exec(line);
+          const phase = match?.[1];
+          const elapsed = Number(match?.[2]);
+          if (
+            phase &&
+            HARNESS_CHILD_PHASES.some((p) => p === phase) &&
+            Number.isFinite(elapsed) &&
+            elapsed <= 3_600_000 &&
+            !this.#phases.has(phase)
+          )
+            this.#phases.set(phase, {
+              phase,
+              childElapsedMs: elapsed,
+              parentReceivedMs: this.#elapsed(),
+            });
+        }
+        this.#line.length = 0;
+        this.#discarding = false;
+      } else if (!this.#discarding) {
+        if (this.#line.length < 512) this.#line.push(byte);
+        else {
+          this.#line.length = 0;
+          this.#discarding = true;
+        }
+      }
+    }
+  }
+
+  snapshot() {
+    return {
+      elapsedMs: this.#elapsed(),
+      events: Object.fromEntries(this.#events),
+      phases: [...this.#phases.values()],
+      ...(this.#runtime ? { runtime: { ...this.#runtime } } : {}),
+    };
+  }
+}
 
 export interface HarnessLaunchCommand {
   readonly args: readonly string[];
@@ -46,6 +156,7 @@ export type SpawnHarnessProcess = (
 ) => HarnessChildProcess;
 
 export interface RunHarnessProcessOptions {
+  readonly phaseTimings?: HarnessPhaseTimings;
   readonly closeConfirmationTimeoutMs: number;
   readonly electronArguments: readonly string[];
   readonly environment: Readonly<NodeJS.ProcessEnv>;
@@ -171,6 +282,7 @@ export async function runHarnessProcess(
     platform: options.platform,
   });
   let child: HarnessChildProcess;
+  options.phaseTimings?.mark("launch");
   try {
     child = options.spawnProcess(launch.command, launch.args, {
       detached: launch.detached,
@@ -179,7 +291,9 @@ export async function runHarnessProcess(
       stdio: ["ignore", "pipe", "pipe"],
       windowsHide: true,
     });
+    options.phaseTimings?.mark("spawn-return");
   } catch (error) {
+    options.phaseTimings?.mark("spawn-error");
     throw new HarnessProcessError(
       `Electron ASAR harness could not be spawned: ${errorMessage(error)}`,
       true,
@@ -230,6 +344,7 @@ export async function runHarnessProcess(
         return;
       }
       closeConfirmationTimer = options.timers.setTimeout(() => {
+        options.phaseTimings?.mark("close-confirmation-deadline");
         const reasonMessage =
           reason === "timeout"
             ? `Electron ASAR harness timed out after ${options.timeoutMs}ms and termination was not confirmed within ${options.closeConfirmationTimeoutMs}ms.`
@@ -242,9 +357,17 @@ export async function runHarnessProcess(
       }, options.closeConfirmationTimeoutMs);
     };
 
-    child.stdout.on("data", (chunk) => stdout.append(chunk));
-    child.stderr.on("data", (chunk) => stderr.append(chunk));
+    child.stdout.on("data", (chunk) => {
+      options.phaseTimings?.mark("first-stdout");
+      stdout.append(chunk);
+    });
+    child.stderr.on("data", (chunk) => {
+      options.phaseTimings?.stderr(chunk);
+      stderr.append(chunk);
+    });
+    child.once("exit", () => options.phaseTimings?.mark("exit"));
     child.once("error", (error) => {
+      options.phaseTimings?.mark("spawn-error");
       if (settled) {
         return;
       }
@@ -258,6 +381,7 @@ export async function runHarnessProcess(
       }
     });
     child.once("close", (code, signal) => {
+      options.phaseTimings?.mark("close");
       if (settled) {
         return;
       }
@@ -297,13 +421,16 @@ export async function runHarnessProcess(
       resolveOnce(output);
     });
 
+    options.phaseTimings?.mark("deadline-armed");
     executionTimer = options.timers.setTimeout(() => {
       if (settled) {
         return;
       }
       timedOut = true;
+      options.phaseTimings?.mark("deadline");
       startCloseConfirmation("timeout");
       try {
+        options.phaseTimings?.mark("terminate-request");
         options.terminateProcess(child, options.platform);
       } catch (error) {
         terminationError = error;

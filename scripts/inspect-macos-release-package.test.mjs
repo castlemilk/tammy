@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -12,7 +12,7 @@ const sourceTree = "b".repeat(40);
 const appSha256 = "c".repeat(64);
 
 async function fixture(context) {
-  const root = await mkdtemp(path.join(tmpdir(), "tammy-package-inspection-"));
+  const root = await mkdtemp(path.join(await realpath(tmpdir()), "tammy-package-inspection-"));
   context.after(() => rm(root, { force: true, recursive: true }));
   const packagePath = path.join(root, "Tammy-0.1.0-build.42.pkg");
   const packageBytes = Buffer.from("synthetic immutable package\n");

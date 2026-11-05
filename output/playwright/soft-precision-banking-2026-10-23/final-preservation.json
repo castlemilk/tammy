@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "priorSource": "220c5d77c607d67057922db09870c90fb1d797c5",
+  "priorTrackedPngs": 700,
+  "allPriorPngBytesIdentical": true,
+  "includesAllOriginal666Pngs": true,
+  "archivedFiles": 55,
+  "archiveVerification": "node scripts/check-retained-output.mjs",
+  "realBankingFrames": 48,
+  "unchangedConceptFrames": 1
+}

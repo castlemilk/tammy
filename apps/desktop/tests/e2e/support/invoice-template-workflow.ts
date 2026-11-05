@@ -118,15 +118,41 @@ export async function expectInvoiceTemplateSnapshot(
   values: TemplateValues,
   dueDate: string,
   hasLogo: boolean,
+  state: "draft" | "issued" = "draft",
 ) {
-  await expect(page.getByRole("textbox", { name: "Seller address", exact: true })).toHaveValue(
-    values.sellerAddress,
-  );
-  await expect(page.getByRole("textbox", { name: "Notes", exact: true })).toHaveValue(values.notes);
-  await expect(
-    page.getByRole("textbox", { name: "Payment instructions", exact: true }),
-  ).toHaveValue(values.paymentInstructions);
-  await expect(page.getByLabel("Due date", { exact: true })).toHaveValue(dueDate);
+  if (state === "issued") {
+    const items = page.getByRole("region", { name: "Issued invoice items", exact: true });
+    await expect(items.locator("input, select, textarea")).toHaveCount(0);
+    const disclosure = page.getByText("Invoice information & private estimates", { exact: true });
+    if ((await disclosure.locator("..").getAttribute("open")) === null) await disclosure.click();
+    await expect(items.getByText("Seller", { exact: true }).locator("..")).toContainText(
+      values.sellerAddress,
+    );
+    await expect(items.getByText("Notes", { exact: true }).locator("..")).toContainText(
+      values.notes,
+    );
+    await expect(
+      items.getByText("Payment instructions", { exact: true }).locator(".."),
+    ).toContainText(values.paymentInstructions);
+    const displayedDueDate = new Intl.DateTimeFormat("en-AU", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+      timeZone: "UTC",
+    }).format(new Date(`${dueDate}T00:00:00Z`));
+    await expect(page.getByText(`Due ${displayedDueDate}`, { exact: false })).toBeVisible();
+  } else {
+    await expect(page.getByRole("textbox", { name: "Seller address", exact: true })).toHaveValue(
+      values.sellerAddress,
+    );
+    await expect(page.getByRole("textbox", { name: "Notes", exact: true })).toHaveValue(
+      values.notes,
+    );
+    await expect(
+      page.getByRole("textbox", { name: "Payment instructions", exact: true }),
+    ).toHaveValue(values.paymentInstructions);
+    await expect(page.getByLabel("Due date", { exact: true })).toHaveValue(dueDate);
+  }
   if (hasLogo) await expectLogo(page, "Invoice logo");
   else await expect(page.getByRole("img", { name: "Invoice logo", exact: true })).toHaveCount(0);
 }

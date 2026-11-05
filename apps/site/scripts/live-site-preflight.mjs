@@ -7,7 +7,7 @@ import { pathToFileURL } from "node:url";
 import { resolve } from "node:path";
 
 export const REQUIRED_ROUTES = Object.freeze([
-  "/", "/tools", "/tools/invoice-generator", "/tools/gst-calculator",
+  "/", "/tools", "/tools/invoice-generator", "/tools/quote-generator", "/tools/cash-flow-forecast", "/tools/gst-calculator",
   "/tools/abn-checker", "/tools/break-even-calculator", "/blog",
   "/privacy", "/robots.txt", "/sitemap.xml",
 ]);

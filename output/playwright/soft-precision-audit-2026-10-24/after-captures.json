@@ -1,0 +1,47 @@
+[
+  {
+    "file": "after/01-retained-records.png",
+    "sha256": "78a8b33057fc9e15e9864c9d7f45b5b2dcf72aeb62abf0d808210f1b5ebeebd8",
+    "viewport": [1440, 1100]
+  },
+  {
+    "file": "after-verified/01-retained-records.png",
+    "sha256": "78a8b33057fc9e15e9864c9d7f45b5b2dcf72aeb62abf0d808210f1b5ebeebd8",
+    "viewport": [1440, 1100]
+  },
+  {
+    "file": "after-verified/02-journal-source-details.png",
+    "sha256": "1d3d6a970cd5bcdf0de4d5b029dea861fc53342181bd513a922be25780825232",
+    "viewport": [1440, 1100]
+  },
+  {
+    "file": "after-verified/03-no-matching-records.png",
+    "sha256": "5f29f16df1db2f405a9b160efe7b0331d51b269470b6847c4557bfffe3dfe3fe",
+    "viewport": [1440, 1100]
+  },
+  {
+    "file": "after-verified/04-filtered-records.png",
+    "sha256": "9a72aebe0a6565919479a9b31a92b147d30a79b6472bd2e4237fd3a13be4ee81",
+    "viewport": [1440, 1100]
+  },
+  {
+    "file": "after-verified/05-keyboard-320.png",
+    "sha256": "7162486f44acb562065ca8fc18f77770be5c989f74026c439a7001c1c07c0eba",
+    "viewport": [320, 1000]
+  },
+  {
+    "file": "after-verified/05-keyboard-390.png",
+    "sha256": "5a001e8c03e5d7b5e4a22556cb4af43d41267fd38eb94d14480ca79520033224",
+    "viewport": [390, 1000]
+  },
+  {
+    "file": "after-verified/05-keyboard-900.png",
+    "sha256": "6cd475ee9afa7d92bcc87b4c682588d3c4212cf9d7167926645eb9d4760764bf",
+    "viewport": [900, 1000]
+  },
+  {
+    "file": "after-verified/06-returned-records.png",
+    "sha256": "78a8b33057fc9e15e9864c9d7f45b5b2dcf72aeb62abf0d808210f1b5ebeebd8",
+    "viewport": [1440, 1100]
+  }
+]

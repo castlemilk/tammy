@@ -178,6 +178,11 @@
     outline: 2px solid var(--ring);
     outline-offset: 2px;
   }
+  .chart-accounts-scroll.focus-ring:focus-visible,
+  .trial-balance-scroll.focus-ring:focus-visible,
+  .bas-table-scroll.focus-ring:focus-visible {
+    outline-offset: -2px;
+  }
 
   .focus-ring-rail:focus-visible {
     outline: 2px solid var(--ready-light);
@@ -396,5 +401,167 @@
   .work-table td {
     padding: 16px 20px;
     border-top: 1px solid var(--border);
+  }
+  .document-index-table th,
+  .document-index-table td {
+    padding: 5px 12px;
+  }
+  .document-index-table th {
+    height: 38px;
+  }
+  .banking-lines-table th,
+  .banking-lines-table td {
+    padding: 4px 12px;
+  }
+  .banking-lines-table th {
+    height: 38px;
+  }
+  .banking-lines-table td {
+    height: 56px;
+  }
+  .compact-ledger-table th,
+  .compact-ledger-table td {
+    padding: 4px 12px;
+  }
+  .compact-ledger-table th {
+    height: 38px;
+  }
+  .compact-ledger-table td {
+    height: 56px;
+  }
+  .trial-balance-table th,
+  .trial-balance-table td {
+    padding: 6px 16px;
+  }
+  .trial-balance-table thead th {
+    height: 38px;
+  }
+  .trial-balance-table tbody th,
+  .trial-balance-table tbody td {
+    height: 40px;
+    border-top: 1px solid var(--border);
+    font-size: 14px;
+    font-weight: 400;
+  }
+  .trial-balance-table tfoot th,
+  .trial-balance-table tfoot td {
+    height: 48px;
+    border-top: 1px solid var(--border);
+    font-size: 14px;
+  }
+  .trial-balance-table tfoot th {
+    color: inherit;
+  }
+  .chart-accounts-table th,
+  .chart-accounts-table td {
+    padding: 4px 12px;
+  }
+  .chart-accounts-table thead th {
+    height: 38px;
+  }
+  .chart-accounts-table th[scope="rowgroup"] {
+    padding-block: 0;
+  }
+  .chart-accounts-table td {
+    height: 36px;
+  }
+  .invoice-index-table th,
+  .invoice-index-table td {
+    padding: 6px 12px;
+  }
+  .invoice-index-table th {
+    height: 40px;
+  }
+  .invoice-index-table td {
+    height: 56px;
+  }
+  .invoice-index-table tbody tr:hover {
+    background: var(--background);
+  }
+  .invoice-index-table tr[data-selected] {
+    background: color-mix(in srgb, var(--apricot) 28%, var(--surface));
+  }
+}
+
+@layer utilities {
+  .invoice-draft-lines th,
+  .invoice-draft-lines td {
+    padding: 8px 6px;
+  }
+  .invoice-draft-lines th {
+    font-size: 12px;
+  }
+  .invoice-draft-lines th:first-child,
+  .invoice-draft-lines td:first-child {
+    padding-left: 0;
+  }
+  .invoice-draft-lines th:last-child,
+  .invoice-draft-lines td:last-child {
+    padding-right: 0;
+  }
+}
+
+@layer components {
+  .bas-page {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .bas-page :where(section, .grid, .flex, label) {
+    min-width: 0;
+  }
+  .bas-page select {
+    min-width: 0;
+    width: 100%;
+    max-width: 100%;
+  }
+  .bas-page :where(input:not([type="checkbox"]), textarea) {
+    min-width: 0;
+    max-width: 100%;
+  }
+  .bas-page button {
+    max-width: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .bas-stage-rail button {
+    padding-inline: 14px;
+  }
+  .bas-label-table th,
+  .bas-label-table td {
+    padding: 8px 14px;
+    height: 40px;
+  }
+  .bas-label-table thead th {
+    height: 38px;
+    font-size: 12px;
+  }
+  .bas-label-table tbody th,
+  .bas-label-table tbody td {
+    font-size: 13px;
+  }
+  .bas-label-table tbody th {
+    color: var(--forest);
+  }
+  .bas-label-table tbody tr:hover {
+    background: var(--background);
+  }
+}
+
+@layer components {
+  .audit-workspace {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .audit-workspace :where(section, .grid, .flex, label) {
+    min-width: 0;
+  }
+  .audit-summary.focus-ring:focus-visible {
+    outline-offset: -2px;
+  }
+  .audit-record summary:hover {
+    background-color: var(--background);
+  }
+  .audit-record details[open] summary {
+    background-color: var(--background);
   }
 }

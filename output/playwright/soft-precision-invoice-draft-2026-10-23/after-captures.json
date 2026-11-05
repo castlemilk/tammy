@@ -1,0 +1,100 @@
+{
+  "syntheticOnly": true,
+  "runtimeSource": "1ec93d6d372cd704fefc74f1f22d06b48d8fc560",
+  "runtimeSourceDirty": false,
+  "testSource": "ef8e87fdf9007a9077e4274fea4d7868a74c71a3",
+  "package": {
+    "passed": 7,
+    "skipped": 1,
+    "failed": 0,
+    "releaseKind": "ordinary-package",
+    "appSha256": "7189bd24ad3d2d6bc158b8de969c2010167d953a99de14b4c49cba9e1125dfe4",
+    "coreSha256": "078811e551eb5cd0c5f505e3282d82bc8f50be578c12a9d92e7bafb70d67562c",
+    "manifestSha256": "6b5be26b0d2f9565e957bbb32f53508cf9a0c6d06021bd7cbd6f2c62a0cbe1e7"
+  },
+  "journey": {
+    "passed": 1,
+    "failed": 0,
+    "seconds": 23.4,
+    "testBodySeconds": 20.4,
+    "retries": 0,
+    "pageErrors": 0,
+    "consoleErrors": 0
+  },
+  "frames": [
+    {
+      "path": "after/01-draft-editor-empty.png",
+      "sha256": "202a36032cc86d88db363288b15a919a906f67c474d02c048554e0c7e52ec5fd",
+      "bytes": 173952,
+      "viewport": [1440, 1100]
+    },
+    {
+      "path": "after/02-validation-preserves-edit.png",
+      "sha256": "404223f36a75e413c1b51b5c03e7dc6da352bb263e8e32a013a0eaa2d0eec5a0",
+      "bytes": 175324,
+      "viewport": [1440, 1100]
+    },
+    {
+      "path": "after/03-saved-draft.png",
+      "sha256": "6e93dd8b0262ce64337657fb7f8e0bb99d1364e4fadc87f4a159de2de1a968ed",
+      "bytes": 200929,
+      "viewport": [1440, 1100]
+    },
+    {
+      "path": "after/03b-unsaved-replacement.png",
+      "sha256": "a6222e1d5a2f07fb092b6ef6478495fc18409c6d24c0477e68acf8d09df8ad7d",
+      "bytes": 202458,
+      "viewport": [1440, 1100]
+    },
+    {
+      "path": "after/03c-draft-320.png",
+      "sha256": "670d55db0b4e8bab3b5b2dc5f2c29f48c519bd9c186125f61399fbd8559376c1",
+      "bytes": 53917,
+      "viewport": [320, 900]
+    },
+    {
+      "path": "after/03c-draft-390.png",
+      "sha256": "48181138d2ee334d8676444649f36040cae591d6906cd24185e69ead8908a052",
+      "bytes": 54758,
+      "viewport": [390, 900]
+    },
+    {
+      "path": "after/04-preview-320.png",
+      "sha256": "baffaf6a54711ad757dad531fb8ad940bb19a238f3da726882c4f2d2bb0759db",
+      "bytes": 59764,
+      "viewport": [320, 900]
+    },
+    {
+      "path": "after/04-preview-390.png",
+      "sha256": "c5007a4a6047128762208baebf98172c7aecc7ec1484770ebecd3e0075169e09",
+      "bytes": 68512,
+      "viewport": [390, 900]
+    },
+    {
+      "path": "after/04b-preview-large-320.png",
+      "sha256": "2b8cd2081003abb5396334ed4c83b35645d99b38d6c7b257d431a3b44dbc1a1a",
+      "bytes": 51177,
+      "viewport": [320, 900]
+    },
+    {
+      "path": "after/05-issue-confirmation.png",
+      "sha256": "303c920f9b159074d0543c2b8f809e4963f01efe1c5684afe30c29ef1fd7826e",
+      "bytes": 212738,
+      "viewport": [1440, 1100]
+    },
+    {
+      "path": "after/05b-issue-confirmation-focused.png",
+      "sha256": "f846bfa5c3db2a7609b78cc5305d48de296e06cc52c3eadf1a1572343c799e78",
+      "bytes": 215758,
+      "viewport": [1440, 1100]
+    }
+  ],
+  "visualInspection": [
+    "before/03-saved-draft.png",
+    "reference/02-automation-invoices.png",
+    "after/03-saved-draft.png",
+    "after/04-preview-320.png",
+    "after/04b-preview-large-320.png",
+    "after/05b-issue-confirmation-focused.png"
+  ]
+}

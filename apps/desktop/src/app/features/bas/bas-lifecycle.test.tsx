@@ -1742,6 +1742,22 @@ it("keeps a retained review-ready state separate from changed live source curren
           sourceSnapshotHash: new Uint8Array(32).fill(0x33),
           inputHash: new Uint8Array(32).fill(0x22),
         }),
+        currentCalculation: create(BasCalculationSchema, {
+          calculationId: "018f0000-0000-7000-8000-000000000026",
+          result: {
+            labels: [
+              {
+                label: 1,
+                exactCentsNumerator: "900719925474099199",
+                exactCentsDenominator: "3",
+                reportedWholeDollars: 3002399751580330n,
+                roundingDifferenceCentsNumerator: "-199",
+                roundingDifferenceCentsDenominator: "3",
+                ruleId: "synthetic-exact-rule",
+              },
+            ],
+          },
+        }),
         currentChain: create(BasChainExpectationSchema, { expectedFamilyVersion: 2n }),
         liveCurrentness: BasLiveCurrentness.SOURCE_CHANGED,
       }),
@@ -1758,7 +1774,26 @@ it("keeps a retained review-ready state separate from changed live source curren
   );
 
   const user = userEvent.setup();
-  await user.click(await screen.findByRole("button", { name: "Freeze" }));
+  await user.click(await screen.findByRole("button", { name: "Review" }));
+  expect(await screen.findByText("Source changed since this snapshot")).toBeTruthy();
+  const disclosure = screen.getByText("Exact snapshot identities").closest("details");
+  expect(disclosure?.open).toBe(false);
+  await user.click(screen.getByText("Exact snapshot identities"));
+  expect(disclosure?.open).toBe(true);
+  expect(within(disclosure as HTMLElement).getByText("33".repeat(32))).toBeTruthy();
+  const scroll = screen.getByRole("region", { name: "BAS calculation labels table" });
+  expect(scroll.getAttribute("tabindex")).toBe("0");
+  scroll.focus();
+  expect(document.activeElement).toBe(scroll);
+  const table = within(scroll).getByRole("table", { name: "Exact BAS calculation labels" });
+  expect(within(table).getAllByRole("columnheader")).toHaveLength(6);
+  expect(within(table).getByRole("rowheader", { name: "G1" })).toBeTruthy();
+  for (const amount of ["900719925474099199/3", "3002399751580330", "-199/3 cents"])
+    expect(within(table).getByRole("cell", { name: amount })).toBeTruthy();
+  await user.click(screen.getByText("Exact snapshot identities"));
+  expect(disclosure?.open).toBe(false);
+  expect(within(table).getByRole("rowheader", { name: "G1" })).toBeTruthy();
+  await user.click(screen.getByRole("button", { name: "Freeze" }));
   expect(await screen.findByText(/Source changed since this snapshot/)).toBeTruthy();
   await user.type(screen.getByLabelText("Approval reason"), "Source review");
   await user.type(screen.getByLabelText("Authenticator code"), "123456");

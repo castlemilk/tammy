@@ -93,3 +93,5 @@ These new MDX posts use an accessible scenario explorer, validated balanced jour
 - [Four quarters. Check the actual BAS deadline.](https://tammy-accounting.castlemilk.chatgpt.site/blog/quarterly-bas-due-dates-australia) - Standard quarterly BAS reference dates with conditional extensions, weekends and the ATO-issued due date.
 
 The article sources are ATO and Australian Government official guidance. Tammy does not electronically lodge a BAS or income-tax return, determine actual filing deadlines, submit user data, or act as an agent.
+
+- [12-week cash flow forecast](https://tammy-accounting.castlemilk.chatgpt.site/tools/cash-flow-forecast) - date-based expected receipts and payments, low-cash detection and browser CSV export. Not bank-linked or predictive.

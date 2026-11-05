@@ -1,5 +1,7 @@
-import { AlertCircle, CheckCircle2, FileSearch, LoaderCircle, Search } from "lucide-react";
-import type { ReactNode, Ref } from "react";
+import { useComposedRefs } from "@radix-ui/react-compose-refs";
+import { AlertCircle, CheckCircle2, FileSearch, LoaderCircle, Search, X } from "lucide-react";
+import { type ReactNode, type Ref, useRef } from "react";
+import { Button } from "./ui/button";
 import { ScreenHeading } from "./workspace-primitives";
 
 export function WorkHeading({
@@ -72,28 +74,48 @@ export function WorkSearch({
   label,
   value,
   onChange,
+  clearLabel = "Clear search",
 }: {
   readonly label: string;
   readonly value: string;
   readonly onChange: (value: string) => void;
   readonly inputRef?: Ref<HTMLInputElement>;
+  readonly clearLabel?: string;
 }) {
+  const localRef = useRef<HTMLInputElement>(null);
+  const ref = useComposedRefs(inputRef, localRef);
   return (
-    <label className="relative block w-full min-w-0 flex-1">
-      <Search
-        aria-hidden="true"
-        className="pointer-events-none absolute left-3 top-3.5 size-4 text-muted-foreground"
-      />
-      <span className="sr-only">{label}</span>
-      <input
-        className="focus-ring h-11 w-full rounded-xl border border-border bg-surface pl-10 pr-3 text-[14px]"
-        ref={inputRef}
-        type="search"
-        placeholder={label}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-      />
-    </label>
+    <div className="flex w-full min-w-0 flex-1 items-center gap-2">
+      <label className="relative block w-full min-w-0 flex-1">
+        <Search
+          aria-hidden="true"
+          className="pointer-events-none absolute left-3 top-3.5 size-4 text-muted-foreground"
+        />
+        <span className="sr-only">{label}</span>
+        <input
+          className="focus-ring h-11 w-full rounded-xl border border-border bg-surface pl-10 pr-3 text-[14px] [&::-webkit-search-cancel-button]:appearance-none"
+          ref={ref}
+          type="search"
+          placeholder={label}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+        />
+      </label>
+      {value ? (
+        <Button
+          aria-label={clearLabel}
+          className="size-11 shrink-0 p-0"
+          onClick={() => {
+            onChange("");
+            localRef.current?.focus();
+          }}
+          type="button"
+          variant="ghost"
+        >
+          <X aria-hidden="true" className="size-4" />
+        </Button>
+      ) : null}
+    </div>
   );
 }
 
@@ -102,6 +124,7 @@ export function WorkFilters<T extends string>({
   options,
   value,
   onChange,
+  variant = "quiet",
 }: {
   readonly label: string;
   readonly options: readonly {
@@ -111,6 +134,7 @@ export function WorkFilters<T extends string>({
   }[];
   readonly value: T;
   readonly onChange: (value: T) => void;
+  readonly variant?: "quiet" | "solid";
 }) {
   return (
     <fieldset aria-label={label} className="flex min-w-0 flex-wrap gap-1">
@@ -120,10 +144,12 @@ export function WorkFilters<T extends string>({
           key={option.value}
           aria-pressed={value === option.value}
           onClick={() => onChange(option.value)}
-          className={`focus-ring flex min-h-11 items-center gap-2 rounded-xl px-3 text-[13px] font-semibold transition-colors ${value === option.value ? "bg-forest-soft text-forest" : "text-muted-foreground hover:bg-muted"}`}
+          className={`focus-ring flex min-h-11 items-center gap-2 rounded-xl px-3 text-[13px] font-semibold transition-colors ${variant === "solid" ? "border border-border" : ""} ${value === option.value ? (variant === "solid" ? "bg-primary text-primary-foreground" : "bg-forest-soft text-forest") : "text-muted-foreground hover:bg-muted"}`}
         >
           {option.label}
-          <span className="rounded-md bg-surface px-1.5 py-0.5 text-[12px] tabular-nums">
+          <span
+            className={`rounded-md px-1.5 py-0.5 text-[12px] tabular-nums ${variant === "solid" && value === option.value ? "bg-transparent" : "bg-surface"}`}
+          >
             {option.count}
           </span>
         </button>

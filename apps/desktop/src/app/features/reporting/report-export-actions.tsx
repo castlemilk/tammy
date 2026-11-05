@@ -85,15 +85,32 @@ export function ReportExportActions({
   const [pending, setPending] = useState(false),
     [message, setMessage] = useState<string>(),
     [error, setError] = useState<string>();
+  const focusReturn = useRef<{ readonly authority: string; readonly trigger: HTMLButtonElement }>(
+    undefined,
+  );
   // biome-ignore lint/correctness/useExhaustiveDependencies: A new authority must discard all previous export feedback.
   useEffect(() => {
+    focusReturn.current = undefined;
     setPending(false);
     setMessage(undefined);
     setError(undefined);
   }, [authority]);
-  const save = async (format: ReportFormat) => {
+  useEffect(() => {
+    if (pending || (!message && !error)) return;
+    const origin = focusReturn.current;
+    focusReturn.current = undefined;
+    if (
+      origin?.authority === authority &&
+      origin.trigger.isConnected &&
+      !origin.trigger.disabled &&
+      (document.activeElement === document.body || document.activeElement === origin.trigger)
+    )
+      origin.trigger.focus();
+  }, [authority, error, message, pending]);
+  const save = async (format: ReportFormat, trigger: HTMLButtonElement) => {
     if (!organisation || !validReport || disabled || pending || profile.isFetching) return;
     const captured = authority;
+    focusReturn.current = { authority: captured, trigger };
     setPending(true);
     setMessage(undefined);
     setError(undefined);
@@ -122,7 +139,7 @@ export function ReportExportActions({
           type="button"
           variant="outline"
           disabled={disabled || pending || profile.isFetching || !organisation || !validReport}
-          onClick={() => void save("pdf")}
+          onClick={(event) => void save("pdf", event.currentTarget)}
         >
           Export PDF
         </Button>
@@ -131,7 +148,7 @@ export function ReportExportActions({
           type="button"
           variant="outline"
           disabled={disabled || pending || profile.isFetching || !organisation || !validReport}
-          onClick={() => void save("csv")}
+          onClick={(event) => void save("csv", event.currentTarget)}
         >
           Export CSV
         </Button>
@@ -144,7 +161,7 @@ export function ReportExportActions({
         >
           Refresh export identity
         </Button>
-        <p className="text-[12px] text-muted-foreground">
+        <p className="min-w-0 break-words text-[12px] text-muted-foreground">
           {organisation
             ? `${organisation.legalName} · ABN ${organisation.abn}`
             : profile.isFetching

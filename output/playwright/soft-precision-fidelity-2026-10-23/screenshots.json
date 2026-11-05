@@ -1,0 +1,74 @@
+[
+  {
+    "path": "after/01-invoice-list-1440.png",
+    "sha256": "13ef3e551f6bc7ecc3fe656c168f0e329b11bb4c136ba9cc7cbce78c5c51d697",
+    "width": 1440,
+    "height": 1100,
+    "kind": "real-packaged-app",
+    "sourceRevision": "08802fcaf66ed2a21955bf2148d0e5dff26d0d1f"
+  },
+  {
+    "path": "after/02-filtered-return-1440.png",
+    "sha256": "457d52050e3c2da5d56977f589e7cfa8dc3a8b2768b28b0fbf02b3b5c5f6eca9",
+    "width": 1440,
+    "height": 1100,
+    "kind": "real-packaged-app",
+    "sourceRevision": "08802fcaf66ed2a21955bf2148d0e5dff26d0d1f"
+  },
+  {
+    "path": "after/03-invoice-list-320.png",
+    "sha256": "740eb7c8b94272c9b93cd2392d4e912492a6687f61669e36e440cba86d3d0652",
+    "width": 320,
+    "height": 900,
+    "kind": "real-packaged-app",
+    "sourceRevision": "08802fcaf66ed2a21955bf2148d0e5dff26d0d1f"
+  },
+  {
+    "path": "after/03-invoice-list-390.png",
+    "sha256": "8983cbd4c58128c469f02ea98fbc54304630cf8d1b6a6116d9f57b07eb57b006",
+    "width": 390,
+    "height": 900,
+    "kind": "real-packaged-app",
+    "sourceRevision": "08802fcaf66ed2a21955bf2148d0e5dff26d0d1f"
+  },
+  {
+    "path": "attempt-1-after/01-invoice-list-1440.png",
+    "sha256": "cd11400c53b08c3c55b400f4b67b548b966f8f7a871fabbc0910aba81492a1f2",
+    "width": 1440,
+    "height": 1100,
+    "kind": "real-packaged-app",
+    "sourceRevision": "3a4dcfa4dcc8afe8b2639a56288c324081ec3e6e"
+  },
+  {
+    "path": "attempt-1-after/02-filtered-return-1440.png",
+    "sha256": "43d4b9b0b26931ff4e80bafd186c7ada43352e606cc987eb8c5e2c6f261a68b0",
+    "width": 1440,
+    "height": 1100,
+    "kind": "real-packaged-app",
+    "sourceRevision": "3a4dcfa4dcc8afe8b2639a56288c324081ec3e6e"
+  },
+  {
+    "path": "attempt-1-after/03-page-overflow-390.png",
+    "sha256": "4a639c273171bb7e813ecdfeef3a24e712d99e4c7279bed39897a6f06d77a7b9",
+    "width": 390,
+    "height": 900,
+    "kind": "real-packaged-app",
+    "sourceRevision": "3a4dcfa4dcc8afe8b2639a56288c324081ec3e6e"
+  },
+  {
+    "path": "before/01-invoice-list-1440.png",
+    "sha256": "3144eee7f9f2441e13ae6d289cc36e696641cdb8d961e7a219cee1e3b84b6509",
+    "width": 1440,
+    "height": 1100,
+    "kind": "real-packaged-app",
+    "sourceRevision": "7aa28d4e243a1bde1006234f013e3c468469ae2c"
+  },
+  {
+    "path": "reference/07-sales-item-tracking.png",
+    "sha256": "96284946e17b516d42cd3d111a6c1ba37a1ac1b2172ed1cfac97dac152e6364c",
+    "width": 1942,
+    "height": 809,
+    "kind": "design-reference",
+    "sourceRevision": "19533020422b6ea2f0c77dc3117a051483f9f9ce"
+  }
+]

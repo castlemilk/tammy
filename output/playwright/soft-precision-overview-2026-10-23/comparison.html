@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Tammy Overview — before, reference and after</title>
+    <style>
+      :root { color-scheme: light; font-family: system-ui, sans-serif; color: #302a25; background: #f7f3ea; }
+      body { max-width: 1800px; margin: auto; padding: 24px; }
+      h1, h2 { font-family: Georgia, serif; font-weight: 500; }
+      p { max-width: 90ch; line-height: 1.6; }
+      a { color: #235c4b; }
+      a:focus-visible { outline: 3px solid #235c4b; outline-offset: 4px; }
+      .pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+      figure { min-width: 0; margin: 0 0 24px; }
+      img { display: block; width: 100%; height: auto; border: 1px solid #dcd3c5; border-radius: 12px; }
+      figcaption { margin: 12px 0; line-height: 1.5; }
+      .narrow { max-width: 320px; }
+      @media (max-width: 800px) { .pair { grid-template-columns: 1fr; } body { padding: 16px; } }
+    </style>
+  </head>
+  <body>
+    <h1>Overview: local income beside the review queue</h1>
+    <p>Real app captures share a 1440 × 1100 viewport and isolated synthetic fixture: $1,200 invoice income excluding GST, $500 received and $820 owing. The income window is explicitly July–September 2026; the existing fixed renderer clock remains May 2024. These figures are posted income and invoice balances, not a fabricated cash position.</p>
+    <div class="pair">
+      <figure>
+        <a href="before/02-income-and-attention.png"><img src="before/02-income-and-attention.png" alt="Before: three tall status cards above a full-width income section, with the review section below the first viewport." /></a>
+        <figcaption>Before — real app, clean ordinary package 1ec93d6d. The review queue sits below the first viewport.</figcaption>
+      </figure>
+      <figure>
+        <a href="after/02-income-and-attention.png"><img src="after/02-income-and-attention.png" alt="After: posted income, dates and exports beside a compact document/bank queue and explicit BAS action-needed status." /></a>
+        <figcaption>After — real app, clean ordinary package 74e14743. Same fixture and viewport. Income and attention are visible together; their financial/status meanings stay separate.</figcaption>
+      </figure>
+    </div>
+    <h2>Approved board 01 — generated concept</h2>
+    <figure>
+      <a href="reference/01-soft-precision-views.png"><img src="reference/01-soft-precision-views.png" alt="Approved Soft Precision board 01, with a compact Today financial summary beside a review queue, plus exploratory transactions and mobile views." /></a>
+      <figcaption>The left Today composition informs this screen. The full board is unchanged from design commit 19533020. Its cash graph, suggested matches, live sync, global search and mobile view are not implemented or claimed by this Overview work.</figcaption>
+    </figure>
+    <h2>Readable responsive data and explicit cancellation</h2>
+    <div class="pair">
+      <figure class="narrow">
+        <a href="after/05-income-focus-320.png"><img src="after/05-income-focus-320.png" alt="320-pixel Overview with visible keyboard focus and readable stacked reporting-date fields." /></a>
+        <figcaption>320 × 900. Natural document scrolling retains the remaining figures and attention column.</figcaption>
+      </figure>
+      <figure>
+        <a href="after/07-income-1100.png"><img src="after/07-income-1100.png" alt="1100-pixel Overview with two-column dates, aligned supporting amounts and restored focus after income export cancellation." /></a>
+        <figcaption>1100 × 1100. The first after attempt exposed misaligned amount baselines. It is retained separately; this corrected capture passes the native geometry assertion.</figcaption>
+      </figure>
+    </div>
+    <p><a href="README.md">Actions, sources, tests and boundaries</a> · <a href="screen-board-inventory.md">Finite implemented-screen inventory</a> · <a href="after-captures.json">Corrected capture provenance</a> · <a href="validation.json">Local verification checkpoint</a></p>
+  </body>
+</html>

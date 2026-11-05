@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "observedAt": "2026-10-23T22:04:55.809Z",
+  "failedHead": "6ad30c5e708235b18883d55fc48b6588b4b2cd55",
+  "originalRuns": [
+    {
+      "event": "push",
+      "runId": 40028904933,
+      "jobId": 120671939602,
+      "passed": 5,
+      "failed": 1,
+      "notRun": 14,
+      "failingCaseSeconds": 31
+    },
+    {
+      "event": "pull_request",
+      "runId": 40028912826,
+      "jobId": 120671966645,
+      "passed": 5,
+      "failed": 1,
+      "notRun": 14,
+      "failingCaseSeconds": 33
+    }
+  ],
+  "artifact": {
+    "id": 12534801528,
+    "bytes": 1031534,
+    "sha256": "eaa28beefa4d67f0eb86f38a88a5fb8383b20a9aa31ad14377c837352b8e57b5",
+    "retainedSafeFrame": "ci-row-followup/original-pr-failure.png",
+    "frameSha256": "2ceff6b207b50379bdca17ddb60422d21be641876d3a0461759751c859c40f14",
+    "frameWidth": 1180,
+    "frameHeight": 732
+  },
+  "localCorrection": {
+    "runtimeSourceRevision": "ffc2fdaa7e8a74092d78025107df4a620516c369",
+    "runtimeRebuilt": false,
+    "harnessBaseRevision": "6ad30c5e708235b18883d55fc48b6588b4b2cd55",
+    "harnessDirty": true,
+    "harnessFile": "apps/desktop/tests/e2e/current-workflows.spec.ts",
+    "harnessSha256": "51628c781634a7a3c669eb936d712310a039a32e9330f0a58b975ce012632ebb",
+    "nativePassed": 1,
+    "nativeSeconds": 22.4,
+    "runnerSeconds": 23.6,
+    "retries": 0,
+    "componentPassed": 10,
+    "componentSeconds": 2.38
+  },
+  "preservation": {
+    "previousTrackedPngs": 786,
+    "allPreviousPngsByteIdentical": true,
+    "newSafeFrameCount": 1,
+    "expectedTotalAfterCommit": 787
+  },
+  "applicationSourceChanged": false,
+  "timeoutRetryWorkerPolicyChanged": false
+}

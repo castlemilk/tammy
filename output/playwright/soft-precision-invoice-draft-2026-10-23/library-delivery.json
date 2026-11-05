@@ -1,0 +1,62 @@
+{
+  "syntheticOnly": true,
+  "uploadConfirmed": true,
+  "originalCaptureBytesUnchanged": true,
+  "files": [
+    {
+      "capture": "before/03-saved-draft.png",
+      "name": "Tammy-draft-before.png",
+      "kind": "real synthetic app screenshot",
+      "libraryFileId": "libfile_ca8ab93860108191a3e220637e6eef2e",
+      "sha256": "ecbcfa028e96086e49f22418662299b15e8b11b6470fc749aa902e1b412d6490",
+      "bytes": 128373,
+      "status": "succeeded",
+      "deliveryCopyXattrsApplied": true,
+      "downloadUrl": "https://chatgpt.com/api/library/files/libfile_ca8ab93860108191a3e220637e6eef2e/download"
+    },
+    {
+      "capture": "reference/02-automation-invoices.png",
+      "name": "Tammy-board-02-reference-concept.png",
+      "kind": "approved generated concept",
+      "libraryFileId": "libfile_b9f2eb4f6f008191b8f26d5696fdf32b",
+      "sha256": "232b863d658277ada528bb5b1576447f24ece4a278f6aedfd407944f4194eaa2",
+      "bytes": 1863995,
+      "status": "succeeded",
+      "deliveryCopyXattrsApplied": true,
+      "downloadUrl": "https://chatgpt.com/api/library/files/libfile_b9f2eb4f6f008191b8f26d5696fdf32b/download"
+    },
+    {
+      "capture": "after/03-saved-draft.png",
+      "name": "Tammy-draft-after.png",
+      "kind": "real synthetic app screenshot",
+      "libraryFileId": "libfile_ca07388b4cb881918bff6ece757dd568",
+      "sha256": "6e93dd8b0262ce64337657fb7f8e0bb99d1364e4fadc87f4a159de2de1a968ed",
+      "bytes": 200929,
+      "status": "succeeded",
+      "deliveryCopyXattrsApplied": true,
+      "downloadUrl": "https://chatgpt.com/api/library/files/libfile_ca07388b4cb881918bff6ece757dd568/download"
+    },
+    {
+      "capture": "after/04-preview-320.png",
+      "name": "Tammy-draft-preview-320.png",
+      "kind": "real synthetic app screenshot",
+      "libraryFileId": "libfile_843f4dbd85a88191846c10e961ed8cfa",
+      "sha256": "baffaf6a54711ad757dad531fb8ad940bb19a238f3da726882c4f2d2bb0759db",
+      "bytes": 59764,
+      "status": "succeeded",
+      "deliveryCopyXattrsApplied": true,
+      "downloadUrl": "https://chatgpt.com/api/library/files/libfile_843f4dbd85a88191846c10e961ed8cfa/download"
+    },
+    {
+      "capture": "after/05b-issue-confirmation-focused.png",
+      "name": "Tammy-draft-issue-keyboard-focus.png",
+      "kind": "real synthetic app screenshot",
+      "libraryFileId": "libfile_bce8cd293d848191979fab5dc88a6c19",
+      "sha256": "f846bfa5c3db2a7609b78cc5305d48de296e06cc52c3eadf1a1572343c799e78",
+      "bytes": 215758,
+      "status": "succeeded",
+      "deliveryCopyXattrsApplied": true,
+      "downloadUrl": "https://chatgpt.com/api/library/files/libfile_bce8cd293d848191979fab5dc88a6c19/download"
+    }
+  ]
+}

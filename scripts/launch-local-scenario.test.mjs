@@ -421,15 +421,11 @@ test("desktop package owner rejects arbitrary arguments before starting a child"
 });
 
 test("desktop:start:scenario reaches the rejecting owner instead of a generic shell", async () => {
-  const child = spawn(
-    "mise",
-    ["exec", "--", "pnpm", "desktop:start:scenario", "--", "--inspect=9229"],
-    {
-      cwd: repositoryRoot,
-      shell: false,
-      stdio: ["ignore", "pipe", "pipe"],
-    },
-  );
+  const child = spawn("pnpm", ["desktop:start:scenario", "--", "--inspect=9229"], {
+    cwd: repositoryRoot,
+    shell: false,
+    stdio: ["ignore", "pipe", "pipe"],
+  });
   let output = "";
   child.stdout.on("data", (chunk) => (output += chunk));
   child.stderr.on("data", (chunk) => (output += chunk));

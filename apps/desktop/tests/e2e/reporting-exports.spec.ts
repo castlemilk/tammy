@@ -389,6 +389,7 @@ async function retainComparison(
 
 async function issueExportInvoice(page: Page, number: string) {
   await page.getByRole("link", { name: "Invoices", exact: true }).click();
+  await page.getByRole("button", { name: "New invoice", exact: true }).click();
   await page.getByLabel("Invoice number", { exact: true }).fill(number);
   await page.getByLabel("Issue date", { exact: true }).fill("2026-10-01");
   await page.getByLabel("Due date", { exact: true }).fill("2026-10-15");

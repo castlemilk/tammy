@@ -1,0 +1,9 @@
+{
+  "library_file_id": "libfile_a7f5297f3d3881919716d214e320abc7",
+  "archive": "Tammy GST BAS verified comparison 2026-10-24.zip",
+  "bytes": 6416902,
+  "sha256": "239c4dc8c0b08fbea1cc72cbdb780269483d0f88900f797d65cc038a541dad58",
+  "entries": 49,
+  "capturesByteIdenticalToRepository": true,
+  "note": "40 actual app frames plus one approved reference; archive manifest verifies every entry. JSON documentation reflects preparation-time formatting; later repository formatting has unchanged metadata values."
+}

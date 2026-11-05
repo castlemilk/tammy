@@ -120,6 +120,29 @@ function lastReviewRequest(fixture: ReturnType<typeof createConveyorFixture>) {
   return reviewCodec.decodeRequest(frame);
 }
 
+it("suggests the explicit Total amount without matching Subtotal or a partial label", async () => {
+  const { fixture } = createReviewFixture();
+  const { container } = renderDocuments(fixture);
+  await screen.findByRole("table", { name: "Retained documents" });
+  const bytes = new TextEncoder().encode(
+    "%PDF-1.4\n(Synthetic Cedar Supplies) Tj\n(Subtotal $100.00) Tj\n(GST $10.00) Tj\n(Totalled $999.00) Tj\n(Total $110.00) Tj",
+  );
+  const file = new File([bytes], "synthetic-labelled-totals.pdf", { type: "application/pdf" });
+  Object.defineProperty(file, "arrayBuffer", { value: async () => bytes.buffer });
+  const input = container.querySelector<HTMLInputElement>('input[type="file"]');
+  if (!input) throw new Error("file input missing");
+  await userEvent.setup().upload(input, file);
+  await screen.findByRole("heading", { name: "synthetic-labelled-totals.pdf" });
+  expect((screen.getByLabelText("Subtotal", { exact: true }) as HTMLInputElement).value).toBe(
+    "100.00",
+  );
+  expect((screen.getByLabelText("GST", { exact: true }) as HTMLInputElement).value).toBe("10.00");
+  expect((screen.getByLabelText("Total", { exact: true }) as HTMLInputElement).value).toBe(
+    "110.00",
+  );
+  expect(fixture.procedures.documents.saveDocumentReview).not.toHaveBeenCalled();
+});
+
 it("reaches the next document page and resets signed cursors when filtering", async () => {
   const fixture = createConveyorFixture();
   const organisationId = "018f0000-0000-7000-8000-000000000004";

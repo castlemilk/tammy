@@ -1,0 +1,27 @@
+{
+  "beforeSourceRevision": "7aa28d4e243a1bde1006234f013e3c468469ae2c",
+  "referenceSourceRevision": "19533020422b6ea2f0c77dc3117a051483f9f9ce",
+  "appViewport": {
+    "width": 1440,
+    "height": 1100
+  },
+  "syntheticRecords": 8,
+  "lifecycleCounts": {
+    "draft": 4,
+    "issued": 4
+  },
+  "images": [
+    {
+      "path": "before/01-invoice-list-1440.png",
+      "sha256": "3144eee7f9f2441e13ae6d289cc36e696641cdb8d961e7a219cee1e3b84b6509",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "path": "reference/07-sales-item-tracking.png",
+      "sha256": "96284946e17b516d42cd3d111a6c1ba37a1ac1b2172ed1cfac97dac152e6364c",
+      "width": 1942,
+      "height": 809
+    }
+  ]
+}

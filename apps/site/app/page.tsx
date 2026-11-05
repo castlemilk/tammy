@@ -388,6 +388,7 @@ export default function Home() {
               <a href="/tools/profit-margin-calculator"><span className="landing-tools-number">08</span><strong>Profit margin calculator</strong><span>Understand markup and gross margin</span><span aria-hidden="true">↗</span></a>
               <a href="/tools/break-even-calculator"><span className="landing-tools-number">09</span><strong>Break-even calculator</strong><span>Know the unit sales target</span><span aria-hidden="true">↗</span></a>
               <a href="/tools/cash-runway-calculator"><span className="landing-tools-number">10</span><strong>Cash runway calculator</strong><span>Estimate monthly cash coverage</span><span aria-hidden="true">↗</span></a>
+              <a href="/tools/cash-flow-forecast"><span className="landing-tools-number">11</span><strong>12-week cash flow forecast</strong><span>Plan dated receipts and payments</span><span aria-hidden="true">↗</span></a>
             </div>
           </section>
 

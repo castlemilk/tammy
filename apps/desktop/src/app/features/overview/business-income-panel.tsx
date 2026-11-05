@@ -110,7 +110,7 @@ export function BusinessIncomePanel({
           </Button>
         }
       />
-      <div className="grid grid-cols-4 gap-3 border-b border-border p-5 max-[760px]:grid-cols-2 max-[460px]:grid-cols-1">
+      <div className="grid grid-cols-4 gap-3 border-b border-border p-5 max-[1400px]:grid-cols-2 max-[460px]:grid-cols-1">
         <label className="grid gap-1.5 text-[12px] font-semibold text-foreground">
           Income period
           <select
@@ -147,8 +147,9 @@ export function BusinessIncomePanel({
         </p>
       ) : value ? (
         <div className="grid gap-5 p-5">
-          <dl className="grid grid-cols-4 gap-3 max-[760px]:grid-cols-2 max-[460px]:grid-cols-1">
+          <dl className="grid grid-cols-3 gap-4 max-[700px]:grid-cols-1">
             <Metric
+              prominent
               label="Business income (ex GST)"
               minor={value.businessIncomeMinor}
               testId="business-income-total"
@@ -169,7 +170,7 @@ export function BusinessIncomePanel({
               testId="business-outstanding"
             />
           </dl>
-          <p className="border-t border-border pt-4 text-[14px] leading-6 text-muted-foreground">
+          <p className="border-t border-border pt-4 text-[12px] leading-6 text-muted-foreground">
             Income and receipts cover {value.periodStart} to {value.periodEnd}. Invoices owing
             include earlier unpaid invoices as of {value.asOfDate}. Invoice GST attributed in this
             period: {money(value.invoiceGstMinor)} (
@@ -258,15 +259,26 @@ function Metric({
   label,
   minor,
   testId,
+  prominent = false,
 }: {
   readonly label: string;
   readonly minor: number;
   readonly testId: string;
+  readonly prominent?: boolean;
 }) {
   return (
-    <div data-testid={testId}>
-      <dt className="text-[12px] leading-5 text-muted-foreground">{label}</dt>
-      <dd className="mt-1 text-[22px] font-semibold leading-7 tabular-nums text-foreground">
+    <div
+      className={prominent ? "col-span-full border-b border-border pb-4" : "min-w-0"}
+      data-testid={testId}
+    >
+      <dt
+        className={`text-[12px] leading-5 text-muted-foreground ${prominent ? "" : "min-[700px]:min-h-10"}`}
+      >
+        {label}
+      </dt>
+      <dd
+        className={`mt-1 break-words font-semibold tabular-nums text-foreground ${prominent ? "text-[36px] leading-[44px] max-[460px]:text-[28px] max-[460px]:leading-9" : "text-[22px] leading-7"}`}
+      >
         {money(minor)}
       </dd>
     </div>

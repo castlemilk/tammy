@@ -1,0 +1,176 @@
+{
+  "runtimeSource": "0f3ed9bd7151cda8757ab5e2874f95e343d78205",
+  "runtimeSourceDirty": false,
+  "runtimeKind": "ordinary-package",
+  "appSha256": "2abb09e3bc28874df76282b68fb9701faf05f1815a6c43c5dff0556d38f17e45",
+  "coreSha256": "078811e551eb5cd0c5f505e3282d82bc8f50be578c12a9d92e7bafb70d67562c",
+  "coreUnchanged": true,
+  "manifestSha256": "8c88f1b0666fe778eefe12d2a7a080380b77f30409b5cfd3b57a699b69d5d486",
+  "packageChecks": {
+    "passed": 7,
+    "failed": 0,
+    "skipped": 1
+  },
+  "focused": {
+    "passed": 55,
+    "files": 6,
+    "seconds": 11.13
+  },
+  "desktop": {
+    "passed": 1308,
+    "files": 111,
+    "seconds": 132.11,
+    "skipped": 0
+  },
+  "typecheck": "passed",
+  "lint": {
+    "passed": true,
+    "warnings": 135,
+    "infos": 12
+  },
+  "nativeCapture": {
+    "passed": 1,
+    "seconds": 11.2,
+    "testBodySeconds": 10.5,
+    "retries": 0,
+    "pageErrors": 0,
+    "consoleErrors": 0
+  },
+  "connectedNativeJourney": {
+    "passed": 1,
+    "seconds": 12.5,
+    "testBodySeconds": 11.9,
+    "retries": 0,
+    "pageErrors": 0,
+    "consoleErrors": 0
+  },
+  "frames": [
+    {
+      "path": "after-keyboard-fix/01-import-validation.png",
+      "sha256": "531cb54438a3a3345b952a2f5d2d8c5403198884b95c0b7301c9fc0699088826",
+      "bytes": 166070,
+      "viewport": [1440, 1100]
+    },
+    {
+      "path": "after-keyboard-fix/02-list-selected.png",
+      "sha256": "7d4e3fea55ec903dd231e1484d0fc6d5c4fa08bdfadd08dc24ea09552a85f0a6",
+      "bytes": 200857,
+      "viewport": [1440, 1100]
+    },
+    {
+      "path": "after-keyboard-fix/03-review-before-save.png",
+      "sha256": "674429569aa2a4232a7b01d361c6092954fca1373c614d7e949b1490236a5afc",
+      "bytes": 210112,
+      "viewport": [1440, 1100]
+    },
+    {
+      "path": "after-keyboard-fix/04-review-error.png",
+      "sha256": "c5a49034cf90a5bf73a367ffb7a6203bb61865f648f9f43af730ac1c0dee78a3",
+      "bytes": 215683,
+      "viewport": [1440, 1100]
+    },
+    {
+      "path": "after-keyboard-fix/05-review-confirmed.png",
+      "sha256": "5dec802529c1b4591b0928b2b986ca52d487170f3ba91ffbcda28a5f83ee30f5",
+      "bytes": 199144,
+      "viewport": [1440, 1100]
+    },
+    {
+      "path": "after-keyboard-fix/06-close-retains-search.png",
+      "sha256": "b41f11bdb623ba28c7c476dfd2649d9203b7e6b0d7663fb7b7f20a16e6330458",
+      "bytes": 112995,
+      "viewport": [1440, 1100]
+    },
+    {
+      "path": "after-keyboard-fix/07-search-empty.png",
+      "sha256": "ff1c231fc609dbaa737c58b2611cb17241fbe0a7aff086f98ea3bcd02126f7ef",
+      "bytes": 160308,
+      "viewport": [1440, 1100]
+    },
+    {
+      "path": "after-keyboard-fix/08-manual-image.png",
+      "sha256": "9f5295cafc0d0875668d1fe6a316ae14cb5c17ea2bca984f229a228f368f665e",
+      "bytes": 185105,
+      "viewport": [1440, 1100]
+    },
+    {
+      "path": "after-keyboard-fix/09-document-list-320.png",
+      "sha256": "f140f7d2cb7816362d7244c12f29c7ac13ec7bb18505564750d0e4538b2a7e58",
+      "bytes": 67983,
+      "viewport": [320, 1000]
+    },
+    {
+      "path": "after-keyboard-fix/09-document-list-390.png",
+      "sha256": "c86af8f361a40685ed7d63575a92c2dcd3712cc2aabc7816085eb0913814198a",
+      "bytes": 76831,
+      "viewport": [390, 1000]
+    },
+    {
+      "path": "after-keyboard-fix/10-manual-fields-320.png",
+      "sha256": "1245b581d135940e402c3d1677724b0f8b2d1fa3fc4f9cb6239f9cec5d5bc3d2",
+      "bytes": 48191,
+      "viewport": [320, 1000]
+    },
+    {
+      "path": "after-keyboard-fix/10-manual-fields-390.png",
+      "sha256": "178099c56163dd443126205917e7b38188eccedcd051cb027f203f9d5e1d186b",
+      "bytes": 52611,
+      "viewport": [390, 1000]
+    }
+  ],
+  "inspectedPixels": ["1440px selected document list", "320px focused horizontally scrolled table"],
+  "libraryByteIdenticalCurrentCaptures": [
+    {
+      "currentCapture": "after-keyboard-fix/02-list-selected.png",
+      "library_file_id": "libfile_0f6dca1097ac8191ad5acd397b7f735a",
+      "byteIdenticalToDeliveredVersion": 0,
+      "sha256": "7d4e3fea55ec903dd231e1484d0fc6d5c4fa08bdfadd08dc24ea09552a85f0a6"
+    },
+    {
+      "currentCapture": "after-keyboard-fix/03-review-before-save.png",
+      "library_file_id": "libfile_93989a8b35ac8191af971815e623ff7e",
+      "byteIdenticalToDeliveredVersion": 0,
+      "sha256": "674429569aa2a4232a7b01d361c6092954fca1373c614d7e949b1490236a5afc"
+    },
+    {
+      "currentCapture": "after-keyboard-fix/10-manual-fields-320.png",
+      "library_file_id": "libfile_9e47ed19131c8191b8a12a05cdc8ecf2",
+      "byteIdenticalToDeliveredVersion": 0,
+      "sha256": "1245b581d135940e402c3d1677724b0f8b2d1fa3fc4f9cb6239f9cec5d5bc3d2"
+    }
+  ],
+  "newLibraryKeyboardCapture": {
+    "operation": "create_library_file",
+    "status": "succeeded",
+    "path": "/Tammy-Documents-keyboard-scroll-320px.png",
+    "file_id": "file_0000000015fc81fab90bb502157bf35f",
+    "library_file_id": "libfile_181e651f652081918972b89335fe774a",
+    "file_name": "Tammy-Documents-keyboard-scroll-320px.png",
+    "current_version_number": 0,
+    "restored_from_version_number": null,
+    "xattrs": [
+      {
+        "name": "user.library-file-version",
+        "value": "0"
+      }
+    ],
+    "directory_id": "libdir_a3a19ff1eb58819186e5b2b573334313",
+    "mime_type": "image/png",
+    "library_artifact_type": "image",
+    "file_size_bytes": 67983,
+    "sourcePath": "after-keyboard-fix/09-document-list-320.png",
+    "sha256": "f140f7d2cb7816362d7244c12f29c7ac13ec7bb18505564750d0e4538b2a7e58",
+    "localIdentityPersisted": true
+  },
+  "originalCi": {
+    "head": "d1174f6e01b3364f06f223455d9ac919ba62955c",
+    "successfulJobs": 5,
+    "failedJobs": 1,
+    "pushPackagedPassed": 20,
+    "prPackagedPassed": 6,
+    "prPackagedFailed": 1,
+    "prPackagedNotRun": 13,
+    "retries": 0
+  },
+  "hostedCorrectionResult": "Recorded in draft PR #11 after pushing this evidence; no manual rerun."
+}

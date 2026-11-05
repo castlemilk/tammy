@@ -1,0 +1,51 @@
+{
+  "sourceRevision": "57d04eaa475e8dc9aec02d1012c13fae30a09b35",
+  "target": "darwin-arm64",
+  "fixture": "isolated synthetic workspace",
+  "packagedJourneys": {
+    "passed": 4,
+    "failed": 0,
+    "skipped": 0,
+    "retries": 0,
+    "duration": "1.2m",
+    "cases": [
+      {
+        "case": "current-workflows/workspace-recovery-accounting",
+        "seconds": 19.1
+      },
+      {
+        "case": "current-workflows/invoices-purchases-bas",
+        "seconds": 25.0
+      },
+      {
+        "case": "invoices/soft-precision-workspace",
+        "seconds": 11.8
+      },
+      {
+        "case": "invoices/income-payments-bas",
+        "seconds": 14.8
+      }
+    ]
+  },
+  "targetedTests": {
+    "files": 17,
+    "passed": 133,
+    "failed": 0
+  },
+  "desktopTypecheck": "passed",
+  "lint": {
+    "status": "passed",
+    "errors": 0,
+    "existingWarnings": 135,
+    "existingInfos": 2
+  },
+  "hostedCi": "Reported separately at the pushed exact head; local checks do not establish hosted status.",
+  "fullDesktopTests": {
+    "files": 104,
+    "passed": 1259,
+    "failed": 0,
+    "skipped": 0,
+    "durationSeconds": 120.12
+  },
+  "ciFollowup": "ci-followup.json"
+}

@@ -1,0 +1,108 @@
+{
+  "sourceRevision": "7aa28d4e243a1bde1006234f013e3c468469ae2c",
+  "generatedConceptImages": false,
+  "screenshots": [
+    {
+      "path": "after/01-new-invoice.png",
+      "sha256": "80f73453ed524ef7bf14951f8bd9a81f7283bbf7bb0a4e9116b166e5cadb1d83",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "path": "after/02-validation-preserves-edit.png",
+      "sha256": "a4e619602d5dbd780632dd45cdcdf759f9f6f73e90d55c2a599c0ce337d35603",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "path": "after/03-saved-draft.png",
+      "sha256": "6dd0348dae1d54d6519e25b7f8b43bf23ce363d70a6d44b869caf13b903347ca",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "path": "after/03b-unsaved-replacement.png",
+      "sha256": "fe774562629f9251ecafa3fbf3e3537b24191752931a304772a21b98d554de27",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "path": "after/04-template-editor.png",
+      "sha256": "e3a41c87ab1af79a37768c646f523cb169994f34aafcaf2d1aa8d0eda7bb46cf",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "path": "after/05-issue-confirmation.png",
+      "sha256": "e50a2674a4ff2fd2f72ca61cb69d2f79d04d2cbbdd956a4a17be8f944eb57fc5",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "path": "after/06-issued-read-only.png",
+      "sha256": "9bc1c92abd113d6670940fc2854b62c5684acea2ab46e1eefec9b6e15be7281a",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "path": "after/07-payment-review.png",
+      "sha256": "c71df62eb275ef34a975fcdfdd528e300003506688f27e1793b480a54b251e2a",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "path": "after/08-recorded-receipt.png",
+      "sha256": "65c1b5be0140299e30e9ee5b3bd8203b822d916c6dfd64246a2e6bbe87e570df",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "path": "after/09-invoice-no-results.png",
+      "sha256": "df688b9ce2a3ec8324da4c5b66ed94364cb5f98e8aa77a751e21b18ffc058dc5",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "path": "after/10-keyboard-focus.png",
+      "sha256": "b5a35b3023562c35516007144a5693fae81268fb469d2e444c76f93df93a7100",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "path": "after/11-invoices-320.png",
+      "sha256": "2bc98213f6671581235c29b8bdfa85879756a16aa7cd79e6f9bdd7180074fd6b",
+      "width": 320,
+      "height": 900
+    },
+    {
+      "path": "after/11-invoices-390.png",
+      "sha256": "cb05ce8a4adb8396a9644b26028125a07ef70897f7c8cb1c7391424c83f9bc07",
+      "width": 390,
+      "height": 900
+    },
+    {
+      "path": "after/12-lines-320.png",
+      "sha256": "ac32c697653ef453e701fe673710be7e64e7f3a69fb3357e59393f85cf2c7e35",
+      "width": 320,
+      "height": 900
+    },
+    {
+      "path": "after/12-lines-390.png",
+      "sha256": "4f976797d1f7381a7772ced06994151084da0178c4abacb0e48978957bf975de",
+      "width": 390,
+      "height": 900
+    },
+    {
+      "path": "after/12b-line-amounts-320.png",
+      "sha256": "b081f66f4054b172f9352228e446f3c0f9377ee6750402d02c0112f90e829096",
+      "width": 320,
+      "height": 900
+    },
+    {
+      "path": "after/12b-line-amounts-390.png",
+      "sha256": "d24b9d8ab2bbcc3d164b67a84e8f2d033d7a87a438ca811ddabaaad75606b3c7",
+      "width": 390,
+      "height": 900
+    }
+  ]
+}

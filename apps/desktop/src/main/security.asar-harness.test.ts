@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   type HarnessChildProcess,
+  HarnessPhaseTimings,
   HarnessProcessError,
   type HarnessProcessTimers,
   MAX_HARNESS_OUTPUT_BYTES,
@@ -90,6 +91,104 @@ async function settledState(promise: Promise<unknown>): Promise<boolean> {
   await Promise.resolve();
   return settled;
 }
+
+describe("bounded ASAR phase diagnostics", () => {
+  it("collects fragmented known numeric phases and keeps raw output out of the summary", () => {
+    let now = 5;
+    const timings = new HarnessPhaseTimings(() => now);
+    now = 10;
+    timings.stderr("private-path-and-environment\nTAMMY_ASAR_PHA");
+    now = 15;
+    timings.stderr(Buffer.from("SE import-start 2.500\nTAMMY_ASAR_PHASE import-start 9\n"));
+    timings.stderr(
+      "TAMMY_ASAR_RUNTIME 43.1.1 24.16.0 linux x64\nTAMMY_ASAR_RUNTIME private unknown linux x64\n",
+    );
+    timings.stderr(
+      "TAMMY_ASAR_PHASE not-a-phase 3\nTAMMY_ASAR_PHASE ready NaN\nTAMMY_ASAR_PHASE ready -1\nTAMMY_ASAR_PHASE ready 999999999\n",
+    );
+    expect(timings.snapshot()).toEqual({
+      elapsedMs: 10,
+      events: { "first-stderr": 5 },
+      phases: [{ phase: "import-start", childElapsedMs: 2.5, parentReceivedMs: 10 }],
+      runtime: { electron: "43.1.1", node: "24.16.0", platform: "linux", arch: "x64" },
+    });
+    expect(JSON.stringify(timings.snapshot())).not.toContain("private-path");
+  });
+
+  it("discards oversized lines, recovers framing and records each known phase once", () => {
+    const timings = new HarnessPhaseTimings(() => 0);
+    timings.stderr(`TAMMY_ASAR_PHASE ready ${"1".repeat(MAX_HARNESS_OUTPUT_BYTES)}\n`);
+    for (let i = 0; i < 1000; i += 1) timings.stderr("TAMMY_ASAR_PHASE ready 1\r\n");
+    expect(timings.snapshot().phases).toEqual([
+      { phase: "ready", childElapsedMs: 1, parentReceivedMs: 0 },
+    ]);
+  });
+
+  it("observes exit and drained close without changing completion or result shape", async () => {
+    let now = 0;
+    const timings = new HarnessPhaseTimings(() => now);
+    const child = new FakeChild();
+    const { options } = harnessOptions(child);
+    const result = runHarnessProcess({ ...options, phaseTimings: timings });
+    now = 10;
+    child.emit("exit", 0, null);
+    expect(await settledState(result)).toBe(false);
+    now = 15;
+    child.stdout.write("drained");
+    now = 20;
+    child.emit("close", 0, null);
+    await expect(result).resolves.toEqual({ stdout: "drained", stderr: "" });
+    expect(timings.snapshot().events).toEqual({
+      launch: 0,
+      "spawn-return": 0,
+      "deadline-armed": 0,
+      exit: 10,
+      "first-stdout": 15,
+      close: 20,
+    });
+  });
+
+  it("still fails at the execution deadline after a correct result and waits for confirmed close", async () => {
+    let now = 0;
+    const timings = new HarnessPhaseTimings(() => now);
+    const child = new FakeChild();
+    const { options, timers } = harnessOptions(child);
+    const result = runHarnessProcess({ ...options, phaseTimings: timings });
+    now = 99;
+    child.stdout.write('TAMMY_ASAR_RESULT {"status":200}\n');
+    now = 100;
+    timers.fire(100);
+    expect(options.terminateProcess).toHaveBeenCalledOnce();
+    expect(await settledState(result)).toBe(false);
+    now = 105;
+    child.emit("close", null, "SIGKILL");
+    await expect(result).rejects.toMatchObject({ processClosed: true });
+    expect(timings.snapshot().events).toMatchObject({
+      "first-stdout": 99,
+      deadline: 100,
+      "terminate-request": 100,
+      close: 105,
+    });
+    expect(timers.active(50)).toBe(0);
+  });
+
+  it("records a missing-close deadline without making cleanup safe", async () => {
+    let now = 0;
+    const timings = new HarnessPhaseTimings(() => now);
+    const child = new FakeChild();
+    const { options, timers } = harnessOptions(child);
+    const result = runHarnessProcess({ ...options, phaseTimings: timings });
+    now = 100;
+    timers.fire(100);
+    now = 150;
+    timers.fire(50);
+    await expect(result).rejects.toMatchObject({ processClosed: false });
+    expect(timings.snapshot().events).toMatchObject({
+      deadline: 100,
+      "close-confirmation-deadline": 150,
+    });
+  });
+});
 
 describe("Electron harness launch selection", () => {
   it.each([

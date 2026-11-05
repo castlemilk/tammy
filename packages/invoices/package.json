@@ -23,6 +23,7 @@
     "./pdf-policy": "./src/pdf-policy.ts",
     "./pdf-components": "./src/pdfcn/components.ts",
     "./pdf-text-policy": "./src/pdfcn/font-coverage.ts",
-    "./pdf-browser": "./src/pdf-browser.ts"
+    "./pdf-browser": "./src/pdf-browser.ts",
+    "./quote-pdf": "./src/quote-pdf.ts"
   }
 }

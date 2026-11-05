@@ -14,6 +14,11 @@ import {
 } from "@tammy/connect-client/tammy/v1/documents_pb.js";
 import { expect, test } from "./fixtures";
 import {
+  basCapturePhase,
+  captureBas,
+  reviewBasAtNarrowWidths,
+} from "./support/bas-journey-capture";
+import {
   authenticatedWorkspace,
   setupAndRunCurrentAccountingWorkflow,
 } from "./support/current-accounting-workflow";
@@ -40,6 +45,7 @@ test("prepares and reviews an exact BAS period in the packaged app", async ({
     electronHarness,
   );
   const page = electronHarness.currentPage();
+  await page.setViewportSize({ width: 1440, height: 1100 });
   const activeWorkspace = await authenticatedWorkspace(page);
   expect({
     workspaceId: activeWorkspace.workspaceId,
@@ -114,6 +120,7 @@ test("prepares and reviews an exact BAS period in the packaged app", async ({
   ).toBeVisible();
 
   const lifecycle = page.getByRole("navigation", { name: "BAS lifecycle stages" });
+  await captureBas(page, "01-prepare-arrival");
   for (const stage of ["Prepare", "Review", "Freeze", "Export", "External record"] as const) {
     await expect(lifecycle.getByRole("button", { name: stage, exact: true })).toBeVisible();
   }
@@ -160,6 +167,7 @@ test("prepares and reviews an exact BAS period in the packaged app", async ({
     );
   await page.getByRole("button", { name: "Save immutable profile revision" }).click();
   await expectLifecycleStatus(page, "Saved BAS obligations profile revision");
+  await captureBas(page, "02-profile-saved");
 
   const lifecycleRegion = page.getByRole("region", {
     name: "BAS preparation lifecycle",
@@ -216,8 +224,22 @@ test("prepares and reviews an exact BAS period in the packaged app", async ({
   await expect(
     page.getByRole("heading", { name: "Exact review snapshot", exact: true }),
   ).toBeVisible();
+  await expect(page.getByRole("table", { name: "Exact BAS calculation labels" })).toBeVisible();
+  await captureBas(page, "03-exact-review");
   await page.getByRole("button", { name: "Run validation on this exact calculation" }).click();
   await expectLifecycleStatus(page, "Created review validation");
+  await expect(page.getByRole("heading", { name: "Review findings", exact: true })).toBeVisible();
+  await captureBas(page, "04-validation-findings");
+  if (!basCapturePhase?.startsWith("before")) {
+    const identities = page.getByText("Exact snapshot identities", { exact: true });
+    await identities.focus();
+    await page.keyboard.press("Enter");
+    await expect(identities.locator("..")).toHaveAttribute("open", "");
+    await captureBas(page, "04b-identities-expanded");
+    await page.keyboard.press("Enter");
+    await expect(identities.locator("..")).not.toHaveAttribute("open", "");
+  }
+  await reviewBasAtNarrowWidths(page);
 
   await lifecycle.getByRole("button", { name: "Freeze", exact: true }).click();
   await expect(
@@ -228,6 +250,14 @@ test("prepares and reviews an exact BAS period in the packaged app", async ({
       "Workspace admins can prepare and read BAS records, but cannot use approval actions.",
     ),
   ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Approve and freeze exact snapshot" }),
+  ).toBeDisabled();
+  await captureBas(page, "07-freeze-permission-boundary");
+  await lifecycle.getByRole("button", { name: "Review", exact: true }).click();
+  await lifecycle.getByRole("button", { name: "Review", exact: true }).click();
+  await expect(page.getByRole("table", { name: "Exact BAS calculation labels" })).toBeVisible();
+  await lifecycle.getByRole("button", { name: "Freeze", exact: true }).click();
   await expect(
     page.getByRole("button", { name: "Approve and freeze exact snapshot" }),
   ).toBeDisabled();
@@ -242,6 +272,7 @@ test("prepares and reviews an exact BAS period in the packaged app", async ({
     .selectOption({ label: "Retained calculation" });
   const exportButton = page.getByRole("button", { name: "Export PDF", exact: true });
   await expect(exportButton).toBeEnabled();
+  await captureBas(page, "08-retained-calculation-export");
   await electronHarness.application.evaluate(({ dialog }) => {
     dialog.showSaveDialog = async () => ({ canceled: true, filePath: "" });
   });
@@ -252,6 +283,7 @@ test("prepares and reviews an exact BAS period in the packaged app", async ({
       .getByRole("status")
       .filter({ hasText: "BAS export cancelled." }),
   ).toHaveText("BAS export cancelled.");
+  await captureBas(page, "09-export-cancelled");
 
   await lifecycle.getByRole("button", { name: "External record", exact: true }).click();
   await expect(
@@ -267,6 +299,7 @@ test("prepares and reviews an exact BAS period in the packaged app", async ({
     page.getByText(/Tammy cannot confirm that the ATO received, processed or accepted anything/),
   ).toBeVisible();
 
+  await captureBas(page, "10-unverified-external-record");
   expect(electronHarness.consoleErrors).toEqual([]);
   expect(electronHarness.pageErrors).toEqual([]);
 });
