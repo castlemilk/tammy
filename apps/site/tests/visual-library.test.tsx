@@ -71,6 +71,6 @@ describe("Tammy practical tools directory", () => {
     }
     const { container } = render(<BlogPage />);
     expect(container.querySelector(".blog-feature-hero-art")?.getAttribute("src"))
-      .toBe("/assets/journal-price-sensitivity.svg");
+      .toBe("/assets/journal-gst-two-periods.svg");
   });
 });

@@ -6,11 +6,11 @@ import { blogPath, blogPosts } from "../../lib/blog/posts";
 
 export const metadata: Metadata = {
   title: "Tammy Journal | Australian accounting, invoicing and cash flow",
-  description: "Australian accounting articles on pricing sensitivity, invoice ageing, accrual profit versus cash, GST, BAS and bookkeeping, with worked examples.",
+  description: "Australian accounting articles on cash versus non-cash GST timing, bank deposit classification, month-end reconciliation, profit and cash flow, with worked examples.",
   alternates: { canonical: "/blog" },
   openGraph: {
     type: "website", title: "The Tammy Journal",
-    description: "Australian tax, pricing, cash flow and bookkeeping in plain language.",
+    description: "Australian GST, bookkeeping, pricing and cash flow explained through genuine worked examples.",
     url: "/blog",
   },
 };

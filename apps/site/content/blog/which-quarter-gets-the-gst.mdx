@@ -1,0 +1,61 @@
+A customer has received a $1,100 invoice. Your work is finished, the invoice is dated 25 June, and they pay on 8 July.
+
+Both dates are correct. But if you are preparing a quarterly BAS, they sit on opposite sides of 30 June. Which quarter gets the $100 of GST?
+
+The answer depends on **which GST accounting basis the business uses**, not which date looks tidier on the invoice.
+
+<h2 id="invoice-crosses-the-quarter">One sale crosses two quarters</h2>
+
+Imagine an Australian business that is registered for GST and reports quarterly. It makes an ordinary, fully taxable sale for **$1,100 including GST**. The price consists of $1,000 of taxable sales and $100 GST. Assume the invoice is valid, the customer pays the entire amount on 8 July and there are no earlier deposits, progressive payments or special attribution rules.
+
+The two relevant quarters are **April–June 2026** and **July–September 2026**. Here is the underlying transaction, before choosing the reporting basis:
+
+<MoneyTable caption="Illustrative taxable sale, Australian dollars; no prior part-payment" columns={["Event", "Date", "Amount"]} rows={[["Tax invoice issued", "25 June 2026", "$1,100 including GST"], ["Customer payment received", "8 July 2026", "$1,100"], ["GST component of sale", "10% of $1,000", "$100"]]} />
+
+The GST rate does not change because a payment crosses the boundary. The **attribution period** changes.
+
+<h2 id="cash-basis-follows-payment">Cash basis follows the payment</h2>
+
+On the GST cash accounting basis, a business generally reports GST when it receives payment for a taxable sale, and only to the extent payment has been received. In this example, the entire payment arrives in July. The $100 is therefore attributed to the **July–September BAS**, not April–June.
+
+The Australian Taxation Office's [small-business cash-basis explanation](https://smallbusiness.taxsuperandyou.gov.au/goods-and-services-tax/accounting-for-gst-on-a-cash-basis) gives a comparable invoice-then-later-payment example.
+
+<Callout tone="method" title="Partial payments need partial attention">
+
+If the customer pays in instalments and the business uses the GST cash basis, attribution generally follows each payment to the extent received. A single invoice date is not a substitute for the actual receipt history.
+
+</Callout>
+
+<h2 id="noncash-basis-follows-earlier-event">Non-cash basis uses the earlier event</h2>
+
+On the GST non-cash basis, the general rule for taxable sales is to attribute GST to the period in which **any payment is received or an invoice is issued, whichever happens first**. With the invoice issued on 25 June and nothing received beforehand, that puts the $100 in **April–June 2026**, even though the bank deposit occurs in July.
+
+<ScenarioExplorer title="Choose the GST accounting basis" scenarios={[
+  {label:"Cash basis",context:"Payment is received in July, after the invoice was issued in June.",rows:[["April–June GST on this sale","$0"],["July–September GST on this sale","$100"],["Total GST attributed","$100"]],conclusion:"The $100 belongs to the quarter in which the customer paid."},
+  {label:"Non-cash basis",context:"The invoice was issued in June, before any payment was received.",rows:[["April–June GST on this sale","$100"],["July–September GST on this sale","$0"],["Total GST attributed","$100"]],conclusion:"The earlier invoice event attributes the $100 to April–June."}
+]} />
+
+<BarChart title="GST attributed to each quarter in this single-sale example" unit="AUD" items={[
+  {label:"Cash: Apr–Jun",value:0,detail:"No payment received in this quarter"},
+  {label:"Cash: Jul–Sep",value:100,detail:"Full payment received 8 July"},
+  {label:"Non-cash: Apr–Jun",value:100,detail:"Invoice issued 25 June"},
+  {label:"Non-cash: Jul–Sep",value:0,detail:"Already attributed before payment"}
+]} />
+
+The example illustrates **timing**, not a different total GST liability across the two quarters combined. Other sales, purchases, adjustments or BAS obligations would affect the business's actual statement.
+
+<Figure src="/assets/journal-gst-two-periods.svg" alt="Two engraved accounting-period arcs, with an invoice crossing from one quarter to the next" caption="Two quarters, one sale. The scenario comparison above contains the amounts and dates." />
+
+<h2 id="check-basis-before-preparing">Check the basis before building the workpaper</h2>
+
+A business's eligibility to choose cash accounting and its selected accounting basis matter. The ATO states that businesses with aggregated turnover below $10 million can generally use cash accounting for GST, with additional eligibility rules and exceptions. The selected GST basis should not be guessed from a customer invoice or from whether the business uses cash-flow forecasting.
+
+Before preparing a BAS workpaper, establish the reporting period, the GST accounting method, the invoice date, any receipts or deposits, and the actual tax treatment of the sale. Retain both invoice and bank evidence. For purchases, eligibility for GST credits and different attribution rules also need review.
+
+Tammy can help prepare **local draft GST/BAS workpapers** for review; it does not lodge a BAS with the ATO. The public [GST calculator](/tools/gst-calculator) adds or extracts 10% GST from a fully taxable price, but cannot determine your accounting method.
+
+<ToolLink href="/tools/gst-calculator" label="Calculate the GST component" description="Add or extract standard 10% GST before preparing a reporting-period workpaper." />
+
+<SourceNote url="https://smallbusiness.taxsuperandyou.gov.au/goods-and-services-tax/accounting-for-gst-on-a-cash-basis" label="ATO: Accounting for GST on a cash basis" context="Official explanation of payment-based GST attribution and an example crossing BAS quarters." />
+
+<SourceNote url="https://www.ato.gov.au/law/view/document?LocID=%22GST%2FGSTR20044%2FNAT%2FATO%2Ffp24%22&PiT=20240131000001" label="ATO: GSTR 2004/4, cash and non-cash attribution rules" context="Paragraphs 53–57 discuss the earlier of invoice or payment for non-cash attribution and payments received on a cash basis." />

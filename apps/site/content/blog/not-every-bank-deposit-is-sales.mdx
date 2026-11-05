@@ -1,0 +1,67 @@
+Three deposits arrive in a business bank account on the same day. The bank feed displays a pleasing total: **$8,700 received**.
+
+That is money in the account. It is not necessarily $8,700 of sales.
+
+The distinction matters when you reconcile statements, calculate turnover, or explain cash movements to someone preparing the books. A bank statement tells you **what moved**; the supporting evidence tells you **why**.
+
+<h2 id="one-day-three-reasons">Three receipts, three different explanations</h2>
+
+Imagine a GST-registered Australian sole trader. For this simplified example, all three transactions happen on the same day, the sale is a new cash sale that has not already been posted, and the supply is fully taxable at the standard 10% GST rate.
+
+- A customer pays **$2,200** for a sale, including $200 GST.
+- A lender advances **$5,000** under an ordinary business loan agreement.
+- The owner transfers **$1,500** from personal savings into the business bank account.
+
+The total received is $2,200 + $5,000 + $1,500 = **$8,700**.
+
+<MoneyTable caption="Illustrative bank deposits, AUD; three separate source transactions" columns={["Bank receipt", "Cash received", "What it represents"]} rows={[["Customer cash sale", "$2,200", "$2,000 taxable sales + $200 GST"],["Loan proceeds", "$5,000", "Financing liability"],["Owner contribution", "$1,500", "Owner capital"],["Total deposits", "$8,700", "Not equal to total sales"]]} />
+
+<BarChart title="Where the $8,700 of incoming cash came from" unit="AUD" items={[
+  {label:"Customer sale",value:2200,detail:"Includes $200 GST"},
+  {label:"Business loan",value:5000,detail:"A financing receipt"},
+  {label:"Owner contribution",value:1500,detail:"Capital introduced by the sole trader"}
+]} />
+
+<h2 id="classify-before-you-report">Classify a receipt before calling it revenue</h2>
+
+Under these assumptions, only **$2,000** is sales revenue excluding GST. A further **$200** is GST collected on the taxable sale. The loan creates an obligation to repay the lender. The owner's transfer represents money contributed to the business, rather than payment by a customer.
+
+This is an accounting classification example, not a complete statement of the tax treatment of every loan or owner transaction. Entity type matters: shareholder contributions to a company, for instance, need their own documents and appropriate treatment.
+
+<Callout tone="caution" title="Do not record the same sale twice">
+
+If the customer is paying an invoice that has already been recognised in receivables, recording revenue again when the money lands would double-count the sale. The usual receipt entry would reduce the existing receivable instead. Trace the payment to the original document first.
+
+</Callout>
+
+Here is one **aggregate teaching view** of the three receipts. It is not a recommendation to combine separate transactions into one actual bookkeeping record.
+
+<JournalEntry title="Balanced teaching summary for the three deposits" lines={[
+  {account:"Bank",debitCents:870000},
+  {account:"Taxable sales (excluding GST)",creditCents:200000},
+  {account:"GST payable on the sale",creditCents:20000},
+  {account:"Business loan payable",creditCents:500000},
+  {account:"Owner capital introduced",creditCents:150000}
+]} note="Illustrative sole-trader example. Actual journals should preserve the three underlying transactions, source documents and applicable accounting treatment." />
+
+The debit equals the credits: $8,700 on each side. The totals balance because the bank movement is explained by more than one kind of transaction, not because every receipt is labelled income.
+
+<h2 id="bank-statement-is-evidence">The statement is evidence, not the full explanation</h2>
+
+For each receipt, retain enough detail to identify the reason it arrived. A customer payment might link to an invoice or till record. A loan deposit should link to the agreement and liability. An owner's transfer may need a clear reference to the originating account and purpose.
+
+The ATO's [bank-account record-keeping guidance](https://smallbusiness.taxsuperandyou.gov.au/record-keeping/bank-accounts) specifically lists records of deposits, bank statements and loan or lease agreements. It also encourages sole traders to keep business and personal transactions separate so the records can be explained more easily.
+
+<Figure src="/assets/journal-deposit-pathways.svg" alt="A bank receipt flowing through three distinct branches into a ledger, financing records and owner capital" caption="Original classification artwork. The accessible bank-receipt table and journal entry show the actual example values." />
+
+<h2 id="reconcile-the-reason">Reconcile the reason, not just the amount</h2>
+
+Start with the statement, match the date and amount, then open the supporting evidence. Decide whether the receipt is a sale, settlement of an existing receivable, financing, capital, a transfer between your own accounts, a refund or something else. Avoid assigning all unexplained money to sales just because the deposits reconcile numerically.
+
+The [bank reconciliation guide](/blog/bank-statement-reconciliation-steps) walks through matching the ledger with statement evidence. The [GST calculator](/tools/gst-calculator) can split an ordinary fully taxable sale into ex-GST value and GST, but it does not classify loans or capital contributions.
+
+<ToolLink href="/tools/gst-calculator" label="Separate GST from a taxable sale" description="Check the $2,200 sale's $2,000 ex-GST amount and $200 GST component." />
+
+<SourceNote url="https://smallbusiness.taxsuperandyou.gov.au/record-keeping/bank-accounts" label="ATO: Bank account records" context="Primary evidence categories include bank statements, deposits, withdrawals, and loan or lease agreements." />
+
+<SourceNote url="https://business.gov.au/guide/guide-to-managing-cash-flow" label="Australian Government: Guide to managing cash flow" context="Discusses funding sources and the need to keep financial records explaining money moving through a business." />

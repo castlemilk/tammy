@@ -50,7 +50,7 @@ for (const filename of entries) {
   if (!/<ToolLink\s/.test(mdx)) failuresForFile.push("needs a real linked Tammy tool");
   if (!/illustrative|fictional|assumptions|hypothetical/i.test(mdx))
     failuresForFile.push("example assumptions must be labelled");
-  if (!/https:\/\/(?:www\.)?(?:ato\.gov\.au|business\.gov\.au|business\.vic\.gov\.au)/i.test(mdx))
+  if (!/https:\/\/(?:www\.)?(?:ato\.gov\.au|smallbusiness\.taxsuperandyou\.gov\.au|business\.gov\.au|business\.vic\.gov\.au)/i.test(mdx))
     failuresForFile.push("requires a relevant official primary source");
   for (const [index, pattern] of banned.entries()) {
     if (pattern.test(mdx)) failuresForFile.push("editorial cliché pattern " + (index + 1));

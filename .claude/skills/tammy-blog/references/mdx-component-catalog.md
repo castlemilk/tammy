@@ -14,6 +14,9 @@ Compiled by `@mdx-js/rollup` in Vinext/Vite. Authors use PascalCase component ta
 | `Figure` | `src="/assets/..."`, `alt`, `caption` | Original local illustration with an actual caption and alternative text |
 | `ToolLink` | `href="/tools/..."`, `label`, `description?` | Connect the concept to an available calculator |
 | `SourceNote` | `url`, `label`, `context?` | Link to authoritative primary guidance close to the supporting claim |
+| `ScenarioExplorer` | `title`, `scenarios=[{label, context, rows:[[label,value]], conclusion}]` | Interactive comparison of two to four explicitly hypothetical accounting outcomes |
+| `JournalEntry` | `title`, `lines=[{account, debitCents?, creditCents?}]`, `note?` | Balanced double-entry table; values are integer AUD cents and must reconcile |
+| `ReviewChecklist` | `title`, `items=[string,...]` | Real reader-operated checkboxes for a limited review routine; state is not saved |
 
 MDX can also use Markdown headings, emphasis, lists, links and GFM tables. Use `## Section` rather than duplicating the page's H1. The layout uses the registered HTML heading style for clear TOC anchors.
 
@@ -62,3 +65,26 @@ An issued invoice and cash in the bank are different events.
 - Authors do not import from `@tammy/invoices` or database packages inside MDX.
 - Design tokens come from `app/tools/tools.css` and `app/blog/blog.css`.
 - Avoid using four callouts in a row: each block must serve an actual reading purpose.
+
+## New domain components in use
+
+```mdx
+<ScenarioExplorer title="The reporting period" scenarios={[
+  {label:"Cash",context:"Received in July",rows:[["April–June","$0"],["July–September","$100"]],conclusion:"GST follows the payment in this example."},
+  {label:"Non-cash",context:"Invoice issued in June",rows:[["April–June","$100"],["July–September","$0"]],conclusion:"GST follows the earlier invoice event in this example."}
+]} />
+
+<JournalEntry title="Teaching example, AUD" lines={[
+  {account:"Bank",debitCents:220000},
+  {account:"Sales ex GST",creditCents:200000},
+  {account:"GST payable",creditCents:20000}
+]} />
+
+<ReviewChecklist title="Month-end review" items={[
+  "Compare bank and ledger balances.",
+  "Verify differences against source transactions.",
+  "Retain the correction's audit trail."
+]} />
+```
+
+Do not render these in the same post unless the subject truly needs all of them. Scenario values should be consistent with the accompanying prose. A JournalEntry with unequal totals must fail loudly rather than display a plausible ledger. ReviewChecklist selections are ephemeral, not persisted to an accounting system.

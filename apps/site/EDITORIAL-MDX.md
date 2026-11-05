@@ -74,3 +74,15 @@ does not claim to replace human factual research or browser visual inspection.
 `tammy.tax` is the intended production domain but the existing Sites hostname
 remains canonical until custom-domain routing, HTTPS and publication are
 confirmed. Passing CI is not proof that the current live website changed.
+
+## Three domain-focused editorial instruments (November continuation)
+
+- `ScenarioExplorer`: lightweight, client-side switch between 2–4 fully described accounting cases. Built with semantic fieldsets, pressed buttons, visible totals and an accessible live detail region. State stays in the browser tab.
+- `JournalEntry`: SSR double-entry example that validates non-negative integer cents, balanced credits and debits, and displays an accessible caption, row headers and tabular AUD figures. Never silently accepts an imbalanced teaching entry.
+- `ReviewChecklist`: ephemeral reader-controlled checks, a live completed count and a working reset button. It cannot save, verify, reconcile or submit actual books.
+
+New sources: `which-quarter-gets-the-gst.mdx` (cash/non-cash GST timing); `not-every-bank-deposit-is-sales.mdx` (bank receipt classification); `the-month-end-review-that-found-220.mdx` (ledger duplicate and monthly review). Matching article routes, original SVG illustrations, source citations, canonical URLs, sitemap/RSS/llms entries and tests accompany them.
+
+An optional raster reference pack contains three generated text-free editorial illustrations with PNG/WebP/mobile variants. The website continues to use locally committed responsive SVG artwork; do not infer that the raster images were deployed.
+
+The approved site claim and publication boundary remain unchanged.

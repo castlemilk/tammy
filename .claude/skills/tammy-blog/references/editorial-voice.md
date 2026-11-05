@@ -36,3 +36,11 @@
 Weak: "In today's dynamic business landscape, managing outstanding invoices is more important than ever."
 
 Better: "The invoice may be only ten days old, but it is already three days overdue. Those are different clocks. An ageing report that starts counting from issue date will tell the wrong story."
+
+## Further human-writing checks
+
+- A real example should have a direction: if cash ledger is lower than the bank, investigate a duplicate outgoing posting or a missing receipt, not a missing bank charge.
+- "Cash" and "accrual" can refer to GST attribution, income tax or financial accounting. Identify which system you mean before comparing dates.
+- A bank credit is evidence of a receipt, not proof of sales. Match it to a source transaction before naming the type.
+- When a block has alternate states, explain what changes and what **does not** change (for example, GST timing versus total GST).
+- Do not congratulate readers for ticking a checklist. The tool records no external action or evidence.

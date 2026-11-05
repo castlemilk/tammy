@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="720" viewBox="0 0 1200 720" fill="none" aria-hidden="true">
+<defs>
+ <linearGradient id="paper" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#FFFCF3"/><stop offset="1" stop-color="#DDE8D9"/></linearGradient>
+ <linearGradient id="forest" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#518064"/><stop offset="1" stop-color="#153E31"/></linearGradient>
+ <filter id="depth"><feDropShadow dx="0" dy="14" stdDeviation="17" flood-color="#234C39" flood-opacity=".14"/></filter>
+</defs>
+<circle cx="395" cy="346" r="262" fill="#E4EDDF" stroke="#ABC2A9" stroke-width="2"/>
+<circle cx="795" cy="346" r="262" fill="#D7E6D4" stroke="#93B093" stroke-width="2"/>
+<circle cx="395" cy="346" r="222" stroke="#83A58A" stroke-width="1.6"/>
+<circle cx="795" cy="346" r="222" stroke="#83A58A" stroke-width="1.6"/>
+<circle cx="395" cy="346" r="177" stroke="#B1C8B3" stroke-width="1.2"/>
+<circle cx="795" cy="346" r="177" stroke="#B1C8B3" stroke-width="1.2"/>
+<path d="M395 124v222l128-122" stroke="#6E9678" stroke-width="4" stroke-linecap="round"/>
+<path d="M795 124v222l-133 74" stroke="#3B7755" stroke-width="4" stroke-linecap="round"/>
+<g fill="#D3B985" stroke="#B49A65" stroke-width="3"><circle cx="395" cy="346" r="20"/><circle cx="795" cy="346" r="20"/></g>
+<g filter="url(#depth)">
+ <path d="M488 216 690 196l40 347-204 22Z" fill="url(#paper)" stroke="#7B9C82" stroke-width="2.8"/>
+ <path d="M523 263 659 248" stroke="#34654D" stroke-width="9" stroke-linecap="round"/>
+ <path d="M528 292 682 278" stroke="#85AB8F" stroke-width="3" stroke-linecap="round"/>
+ <path d="m527 337 168-18m-164 52 168-19m-161 56 166-19m-160 56 166-19m-155 52 164-18" stroke="#A7BDA8" stroke-width="2"/>
+ <path d="m596 333 12 141" stroke="#BCD0B7" stroke-width="1.5"/>
+ <path d="m546 508 165-18" stroke="#3B7253" stroke-width="5" stroke-linecap="round"/>
+</g>
+<path d="M135 570c111 47 233 55 371 25M688 595c142 32 268 22 380-22" stroke="#A6BFA7" stroke-width="1.8"/>
+<path d="M588 69v87M589 572v94" stroke="#D4B679" stroke-width="2.5" stroke-dasharray="2 10"/>
+<g fill="#64896A"><circle cx="135" cy="570" r="4"/><circle cx="1068" cy="573" r="4"/></g>
+</svg>

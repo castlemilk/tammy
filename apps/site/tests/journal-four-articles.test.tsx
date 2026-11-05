@@ -19,10 +19,11 @@ afterEach(cleanup);
 
 describe("Tammy Journal source-backed article expansion", () => {
   it("publishes exactly four new complete posts, each with standalone local editorial artwork", () => {
-    expect(blogPosts.length).toBe(10);
+    expect(blogPosts.length).toBeGreaterThanOrEqual(13);
     const latest = blogPosts.filter(post => latestPosts.some(item => item.path === blogPath(post)));
     expect(latest).toHaveLength(4);
-    expect(blogPosts.slice(3, 7)).toEqual(latest);
+    const firstPrevious = blogPosts.findIndex(post => post.slug === "when-to-register-for-gst-australia");
+    expect(blogPosts.slice(firstPrevious, firstPrevious + 4)).toEqual(latest);
     expect(new Set(blogPosts.map(post => post.slug)).size).toBe(blogPosts.length);
     for (const post of latest) {
       expect(post.cover).toMatch(/^\/assets\/journal-[a-z-]+\.svg$/);
@@ -39,10 +40,10 @@ describe("Tammy Journal source-backed article expansion", () => {
 
   it("highlights the newest original story and shows illustrated archive entries", () => {
     const { container } = render(<BlogPage />);
-    const title = screen.getByRole("heading", { level: 2, name: /The price rise that didn/ });
+    const title = screen.getByRole("heading", { level: 2, name: /The BAS quarter has two clocks/ });
     expect(title).toBeTruthy();
-    expect(container.querySelector(".blog-feature-hero-art")?.getAttribute("src")).toBe("/assets/journal-price-sensitivity.svg");
-    expect(container.querySelectorAll(".blog-archive-art").length).toBe(6);
+    expect(container.querySelector(".blog-feature-hero-art")?.getAttribute("src")).toBe("/assets/journal-gst-two-periods.svg");
+    expect(container.querySelectorAll(".blog-archive-art").length).toBe(9);
     expect(screen.getByRole("link", { name: /Keep the evidence behind the entry/ })).toBeTruthy();
     expect(screen.getByRole("link", { name: /Make the bank and ledger agree/ })).toBeTruthy();
   });
