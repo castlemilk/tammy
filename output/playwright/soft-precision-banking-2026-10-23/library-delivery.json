@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "images": [
+    {
+      "role": "before",
+      "file": "before/04-selected-match.png",
+      "library_file_id": "libfile_881684f82bac8191851ddd03199252cb",
+      "size": 178285,
+      "sha256": "83dd908f3020d6974832c9a8faefbb5edb0fc59edfb3d29c8e71fa09d2cde63b",
+      "version": 0,
+      "confirmed": true
+    },
+    {
+      "role": "after",
+      "file": "after/04-selected-match.png",
+      "library_file_id": "libfile_7385edb449f88191b9dba500cfb0a26e",
+      "size": 198317,
+      "sha256": "23e42263f18eb884c3ee52867d88eea65e65bbe9871a016efcfca3d5a9b68efd",
+      "version": 0,
+      "confirmed": true
+    },
+    {
+      "role": "after-narrow-focus",
+      "file": "after/07-match-focus-320.png",
+      "library_file_id": "libfile_e635246e42388191aaec1c5a91250815",
+      "size": 63175,
+      "sha256": "aa4eb208abd4d54065e62a3f699c451fed59362fd7ea7772f149182257cd140b",
+      "version": 0,
+      "confirmed": true
+    }
+  ],
+  "reference": {
+    "library_file_id": "libfile_10ac0000a4f881919121867d18df7719",
+    "reused": true,
+    "sha256": "1ff7a89366290bd31c7a4747b51e81cc9820db9eeaf15bbbc489e08f9210b301",
+    "kind": "Unchanged generated concept; not app evidence"
+  },
+  "captureBytesUnchangedByDelivery": true,
+  "transportCopiesOutsideRepository": true
+}

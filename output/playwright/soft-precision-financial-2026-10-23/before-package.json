@@ -1,0 +1,18 @@
+{
+  "sourceRevision": "0e96bd2a7085985d183099fdd1874aaf01581510",
+  "manifestSha256": "68fedb9056d14c1155274b2da54211ba24fe22861652f5c08f1e057c60f209d4",
+  "appSha256": "41e22d4b48e718059daa211085d96c7df0b969fd53c3d4cf6fe7b194980255ed",
+  "coreSha256": "e3818323fc4a26d54ac3217e885911c9969c7d6da29840cf8f882f8429140bf4",
+  "releaseKind": "ordinary-package",
+  "platform": "darwin-arm64",
+  "result": "1 passed",
+  "durationSeconds": 18.1,
+  "capturePhase": "before",
+  "fixture": "isolated synthetic workspace",
+  "journey": "apps/desktop/tests/e2e/financial-workspace.spec.ts",
+  "notes": [
+    "The package contains the pre-uplift application at 8b048f08 plus a test-only journey commit.",
+    "The successful extended capture used corrected synthetic addresses and stable accessible locators; test-only corrections were not in the package renderer graph.",
+    "The ordinary ad-hoc package is not MAS or Windows 11 qualification."
+  ]
+}

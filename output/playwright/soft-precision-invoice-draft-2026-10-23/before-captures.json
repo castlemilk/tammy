@@ -1,0 +1,65 @@
+{
+  "syntheticOnly": true,
+  "runtimeSource": "9b559fea66a4e8821f3719975d0dbfabce0501e4",
+  "runtimeSourceDirty": false,
+  "appSourceIdenticalToReviewHead": "262a6e77fc9ffd4d3c7003f1ab64a5e833766132",
+  "testCommit": "5d87d274d249259b06a6783aa673a1c97a38cc55",
+  "journey": {
+    "passed": 1,
+    "failed": 0,
+    "seconds": 18.0,
+    "retries": 0,
+    "pageErrors": 0,
+    "consoleErrors": 0
+  },
+  "frames": [
+    {
+      "path": "before/01-draft-editor-empty.png",
+      "sha256": "2c12dce3bbb853d794271cca9f4f90d78e45d3c80f68e3f7729744b39469b839",
+      "bytes": 116530,
+      "viewport": [1440, 1100]
+    },
+    {
+      "path": "before/02-validation-preserves-edit.png",
+      "sha256": "3496bb58695beac4ea850ed0b07666f4d8c65a6e1b67cf6073a9e1fe29339b09",
+      "bytes": 132233,
+      "viewport": [1440, 1100]
+    },
+    {
+      "path": "before/03-saved-draft.png",
+      "sha256": "ecbcfa028e96086e49f22418662299b15e8b11b6470fc749aa902e1b412d6490",
+      "bytes": 128373,
+      "viewport": [1440, 1100]
+    },
+    {
+      "path": "before/03b-unsaved-replacement.png",
+      "sha256": "ee338088033ade49c15d88fdaa079f85cd28880a9d353a387f6bc2691d0a85a8",
+      "bytes": 135463,
+      "viewport": [1440, 1100]
+    },
+    {
+      "path": "before/03c-draft-320.png",
+      "sha256": "b3a432bce216bf463d389f381a942ec4df390b5d3d03e370cb71fbce22217c79",
+      "bytes": 50536,
+      "viewport": [320, 900]
+    },
+    {
+      "path": "before/03c-draft-390.png",
+      "sha256": "a946072c229c9396ec6c4a57acc9d3d3488f6710cb0a70dbaeb16f99551a0b83",
+      "bytes": 53963,
+      "viewport": [390, 900]
+    },
+    {
+      "path": "before/05-issue-confirmation.png",
+      "sha256": "347db0c1536437fc6d035525fe2379c7e588067ad4b3eff2ac60c8eb94218d77",
+      "bytes": 127492,
+      "viewport": [1440, 1100]
+    }
+  ],
+  "reference": {
+    "path": "reference/02-automation-invoices.png",
+    "designCommit": "19533020422b6ea2f0c77dc3117a051483f9f9ce",
+    "sha256": "232b863d658277ada528bb5b1576447f24ece4a278f6aedfd407944f4194eaa2",
+    "kind": "unchanged generated concept; not app evidence"
+  }
+}

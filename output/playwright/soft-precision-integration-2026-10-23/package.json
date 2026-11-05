@@ -1,0 +1,15 @@
+{
+  "releaseKind": "ordinary-package",
+  "sourceRevision": "7aa28d4e243a1bde1006234f013e3c468469ae2c",
+  "sourceDirty": false,
+  "target": "darwin-arm64",
+  "appSha256": "b831cc29813e104550958737cb50ded9ef001045ebc8778ae3d85ac9ac4759e0",
+  "coreSha256": "078811e551eb5cd0c5f505e3282d82bc8f50be578c12a9d92e7bafb70d67562c",
+  "manifestSha256": "db0d1c12b8b58796e5fbd4d3f422b9b0903322575443a9f988682ce8552e4b08",
+  "packageChecks": {
+    "passed": 7,
+    "failed": 0,
+    "skipped": 1,
+    "skipReason": "Windows-only package check on macOS"
+  }
+}

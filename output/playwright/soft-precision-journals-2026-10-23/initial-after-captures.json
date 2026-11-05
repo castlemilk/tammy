@@ -1,0 +1,102 @@
+{
+  "schemaVersion": 1,
+  "phase": "after-initial",
+  "runtime": {
+    "sourceRevision": "4abab3e0c3c1f18479b64eb5f1f312c0971e30f9",
+    "sourceDirty": false,
+    "appSha256": "85c0784a45b264168bea4df2c84f6e5eb46188c39c6ffabea0eec02205ee800a",
+    "coreSha256": "078811e551eb5cd0c5f505e3282d82bc8f50be578c12a9d92e7bafb70d67562c",
+    "manifestSha256": "6b640d40819ebf0cb0f9329af179f51de85f5f02b2e0b44cd756918b2f7e3118"
+  },
+  "harnessSourceRevision": "4abab3e0c3c1f18479b64eb5f1f312c0971e30f9",
+  "harnessSha256": "55c52414904fefae561ce111a1969253de850f5298c5b048396b988969086607",
+  "nativeSeconds": 10.7,
+  "runnerSeconds": 11.4,
+  "connectedSeconds": 14.8,
+  "connectedRunnerSeconds": 15.5,
+  "retries": 0,
+  "pageErrors": 0,
+  "consoleErrors": 0,
+  "measurementFile": "after-initial/measurements-1440.json",
+  "finding": "Actual detail PNG shows Workspace breadcrumb for the valid Journals query route. AppShell compares the raw query string while Navigation already strips it. Narrow canonical display correction pending; original app evidence retained.",
+  "frames": [
+    {
+      "file": "after-initial/01-initial-list.png",
+      "sha256": "076ffe8d4ba5f37c6ee9c68e752e126d788528325a03b29d41beedc87476ab4c",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "file": "after-initial/02-loaded-history.png",
+      "sha256": "e2b2ebdd0a084a61880faf7a7f1593134b7efa3b3b092fe2322dc174edd57081",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "file": "after-initial/03-entry-review.png",
+      "sha256": "e7d632440ae7e66b9b77b9263480dd4e389163c17ef73e8afea68f8df9c2094a",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "file": "after-initial/04-invalid-accounts.png",
+      "sha256": "445e8f34a12cc6a192373b24282313d7b4b05028e8bbc3632af747e03e8cfa29",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "file": "after-initial/05-entry-focus-320.png",
+      "sha256": "5e87e778365256aa358e451404843390ca112d1a95febc19925a754f54deb2b4",
+      "width": 320,
+      "height": 1000
+    },
+    {
+      "file": "after-initial/05-entry-focus-390.png",
+      "sha256": "48d13d339944e49aa07f4812335a997c8f48047e4eb9617696a3f070580a0937",
+      "width": 390,
+      "height": 1000
+    },
+    {
+      "file": "after-initial/05-entry-focus-900.png",
+      "sha256": "b6c76f86d578b43dd621580ae261e8ac76ea4336429fb81409553e254b5d8688",
+      "width": 900,
+      "height": 1000
+    },
+    {
+      "file": "after-initial/06-posted-detail.png",
+      "sha256": "a406f12cff80ae43590ff56e0d05ddbbf2c71eb9d6b089f0178b5e4f7cda83c6",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "file": "after-initial/07-detail-scroll-320.png",
+      "sha256": "2fe4542aa702432fab6d513f4b2cb9dd16a70f2b82d3e27994939b10324a3c4c",
+      "width": 320,
+      "height": 1000
+    },
+    {
+      "file": "after-initial/07-detail-scroll-390.png",
+      "sha256": "925e9c13a30ef7b9e96270aa821c70520e606863392a370c814ffd63d30c38f3",
+      "width": 390,
+      "height": 1000
+    },
+    {
+      "file": "after-initial/08-returned-history.png",
+      "sha256": "6da03bb9805a7aaadcc4a36e368986618f545276b1ddd7a36dc21dd551cdf280",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "file": "after-initial/09-retained-search.png",
+      "sha256": "d1f70ea914b32d81d8b52375db5cdd44df1df5fd6cd42c9bed454066119903c3",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "file": "after-initial/10-no-results.png",
+      "sha256": "f6b9aed3d3b268132e20dc34d247aba5f57219815484e01d3196469a645451e1",
+      "width": 1440,
+      "height": 1100
+    }
+  ]
+}

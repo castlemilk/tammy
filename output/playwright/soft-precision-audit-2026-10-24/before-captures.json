@@ -1,0 +1,27 @@
+[
+  {
+    "file": "before/01-retained-records.png",
+    "sha256": "39bfe2945f8db6c5131ac34afb0bd91b6fd681d7eed7a404a9e737869bce5ccc",
+    "viewport": [1440, 1100]
+  },
+  {
+    "file": "before/05-keyboard-320.png",
+    "sha256": "e56a37a7f9417af61e74b0c18fac15112fdb8c0debb6520ece846d7cedae2206",
+    "viewport": [320, 1000]
+  },
+  {
+    "file": "before/05-keyboard-390.png",
+    "sha256": "2164aeeb4e4f8c2de401c6fe4121487b8619c6b986ee8b631e9859cb4d0d10a3",
+    "viewport": [390, 1000]
+  },
+  {
+    "file": "before/05-keyboard-900.png",
+    "sha256": "66015bf091d73b6a2c43e97fbcd7d4cec2bb89946682665f3ad4554836d4c189",
+    "viewport": [900, 1000]
+  },
+  {
+    "file": "before/06-returned-records.png",
+    "sha256": "39bfe2945f8db6c5131ac34afb0bd91b6fd681d7eed7a404a9e737869bce5ccc",
+    "viewport": [1440, 1100]
+  }
+]

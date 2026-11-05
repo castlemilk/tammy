@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "newLibrarySavesConfirmed": false,
+  "reason": "Supported Library prepared-upload helper reports preparation action unavailable in this desktop session; stopped before preparation. No direct-write fallback or retry.",
+  "files": [
+    {
+      "file": "before/01-installed-chart.png",
+      "sha256": "c3df1f82b554ddbd551c1c0b04c9b19b94eb02438c7cd405da837bcf9a542235",
+      "bytes": 139709,
+      "delivery": "repository image at exact pushed head"
+    },
+    {
+      "file": "after/01-installed-chart.png",
+      "sha256": "60d4a8972b165cb7abe33cd2552acd61784ed4ad6de23ab569c7335a511228ea",
+      "bytes": 176441,
+      "delivery": "repository image at exact pushed head"
+    },
+    {
+      "file": "after/06-ordinary-account-entry.png",
+      "sha256": "d527530386046d7038515689b8c45366545fa6aa1e689f384771c50445657865",
+      "bytes": 178163,
+      "delivery": "repository image at exact pushed head"
+    },
+    {
+      "file": "after/11-protection-focus-320.png",
+      "sha256": "c5b48c8bbab01f87fb59e6a78c303566b83a1d6ea4d3c4a583f00c811d30ad7f",
+      "bytes": 51151,
+      "delivery": "repository image at exact pushed head"
+    }
+  ],
+  "unchangedReferenceLibraryId": "libfile_d5b9bb9901ec8191867a34509b32c2bf"
+}

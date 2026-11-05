@@ -1,0 +1,77 @@
+[
+  {
+    "file": "after-compact/01-prepare-arrival.png",
+    "sha256": "9f836a94bb8bce631b48402a8cd783e7f21cb954abbad9189b8de47d9abe2c7c",
+    "viewport": [1440, 1100]
+  },
+  {
+    "file": "after-compact/02-profile-saved.png",
+    "sha256": "f2c269e8b86828aab255a26157effc615161e5d38995ed071bbb20a6b3d2fc6d",
+    "viewport": [1440, 1100]
+  },
+  {
+    "file": "after-compact/03-exact-review.png",
+    "sha256": "b2b6d0dd67c254727c06f689260123cf5fe310989efc56352953aa98a100ab85",
+    "viewport": [1440, 1100]
+  },
+  {
+    "file": "after-compact/04-validation-findings.png",
+    "sha256": "1756d76ecceb64651224b9358f89d9d2cd66a1fee65a14de7d909755abbe536e",
+    "viewport": [1440, 1100]
+  },
+  {
+    "file": "after-compact/04b-identities-expanded.png",
+    "sha256": "9d95e20ae57034053a354b993433136495af3fbcf4f691a080cbea686308675f",
+    "viewport": [1440, 1100]
+  },
+  {
+    "file": "after-compact/05-review-nav-focus-320.png",
+    "sha256": "328f58a48ea50b56142d15d1582297f12ddece0fa284840018748e0577d723bb",
+    "viewport": [320, 1000]
+  },
+  {
+    "file": "after-compact/05-review-nav-focus-390.png",
+    "sha256": "e1a6e62f2ec0400cda0ee4298dac469496239ff49b83bf0d43bfff76f9f5b7a0",
+    "viewport": [390, 1000]
+  },
+  {
+    "file": "after-compact/05-review-nav-focus-900.png",
+    "sha256": "3f44ac5e8bc93e75e2de16d47a22add23961925e4e001fb9a94a41fb5426b923",
+    "viewport": [900, 1000]
+  },
+  {
+    "file": "after-compact/06-calculation-keyboard-320.png",
+    "sha256": "5c4cf39ff5a5c2b134b00cb6087973ea637f3aea4443f042741645ca629367c7",
+    "viewport": [320, 1000]
+  },
+  {
+    "file": "after-compact/06-calculation-keyboard-390.png",
+    "sha256": "1f4b82f9ad813e0eda7fe62de244ea70fe808cea023018876c5cde8696f5de38",
+    "viewport": [390, 1000]
+  },
+  {
+    "file": "after-compact/06-calculation-keyboard-900.png",
+    "sha256": "605600eaae16451ca158e0228b029701c236a97965ae6796b34ed7dd11d86219",
+    "viewport": [900, 1000]
+  },
+  {
+    "file": "after-compact/07-freeze-permission-boundary.png",
+    "sha256": "b2b4168bf72b1c3246607de884766ff953cbb2fec623e9c85f2380fd81ed98d0",
+    "viewport": [1440, 1100]
+  },
+  {
+    "file": "after-compact/08-retained-calculation-export.png",
+    "sha256": "39ae0afed77dc248826cbd2853c4d4d06d2e66dd721817953c74d4752daafd46",
+    "viewport": [1440, 1100]
+  },
+  {
+    "file": "after-compact/09-export-cancelled.png",
+    "sha256": "27e78525604e04a522847f8dc4dd118a50e53ea83e6c93f4930dba2d82547cc2",
+    "viewport": [1440, 1100]
+  },
+  {
+    "file": "after-compact/10-unverified-external-record.png",
+    "sha256": "7f0bfbfdf74d35aa2552e4e6431899faf6a8906173331ed5d1b77d18a11bc7dd",
+    "viewport": [1440, 1100]
+  }
+]

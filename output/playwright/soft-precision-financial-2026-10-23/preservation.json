@@ -1,0 +1,8 @@
+{
+  "historicalBaseRevision": "894c0ac604f2afbd22547b97faee94156eaaa97a",
+  "historicalScreenshotCount": 81,
+  "historicalScreenshotByteChanges": 0,
+  "retainedOutputCount": 55,
+  "retainedOutputCheck": "node scripts/check-retained-output.mjs",
+  "scopedUiCacheChanges": 0
+}

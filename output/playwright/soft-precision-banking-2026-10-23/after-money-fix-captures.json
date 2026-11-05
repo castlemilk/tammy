@@ -1,0 +1,128 @@
+{
+  "schemaVersion": 1,
+  "phase": "after-money-fix",
+  "runtime": {
+    "sourceRevision": "4ce093a93422121cf7e0492456a20a7b0dcf2344",
+    "sourceDirty": false,
+    "releaseKind": "ordinary-package",
+    "target": "darwin-arm64",
+    "appSha256": "325b0d0ee103f165ea339821602cfab662c5173e82b82ffdaf01eb96092055a9",
+    "coreSha256": "078811e551eb5cd0c5f505e3282d82bc8f50be578c12a9d92e7bafb70d67562c",
+    "manifestSha256": "d10f735a165a6e3bd80d19ad465ec7c1bb87034f08656f71e6ac3322f54411f3",
+    "helperSha256": "8dbfb2b0708d1c61ebc07cd8c8b5ee6a626d73dad490b90667b3794d61edb201"
+  },
+  "captureHarnessSourceRevision": "4ce093a93422121cf7e0492456a20a7b0dcf2344",
+  "harnessFiles": [
+    {
+      "file": "apps/desktop/tests/e2e/current-workflows.spec.ts",
+      "sha256": "a187ceedda2238728c9342f0824e714300bc7628810fa6c1a5fb3ba1644d535d"
+    },
+    {
+      "file": "apps/desktop/tests/e2e/support/banking-journey.ts",
+      "sha256": "46e97918c73d26dd9cc5d848f823e0eb43cf67280fe5d88013b20a226fc76f81"
+    }
+  ],
+  "originalWorkflowHarnessNote": "The additional Shift+Tab/Tab assertion correction was uncommitted during the successful original-workflow run; the exact file hash above binds it. Banking capture helper is unchanged from the clean runtime commit.",
+  "originalWorkflowSeconds": 13.8,
+  "originalWorkflowRunnerSeconds": 14.6,
+  "captureSeconds": 12.8,
+  "captureRunnerSeconds": 13.8,
+  "connectedSeconds": 15.8,
+  "connectedRunnerSeconds": 16.8,
+  "retries": 0,
+  "pageErrors": 0,
+  "consoleErrors": 0,
+  "layoutMeasurements": "after-money-fix/measurements-1440.json",
+  "frames": [
+    {
+      "file": "after-money-fix/01-import-error.png",
+      "sha256": "58e1fb35dd94ffd531e2b115bc0ccfa70e0ec9391cf956bcf70ab795db2c3078",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "file": "after-money-fix/02-import-review.png",
+      "sha256": "8e0932be944594afa9f56cc084cb69eca04a2c989947efaa9bca4427b98e2b43",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "file": "after-money-fix/03-statement-list.png",
+      "sha256": "10f66c71bcde8d2d8b4a5fc778db46d215d8206c8852d0b77772e7ec8f72a21a",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "file": "after-money-fix/04-selected-match.png",
+      "sha256": "b189f8edc328ffa8e61ce801d6e0f31a4af7f4d42899e6964ce8e23cccdbd82d",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "file": "after-money-fix/05-match-detail.png",
+      "sha256": "b189f8edc328ffa8e61ce801d6e0f31a4af7f4d42899e6964ce8e23cccdbd82d",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "file": "after-money-fix/06-statement-320.png",
+      "sha256": "23a0787ea4bcd540ff2e194bc149575baf147b27c6b21cb6fcfdc30e3df268ea",
+      "width": 320,
+      "height": 1000
+    },
+    {
+      "file": "after-money-fix/06-statement-390.png",
+      "sha256": "6b0ca8f059e86d77818bfbf6d077a1676d9caab6ed5615edbb6ac222830bb28e",
+      "width": 390,
+      "height": 1000
+    },
+    {
+      "file": "after-money-fix/06-statement-900.png",
+      "sha256": "e0c566d3f800f5b0493cddf655b55b121bbf07c4d8b440d81d4b215f5bff18b0",
+      "width": 900,
+      "height": 1000
+    },
+    {
+      "file": "after-money-fix/07-match-focus-320.png",
+      "sha256": "76ce1ce4554a9b4e78be42040bbc81ad94b1b36bb5088262fd0dbf69a99358c4",
+      "width": 320,
+      "height": 1000
+    },
+    {
+      "file": "after-money-fix/07-match-focus-390.png",
+      "sha256": "38b2bef494623d6a218603306da1a5f6a43fe8daa35630cf0580d3f72b64f401",
+      "width": 390,
+      "height": 1000
+    },
+    {
+      "file": "after-money-fix/07-match-focus-900.png",
+      "sha256": "1c42884a1c6f77da9c1b99acb51b75e0e8907678a33c0f2c6edd10b5eab784bc",
+      "width": 900,
+      "height": 1000
+    },
+    {
+      "file": "after-money-fix/08-match-confirmed.png",
+      "sha256": "4528b744453e404ce890e87b717f38d576588e15ce745556bfc2b94d4b124f62",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "file": "after-money-fix/09-search-empty.png",
+      "sha256": "02dad9625c48f376f8951dff0d865270306f3afa2550f24724fc95e211d9f5f3",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "file": "after-money-fix/10-ready-to-reconcile.png",
+      "sha256": "ca57465a9584e53ec812fd5339c069923d6cf847d40bdbf9c28a4c8393fbec82",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "file": "after-money-fix/11-reconciled.png",
+      "sha256": "54a5b4a423736715e314be262fafce2ef7866c6c18be2b1f18777a8a31f21391",
+      "width": 1440,
+      "height": 1100
+    }
+  ]
+}

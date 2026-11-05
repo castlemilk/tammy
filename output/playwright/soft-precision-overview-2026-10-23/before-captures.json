@@ -1,0 +1,208 @@
+{
+  "syntheticOnly": true,
+  "runtimeSource": "1ec93d6d372cd704fefc74f1f22d06b48d8fc560",
+  "runtimeSourceDirty": false,
+  "runtimeAppSourceIdenticalToReviewHead": "c1bf895d57d5f59ad7f979864f77f02659761624",
+  "testCommit": "722a04d10b00e7e74d0d91ea567ebf754d908ba2",
+  "journey": {
+    "passed": 1,
+    "failed": 0,
+    "seconds": 14.2,
+    "testBodySeconds": 13.4,
+    "retries": 0,
+    "pageErrors": 0,
+    "consoleErrors": 0,
+    "baselineOnlyExpectedDifferences": [
+      "Export completion loses focus in the unchanged baseline; corrected source and normal CI assert focus return.",
+      "BAS navigation uses native auto outline in the baseline; corrected source and CI assert the shared solid forest ring."
+    ]
+  },
+  "incomeFixture": {
+    "periodStart": "2026-07-01",
+    "periodEnd": "2026-09-30",
+    "balancesAsOf": "2026-09-30",
+    "receiptDate": "2026-09-30",
+    "invoiceIncomeExGstMinor": 120000,
+    "paymentsReceivedMinor": 50000,
+    "outstandingMinor": 82000,
+    "rendererClock": "2024-05-12; unchanged existing synthetic workspace clock, distinct from explicitly selected income dates"
+  },
+  "frames": [
+    {
+      "path": "before/01-local-summary.png",
+      "sha256": "77b1a6a19f44fd58b01a6277554748dc1b09a71b6148090196e8072051561302",
+      "bytes": 140152,
+      "viewport": [1440, 1100]
+    },
+    {
+      "path": "before/02-income-and-attention.png",
+      "sha256": "9c94b94e2dec4317d1497beb7c3db50339de07d9b9a72a0a3d728139f2b08154",
+      "bytes": 146732,
+      "viewport": [1440, 1100]
+    },
+    {
+      "path": "before/03-invalid-period.png",
+      "sha256": "e97b52316011179bb8a32fb331eacaa8ec7f6cc04cce83dabe565e0ba250b00f",
+      "bytes": 143212,
+      "viewport": [1440, 1100]
+    },
+    {
+      "path": "before/04-export-cancelled.png",
+      "sha256": "e52ee25412d68faeb6f4aa20cec9448148790e08025ef0ac32c9ba86597eac0a",
+      "bytes": 142642,
+      "viewport": [1440, 1100]
+    },
+    {
+      "path": "before/05-income-focus-320.png",
+      "sha256": "39e19b8470d71ebf9a827cae0415dbb2196c7cb1a20d90b19df39b63db92709a",
+      "bytes": 52737,
+      "viewport": [320, 900]
+    },
+    {
+      "path": "before/05-income-focus-390.png",
+      "sha256": "9e70c943702ee555e0838181c02c6c9f380be410f4bab9de4ad346ab99e581d7",
+      "bytes": 56242,
+      "viewport": [390, 900]
+    },
+    {
+      "path": "before/06-exact-bas-focus.png",
+      "sha256": "9202fed1c1168223d6f627c25addc40440c7f5d58caa09dcc836e3c4d4872faf",
+      "bytes": 142920,
+      "viewport": [1440, 1100]
+    }
+  ],
+  "retainedAttempts": [
+    {
+      "attempt": 1,
+      "cause": "Fixture assertion assumed Sep 2026 invoice belonged to the fixed-clock May 2024 quarter; corrected by selecting explicit report/receipt dates.",
+      "frames": [
+        {
+          "path": "attempt-1-before/01-local-summary.png",
+          "sha256": "e088885e154d61f9af6c73b76dce1ee0431bb060e9b092dd566d20e260454112",
+          "bytes": 139079,
+          "viewport": [1440, 1100]
+        }
+      ]
+    },
+    {
+      "attempt": 2,
+      "cause": "Observed real focus loss when export button is disabled during native cancellation; corrected source has a regression test and focus return guard.",
+      "frames": [
+        {
+          "path": "attempt-2-before/01-local-summary.png",
+          "sha256": "b53197a61b7436a39b12f2f6996e042247e2cf26ea0fcbd2d362ad672bd34232",
+          "bytes": 140375,
+          "viewport": [1440, 1100]
+        },
+        {
+          "path": "attempt-2-before/02-income-and-attention.png",
+          "sha256": "756965686a9dfaefa04e4d6284909f55350301b88ad4d72cf3960aa4fe33c55f",
+          "bytes": 146330,
+          "viewport": [1440, 1100]
+        },
+        {
+          "path": "attempt-2-before/03-invalid-period.png",
+          "sha256": "e97b52316011179bb8a32fb331eacaa8ec7f6cc04cce83dabe565e0ba250b00f",
+          "bytes": 143212,
+          "viewport": [1440, 1100]
+        }
+      ]
+    },
+    {
+      "attempt": 3,
+      "cause": "Baseline BAS action uses native auto outline; target composition adds shared forest solid ring. Baseline style assertion distinguished from corrected-source requirement.",
+      "frames": [
+        {
+          "path": "attempt-3-before/01-local-summary.png",
+          "sha256": "b53197a61b7436a39b12f2f6996e042247e2cf26ea0fcbd2d362ad672bd34232",
+          "bytes": 140375,
+          "viewport": [1440, 1100]
+        },
+        {
+          "path": "attempt-3-before/02-income-and-attention.png",
+          "sha256": "756965686a9dfaefa04e4d6284909f55350301b88ad4d72cf3960aa4fe33c55f",
+          "bytes": 146330,
+          "viewport": [1440, 1100]
+        },
+        {
+          "path": "attempt-3-before/03-invalid-period.png",
+          "sha256": "092059cded0e91cdf65d12d34ef3c79d1dee0854c7871af7960f51377ce33664",
+          "bytes": 142849,
+          "viewport": [1440, 1100]
+        },
+        {
+          "path": "attempt-3-before/04-export-cancelled.png",
+          "sha256": "e52ee25412d68faeb6f4aa20cec9448148790e08025ef0ac32c9ba86597eac0a",
+          "bytes": 142642,
+          "viewport": [1440, 1100]
+        },
+        {
+          "path": "attempt-3-before/05-income-focus-320.png",
+          "sha256": "39e19b8470d71ebf9a827cae0415dbb2196c7cb1a20d90b19df39b63db92709a",
+          "bytes": 52737,
+          "viewport": [320, 900]
+        },
+        {
+          "path": "attempt-3-before/05-income-focus-390.png",
+          "sha256": "9e70c943702ee555e0838181c02c6c9f380be410f4bab9de4ad346ab99e581d7",
+          "bytes": 56242,
+          "viewport": [390, 900]
+        }
+      ]
+    },
+    {
+      "attempt": 4,
+      "cause": "Overview remount restores default reporting dates; test reselects explicit income window after navigation, preserving existing behavior.",
+      "frames": [
+        {
+          "path": "attempt-4-before/01-local-summary.png",
+          "sha256": "b53197a61b7436a39b12f2f6996e042247e2cf26ea0fcbd2d362ad672bd34232",
+          "bytes": 140375,
+          "viewport": [1440, 1100]
+        },
+        {
+          "path": "attempt-4-before/02-income-and-attention.png",
+          "sha256": "756965686a9dfaefa04e4d6284909f55350301b88ad4d72cf3960aa4fe33c55f",
+          "bytes": 146330,
+          "viewport": [1440, 1100]
+        },
+        {
+          "path": "attempt-4-before/03-invalid-period.png",
+          "sha256": "092059cded0e91cdf65d12d34ef3c79d1dee0854c7871af7960f51377ce33664",
+          "bytes": 142849,
+          "viewport": [1440, 1100]
+        },
+        {
+          "path": "attempt-4-before/04-export-cancelled.png",
+          "sha256": "e52ee25412d68faeb6f4aa20cec9448148790e08025ef0ac32c9ba86597eac0a",
+          "bytes": 142642,
+          "viewport": [1440, 1100]
+        },
+        {
+          "path": "attempt-4-before/05-income-focus-320.png",
+          "sha256": "39e19b8470d71ebf9a827cae0415dbb2196c7cb1a20d90b19df39b63db92709a",
+          "bytes": 52737,
+          "viewport": [320, 900]
+        },
+        {
+          "path": "attempt-4-before/05-income-focus-390.png",
+          "sha256": "9e70c943702ee555e0838181c02c6c9f380be410f4bab9de4ad346ab99e581d7",
+          "bytes": 56242,
+          "viewport": [390, 900]
+        },
+        {
+          "path": "attempt-4-before/06-exact-bas-focus.png",
+          "sha256": "9202fed1c1168223d6f627c25addc40440c7f5d58caa09dcc836e3c4d4872faf",
+          "bytes": 142920,
+          "viewport": [1440, 1100]
+        }
+      ]
+    }
+  ],
+  "reference": {
+    "path": "reference/01-soft-precision-views.png",
+    "designCommit": "19533020422b6ea2f0c77dc3117a051483f9f9ce",
+    "sha256": "c627e2021bbf4f23795a9b7490d9becdd0d332111359a99aa8f39fa946a8e3f9",
+    "kind": "unchanged generated concept; not app evidence"
+  }
+}

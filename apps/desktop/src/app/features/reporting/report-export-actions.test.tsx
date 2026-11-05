@@ -3,7 +3,7 @@ import {
   GetOrganisationRequestSchema,
   GetOrganisationResponseSchema,
 } from "@tammy/connect-client/tammy/v1/organisation_pb.js";
-import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import { expect, it, vi } from "vitest";
 import { createProtoMethodCodec } from "../../../shared/proto-ipc";
 import { createConveyorFixture, renderWithConveyor } from "../../test/conveyor-fixtures";
@@ -38,6 +38,46 @@ function fixture(legalName = "Trusted Organisation") {
   );
   return f;
 }
+it.each([false, true])(
+  "returns completed export focus only when the user has not moved elsewhere (moved: %s)",
+  async (movedElsewhere) => {
+    const f = fixture();
+    let finish: ((result: { saved: boolean }) => void) | undefined;
+    const execute = vi.fn(
+      () =>
+        new Promise<{ saved: boolean }>((resolve) => {
+          finish = resolve;
+        }),
+    );
+    renderWithConveyor(
+      <>
+        <input aria-label="Other work" />
+        <ReportExportActions
+          organisationApi={f.conveyor.organisation}
+          workspace={workspace}
+          label="Income"
+          disabled={false}
+          execute={execute}
+        />
+      </>,
+    );
+    const trigger = screen.getByRole("button", { name: "Export CSV" });
+    await waitFor(() => expect(trigger).toHaveProperty("disabled", false));
+    trigger.focus();
+    fireEvent.click(trigger);
+    await waitFor(() => expect(trigger).toHaveProperty("disabled", true));
+    // Native Chromium blurs a button disabled for an in-progress export.
+    const other = screen.getByRole("textbox", { name: "Other work" });
+    other.focus();
+    if (!movedElsewhere) other.blur();
+    expect(document.activeElement).toBe(movedElsewhere ? other : document.body);
+    if (!finish) throw new Error("Export did not start");
+    await act(async () => finish?.({ saved: false }));
+    await screen.findByText("Income export cancelled.");
+    await waitFor(() => expect(document.activeElement).toBe(movedElsewhere ? other : trigger));
+    expect(execute).toHaveBeenCalledOnce();
+  },
+);
 it("loads displayed authoritative profile version and exports only bounded identity/dates while retaining cancellation", async () => {
   const f = fixture(),
     execute = vi.fn(async () => ({ saved: false }));

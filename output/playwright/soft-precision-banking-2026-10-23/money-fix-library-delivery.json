@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "runtimeSourceRevision": "4ce093a93422121cf7e0492456a20a7b0dcf2344",
+  "images": [
+    {
+      "role": "after-desktop",
+      "file": "after-money-fix/04-selected-match.png",
+      "library_file_id": "libfile_e08f531ca7648191b5839f20684224ee",
+      "sha256": "b189f8edc328ffa8e61ce801d6e0f31a4af7f4d42899e6964ce8e23cccdbd82d",
+      "bytes": 198350,
+      "confirmed": true,
+      "version": 0,
+      "xattrsAppliedToTransportCopy": true
+    },
+    {
+      "role": "after-narrow-focus",
+      "file": "after-money-fix/07-match-focus-320.png",
+      "library_file_id": "libfile_7f9a0cbc49108191b89126641d131ee4",
+      "sha256": "76ce1ce4554a9b4e78be42040bbc81ad94b1b36bb5088262fd0dbf69a99358c4",
+      "bytes": 62842,
+      "confirmed": true,
+      "version": 0,
+      "xattrsAppliedToTransportCopy": true
+    },
+    {
+      "role": "large-balance-keyboard",
+      "file": "money-nowrap-regression/19-320-banking-import.png",
+      "library_file_id": "libfile_6f911fc88a6c8191a8d020585a1c7523",
+      "sha256": "ba5a96cea260a60a5f5d52087f269aeba18de0383575017a9b3d0721f738522c",
+      "bytes": 113858,
+      "confirmed": true,
+      "version": 0,
+      "xattrsAppliedToTransportCopy": true
+    }
+  ],
+  "previousDeliveriesUnchanged": true,
+  "referenceLibraryId": "libfile_10ac0000a4f881919121867d18df7719"
+}

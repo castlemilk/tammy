@@ -1,0 +1,57 @@
+{
+  "runtimeSource": "1ec93d6d372cd704fefc74f1f22d06b48d8fc560",
+  "desktop": {
+    "passed": 1301,
+    "failed": 0,
+    "skipped": 0,
+    "files": 111,
+    "seconds": 134.02,
+    "followedBy": "CSS-only seller wrapping correction and journey assertions; final typecheck/lint passed"
+  },
+  "focusedBeforeFinalFocusRegression": {
+    "passed": 101,
+    "files": 10,
+    "seconds": 16.42
+  },
+  "typecheck": "passed",
+  "lint": {
+    "errors": 0,
+    "warnings": 135,
+    "infos": 2,
+    "files": 609
+  },
+  "strictAudit": "19 unchanged findings: 14 native forms, 4 test mock buttons, 1 CSV textarea resize; no policy or exclusion changes",
+  "packagedJourneys": [
+    {
+      "name": "draft visual / edit, repeated-save, cancel, issue, receipt, export, navigation, responsive / keyboard",
+      "passed": 1,
+      "seconds": 23.4
+    },
+    {
+      "name": "BAS lifecycle",
+      "passed": 1,
+      "testBodySeconds": 15.8
+    },
+    {
+      "name": "cash mixed-GST receipts and restart",
+      "passed": 1,
+      "seconds": 19.5,
+      "testBodySeconds": 18.1
+    },
+    {
+      "name": "invoice / purchase / BAS",
+      "passed": 0,
+      "failed": 1,
+      "testBodySeconds": 32.6,
+      "failure": "Second restart: unlockCurrentWorkflowWorkspace at current-workflows.spec.ts:1814; expected Overview, remained at Unlock your workspace with generic unlock failure. Earlier invoice, issue, receipt, template and BAS assertions completed. No retry. Raw artifacts retained privately outside Git. Cause unresolved; not declared environmental or a UI regression."
+    }
+  ],
+  "financialHandlersByteIdenticalTo": "262a6e77fc9ffd4d3c7003f1ab64a5e833766132",
+  "handlersCompared": ["save", "issue", "requestIssue", "exportPdf"],
+  "financialAssertionsRemoved": 0,
+  "timeoutsChanged": 0,
+  "retries": 0,
+  "runtimeCodeChangesAfterPackage": 0,
+  "releaseActions": 0,
+  "hostedCI": "pending new push; prior head checks do not validate this block"
+}

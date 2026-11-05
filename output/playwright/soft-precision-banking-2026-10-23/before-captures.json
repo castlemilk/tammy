@@ -1,0 +1,160 @@
+{
+  "schemaVersion": 1,
+  "phase": "before",
+  "reviewBase": "724ac6fe9e5b2cba0cee6870658196c575b58486",
+  "runtime": {
+    "sourceRevision": "0f3ed9bd7151cda8757ab5e2874f95e343d78205",
+    "sourceDirty": false,
+    "releaseKind": "ordinary-package",
+    "target": "darwin-arm64",
+    "appSha256": "2abb09e3bc28874df76282b68fb9701faf05f1815a6c43c5dff0556d38f17e45",
+    "coreSha256": "078811e551eb5cd0c5f505e3282d82bc8f50be578c12a9d92e7bafb70d67562c",
+    "manifestSha256": "8c88f1b0666fe778eefe12d2a7a080380b77f30409b5cfd3b57a699b69d5d486",
+    "applicationSourceEquivalentToReviewBase": true
+  },
+  "harness": {
+    "state": "Initial uncommitted Banking helper; formatted and extended with after-only keyboard/focus checks later. No exact initial harness hash is claimed.",
+    "test": "apps/desktop/tests/e2e/financial-workspace.spec.ts",
+    "nativeTestSeconds": 10.7,
+    "overallSeconds": 11.4,
+    "retries": 0,
+    "consoleErrors": 0,
+    "pageErrors": 0
+  },
+  "financialHandlersSha256": "0e178f317ed4cc0fadc18e5956ed1f99fd5721f48e7c8e9d441936442a48b178",
+  "reconciliationGateSha256": "5a068865138fe196415c761584bbf1b163fe63e737579ac638165ead9d8d4d76",
+  "reference": {
+    "sourceCommit": "19533020422b6ea2f0c77dc3117a051483f9f9ce",
+    "file": "docs/design/soft-precision-2026-10-22/08-documents-banking-activity.png",
+    "sha256": "1ff7a89366290bd31c7a4747b51e81cc9820db9eeaf15bbbc489e08f9210b301",
+    "kind": "Unchanged generated concept; not app evidence"
+  },
+  "frames": [
+    {
+      "file": "before/01-import-error.png",
+      "sha256": "3b452d777c227cc3e7434df5d9cee2545f6b507ecbd1b25bf8b12112a65fc432",
+      "width": 1440,
+      "height": 1100,
+      "capturedFileMtimeUtc": "2026-10-23T19:02:55.203Z"
+    },
+    {
+      "file": "before/02-import-review.png",
+      "sha256": "0b28f724997854047813c0e2436cc7225bf3dcd7e216126e34a6b28446b2f6e0",
+      "width": 1440,
+      "height": 1100,
+      "capturedFileMtimeUtc": "2026-10-23T19:02:55.406Z"
+    },
+    {
+      "file": "before/03-statement-list.png",
+      "sha256": "50f32126db87d1c8e64ed0cf17d82b4a562578c9a43db123754912dd1dd1ab26",
+      "width": 1440,
+      "height": 1100,
+      "capturedFileMtimeUtc": "2026-10-23T19:02:55.574Z"
+    },
+    {
+      "file": "before/04-selected-match.png",
+      "sha256": "83dd908f3020d6974832c9a8faefbb5edb0fc59edfb3d29c8e71fa09d2cde63b",
+      "width": 1440,
+      "height": 1100,
+      "capturedFileMtimeUtc": "2026-10-23T19:02:55.691Z"
+    },
+    {
+      "file": "before/05-match-detail.png",
+      "sha256": "1414486597768fabefd00d5a5591bfca6f41361af86ce527381cf387a8852569",
+      "width": 1440,
+      "height": 1100,
+      "capturedFileMtimeUtc": "2026-10-23T19:02:55.790Z"
+    },
+    {
+      "file": "before/06-statement-320.png",
+      "sha256": "fb60b8f9d03d841dd05a8a0a342d738b3d2f278be7ee3cef24a8db1540a548d1",
+      "width": 320,
+      "height": 1000,
+      "capturedFileMtimeUtc": "2026-10-23T19:02:56.083Z"
+    },
+    {
+      "file": "before/06-statement-390.png",
+      "sha256": "7bc527709eb2472e999d4f6ac4391996c796a4ae0e7ac364cb0cc00ff21cf766",
+      "width": 390,
+      "height": 1000,
+      "capturedFileMtimeUtc": "2026-10-23T19:02:55.952Z"
+    },
+    {
+      "file": "before/07-match-focus-320.png",
+      "sha256": "fb60b8f9d03d841dd05a8a0a342d738b3d2f278be7ee3cef24a8db1540a548d1",
+      "width": 320,
+      "height": 1000,
+      "capturedFileMtimeUtc": "2026-10-23T19:02:56.131Z"
+    },
+    {
+      "file": "before/07-match-focus-390.png",
+      "sha256": "7bc527709eb2472e999d4f6ac4391996c796a4ae0e7ac364cb0cc00ff21cf766",
+      "width": 390,
+      "height": 1000,
+      "capturedFileMtimeUtc": "2026-10-23T19:02:56.000Z"
+    },
+    {
+      "file": "before/08-match-confirmed.png",
+      "sha256": "798ce7ed26ef7e78237d8cc5c1783bd455c1031e8db722c1e66494b3ccf3f996",
+      "width": 1440,
+      "height": 1100,
+      "capturedFileMtimeUtc": "2026-10-23T19:02:56.299Z"
+    },
+    {
+      "file": "before/09-search-empty.png",
+      "sha256": "c9ceecfe8060355022d1b42fdc882ed29c59fd3e515a84f557fff3e30b391691",
+      "width": 1440,
+      "height": 1100,
+      "capturedFileMtimeUtc": "2026-10-23T19:02:56.397Z"
+    },
+    {
+      "file": "before/10-ready-to-reconcile.png",
+      "sha256": "7b202adb62a4be2c4ee073af75a76b50701683c4309bb076a1fe1bb197b187b0",
+      "width": 1440,
+      "height": 1100,
+      "capturedFileMtimeUtc": "2026-10-23T19:02:56.924Z"
+    },
+    {
+      "file": "before/11-reconciled.png",
+      "sha256": "ee9071ad926b0eb4800cec27933b4020256a618663e6f064cdb872091e4386d9",
+      "width": 1440,
+      "height": 1100,
+      "capturedFileMtimeUtc": "2026-10-23T19:02:57.092Z"
+    },
+    {
+      "file": "baseline-attempt-1/invalid-date-import.png",
+      "sha256": "944b0994191673a8115dc9b9d4566f48d5a98c9c0d16245cef35d9c55ae128be",
+      "width": 1440,
+      "height": 1100,
+      "capturedFileMtimeUtc": "2026-10-23T18:58:57.709Z"
+    },
+    {
+      "file": "baseline-attempt-2/retained-malformed-csv.png",
+      "sha256": "3b452d777c227cc3e7434df5d9cee2545f6b507ecbd1b25bf8b12112a65fc432",
+      "width": 1440,
+      "height": 1100,
+      "capturedFileMtimeUtc": "2026-10-23T19:00:17.542Z"
+    },
+    {
+      "file": "baseline-attempt-3/01-import-error.png",
+      "sha256": "3b452d777c227cc3e7434df5d9cee2545f6b507ecbd1b25bf8b12112a65fc432",
+      "width": 1440,
+      "height": 1100,
+      "capturedFileMtimeUtc": "2026-10-23T19:00:51.073Z"
+    },
+    {
+      "file": "baseline-attempt-3/02-import-review.png",
+      "sha256": "0b28f724997854047813c0e2436cc7225bf3dcd7e216126e34a6b28446b2f6e0",
+      "width": 1440,
+      "height": 1100,
+      "capturedFileMtimeUtc": "2026-10-23T19:00:51.257Z"
+    },
+    {
+      "file": "baseline-attempt-3/import-confirmed-status-locator.png",
+      "sha256": "50f32126db87d1c8e64ed0cf17d82b4a562578c9a43db123754912dd1dd1ab26",
+      "width": 1440,
+      "height": 1100,
+      "capturedFileMtimeUtc": "2026-10-23T19:02:39.864Z"
+    }
+  ]
+}

@@ -208,6 +208,7 @@ function fixture({ lostResponse = false, failedInvalidation = false } = {}) {
 
 async function openPayment() {
   await userEvent.click(await screen.findByRole("button", { name: "Open RETRY-001" }));
+  await userEvent.click(await screen.findByRole("button", { name: "Payments" }));
   await userEvent.click(await screen.findByRole("button", { name: "Record payment" }));
   fireEvent.change(screen.getByLabelText("Amount received (AUD)"), { target: { value: "55.00" } });
   fireEvent.change(screen.getByLabelText("Payment reference (optional)"), {

@@ -28,8 +28,7 @@ export function BasLifecycleScreen({
   };
 }) {
   return (
-    <div className="mx-auto grid w-full max-w-[1200px] gap-6">
-      <BASLodgerRoleControl api={roleControlApi} workspace={legacyProps.workspace} />
+    <div className="mx-auto grid w-full max-w-[1120px] gap-4 bas-page">
       <BasPreparationLifecycle
         api={lifecycleApi}
         identityApi={identityApi}
@@ -38,6 +37,7 @@ export function BasLifecycleScreen({
         {...(initialPreparationTarget ? { initialPreparationTarget } : {})}
         workspace={legacyProps.workspace}
       />
+      <BASLodgerRoleControl api={roleControlApi} workspace={legacyProps.workspace} />
       <details className="work-surface group overflow-hidden">
         <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-5 py-4 text-[15px] font-semibold [&::-webkit-details-marker]:hidden max-[600px]:flex-wrap">
           <span>Saved workpapers and exports</span>
@@ -52,7 +52,7 @@ export function BasLifecycleScreen({
           </span>
         </summary>
         <div className="border-t border-border p-5">
-          <BasScreen {...legacyProps} />
+          <BasScreen {...legacyProps} embedded />
         </div>
       </details>
     </div>

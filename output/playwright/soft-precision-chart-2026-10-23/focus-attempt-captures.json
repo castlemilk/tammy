@@ -1,0 +1,111 @@
+{
+  "schemaVersion": 1,
+  "phase": "after-focus-attempt",
+  "runtime": {
+    "sourceRevision": "6707b3b146d2a04e850b0b32e8f73958162047f0",
+    "sourceDirty": false,
+    "appSha256": "38629bec4e3cbf0ce66f1dc650e720817655c7bb8e0bf69db961f8246d5d54f0",
+    "coreSha256": "078811e551eb5cd0c5f505e3282d82bc8f50be578c12a9d92e7bafb70d67562c",
+    "helperSha256": "8dbfb2b0708d1c61ebc07cd8c8b5ee6a626d73dad490b90667b3794d61edb201",
+    "manifestSha256": "d8caacc216ee52be2f7933b06b31084c0d232352e39078bc2c34d1d110fc5e8e",
+    "releaseKind": "ordinary-package",
+    "target": "darwin-arm64"
+  },
+  "harnessSourceRevision": "6707b3b146d2a04e850b0b32e8f73958162047f0",
+  "nativeSeconds": 21.3,
+  "runnerSeconds": null,
+  "retries": 0,
+  "passed": false,
+  "failure": {
+    "stage": "First narrow table focus, 390px",
+    "expectedOutlineOffset": "-2px",
+    "actualOutlineOffset": "2px",
+    "cause": "Override is in the components cascade layer; canonical focus is in the higher-priority utilities layer."
+  },
+  "notRun": [
+    "390px protected label keyboard proof",
+    "320px table/protection proof",
+    "back/forward"
+  ],
+  "measurements": "after-focus-attempt/measurements-1440.json",
+  "frames": [
+    {
+      "file": "after-focus-attempt/01-installed-chart.png",
+      "sha256": "60d4a8972b165cb7abe33cd2552acd61784ed4ad6de23ab569c7335a511228ea",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "file": "after-focus-attempt/02-grouped-chart.png",
+      "sha256": "c7e719d32662f570444e87a784113de12d31a0625e38ce8a8c271a451b8e1e66",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "file": "after-focus-attempt/03-collapsed-assets.png",
+      "sha256": "86897ce3dc13bf273a5d76947e6fbffa44968bd77093be4acd735133a1c74f6d",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "file": "after-focus-attempt/04-search.png",
+      "sha256": "d87c7a2722830a0ee2b665c4084fa425465e9b92ef90f3b9b6e010dcdc4996a0",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "file": "after-focus-attempt/05-no-results.png",
+      "sha256": "e72694e48e00fa8f5d97d21c9645135ebd25b9b312da85c9d604af37754c9e0e",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "file": "after-focus-attempt/06-ordinary-account-entry.png",
+      "sha256": "d527530386046d7038515689b8c45366545fa6aa1e689f384771c50445657865",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "file": "after-focus-attempt/07-rejected-duplicate.png",
+      "sha256": "d4b9ecd31eefd5181ba61b4c5f718fab307c7ce4ddea1f8c1d46f132062a5197",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "file": "after-focus-attempt/08-entry-focus-320.png",
+      "sha256": "0bfbcf1825cd1024bf5fb900f43da244363fe0e9152fb3582d5232ade10da68a",
+      "width": 320,
+      "height": 1000
+    },
+    {
+      "file": "after-focus-attempt/08-entry-focus-390.png",
+      "sha256": "d121de46b5e126c860cdc6baf6f00d91e9d3f1d6afa5cf9549023964df8a109c",
+      "width": 390,
+      "height": 1000
+    },
+    {
+      "file": "after-focus-attempt/08-entry-focus-900.png",
+      "sha256": "7b13a013908d5aea89d5f2e153391076a5da23bb07cce9869d9485ae0d342324",
+      "width": 900,
+      "height": 1000
+    },
+    {
+      "file": "after-focus-attempt/09-account-saved.png",
+      "sha256": "8b3b44fb17d4161fc12d5607d32dbe21659e41ef34c30c492f35a881c0e6d99b",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "file": "after-focus-attempt/09b-new-ordinary-row.png",
+      "sha256": "53aabe400f040121fee5ede25477f7b059e691f13a6c23bfc0bcf0b96702292c",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "file": "after-focus-attempt/failure-focus.png",
+      "sha256": "5b4bc838a9c6a287cc056ba9f194a36fb3520d183953f11a6c4142b9c788aa44",
+      "width": 390,
+      "height": 1000
+    }
+  ]
+}

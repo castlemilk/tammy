@@ -1,0 +1,17 @@
+{
+  "synthetic": true,
+  "currency": "AUD",
+  "rendererClock": "Existing fixed workflow clock, 12 May 2024",
+  "openingBalanceMinor": 100000,
+  "rows": [
+    ["2024-05-01", "Synthetic Cedar Studio invoice SYN-2001", 78000],
+    ["2024-05-02", "Synthetic Paper House supplies", -20000],
+    ["2024-05-03", "Synthetic Grove software subscription", -3190],
+    ["2024-05-04", "Synthetic Bower Studio invoice SYN-2002", 24000],
+    ["2024-05-05", "Synthetic Cedar Supplies invoice SYN-2003", -11000]
+  ],
+  "newLineCount": 5,
+  "existingReconciledFixtureLineCount": 1,
+  "latestImportClosingBalanceMinor": 167810,
+  "confirmation": "Each reviewed reference is explicitly entered; matching and reconciliation create no journals or payments"
+}

@@ -1,0 +1,14 @@
+{
+  "viewport": {
+    "width": 1440,
+    "height": 1100
+  },
+  "form": {
+    "x": 268,
+    "y": 213.1875,
+    "width": 1120,
+    "height": 459.5
+  },
+  "minimumControlHeight": 44,
+  "totalsBackground": "rgb(231, 237, 226)"
+}

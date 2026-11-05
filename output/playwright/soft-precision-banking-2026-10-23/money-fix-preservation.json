@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "baselineRevision": "0fa0ab38bd5638fefc9fe2f337629cec9bb4de4f",
+  "previousTrackedPngCount": 715,
+  "previousPngsByteIdentical": true,
+  "configuredAuditFindings": 19,
+  "configuredRuleFileMultisetUnchanged": true,
+  "financialFormatterByteIdenticalTo724ac6fe": true
+}

@@ -1,0 +1,99 @@
+{
+  "schemaVersion": 1,
+  "phase": "after",
+  "runtime": {
+    "sourceRevision": "f82d9753e2dd9f5678b943fcb283adff6eb3f44b",
+    "sourceDirty": false,
+    "appSha256": "23ecefcb2b9a941293719eae3da1cef3a991fe7658ac948ef5863ef1a2ab0935",
+    "coreSha256": "078811e551eb5cd0c5f505e3282d82bc8f50be578c12a9d92e7bafb70d67562c",
+    "helperSha256": "8dbfb2b0708d1c61ebc07cd8c8b5ee6a626d73dad490b90667b3794d61edb201",
+    "manifestSha256": "0743dbe37cb9371033c6fa78d6e71820bcd102ef54d86c5d09db6d07f457da07",
+    "releaseKind": "ordinary-package",
+    "target": "darwin-arm64",
+    "sbrStatus": "SIMULATOR_ENABLED"
+  },
+  "harnessSourceRevision": "f2a8c563471936d9a9d919e2f376a3eca866c905",
+  "harnessDirtyAtStart": false,
+  "helperSha256": "687a7cdf918febba6a43061ba07e67be208c64d9fea4897d1c77ee3ce2eea382",
+  "nativeSeconds": 10.5,
+  "runnerSeconds": 11.4,
+  "retries": 0,
+  "pageErrors": 0,
+  "consoleErrors": 0,
+  "syntheticOnly": true,
+  "primaryPair": {
+    "viewport": {
+      "width": 1440,
+      "height": 1100
+    },
+    "accounts": 4,
+    "debitMinorUnits": "331900",
+    "creditMinorUnits": "331900",
+    "inclusiveAsOfDate": "2024-05-12",
+    "excludedFollowingDayMinorUnits": "77777"
+  },
+  "largeAmountAdditionalPostMinorUnits": "9007199254740991",
+  "largeAmountPrimaryPair": false,
+  "frames": [
+    {
+      "file": "after/01-trial-balance.png",
+      "sha256": "eaa24d6d5793e498f38ea4e1e84769cc783c7773f3caef840f4dbf0addccb3ec",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "file": "after/02-confirmed-refresh.png",
+      "sha256": "eaa24d6d5793e498f38ea4e1e84769cc783c7773f3caef840f4dbf0addccb3ec",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "file": "after/03-report-focus-320.png",
+      "sha256": "2cab7feb262406f3db2af8fd7fa514b8021f38597131439dcbf7d9535be2e0b4",
+      "width": 320,
+      "height": 1000
+    },
+    {
+      "file": "after/03-report-focus-390.png",
+      "sha256": "3a5eb8d273d480936aa635fb3e0001337d29c2063c337b9b7ad0c5ce8d04adeb",
+      "width": 390,
+      "height": 1000
+    },
+    {
+      "file": "after/03-report-focus-900.png",
+      "sha256": "40d002bc90667591140217979ca6a92fca6aec85b9b8bef441d0457870aa5f4f",
+      "width": 900,
+      "height": 1000
+    },
+    {
+      "file": "after/04-credit-and-total-320.png",
+      "sha256": "3ea6d37dd11612f40d2a5e1584fbc5d8cf58c9c7e314ffa90a8f64fd109d0b15",
+      "width": 320,
+      "height": 1000
+    },
+    {
+      "file": "after/04-credit-and-total-390.png",
+      "sha256": "04f8b9ffcad0df41bfd59a4464bcdcc9fdca7ff6c14337f6ccb4b0a79f866a29",
+      "width": 390,
+      "height": 1000
+    },
+    {
+      "file": "after/05-returned-report.png",
+      "sha256": "eaa24d6d5793e498f38ea4e1e84769cc783c7773f3caef840f4dbf0addccb3ec",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "file": "after/06-exact-large-amounts.png",
+      "sha256": "a3b7059560d8083c9751b20c9fccecf37f24ffe7ec1698f79d1fd00b9c819fd9",
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "file": "after/07-large-credit-focus-320.png",
+      "sha256": "a05b6e14782ffb41332510ad2f327e83e5ef554b409507bcd1fc09f30ce79118",
+      "width": 320,
+      "height": 1000
+    }
+  ]
+}
