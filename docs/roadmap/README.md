@@ -23,3 +23,8 @@ node scripts/check-xero-roadmap.mjs
 ```
 
 The CI workflow runs the same check on roadmap PRs.
+
+## Execution
+
+- [Roadmap tracker #30](https://github.com/castlemilk/tammy/issues/30) records the end-to-end Xero-switch journey.
+- [Epics #22–#29](https://github.com/castlemilk/tammy/issues?q=is%3Aissue%20is%3Aopen%20%5BG0%2FP0%5D%20OR%20%5BG1%2FP0%5D%20OR%20%5BG2%2FP0%5D) are the first dependency-ordered engineering packages.
