@@ -27,7 +27,7 @@ export function TaxReturnChecklist() {
     </div>
     <p className="tools-help">This is for a sole trader preparing their own individual return, not a company tax return or a BAS. The selected year is only a checklist label; it does not change tax rates or calculate tax.</p>
     <output className="tools-checker-progress" aria-live="polite">{checked.length} of {tasks.length} checks reviewed · {year}</output>
-    <div className="tools-checker-items">{tasks.map((task)=> <label className="tools-checker-item" key={task.id}>
+    <div className="tools-checker-items">{tasks.map((task)=> <label className="tools-checker-item" key={task.id} aria-label={task.title}>
       <input type="checkbox" checked={checked.includes(task.id)} onChange={(e)=>toggle(task.id,e.target.checked)}/>
       <span><strong>{task.title}</strong><small>{task.detail}</small></span>
     </label>)}</div>
