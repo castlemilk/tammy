@@ -131,3 +131,11 @@ primitives. See `UI-COMPONENT-STANDARD.md` and
 `components/gamma/README.md` for design-system authority, review gates and
 the remaining gradual migration. This changes presentation only, not GST,
 BAS, quote arithmetic, customer data handling, publishing or ATO integration.
+
+## Free receipt/expense organiser (5 November 2026)
+
+- `/tools/expense-organiser`: manual expense register with date, supplier, category, gross cents, user-entered estimated business use and descriptive GST evidence; optional browser-memory PDF/JPG/PNG receipt file association (<=5 MB).
+- Totals deliberately distinguish paid amounts, user-entered business-use allocations and an indicative standard GST component; they **do not** estimate legal deductions or claimable GST credits.
+- CSV export quotes/formula-neutralises user-controlled text; JSON import/export validates version and fields strictly with a 2 MB file cap. Both are browser initiated and contain private supplier details; binary receipt attachments are **not embedded** and must be kept separately.
+- No account, backend upload, automatic OCR, browser localStorage, ATO filing or ledger posting. No claims of persistent synced storage.
+- Tool directory, homepage, canonical sitemap and llms.txt updated. Actual Sites publication/canonical migration remains a separate release gate.

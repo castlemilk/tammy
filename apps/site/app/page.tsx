@@ -381,14 +381,17 @@ export default function Home() {
             </div>
             <div className="landing-tools-list">
               <a href="/tools/invoice-generator"><span className="landing-tools-number">01</span><strong>Australian invoice generator</strong><span>Make and download an invoice PDF</span><span aria-hidden="true">↗</span></a>
-              <a href="/tools/quote-generator"><span className="landing-tools-number">02</span><strong>Quote and estimate generator</strong><span>Prepare a printable quote</span><span aria-hidden="true">↗</span></a>
-              <a href="/tools/gst-calculator"><span className="landing-tools-number">05</span><strong>GST calculator</strong><span>Add or remove 10% GST</span><span aria-hidden="true">↗</span></a>
-              <a href="/tools/invoice-due-date-calculator"><span className="landing-tools-number">06</span><strong>Invoice due-date calculator</strong><span>Work out payment terms</span><span aria-hidden="true">↗</span></a>
-              <a href="/tools/abn-checker"><span className="landing-tools-number">07</span><strong>ABN format checker</strong><span>Check the number before the register</span><span aria-hidden="true">↗</span></a>
-              <a href="/tools/profit-margin-calculator"><span className="landing-tools-number">08</span><strong>Profit margin calculator</strong><span>Understand markup and gross margin</span><span aria-hidden="true">↗</span></a>
-              <a href="/tools/break-even-calculator"><span className="landing-tools-number">09</span><strong>Break-even calculator</strong><span>Know the unit sales target</span><span aria-hidden="true">↗</span></a>
-              <a href="/tools/cash-runway-calculator"><span className="landing-tools-number">10</span><strong>Cash runway calculator</strong><span>Estimate monthly cash coverage</span><span aria-hidden="true">↗</span></a>
-              <a href="/tools/cash-flow-forecast"><span className="landing-tools-number">11</span><strong>12-week cash flow forecast</strong><span>Plan dated receipts and payments</span><span aria-hidden="true">↗</span></a>
+              <a href="/tools/quote-generator"><span className="landing-tools-number">02</span><strong>Quote and estimate generator</strong><span>Build and download a quote PDF</span><span aria-hidden="true">↗</span></a>
+              <a href="/tools/bas-workpaper"><span className="landing-tools-number">03</span><strong>Simpler BAS workpaper</strong><span>Review GST figures before lodging</span><span aria-hidden="true">↗</span></a>
+              <a href="/tools/sole-trader-tax-checklist"><span className="landing-tools-number">04</span><strong>Sole trader tax checklist</strong><span>Prepare your myTax records</span><span aria-hidden="true">↗</span></a>
+              <a href="/tools/expense-organiser"><span className="landing-tools-number">05</span><strong>Receipt and expense organiser</strong><span>Keep a private source record worksheet</span><span aria-hidden="true">↗</span></a>
+              <a href="/tools/gst-calculator"><span className="landing-tools-number">06</span><strong>GST calculator</strong><span>Add or remove 10% GST</span><span aria-hidden="true">↗</span></a>
+              <a href="/tools/invoice-due-date-calculator"><span className="landing-tools-number">07</span><strong>Invoice due-date calculator</strong><span>Work out payment terms</span><span aria-hidden="true">↗</span></a>
+              <a href="/tools/abn-checker"><span className="landing-tools-number">08</span><strong>ABN format checker</strong><span>Check the number before the register</span><span aria-hidden="true">↗</span></a>
+              <a href="/tools/profit-margin-calculator"><span className="landing-tools-number">09</span><strong>Profit margin calculator</strong><span>Understand markup and gross margin</span><span aria-hidden="true">↗</span></a>
+              <a href="/tools/break-even-calculator"><span className="landing-tools-number">10</span><strong>Break-even calculator</strong><span>Know the unit sales target</span><span aria-hidden="true">↗</span></a>
+              <a href="/tools/cash-runway-calculator"><span className="landing-tools-number">11</span><strong>Cash runway calculator</strong><span>Estimate monthly cash coverage</span><span aria-hidden="true">↗</span></a>
+              <a href="/tools/cash-flow-forecast"><span className="landing-tools-number">12</span><strong>12-week cash flow forecast</strong><span>Plan dated receipts and payments</span><span aria-hidden="true">↗</span></a>
             </div>
           </section>
 

@@ -95,3 +95,5 @@ These new MDX posts use an accessible scenario explorer, validated balanced jour
 The article sources are ATO and Australian Government official guidance. Tammy does not electronically lodge a BAS or income-tax return, determine actual filing deadlines, submit user data, or act as an agent.
 
 - [12-week cash flow forecast](https://tammy-accounting.castlemilk.chatgpt.site/tools/cash-flow-forecast) - date-based expected receipts and payments, low-cash detection and browser CSV export. Not bank-linked or predictive.
+
+- [Expense and receipt organiser](https://tammy-accounting.castlemilk.chatgpt.site/tools/expense-organiser) - local-only manual expense register, user-classified GST evidence, optional session receipt attachments, CSV and JSON exports. Does not lodge, determine deductions or upload records; exports do not include receipt binaries.

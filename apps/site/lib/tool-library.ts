@@ -1,5 +1,5 @@
 /** Public, browser-only Tammy utilities. Curated rather than scraped SEO inventory. */
-export type ToolCategory = "invoicing" | "gst" | "tax" | "pricing" | "cashflow";
+export type ToolCategory = "invoicing" | "gst" | "tax" | "bookkeeping" | "pricing" | "cashflow";
 
 export interface PublicTool {
   readonly href: string;
@@ -18,6 +18,7 @@ export const toolCategories: ReadonlyArray<{ id: ToolCategory | "all"; label: st
   { id: "invoicing", label: "Invoicing" },
   { id: "gst", label: "GST & BAS" },
   { id: "tax", label: "Tax returns" },
+  { id: "bookkeeping", label: "Bookkeeping" },
   { id: "pricing", label: "Pricing" },
   { id: "cashflow", label: "Cash flow" },
 ];
@@ -85,6 +86,13 @@ export const publicTools: readonly PublicTool[] = [
     summary: "Find the number of units needed to cover fixed costs at your price.",
     category: "pricing", categoryLabel: "Pricing", icon: "ledger",
     note: "Units and revenue", keywords: "fixed variable costs units contribution",
+  },
+  {
+    href: "/tools/expense-organiser",
+    name: "Receipt and expense organiser",
+    summary: "Record business receipts locally, review GST evidence and export a worksheet.",
+    category: "bookkeeping", categoryLabel: "Bookkeeping", icon: "reconciliation",
+    note: "Private CSV / JSON", keywords: "expense tracker receipt log bookkeeping GST evidence business use",
   },
   {
     href: "/tools/cash-flow-forecast",
