@@ -5,9 +5,9 @@ import { ToolsShell, origin } from "../../components/tools-shell";
 
 export const metadata: Metadata = {
   title: "Free Australian business tools",
-  description: "Free, privacy-conscious Australian invoice generator, 10% GST calculator and invoice due-date calculator. No account or data upload needed.",
+  description: "Free Australian invoice PDF generator, GST calculator, ABN checker, margin calculator and payment-date tool. No account or data upload required.",
   alternates: { canonical: "/tools" },
-  keywords: ["Australian business calculators", "free invoice generator Australia", "GST calculator Australia", "invoice due date calculator"],
+  keywords: ["Australian business calculators", "free invoice generator Australia", "GST calculator Australia", "ABN checker", "profit margin calculator"],
   openGraph: { title: "Free business tools | Tammy", description: "Invoices, GST and payment terms, made clearer.", url: origin + "/tools", type: "website" },
 };
 
@@ -15,6 +15,8 @@ const items = [
   { number: "01", href: "/tools/invoice-generator", icon: "invoices", title: "Invoice generator", detail: "Create an Australian invoice with line items, 10% GST and a PDF you can keep.", meta: "Tax invoices and regular invoices" },
   { number: "02", href: "/tools/gst-calculator", icon: "gst-bas", title: "GST calculator", detail: "Add or remove 10% GST with cent-accurate totals and a clear breakdown.", meta: "Inclusive and exclusive" },
   { number: "03", href: "/tools/invoice-due-date-calculator", icon: "review", title: "Invoice due-date calculator", detail: "Work out when payment is due from an invoice date and agreed terms.", meta: "7, 14, 30, 45 or 60 days" },
+  { number: "04", href: "/tools/abn-checker", icon: "abn-form", title: "ABN checker", detail: "Validate an Australian Business Number checksum before checking official registration details.", meta: "11-digit, modulus-89 format check" },
+  { number: "05", href: "/tools/profit-margin-calculator", icon: "margin-scale", title: "Profit margin calculator", detail: "Compare gross profit, markup and margin from your cost and selling price.", meta: "Ex-GST AUD pricing" },
 ] as const;
 
 export default function ToolsPage() {
@@ -31,10 +33,10 @@ export default function ToolsPage() {
         <div>
           <p className="tools-overline">Tammy tools</p>
           <h1>Good tools. <em>Clearer books.</em></h1>
-          <p>Useful little instruments for Australian business. Make an invoice, calculate GST or work out a due date. No account required.</p>
+          <p>Create invoices, calculate GST, check an ABN, understand margins and work out payment dates. Useful, no-account tools for everyday business numbers.</p>
           <a className="tools-primary-link" href="/tools/invoice-generator">Create an invoice <span aria-hidden="true">↗</span></a>
         </div>
-        <div className="tools-hero-art" aria-hidden="true"><span className="tools-art-orbit"/><span className="tools-art-paper"/><span className="tools-art-stamp">10% GST</span><span className="tools-art-line"/></div>
+        <div className="tools-hero-art" aria-hidden="true"><img className="tools-hero-illustration" src="/assets/tools-workflow-engraving.svg" alt="" /></div>
       </section>
       <section className="tools-content-section" aria-labelledby="available-tools-heading">
         <div className="tools-section-heading"><p className="tools-overline">Business essentials</p><h2 id="available-tools-heading">Choose what you need.</h2></div>
@@ -45,6 +47,13 @@ export default function ToolsPage() {
             <h3>{item.title}</h3><p>{item.detail}</p>
             <span className="tools-card-foot">{item.meta}<span aria-hidden="true">↗</span></span>
           </a>)}
+        </div>
+      </section>
+      <section className="tools-guides-callout" aria-labelledby="tools-guide-heading">
+        <div className="tools-guides-callout-copy"><p className="tools-overline">Practical reading</p><h2 id="tools-guide-heading">Understand the numbers behind the tools.</h2><p>Original Australian invoicing and GST explainers, with source references and examples you can check yourself.</p><a href="/guides" className="tools-secondary-link">Browse all guides <span aria-hidden="true">↗</span></a></div>
+        <div className="tools-guides-callout-links">
+          <a href="/guides/australian-tax-invoice-checklist"><span>Invoicing</span><strong>What an Australian tax invoice needs</strong><span aria-hidden="true">↗</span></a>
+          <a href="/guides/gst-inclusive-vs-exclusive"><span>GST</span><strong>Inclusive and exclusive GST, explained</strong><span aria-hidden="true">↗</span></a>
         </div>
       </section>
       <section className="tools-trust-band"><strong>Your numbers stay your numbers.</strong><p>Calculations and invoice data remain in this browser tab. There is no account, backend submission or tracking added by these tools.</p></section>

@@ -29,3 +29,16 @@ For access enquiries use the Support page. The public website contains no accoun
 - [Invoice due-date calculator](https://tammy-accounting.castlemilk.chatgpt.site/tools/invoice-due-date-calculator) - calendar-day terms.
 
 These public tools do not upload customer records or modify local Tammy desktop data. PDF export uses Tammy's pdfcn/Forme adapted invoice renderer.
+
+## Additional business tools
+
+- [ABN checker](https://tammy-accounting.castlemilk.chatgpt.site/tools/abn-checker) - check the 11-digit ABN checksum locally; this is not a live business-registration or GST-status lookup.
+- [Profit margin calculator](https://tammy-accounting.castlemilk.chatgpt.site/tools/profit-margin-calculator) - compare cost, selling price, gross profit, margin and markup in AUD.
+
+## Australian invoicing and GST guides
+
+- [All guides](https://tammy-accounting.castlemilk.chatgpt.site/guides)
+- [Australian tax invoice checklist](https://tammy-accounting.castlemilk.chatgpt.site/guides/australian-tax-invoice-checklist) - GST, ABN and recipient identification requirements, with an example.
+- [GST inclusive versus exclusive](https://tammy-accounting.castlemilk.chatgpt.site/guides/gst-inclusive-vs-exclusive) - 10% versus 1/11 GST formulas, rounding and exceptions.
+
+The guides cite ATO/ABR primary sources. Neither the calculator nor the guide certifies a supplier, tax registration or a lodged BAS.

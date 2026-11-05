@@ -1,7 +1,8 @@
 /* oxlint-disable next/no-html-link-for-pages -- Vinext handles these static same-origin routes. */
 import type { ReactNode } from "react";
+import { SITE_ORIGIN } from "../lib/site-config";
 
-export const origin = "https://tammy-accounting.castlemilk.chatgpt.site";
+export const origin = SITE_ORIGIN;
 
 export function ToolsShell({ children }: { readonly children: ReactNode }) {
   return (
@@ -13,7 +14,8 @@ export function ToolsShell({ children }: { readonly children: ReactNode }) {
           <a href="/tools">All tools</a>
           <a href="/tools/invoice-generator">Invoices</a>
           <a href="/tools/gst-calculator">GST</a>
-          <a href="/tools/invoice-due-date-calculator">Due dates</a>
+          <a href="/tools/abn-checker">ABN checker</a>
+          <a href="/guides">Guides</a>
         </nav>
         <a href="/" className="tools-back">About Tammy</a>
       </header>
@@ -21,7 +23,7 @@ export function ToolsShell({ children }: { readonly children: ReactNode }) {
       <footer className="tools-footer">
         <div><a className="tools-logo" href="/">Tammy</a><p>Thoughtful tools for Australian businesses.</p></div>
         <nav aria-label="Tools footer">
-          <a href="/tools">All tools</a><a href="/privacy">Privacy</a><a href="/support">Support</a>
+          <a href="/tools">All tools</a><a href="/guides">Guides</a><a href="/privacy">Privacy</a><a href="/support">Support</a>
         </nav>
         <small>Tools run locally in your browser. Nothing here files a BAS, issues an invoice in Tammy, or sends business records to a server.</small>
       </footer>
@@ -41,6 +43,7 @@ export function ToolStructuredData({ name, description, path }: { readonly name:
     applicationCategory: "BusinessApplication",
     operatingSystem: "Web browser",
     isAccessibleForFree: true,
+    offers: { "@type": "Offer", price: 0, priceCurrency: "AUD" },
     inLanguage: "en-AU",
     publisher: { "@type": "Organization", name: "Gamma Systems Pty Ltd" },
   };

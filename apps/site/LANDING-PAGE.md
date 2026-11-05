@@ -42,3 +42,18 @@ Tools are at `/tools`, with individual canonical routes for Australian invoices,
 - The rendered tool art is semantic CSS decoration. Generated raster concept art is retained as optional design reference and is not an authenticated screenshot.
 
 Validation: `pnpm --filter sites-project typecheck`, `pnpm --filter sites-project lint`, `pnpm --filter sites-project test`, `pnpm --filter sites-project build`, with mobile/desktop preview before any publication.
+
+## November follow-up: discovery, content and visual system
+
+- `/tools/abn-checker`: offline modulus-89 ABN format check through the existing invoice model. It does not verify business registration or GST status; official ABN Lookup remains the source of truth.
+- `/tools/profit-margin-calculator`: integer AUD cents; gross profit, margin-on-sale and markup-on-cost. GST is deliberately excluded from input prices.
+- `/guides`, `/guides/australian-tax-invoice-checklist` and `/guides/gst-inclusive-vs-exclusive`: original, sourced editorial content, not mass-produced search pages.
+- The Tools hub uses an original layered-accounting SVG illustration with better responsive layouts, visible focus, five functional utilities, and a guide-reading section.
+- Site-level `SITE_ORIGIN` now owns canonical URL configuration in shared layout, tools and homepage JSON-LD; the sitemap and llms.txt remain materialized public files.
+- `pnpm --dir apps/site seo:check` scans routes for metadata/canonicals and compares their URLs against the sitemap and llms.txt. CI runs this audit before the production build.
+
+### Domain transition hold
+`tammy.tax` is the desired branded hostname, but **do not** change `SITE_ORIGIN`, sitemap, robots.txt or llms.txt until the ChatGPT Sites custom-domain validation, apex routing and HTTPS work on that hostname. Once verified, change them together, build, deploy and validate live canonical tags and sitemap. No domain or DNS change is part of this code-only PR. The preceding `tammy-accounting.castlemilk.chatgpt.site` canonical remains correct until migration.
+
+### Release boundaries
+Site changes do not change Tammy's desktop application, ATO/EVTE/SBR readiness, public download availability, tax eligibility or business registration. Generated illustration is decorative; no synthetic financial evidence is claimed as customer data or performance proof.

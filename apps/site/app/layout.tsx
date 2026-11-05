@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import { publicContent } from "../content/public-content.generated";
 import "./globals.css";
+import { SITE_ORIGIN } from "../lib/site-config";
 
 const { identity } = publicContent;
-const publicOrigin = "https://tammy-accounting.castlemilk.chatgpt.site";
+const publicOrigin = SITE_ORIGIN;
 const socialImage = `${publicOrigin}/og.png`;
 
 export const metadata: Metadata = {

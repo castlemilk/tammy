@@ -1409,3 +1409,7 @@ body {
 .landing-tools-list a:hover strong { color: var(--l-forest); }
 @media (max-width: 840px) { .landing-tools-section { grid-template-columns: 1fr; } }
 @media (max-width: 600px) { .landing-tools-list a { padding: 15px 2px; } }
+
+/* Companion editorial resources stay secondary to the main product story. */
+.landing-guides-link { margin-left: 22px; }
+@media (max-width: 700px) { .landing-guides-link { display: flex !important; margin: 18px 0 0; } }
