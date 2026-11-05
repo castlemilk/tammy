@@ -1,0 +1,48 @@
+name: Tammy marketing site
+
+on:
+  push:
+    paths:
+      - "apps/site/**"
+      - ".github/workflows/tammy-site.yml"
+  pull_request:
+    paths:
+      - "apps/site/**"
+      - ".github/workflows/tammy-site.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tammy-site-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify-site:
+    name: Typecheck, lint, test and build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Check out source
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
+        with:
+          persist-credentials: false
+      - name: Use pinned Node.js
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
+        with:
+          node-version: 24.18.0
+          package-manager-cache: false
+      - name: Use pinned pnpm
+        run: |
+          corepack enable pnpm
+          corepack prepare pnpm@11.15.0 --activate
+      - name: Install site dependencies from lockfile
+        run: pnpm install --frozen-lockfile --filter sites-project...
+      - name: Site typecheck
+        run: pnpm --dir apps/site typecheck
+      - name: Site lint
+        run: pnpm --dir apps/site lint
+      - name: Site tests
+        run: pnpm --dir apps/site test
+      - name: Site build
+        run: pnpm --dir apps/site build

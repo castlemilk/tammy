@@ -69,8 +69,8 @@ export default function SupportPage() {
             with the ATO.
           </p>
           <p>
-            A customer's RAM authorisation, an imported machine credential, and a software
-            provider's ATO registration or security-framework status are separate matters. The
+            A customer’s RAM authorisation, an imported machine credential, and a software
+            provider’s ATO registration or security-framework status are separate matters. The
             privacy policy explains those boundaries and links to current ATO information.
           </p>
         </section>
