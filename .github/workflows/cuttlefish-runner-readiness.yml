@@ -19,7 +19,7 @@ permissions:
 jobs:
   verify-cuttlefish:
     name: Verify Cuttlefish Linux runner for Tammy
-    runs-on: [self-hosted, Linux, ARM64, cuttlefish, container]
+    runs-on: [self-hosted, linux, ARM64, tammy-linux-ci]
     timeout-minutes: 10
     steps:
       - name: Verify Cuttlefish identity and isolation boundaries
@@ -30,7 +30,7 @@ jobs:
           test "${RUNNER_ARCH}" = ARM64
           test "$(uname -m)" = aarch64
           case "${RUNNER_NAME}" in
-            cuttlefish-linux-*) ;;
+            cf-vm-*) ;;
             *) echo "RUNNER_NOT_CUTTLEFISH: ${RUNNER_NAME}" >&2; exit 1 ;;
           esac
           test "${GITHUB_REPOSITORY}" = castlemilk/tammy

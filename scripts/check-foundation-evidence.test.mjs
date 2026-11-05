@@ -176,7 +176,7 @@ test("retains runner provisioning, evidence classification, and artifacts around
     assert.match(workflow, /corepack enable pnpm\n {10}corepack prepare pnpm@11\.15\.0 --activate/);
     assert.match(workflow, /pnpm install --frozen-lockfile/);
   }
-  assert.match(foundationWorkflow, /runs-on: \[self-hosted, Linux, ARM64, cuttlefish, container\][\s\S]*timeout-minutes: 30/);
+  assert.match(foundationWorkflow, /runs-on: \[self-hosted, linux, ARM64, tammy-linux-ci\][\s\S]*timeout-minutes: 30/);
   assert.match(foundationWorkflow, /runs-on: macos-15\n\s*timeout-minutes: 40/);
   assert.match(foundationWorkflow, /runs-on: windows-2025[\s\S]*timeout-minutes: 30/);
   assert.match(foundationWorkflow, /Verify Cuttlefish Linux runner identity[\s\S]*RUNNER_NOT_CUTTLEFISH/);
