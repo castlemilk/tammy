@@ -24,3 +24,23 @@ jobs:
       - name: Emit complete Biome diagnostics for targeted remediation
         continue-on-error: true
         run: pnpm exec biome check --max-diagnostics=300 .
+
+      - name: Format only the five confirmed Biome violations
+        run: |
+          pnpm exec biome check --write \
+            packages/invoices/src/pdf-browser.ts \
+            packages/invoices/src/quote-pdf.test.ts \
+            packages/invoices/src/quote-pdf.ts \
+            scripts/check-growth-backlog.mjs \
+            scripts/check-xero-roadmap.mjs
+          for file in \
+            packages/invoices/src/pdf-browser.ts \
+            packages/invoices/src/quote-pdf.test.ts \
+            packages/invoices/src/quote-pdf.ts \
+            scripts/check-growth-backlog.mjs \
+            scripts/check-xero-roadmap.mjs; do
+            printf 'TAMMY_FMT_BEGIN|%s|\n' "$file"
+            base64 -w0 "$file"
+            printf '\n'
+            printf 'TAMMY_FMT_END|%s|\n' "$file"
+          done
