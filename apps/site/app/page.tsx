@@ -394,14 +394,14 @@ export default function Home() {
             <div className="landing-journal-intro">
               <p className="landing-kicker">The Tammy Journal</p>
               <h2 id="landing-journal-heading">Better questions, clearer numbers.</h2>
-              <p>Carefully worked notes on GST, source records, BAS and the everyday work of bookkeeping.</p>
+              <p>Carefully worked notes on GST timing, bank receipts, month-end reviews and business decisions.</p>
               <a className="landing-text-link" href="/blog">Explore the journal <span aria-hidden="true">↗</span></a>
             </div>
             <div className="landing-journal-stories">
+              <a href="/blog/which-quarter-gets-the-gst"><span>GST</span><strong>The BAS quarter has two clocks.</strong><span aria-hidden="true">↗</span></a>
+              <a href="/blog/not-every-bank-deposit-is-sales"><span>Bookkeeping</span><strong>Not every bank deposit is sales.</strong><span aria-hidden="true">↗</span></a>
+              <a href="/blog/the-month-end-review-that-found-220"><span>Bookkeeping</span><strong>The month-end close that found $220.</strong><span aria-hidden="true">↗</span></a>
               <a href="/blog/the-price-rise-that-didnt-fix-margin"><span>Pricing</span><strong>The price rise that didn&apos;t fix the margin.</strong><span aria-hidden="true">↗</span></a>
-              <a href="/blog/the-invoice-ageing-trap"><span>Invoicing</span><strong>The ageing report is using the wrong clock.</strong><span aria-hidden="true">↗</span></a>
-              <a href="/blog/when-profit-and-cash-part-ways"><span>Cash flow</span><strong>When profit and cash part ways.</strong><span aria-hidden="true">↗</span></a>
-              <a href="/blog/when-to-register-for-gst-australia"><span>GST</span><strong>When GST registration becomes necessary.</strong><span aria-hidden="true">↗</span></a>
             </div>
           </section>
 

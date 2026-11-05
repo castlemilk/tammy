@@ -1,6 +1,9 @@
 /* oxlint-disable next/no-html-link-for-pages -- Vinext serves these real same-origin routes. */
 /* oxlint-disable next/no-img-element -- Editorial figures use committed local artwork, not remote pixels. */
 import type { CSSProperties, ElementType, ReactNode } from "react";
+import { ScenarioExplorer } from "./scenario-explorer";
+import { ReviewChecklist } from "./review-checklist";
+import { JournalEntry } from "./journal-entry";
 
 type CalloutTone = "note" | "caution" | "method";
 
@@ -156,4 +159,7 @@ export const tammyMdxComponents: Record<string, ElementType> = {
   Figure,
   ToolLink,
   SourceNote,
+  ScenarioExplorer,
+  ReviewChecklist,
+  JournalEntry,
 };

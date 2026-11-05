@@ -34,7 +34,7 @@ Ban opener clichés (`in today's fast-paced world`, `in an ever-evolving landsca
 - Assets: original, text-free local SVG under `apps/site/public/assets/`, with `cover` and useful `coverAlt`. Charts and numeric results are **real semantic HTML or SVG components**; never paint numbers into an image.
 - Navigation: add meaningful contextual links to existing tools, guides and other articles. Register the article URL in `public/sitemap.xml`, `public/rss.xml` and `public/llms.txt`. Keep metadata and content aligned.
 - Source snippets use official links; external citations use `<SourceNote url="..." label="..."/>` and do not rely only on an unspecific footer link.
-- Use examples from `references/mdx-component-catalog.md`. Prefer `<Callout>`, `<WorkedExample>`, `<Formula>`, `<MoneyTable>`, `<BarChart>`, `<Figure>`, `<ToolLink>`, and `<SourceNote>` before introducing a new component.
+- Use examples from `references/mdx-component-catalog.md`. Prefer `<Callout>`, `<WorkedExample>`, `<Formula>`, `<MoneyTable>`, `<BarChart>`, `<Figure>`, `<ToolLink>`, and `<SourceNote>` before introducing a new component. For a true accounting distinction that improves by comparison, reuse `<ScenarioExplorer>`. For multi-line debit/credit examples, use `<JournalEntry>` which rejects an unbalanced entry. For practical reviews, `<ReviewChecklist>` is a local-only reader aid, never a claim of automatic verification.
 
 ## Design gate (Hallmark, Design Taste, Impeccable)
 
@@ -54,3 +54,16 @@ The approved Soft Precision world wins: warm ivory, forest and sage, ledger-like
 4. Open a draft PR with source links, evidence, new assets and exact testing results. No unsupported SEO ranking claims. Never call a build a Sites deployment. Preserve the old canonical until `tammy.tax` is serving the verified version.
 
 A completed article has a unique insight, specific examples, connected components, accurate references and a working reading experience. Quantity of pages is not a quality metric.
+
+## Continued editorial work: a richer block grammar
+
+Do not insert blocks just because they exist. For each article, choose one primary reading device:
+- Timing or accounting-method uncertainty: **ScenarioExplorer** with concrete alternative periods, results and explanations.
+- Double-entry bookkeeping: **JournalEntry** with cents and an internally balanced debit/credit total.
+- A review task readers can actually perform: **ReviewChecklist** whose state is explicitly local and never treated as saved evidence.
+
+Pair with a MoneyTable, Formula or an accessible BarChart when the narrative genuinely benefits. Keep one descriptive chart title and label units and hypothetical assumptions. Never turn a single figure into four duplicate display styles.
+
+For each new article, also test the selected block's semantic labels and every numeric relationship. Prefer reusable domain components over bespoke decorations. Visual art must be concept-specific, text-free, local and subordinate to the accessible figures.
+
+When editing older posts, preserve their source anchors and continue to validate canonical URLs and the RSS inventory. Avoid manual hardcoded post totals in tests; derive expected counts from the curated blog inventory when possible.

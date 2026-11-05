@@ -1,0 +1,61 @@
+The bank statement closes at **$15,000**. Your cash ledger closes at **$14,780**.
+
+The difference is only $220, which makes it tempting to create an adjusting entry and move on. That's also how a perfectly ordinary mistake survives into next month's records.
+
+A reconciliation works best when the mismatch is treated as a question, not as an amount that needs to disappear.
+
+<h2 id="find-where-the-difference-begins">Find where the difference begins</h2>
+
+Take a fictional small business reviewing its bank account at month-end. The bank's closing balance is $15,000, while the accounting ledger says $14,780. Both are drawn from the same account and the same closing date.
+
+<MoneyTable caption="Illustrative closing balances, AUD; cash-account comparison only" columns={["Source", "Balance", "Difference from bank"]} rows={[["Bank statement", "$15,000", "—"],["Cash ledger before review", "$14,780", "−$220"],["Cash ledger after correction", "$15,000", "$0"]]} />
+
+The ledger is **$220 lower** than the bank. A genuine missing outgoing payment would usually make the ledger too high, not too low. That direction helps narrow the investigation.
+
+<Formula label="Difference to explain" expression="Bank closing balance − ledger closing balance" result="$15,000 − $14,780 = $220" />
+
+<h2 id="trace-the-source-lines">Trace the source lines before posting anything</h2>
+
+You compare the bank statement rows with the ledger transactions. A $220 supplier payment appears once on the statement but twice in the books. The duplicate posting reduced the ledger cash balance by an extra $220.
+
+Check the supplier document, the single genuine bank movement and both bookkeeping records. If the second ledger entry is erroneous, correct it through the accounting system's appropriate reversal or audit process. The cash balance then rises from $14,780 to **$15,000** and agrees with the statement.
+
+<ScenarioExplorer title="See what correcting the duplicate changes" scenarios={[
+  {label:"Before review",context:"The bank shows one $220 supplier payment. The ledger records that payment twice.",rows:[["Bank closing balance","$15,000"],["Ledger closing balance","$14,780"],["Unexplained difference","$220"]],conclusion:"Do not force a new bank transaction into the books. Investigate the duplicate ledger posting."},
+  {label:"After correction",context:"The duplicate ledger posting is reversed or otherwise corrected with its audit trail retained.",rows:[["Bank closing balance","$15,000"],["Corrected ledger balance","$15,000"],["Remaining difference","$0"]],conclusion:"The cash-account balances now agree in this simplified example."}
+]} />
+
+In real books, the duplicate may also have affected an expense, a payable or a GST account. The correct reversal depends on what the original entry actually posted. Confirm the other side rather than fixing only the cash account.
+
+<Figure src="/assets/journal-month-end-close.svg" alt="Two overlapping ledger pages and a brass reconciliation seal resting over aligned record lines" caption="Editorial illustration of a month-end review. The table and scenario comparison provide the numerical evidence." />
+
+<h2 id="check-more-than-bank-balance">A close is more than matching one balance</h2>
+
+The bank account is one checkpoint. A disciplined month-end review can also include unpaid customer invoices, bills that have not yet been settled, supporting documents, unexpected account movements and incomplete journal entries.
+
+The ATO's [record-keeping task guidance](https://smallbusiness.taxsuperandyou.gov.au/record-keeping/when-to-do-record-keeping-and-reporting-tasks) explicitly includes bank reconciliation among regular tasks. [Banking record tips](https://smallbusiness.taxsuperandyou.gov.au/record-keeping/tips-for-banking-records) explain how statement downloads and reconciliations help identify fees, omissions and discrepancies.
+
+<ReviewChecklist title="A practical month-end review" items={[
+  "Confirm the statement is for the right bank account and covers the closing date.",
+  "Compare the opening and closing balances with the ledger.",
+  "Trace unmatched and duplicated movements to source documents.",
+  "Review customer invoices still unpaid and bills awaiting settlement.",
+  "Check GST treatment and any adjusting entries separately.",
+  "Preserve the reconciliation, supporting files and a recoverable backup."
+]} />
+
+The checklist is for the reader's own review. Ticking a box does not reconcile a real account, lodge a BAS or save any work to Tammy.
+
+<h2 id="leave-a-readable-trail">Leave enough evidence for the next review</h2>
+
+Save the statement, document why the difference occurred, link any corrective entry to its original source and keep a list of unresolved items. If the next month's opening balance doesn't match the prior month's reviewed close, you should be able to trace what changed.
+
+Tammy's development workspace supports imported bank-statement files and manual reconciliation review. It does **not** claim to connect to live bank feeds or automatically post adjustments.
+
+The [records and receipts guide](/blog/business-receipts-five-year-record-keeping) explains why source documents matter; the [cash-flow guide](/blog/the-12-week-cash-flow-view) explains why a verified historical balance is only the starting point for forecasting.
+
+<ToolLink href="/tools/cash-runway-calculator" label="Estimate cash cover from verified numbers" description="Use your reconciled cash balance and realistic monthly receipts and payments." />
+
+<SourceNote url="https://smallbusiness.taxsuperandyou.gov.au/record-keeping/when-to-do-record-keeping-and-reporting-tasks" label="ATO: When to do record-keeping and reporting tasks" context="Lists routine reconciliations, monthly reporting tasks and obligations." />
+
+<SourceNote url="https://smallbusiness.taxsuperandyou.gov.au/record-keeping/tips-for-banking-records" label="ATO: Tips for banking records" context="Explains statement downloads, error identification and the value of regular bank reconciliation." />

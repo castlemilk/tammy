@@ -148,3 +148,194 @@
 @media (prefers-reduced-motion: reduce) {
   .blog-story-copy .tammy-mdx-chart-fill { transition: none; }
 }
+
+/* Tammy's next editorial instruments: honest scenario switching, balanced
+   journal entries, and a local-only review checklist. No fake performance data. */
+.blog-story-copy .tammy-mdx-scenarios,
+.blog-story-copy .tammy-mdx-review,
+.blog-story-copy .tammy-mdx-journal-entry {
+  margin: 36px 0 45px;
+  max-width: 100%;
+}
+.blog-story-copy .tammy-mdx-scenarios {
+  padding: clamp(22px, 4vw, 33px);
+  border-radius: 14px;
+  background: var(--t-sage);
+}
+.blog-story-copy .tammy-mdx-scenarios-heading {
+  display: flex;
+  align-items: baseline;
+  gap: 15px;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+.blog-story-copy .tammy-mdx-scenarios-heading h3 {
+  font: 550 clamp(26px, 3vw, 37px)/1.12 var(--t-display);
+  margin: 0 0 20px;
+}
+.blog-story-copy .tammy-mdx-scenarios-heading > span {
+  color: var(--t-muted);
+  font-size: 12px;
+}
+.blog-story-copy .tammy-mdx-scenario-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+  padding: 0;
+  margin: 0 0 24px;
+  border: 0;
+}
+.blog-story-copy .tammy-mdx-scenario-options legend {
+  padding: 0;
+  margin-bottom: 10px;
+  font-size: 12px;
+  font-weight: 650;
+}
+.blog-story-copy .tammy-mdx-scenario-options button {
+  min-height: 44px;
+  padding: 10px 17px;
+  cursor: pointer;
+  border: 1px solid var(--t-line);
+  background: var(--t-paper);
+  color: var(--t-ink);
+  border-radius: 10px;
+  font: 650 13px/1.3 var(--t-body);
+}
+.blog-story-copy .tammy-mdx-scenario-options button:hover {
+  border-color: var(--t-forest);
+}
+.blog-story-copy .tammy-mdx-scenario-options button[aria-pressed="true"] {
+  background: var(--t-forest);
+  color: var(--t-paper);
+  border-color: var(--t-forest);
+}
+.blog-story-copy .tammy-mdx-scenario-options button:focus-visible,
+.blog-story-copy .tammy-mdx-review input:focus-visible,
+.blog-story-copy .tammy-mdx-review button:focus-visible {
+  outline: 3px solid var(--t-forest);
+  outline-offset: 3px;
+}
+.blog-story-copy .tammy-mdx-scenario-data {
+  background: var(--t-paper);
+  border: 1px solid var(--t-line);
+  padding: clamp(20px, 3vw, 28px);
+  border-radius: 10px;
+}
+.blog-story-copy .tammy-mdx-scenario-data > p:first-child {
+  color: var(--t-muted);
+  font-size: 14px;
+  line-height: 1.6;
+  margin-bottom: 20px;
+}
+.blog-story-copy .tammy-mdx-scenario-data dl { margin: 0 0 18px; }
+.blog-story-copy .tammy-mdx-scenario-data dl > div {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: 20px; padding: 13px 0; border-bottom: 1px solid var(--t-line);
+}
+.blog-story-copy .tammy-mdx-scenario-data dt { font-size: 14px; line-height: 1.55; }
+.blog-story-copy .tammy-mdx-scenario-data dd {
+  text-align: right; font-variant-numeric: tabular-nums;
+  font: 600 clamp(19px, 2.6vw, 26px)/1.2 var(--t-display);
+  margin: 0;
+}
+.blog-story-copy .tammy-mdx-scenario-data .tammy-mdx-scenario-conclusion {
+  font-size: 15px; line-height: 1.65; margin: 0;
+}
+.blog-story-copy .tammy-mdx-scenarios > small {
+  display: block; margin-top: 17px; color: var(--t-muted);
+  font-size: 12px; line-height: 1.6;
+}
+.blog-story-copy .tammy-mdx-review {
+  padding: clamp(22px, 4vw, 35px);
+  border: 1px solid var(--t-line);
+  border-radius: 14px;
+  background: var(--t-paper);
+}
+.blog-story-copy .tammy-mdx-review-heading {
+  display: flex; flex-wrap: wrap; justify-content: space-between;
+  align-items: baseline; gap: 15px;
+  border-bottom: 1px solid var(--t-line); padding-bottom: 20px;
+}
+.blog-story-copy .tammy-mdx-review-heading h3 {
+  font: 550 clamp(26px, 3vw, 35px)/1.15 var(--t-display); margin: 0;
+}
+.blog-story-copy .tammy-mdx-review-heading output {
+  font-size: 13px; color: var(--t-forest);
+  font-variant-numeric: tabular-nums;
+}
+.blog-story-copy .tammy-mdx-review-items label {
+  display: grid; grid-template-columns: 22px minmax(0, 1fr);
+  gap: 13px; align-items: start; padding: 16px 0;
+  border-bottom: 1px solid var(--t-line);
+  cursor: pointer;
+  font-size: 15px;
+}
+.blog-story-copy .tammy-mdx-review-items input {
+  accent-color: var(--t-forest);
+  width: 20px; height: 20px; margin: 2px 0 0;
+}
+.blog-story-copy .tammy-mdx-review-items label:has(input:checked) span {
+  color: var(--t-muted);
+}
+.blog-story-copy .tammy-mdx-review-footer {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 15px; margin-top: 22px;
+}
+.blog-story-copy .tammy-mdx-review-footer p {
+  font-size: 12px; line-height: 1.6;
+  color: var(--t-muted); margin: 0;
+}
+.blog-story-copy .tammy-mdx-review-footer button {
+  flex: 0 0 auto;
+  background: transparent; border: 1px solid var(--t-forest);
+  color: var(--t-forest); border-radius: 9px;
+  min-height: 44px; padding: 8px 13px;
+  font: 650 13px var(--t-body);
+  cursor: pointer;
+}
+.blog-story-copy .tammy-mdx-review-footer button:disabled {
+  opacity: .4; cursor: not-allowed;
+}
+.blog-story-copy .tammy-mdx-journal-entry {
+  background: var(--t-paper);
+  border: 1px solid var(--t-line);
+  border-radius: 12px;
+  padding: clamp(15px, 3vw, 30px);
+  overflow-x: auto;
+}
+.blog-story-copy .tammy-mdx-journal-entry table {
+  width: 100%; min-width: 360px; border-collapse: collapse;
+  font-variant-numeric: tabular-nums; font-size: 14px;
+}
+.blog-story-copy .tammy-mdx-journal-entry caption {
+  text-align: left; padding-bottom: 17px;
+  font: 550 clamp(21px, 2.7vw, 29px)/1.2 var(--t-display);
+  color: var(--t-forest);
+}
+.blog-story-copy .tammy-mdx-journal-entry :is(th, td) {
+  text-align: right; padding: 12px 8px;
+  border-bottom: 1px solid var(--t-line);
+}
+.blog-story-copy .tammy-mdx-journal-entry :is(th,td):first-child { text-align: left; }
+.blog-story-copy .tammy-mdx-journal-entry thead th {
+  color: var(--t-muted); font-size: 12px; font-weight: 700;
+}
+.blog-story-copy .tammy-mdx-journal-entry tbody th { font-weight: 550; }
+.blog-story-copy .tammy-mdx-journal-entry tfoot th,
+.blog-story-copy .tammy-mdx-journal-entry tfoot td {
+  color: var(--t-forest); font-weight: 750; border: 0; padding-top: 18px;
+}
+.blog-story-copy .tammy-mdx-journal-entry figcaption {
+  font-size: 12px; line-height: 1.65;
+  color: var(--t-muted); padding-top: 16px;
+}
+@media (max-width: 660px) {
+  .blog-story-copy .tammy-mdx-review-footer { align-items: stretch; flex-direction: column; }
+  .blog-story-copy .tammy-mdx-review-footer button { align-self: start; }
+  .blog-story-copy .tammy-mdx-scenario-data dl > div { gap: 12px; }
+  .blog-story-copy .tammy-mdx-journal-entry table { font-size: 12px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .blog-story-copy .tammy-mdx-scenario-options button,
+  .blog-story-copy .tammy-mdx-review button { transition: none; }
+}
