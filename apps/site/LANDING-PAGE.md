@@ -110,3 +110,15 @@ The tax content was checked against relevant ATO and Australian Government sourc
 - Journal: `how-to-lodge-bas-yourself-australia`, `lodge-sole-trader-tax-return-mytax`, `quarterly-bas-due-dates-australia`; each includes ATO primary source, worked examples, article metadata and local SVG.
 - Updated catalogue, home navigation, RSS, sitemap, llms.txt and tests. Existing Sites canonical remains unchanged until the publication and custom-domain move are verified.
 - These free tools are **not** an authorised ATO submission channel and **not** a tax/BAS agent service.
+
+## Shared UI component adoption (5 November 2026)
+
+Site controls use Tailwind v4 semantic tokens and the existing shadcn/UI
+configuration, with locally owned accessible Button, Input, Select, Checkbox,
+Label and Card primitives. The BAS quarter switch is the owner's actual Gamma
+SegmentedControl, vendored with its maintained CSS and mapped to Soft Precision
+through `app/design-system.css`. Tax/checklist and quote forms reuse these
+primitives. See `UI-COMPONENT-STANDARD.md` and
+`components/gamma/README.md` for design-system authority, review gates and
+the remaining gradual migration. This changes presentation only, not GST,
+BAS, quote arithmetic, customer data handling, publishing or ATO integration.

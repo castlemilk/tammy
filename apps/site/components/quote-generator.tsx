@@ -1,5 +1,9 @@
 "use client";
 import { useMemo, useState } from "react";
+import { Button } from "./ui/button";
+import { Input } from "./ui/input";
+import { Select } from "./ui/select";
+import { Checkbox } from "./ui/checkbox";
 import { formatAud } from "@tammy/invoices/model";
 import { compileQuote, type QuoteLineInput } from "../lib/tools/quote";
 
@@ -54,40 +58,40 @@ export function QuoteGenerator() {
       </div>
       <fieldset className="tools-form-section"><legend>From</legend>
         <div className="tools-form-two">
-          <label className="tools-field"><span>Business name *</span><input value={sellerName} maxLength={256} onChange={(event) => setSellerName(event.target.value)} /></label>
-          <label className="tools-field"><span>ABN (optional)</span><input inputMode="numeric" maxLength={20} value={sellerAbn} onChange={(event) => setSellerAbn(event.target.value)} /></label>
+          <label className="tools-field"><span>Business name *</span><Input value={sellerName} maxLength={256} onChange={(event) => setSellerName(event.target.value)} /></label>
+          <label className="tools-field"><span>ABN (optional)</span><Input inputMode="numeric" maxLength={20} value={sellerAbn} onChange={(event) => setSellerAbn(event.target.value)} /></label>
         </div>
         <label className="tools-field"><span>Business address</span><textarea value={sellerAddress} rows={2} maxLength={1000} onChange={(event) => setSellerAddress(event.target.value)} /></label>
-        <label className="tools-check"><input type="checkbox" checked={gstRegistered} onChange={(event) => setGstRegistered(event.target.checked)} /><span>My business is registered for GST</span></label>
+        <label className="tools-check"><Checkbox checked={gstRegistered} onChange={(event) => setGstRegistered(event.target.checked)} /><span>My business is registered for GST</span></label>
       </fieldset>
       <fieldset className="tools-form-section"><legend>Customer</legend>
         <div className="tools-form-two">
-          <label className="tools-field"><span>Customer name *</span><input value={customerName} maxLength={200} onChange={(event) => setCustomerName(event.target.value)} /></label>
-          <label className="tools-field"><span>Customer address</span><input value={customerAddress} maxLength={1000} onChange={(event) => setCustomerAddress(event.target.value)} /></label>
+          <label className="tools-field"><span>Customer name *</span><Input value={customerName} maxLength={200} onChange={(event) => setCustomerName(event.target.value)} /></label>
+          <label className="tools-field"><span>Customer address</span><Input value={customerAddress} maxLength={1000} onChange={(event) => setCustomerAddress(event.target.value)} /></label>
         </div>
       </fieldset>
       <fieldset className="tools-form-section"><legend>Quote details</legend>
         <div className="tools-form-three">
-          <label className="tools-field"><span>Reference *</span><input value={reference} maxLength={40} onChange={(event) => setReference(event.target.value)} /></label>
-          <label className="tools-field"><span>Quote date *</span><input type="date" value={quoteDate} onChange={(event) => setQuoteDate(event.target.value)} /></label>
-          <label className="tools-field"><span>Valid until *</span><input type="date" min={quoteDate || undefined} value={validUntil} onChange={(event) => setValidUntil(event.target.value)} /></label>
+          <label className="tools-field"><span>Reference *</span><Input value={reference} maxLength={40} onChange={(event) => setReference(event.target.value)} /></label>
+          <label className="tools-field"><span>Quote date *</span><Input type="date" value={quoteDate} onChange={(event) => setQuoteDate(event.target.value)} /></label>
+          <label className="tools-field"><span>Valid until *</span><Input type="date" min={quoteDate || undefined} value={validUntil} onChange={(event) => setValidUntil(event.target.value)} /></label>
         </div>
       </fieldset>
       <fieldset className="tools-form-section"><legend>Quoted work</legend>
         {lines.map((line, i) => <div className="tools-quote-line" key={i}>
-          <label className="tools-field"><span>Line {i + 1} description *</span><input maxLength={500} value={line.description} onChange={(e) => updateLine(i, { description: e.target.value })} /></label>
+          <label className="tools-field"><span>Line {i + 1} description *</span><Input maxLength={500} value={line.description} onChange={(e) => updateLine(i, { description: e.target.value })} /></label>
           <div className="tools-form-three">
-            <label className="tools-field"><span>Quantity</span><input inputMode="decimal" value={line.quantity} onChange={(e) => updateLine(i, { quantity: e.target.value })}/></label>
-            <label className="tools-field"><span>Unit price (ex GST, AUD)</span><input inputMode="decimal" value={line.unitPrice} onChange={(e) => updateLine(i, { unitPrice: e.target.value })}/></label>
-            {gstRegistered && <label className="tools-field"><span>Tax treatment</span><select value={line.treatment} onChange={(e) => updateLine(i, { treatment: e.target.value as QuoteLineInput["treatment"] })}><option value="taxable">Taxable (10%)</option><option value="gst-free">GST-free</option></select></label>}
+            <label className="tools-field"><span>Quantity</span><Input inputMode="decimal" value={line.quantity} onChange={(e) => updateLine(i, { quantity: e.target.value })}/></label>
+            <label className="tools-field"><span>Unit price (ex GST, AUD)</span><Input inputMode="decimal" value={line.unitPrice} onChange={(e) => updateLine(i, { unitPrice: e.target.value })}/></label>
+            {gstRegistered && <label className="tools-field"><span>Tax treatment</span><Select value={line.treatment} onChange={(e) => updateLine(i, { treatment: e.target.value as QuoteLineInput["treatment"] })}><option value="taxable">Taxable (10%)</option><option value="gst-free">GST-free</option></Select></label>}
           </div>
-          {lines.length > 1 && <button className="tools-quote-remove" type="button" onClick={() => setLines((previous) => previous.filter((_, j) => i !== j))}>Remove line {i + 1}</button>}
+          {lines.length > 1 && <Button variant="outline" className="tools-quote-remove" type="button" onClick={() => setLines((previous) => previous.filter((_, j) => i !== j))}>Remove line {i + 1}</Button>}
         </div>)}
-        <button className="tools-add-item" type="button" disabled={lines.length >= 20} onClick={() => setLines((previous) => [...previous, emptyLine()])}>+ Add line item</button>
+        <Button variant="outline" className="tools-add-item" type="button" disabled={lines.length >= 20} onClick={() => setLines((previous) => [...previous, emptyLine()])}>+ Add line item</Button>
       </fieldset>
       <label className="tools-field tools-quote-notes"><span>Notes and assumptions</span><textarea rows={3} maxLength={2000} value={notes} onChange={(e) => setNotes(e.target.value)}/></label>
       <div className="tools-form-actions">
-        <button className="tools-download" type="button" onClick={print}>Print or save quote as PDF</button>
+        <Button className="tools-download" type="button" onClick={print}>Print or save quote as PDF</Button>
         {message && <output className="tools-error">{message}</output>}
         <p className="tools-help">Printing opens your browser&apos;s print dialog; choose Save as PDF to create a PDF. No account, upload, issue posting or delivery occurs.</p>
       </div>

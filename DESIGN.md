@@ -193,3 +193,23 @@ from the same generated policy content as the public site. Settings uses a conci
 summary and an in-app route to the full document. The ABN browser lookup is explicit
 and uses the official register; checksum feedback is separate from registry evidence.
 These interactions do not change financial, approval or SBR production capabilities.
+
+## Public-site component standard (2026-11-05)
+
+The public Tammy Tools/Journal site now uses **Tailwind CSS 4**, the existing
+`apps/site/components.json` shadcn/ui configuration, shared React primitives
+under `apps/site/components/ui/`, and selective vendoring of the owner's
+**Gamma component catalogue**. The first Gamma component is its accessible
+`SegmentedControl`, adapted to the site's tokens via
+`apps/site/app/design-system.css`.
+
+**Token authority remains this Soft Precision system**. Web components use
+shadcn/Tailwind semantic aliases, Gamma components use a token bridge, and
+accounting-domain rules retain their separate validated package source.
+Do not introduce another CSS palette or recreate native form controls in each
+free tool. Reference `apps/site/UI-COMPONENT-STANDARD.md` for source provenance,
+implementation precedence, accessibility checks and adoption inventory.
+
+The macOS desktop's `apps/desktop/src/app/styles.css` remains the canonical
+desktop token implementation. A website control migration does not imply that
+new desktop accounting or ATO features exist.

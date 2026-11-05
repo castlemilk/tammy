@@ -2,6 +2,8 @@
 /* oxlint-disable next/no-html-link-for-pages -- Vinext serves these same-origin routes. */
 /* oxlint-disable next/no-img-element -- Local vector category icons have no raster payload. */
 import { useState } from "react";
+import { Button } from "./ui/button";
+import { Input } from "./ui/input";
 import { matchTools, publicTools, toolCategories, type ToolCategory } from "../lib/tool-library";
 
 export function ToolLibrary() {
@@ -22,10 +24,10 @@ export function ToolLibrary() {
           const count = item.id === "all"
             ? publicTools.length
             : publicTools.filter((tool) => tool.category === item.id).length;
-          return <button key={item.id} type="button" className="tools-library-filter"
+          return <Button key={item.id} type="button" variant="ghost" className="tools-library-filter"
             aria-pressed={category === item.id} onClick={() => setCategory(item.id)}>
             {item.label}<span className="tools-library-filter-count">{count}</span>
-          </button>;
+          </Button>;
         })}
       </div>
       </fieldset>
@@ -36,7 +38,7 @@ export function ToolLibrary() {
             <circle cx="10.5" cy="10.5" r="6.5" stroke="currentColor" strokeWidth="1.7"/>
             <path d="m15.3 15.3 4.4 4.4" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/>
           </svg>
-          <input type="search" name="tool-search" value={query}
+          <Input type="search" name="tool-search" value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="GST, pricing, invoices..." autoComplete="off" />
         </span>
@@ -75,7 +77,7 @@ export function ToolLibrary() {
     </div> : <div className="tools-library-empty">
       <strong>No matching tools.</strong>
       <p>Try searching for an accounting task, or browse the complete library.</p>
-      <button type="button" onClick={reset}>Show all tools</button>
+      <Button type="button" onClick={reset}>Show all tools</Button>
     </div>}
   </>;
 }

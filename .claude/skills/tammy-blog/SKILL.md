@@ -67,3 +67,14 @@ Pair with a MoneyTable, Formula or an accessible BarChart when the narrative gen
 For each new article, also test the selected block's semantic labels and every numeric relationship. Prefer reusable domain components over bespoke decorations. Visual art must be concept-specific, text-free, local and subordinate to the accessible figures.
 
 When editing older posts, preserve their source anchors and continue to validate canonical URLs and the RSS inventory. Avoid manual hardcoded post totals in tests; derive expected counts from the curated blog inventory when possible.
+
+## UI composition when adding a blog-related tool
+
+For new Tammy Journal interactive embeds or companion tools, consult
+`apps/site/UI-COMPONENT-STANDARD.md`. Start with the site's shadcn-compatible
+Tailwind primitives in `components/ui`; use maintained Gamma components via
+`components/gamma` and the Soft Precision token bridge for specialised
+interactions. Do not invent another font/color system or add one-off button,
+checkbox and input CSS in each article. Prefer the existing audited MDX blocks
+for numerical and explanatory content. Preserve source/financial verification
+and accessibility on every new control.
