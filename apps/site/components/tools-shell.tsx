@@ -13,6 +13,7 @@ export function ToolsShell({ children }: { readonly children: ReactNode }) {
         <nav aria-label="Tools navigation">
           <a href="/tools">All tools</a>
           <a href="/tools/invoice-generator">Invoices</a>
+          <a href="/tools/quote-generator">Quotes</a>
           <a href="/tools/gst-calculator">GST</a>
           <a href="/guides">Guides</a>
           <a href="/blog">Journal</a>

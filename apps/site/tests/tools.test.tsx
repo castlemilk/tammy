@@ -66,6 +66,7 @@ describe("Tammy business tools", () => {
     render(<ToolsPage />);
     expect(screen.getByRole("heading", { name: /Good tools/ })).toBeTruthy();
     expect(screen.getByRole("link", { name: /Invoice generator/i })).toBeTruthy();
+    expect(screen.getByRole("link", { name: /Quote generator/i })).toBeTruthy();
     expect(screen.getByRole("link", { name: /GST calculator/i })).toBeTruthy();
     expect(screen.getByRole("link", { name: /Invoice due-date calculator/i })).toBeTruthy();
     expect(toolsMetadata.alternates).toEqual({ canonical: "/tools" });

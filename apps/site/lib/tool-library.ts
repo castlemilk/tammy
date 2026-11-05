@@ -30,6 +30,13 @@ export const publicTools: readonly PublicTool[] = [
     note: "PDF export", keywords: "invoice tax ABN document pdf", featured: true,
   },
   {
+    href: "/tools/quote-generator",
+    name: "Quote generator",
+    summary: "Create an itemised estimate with GST and save it as a PDF from the print dialog.",
+    category: "invoicing", categoryLabel: "Invoicing", icon: "invoices",
+    note: "Print or save PDF", keywords: "quote estimate proposal price terms printable",
+  },
+  {
     href: "/tools/gst-calculator",
     name: "GST calculator",
     summary: "Add GST or extract the 10% component from an inclusive amount.",
