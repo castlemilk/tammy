@@ -1,5 +1,5 @@
 "use client";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { addCalendarDays, aud } from "../lib/tools/calculations";
 import {
   computeCashForecast, exampleForecast, forecastToCsv, parseForecastMoney,
@@ -18,7 +18,7 @@ interface EditableMovement {
   amount: string;
   direction: "receipt" | "payment";
 }
-const START_DATE = "2026-11-05";
+
 const parseLines = (lines: readonly EditableMovement[]): ForecastMovement[] =>
   lines.map((line) => ({
     id:line.id,date:line.date,description:line.description.trim(),
@@ -31,7 +31,11 @@ function downloadCsv(content: string, name: string) {
   window.setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
 export function CashFlowForecast() {
-  const [start,setStart]=useState(START_DATE);
+  const [start,setStart]=useState("");
+  useEffect(()=>{
+    const now=new Date();
+    setStart(new Date(now.getTime()-now.getTimezoneOffset()*60000).toISOString().slice(0,10));
+  },[]);
   const [opening,setOpening]=useState("12000.00");
   const [lines,setLines]=useState<EditableMovement[]>([]);
   const [notice,setNotice]=useState("");
@@ -88,7 +92,7 @@ export function CashFlowForecast() {
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-3">
           <h3 className="font-semibold">Expected movements</h3>
           <div className="flex flex-wrap gap-2">
-            <Button variant="outline" size="sm" onClick={fillExample}>Use sample figures</Button>
+            <Button variant="outline" size="sm" disabled={!start} onClick={fillExample}>Use sample figures</Button>
             <Button variant="secondary" size="sm" onClick={add} disabled={lines.length>=150}>Add movement</Button>
           </div>
         </div>
