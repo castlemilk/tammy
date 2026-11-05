@@ -1,0 +1,17 @@
+/* Tammy Tools: print-friendly self-lodgement preparation, not an ATO filing UI. */
+.tools-checker { margin:44px 0 70px; border:1px solid var(--t-line); padding:clamp(22px,4vw,45px); border-radius:13px; background:var(--t-paper); }
+.tools-checker-header { display:flex; justify-content:space-between; gap:22px; align-items:center; flex-wrap:wrap; padding-bottom:25px; border-bottom:1px solid var(--t-line); }
+.tools-checker-header h2 { font-family:var(--t-display); font-size:clamp(28px,3vw,40px); margin:0; font-weight:500; }
+.tools-checker-header .tools-field { min-width:190px; }
+.tools-checker-progress { display:block; font-variant-numeric:tabular-nums; font-size:14px; font-weight:700; color:var(--t-forest); margin:21px 0 8px; }
+.tools-checker-items { border-top:1px solid var(--t-line); }
+.tools-checker-item { display:grid; grid-template-columns:22px minmax(0,1fr); align-items:start; gap:15px; padding:20px 0; border-bottom:1px solid var(--t-line); cursor:pointer; }
+.tools-checker-item input { width:20px; height:20px; accent-color:var(--t-forest); margin:3px 0 0; }
+.tools-checker-item strong { display:block; font-size:16px; color:var(--t-ink); margin-bottom:6px; }
+.tools-checker-item small { display:block; font-size:14px; color:var(--t-muted); line-height:1.65; }
+.tools-checker-actions { display:flex; flex-wrap:wrap; gap:14px; align-items:center; margin:30px 0; }
+.tools-checker-actions button { padding:11px 17px; border:1px solid var(--t-forest); border-radius:9px; min-height:44px; font:650 14px var(--t-body); color:var(--t-forest); background:transparent; cursor:pointer; }
+.tools-checker-actions button:first-child { background:var(--t-forest); color:var(--t-paper); }
+.tools-checker-actions button:disabled { opacity:.4; cursor:not-allowed; }
+.tools-checker-actions a { font-size:14px; font-weight:700; text-decoration:underline; text-underline-offset:3px; }
+@media print { .tools-shell > header,.tools-shell > footer,.tools-breadcrumb,.tools-page-heading,.tools-explain,.tools-related,.tools-checker-actions { display:none !important; } .tools-shell { width:100% !important; } .tools-checker { border:0; padding:0; } .tools-checker-item { break-inside:avoid; } }

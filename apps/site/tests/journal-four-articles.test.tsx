@@ -40,10 +40,10 @@ describe("Tammy Journal source-backed article expansion", () => {
 
   it("highlights the newest original story and shows illustrated archive entries", () => {
     const { container } = render(<BlogPage />);
-    const title = screen.getByRole("heading", { level: 2, name: /The BAS quarter has two clocks/ });
+    const title = screen.getByRole("heading", { level: 2, name: /Lodge your own BAS/ });
     expect(title).toBeTruthy();
-    expect(container.querySelector(".blog-feature-hero-art")?.getAttribute("src")).toBe("/assets/journal-gst-two-periods.svg");
-    expect(container.querySelectorAll(".blog-archive-art").length).toBe(9);
+    expect(container.querySelector(".blog-feature-hero-art")?.getAttribute("src")).toBe("/assets/journal-self-lodge-bas.svg");
+    expect(container.querySelectorAll(".blog-archive-art").length).toBe(blogPosts.filter((post) => post.cover).length - 1);
     expect(screen.getByRole("link", { name: /Keep the evidence behind the entry/ })).toBeTruthy();
     expect(screen.getByRole("link", { name: /Make the bank and ledger agree/ })).toBeTruthy();
   });

@@ -83,3 +83,13 @@ These stories are authored in .mdx, using registered local components for source
 These new MDX posts use an accessible scenario explorer, validated balanced journal entries, and/or a local-only reader checklist. Numbers are illustrative, source-backed and never taken from real business records.
 
 - [Quote generator](https://tammy-accounting.castlemilk.chatgpt.site/tools/quote-generator) - anonymous itemised quote, browser printing or Save as PDF; never issues invoices, collects payments, posts accounting or uploads customer details.
+
+## Free self-lodgement preparation (5 November 2026)
+
+- [Simpler BAS GST workpaper](https://tammy-accounting.castlemilk.chatgpt.site/tools/bas-workpaper) - narrow G1 / 1A / 1B calculation from already classified ordinary taxable sales and fully creditable purchases; standard due-date reference only, not eligible-credit verification or lodging.
+- [Sole trader income-tax checklist](https://tammy-accounting.castlemilk.chatgpt.site/tools/sole-trader-tax-checklist) - client-only printable checklist for an individual business income tax return using ATO myTax; no personal details stored.
+- [Lodge your own BAS, without guessing.](https://tammy-accounting.castlemilk.chatgpt.site/blog/how-to-lodge-bas-yourself-australia) - Find the ATO activity statement, prepare reviewed G1/1A/1B figures and lodge online through an official ATO channel.
+- [Your sole-trader return goes through myTax.](https://tammy-accounting.castlemilk.chatgpt.site/blog/lodge-sole-trader-tax-return-mytax) - Sole trader income and deductions belong in the individual myTax return, not a separate company return.
+- [Four quarters. Check the actual BAS deadline.](https://tammy-accounting.castlemilk.chatgpt.site/blog/quarterly-bas-due-dates-australia) - Standard quarterly BAS reference dates with conditional extensions, weekends and the ATO-issued due date.
+
+The article sources are ATO and Australian Government official guidance. Tammy does not electronically lodge a BAS or income-tax return, determine actual filing deadlines, submit user data, or act as an agent.
