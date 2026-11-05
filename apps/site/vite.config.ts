@@ -1,5 +1,7 @@
 import { sites } from "@openai/sites-vite-plugin";
 import tailwindcss from "@tailwindcss/postcss";
+import mdx from "@mdx-js/rollup";
+import remarkGfm from "remark-gfm";
 import vinext from "vinext";
 import { defineConfig } from "vite";
 import hostingConfig from "./.openai/hosting.json";
@@ -54,6 +56,7 @@ export default defineConfig(async () => {
       ? { watch: { useFsEvents: false, usePolling: true } }
       : undefined,
     plugins: [
+      { enforce: "pre", ...mdx({ remarkPlugins: [remarkGfm] }) },
       vinext(),
       sites(),
       cloudflare({

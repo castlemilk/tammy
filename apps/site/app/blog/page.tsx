@@ -6,7 +6,7 @@ import { blogPath, blogPosts } from "../../lib/blog/posts";
 
 export const metadata: Metadata = {
   title: "Tammy Journal | Australian accounting, invoicing and cash flow",
-  description: "Australian small-business articles on GST registration, record keeping, BAS labels, bank reconciliation, cash flow, invoicing and margins, with worked examples.",
+  description: "Australian accounting articles on pricing sensitivity, invoice ageing, accrual profit versus cash, GST, BAS and bookkeeping, with worked examples.",
   alternates: { canonical: "/blog" },
   openGraph: {
     type: "website", title: "The Tammy Journal",
@@ -42,7 +42,7 @@ export default function BlogPage() {
       </div>
     </section>
     <section className="blog-archive" aria-labelledby="blog-latest">
-      <div className="blog-archive-heading"><h2 id="blog-latest">From the journal</h2><p>GST, record keeping, BAS, bookkeeping and finance, with worked examples.</p></div>
+      <div className="blog-archive-heading"><h2 id="blog-latest">From the journal</h2><p>Pricing, overdue invoices, cash flow, GST and bookkeeping, with worked examples.</p></div>
       <div className="blog-archive-list">
         {others.map((post) => <a key={post.slug} href={blogPath(post)} className="blog-archive-item">
           <div><span className="blog-archive-category">{post.category}</span><time dateTime={post.publishedAt}>{post.publishedLabel}</time></div>
