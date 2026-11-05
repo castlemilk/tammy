@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, type ChangeEvent, type FormEvent } from "react";
+import { useRef, useState, type ChangeEvent, type SyntheticEvent } from "react";
 import { aud } from "../lib/tools/calculations";
 import {
   EXPENSE_CATEGORIES, GST_EVIDENCE, createExpenseRecord, exportExpenseCSV,
@@ -63,7 +63,7 @@ export function ExpenseOrganiser() {
     setError("");
   }
 
-  function addRecord(event: FormEvent<HTMLFormElement>) {
+  function addRecord(event: SyntheticEvent<HTMLFormElement>) {
     event.preventDefault();
     try {
       const next = createExpenseRecord({
@@ -268,7 +268,7 @@ export function ExpenseOrganiser() {
             <Input id="expense-import" type="file" accept=".json,application/json" onChange={(event) => void openJson(event)} className="cursor-pointer"/>
           </div>
           {error && <p role="alert" className="mt-4 text-sm font-semibold text-red-800">{error}</p>}
-          {notice && <p role="status" className="mt-4 text-sm text-primary">{notice}</p>}
+          {notice && <output className="mt-4 block text-sm text-primary">{notice}</output>}
           <p className="mt-4 text-xs leading-relaxed text-muted-foreground">Exports include supplier details and are not encrypted. Keep them private. Receipt files are not bundled with CSV or JSON exports; retain original files separately. Reloading the page clears this worksheet.</p>
         </CardContent>
       </Card>

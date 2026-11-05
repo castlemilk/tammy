@@ -40,8 +40,13 @@ function exactKeys(record: Record<string, unknown>, keys: readonly string[]) {
     Object.keys(record).every((key) => keys.includes(key));
 }
 function safeText(value: unknown, label: string, max: number, required = true): string {
+  const hasControl = typeof value === "string" &&
+    Array.from(value).some((char) => {
+      const point = char.charCodeAt(0);
+      return (point < 32 && point !== 9 && point !== 10 && point !== 13) || point === 127;
+    });
   if (typeof value !== "string" || value.length > max ||
-    (required && !value.trim()) || /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(value)) {
+    (required && !value.trim()) || hasControl) {
     throw new Error(label + " is missing, too long, or contains unsupported characters.");
   }
   return value.trim();

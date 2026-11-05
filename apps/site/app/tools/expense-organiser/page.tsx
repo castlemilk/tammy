@@ -31,7 +31,7 @@ export default function ExpenseOrganiserPage() {
       <h2 id="expenses-explained">A receipt is evidence, not a tax decision.</h2>
       <p>Record the amount actually paid, the supplier, date and what was purchased. Categorise it for your own review, then keep the original receipt with the exported register. A GST amount shown on a receipt does not automatically establish eligibility for a GST credit, and a business-use percentage alone does not determine a deduction.</p>
       <p>This tool does not connect to your bank, OCR documents, post accounting entries or send information to Tammy. Files are held only in the current browser session. The JSON worksheet is portable but not encrypted; it does not embed receipt PDFs or images.</p>
-      <p>For Australian source-document requirements, consult the <a target="_blank" rel="noopener noreferrer" href="https://www.ato.gov.au/businesses-and-organisations/preparing-lodging-and-paying/record-keeping-for-business">ATO business record-keeping guidance</a> and <a href="/blog/business-receipts-five-year-record-keeping">Tammy's record-keeping guide</a>.</p>
+      <p>For Australian source-document requirements, consult the <a target="_blank" rel="noopener noreferrer" href="https://www.ato.gov.au/businesses-and-organisations/preparing-lodging-and-paying/record-keeping-for-business">ATO business record-keeping guidance</a> and <a href="/blog/business-receipts-five-year-record-keeping">Tammy&apos;s record-keeping guide</a>.</p>
     </section>
     <aside className="tools-related" aria-label="Related resources">
       <a href="/blog/business-receipts-five-year-record-keeping">Why keeping source records matters <span aria-hidden="true">↗</span></a>
