@@ -6,7 +6,7 @@ import { blogPath, blogPosts } from "../../lib/blog/posts";
 
 export const metadata: Metadata = {
   title: "Tammy Journal | Australian accounting, invoicing and cash flow",
-  description: "Australian accounting articles on cash versus non-cash GST timing, bank deposit classification, month-end reconciliation, profit and cash flow, with worked examples.",
+  description: "Australian guides to lodging your own BAS, using myTax as a sole trader, BAS due dates, GST, reconciliation and cash flow, with source-backed examples.",
   alternates: { canonical: "/blog" },
   openGraph: {
     type: "website", title: "The Tammy Journal",

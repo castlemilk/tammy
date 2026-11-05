@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 720" width="1200" height="720" fill="none" aria-hidden="true">
+<defs><linearGradient id="light" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#FFFDF6"/><stop offset="1" stop-color="#DDEBDB"/></linearGradient><linearGradient id="green" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#86AF8E"/><stop offset="1" stop-color="#204B3A"/></linearGradient><filter id="shadow"><feDropShadow dx="0" dy="13" stdDeviation="18" flood-color="#244B36" flood-opacity=".15"/></filter></defs>
+<circle cx="597" cy="336" r="289" fill="#E7EEE2" stroke="#B6C8B1" stroke-width="2"/>
+<path d="M120 554C329 599 826 611 1095 547" stroke="#90AB92" stroke-width="2"/>
+<g filter="url(#shadow)"><path d="m258 166 315-49 67 378-315 54Z" fill="#BDD4BE" stroke="#769A80" stroke-width="2.8"/><path d="m301 151 320-9 26 411-317 10Z" fill="url(#light)" stroke="#90A994" stroke-width="2.8"/>
+<path d="M357 208h196" stroke="#336C4E" stroke-width="12" stroke-linecap="round"/><path d="M357 242h140" stroke="#93B299" stroke-width="4" stroke-linecap="round"/>
+<path d="M356 298h232M356 342h232M356 386h232M356 430h232M356 474h232" stroke="#B6CDBA" stroke-width="2.8"/>
+<path d="M356 503h232" stroke="#387653" stroke-width="6" stroke-linecap="round"/></g>
+<g filter="url(#shadow)"><path d="M720 248h249l15 286H703Z" fill="url(#green)" stroke="#356A4E" stroke-width="3"/><path d="M748 301h187M748 343h187M748 385h187" stroke="#B8D5BC" stroke-width="3" opacity=".8"/>
+<path d="m756 456 31 28 65-65" stroke="#EFF5E7" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/></g>
+<g stroke="#BEA876" stroke-width="3.2"><path d="M617 289c51-39 85-39 109-15"/><path d="M632 417c33 23 59 25 78 13"/></g><circle cx="618" cy="289" r="5" fill="#D7C192"/><circle cx="710" cy="430" r="5" fill="#D7C192"/>
+</svg>

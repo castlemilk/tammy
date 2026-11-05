@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 720" width="1200" height="720" fill="none" aria-hidden="true">
+<defs><linearGradient id="paper" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#FFFCF2"/><stop offset="1" stop-color="#DDE8D9"/></linearGradient><linearGradient id="green" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#629474"/><stop offset="1" stop-color="#1D4C39"/></linearGradient><filter id="shadow"><feDropShadow dx="0" dy="15" stdDeviation="20" flood-color="#183D2D" flood-opacity=".15"/></filter></defs>
+<circle cx="604" cy="343" r="299" fill="#E4EEDF" stroke="#A8BFA5" stroke-width="2"/><circle cx="604" cy="343" r="256" stroke="#B7CBB6" stroke-width="1.6"/>
+<g filter="url(#shadow)"><path d="M315 166h558v386H315Z" fill="url(#paper)" stroke="#769B7F" stroke-width="3"/><path d="M315 166h558v74H315Z" fill="url(#green)"/><path d="M412 137v78M774 137v78" stroke="#D7E7D7" stroke-width="19" stroke-linecap="round"/>
+<path d="M353 286h482M353 348h482M353 410h482M353 472h482" stroke="#AAC3AC" stroke-width="2.4"/>
+<path d="M471 265v240M592 265v240M713 265v240" stroke="#BBCFB9" stroke-width="1.8"/>
+<circle cx="776" cy="438" r="39" fill="#D8E4CE" stroke="#557E60" stroke-width="3"/><path d="m761 438 11 13 20-24" stroke="#3B704F" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/></g>
+<path d="M145 513c102 48 185 60 262 31M840 153c78-39 141-31 201 12" stroke="#90AB8D" stroke-width="1.9"/><g fill="#578166"><circle cx="145" cy="513" r="5"/><circle cx="1041" cy="165" r="5"/></g>
+</svg>

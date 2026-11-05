@@ -9,7 +9,7 @@ afterEach(cleanup);
 
 describe("Tammy practical tools directory", () => {
   it("lists every real tool once with unique, descriptive categories and valid local routes", () => {
-    expect(publicTools).toHaveLength(8);
+    expect(publicTools).toHaveLength(10);
     expect(new Set(publicTools.map((tool) => tool.href)).size).toBe(publicTools.length);
     expect(publicTools.filter((tool) => tool.featured)).toHaveLength(1);
     for (const tool of publicTools) {
@@ -22,8 +22,8 @@ describe("Tammy practical tools directory", () => {
   });
 
   it("matches by task, key term and category without inventing new results", () => {
-    expect(matchTools("", "all")).toHaveLength(8);
-    expect(matchTools("GST", "gst")).toHaveLength(2);
+    expect(matchTools("", "all")).toHaveLength(10);
+    expect(matchTools("GST", "gst")).toHaveLength(3);
     expect(matchTools("markup", "all").map((tool) => tool.href)).toEqual(["/tools/profit-margin-calculator"]);
     expect(matchTools("cash", "invoicing")).toHaveLength(0);
     expect(matchTools("  NET 30  ", "invoicing").map((tool) => tool.href))
@@ -32,11 +32,11 @@ describe("Tammy practical tools directory", () => {
 
   it("filters tool cards accessibly and preserves navigable links", () => {
     render(<ToolsPage />);
-    expect(screen.getByRole("status").textContent).toContain("8 tools");
+    expect(screen.getByRole("status").textContent).toContain("10 tools");
     expect(screen.getByRole("link", { name: /Invoice generator/i })).toBeTruthy();
 
-    fireEvent.click(screen.getByRole("button", { name: /Tax & GST/i }));
-    expect(screen.getByRole("status").textContent).toContain("2 tools");
+    fireEvent.click(screen.getByRole("button", { name: /GST & BAS/i }));
+    expect(screen.getByRole("status").textContent).toContain("3 tools");
     expect(screen.getByRole("link", { name: /ABN checker/i })).toBeTruthy();
     expect(screen.queryByRole("link", { name: /Invoice generator/i })).toBeNull();
 
@@ -53,7 +53,7 @@ describe("Tammy practical tools directory", () => {
     fireEvent.change(search, { target: { value: "no-such-service-xyz" } });
     expect(screen.getByText("No matching tools.")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Show all tools" }));
-    expect(screen.getByRole("status").textContent).toContain("8 tools");
+    expect(screen.getByRole("status").textContent).toContain("10 tools");
     expect(screen.getByRole("link", { name: /GST calculator/i })).toBeTruthy();
   });
 
@@ -71,6 +71,6 @@ describe("Tammy practical tools directory", () => {
     }
     const { container } = render(<BlogPage />);
     expect(container.querySelector(".blog-feature-hero-art")?.getAttribute("src"))
-      .toBe("/assets/journal-gst-two-periods.svg");
+      .toBe("/assets/journal-self-lodge-bas.svg");
   });
 });

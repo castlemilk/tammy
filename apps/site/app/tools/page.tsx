@@ -7,7 +7,7 @@ import { publicTools } from "../../lib/tool-library";
 
 export const metadata: Metadata = {
   title: "Free Australian business tools",
-  description: "Free Australian invoice PDF generator, GST and ABN checker, margin, break-even, cash runway and payment-date calculators. No signup or upload.",
+  description: "Free invoice and quote generators, BAS workpaper, sole-trader tax checklist, GST, pricing and cash flow tools. No signup or upload.",
   alternates: { canonical: "/tools" },
   keywords: ["Australian business calculators", "free invoice generator Australia", "GST calculator Australia", "ABN checker", "profit margin calculator", "break even calculator", "cash runway calculator"],
   openGraph: { title: "Free business tools | Tammy", description: "Invoices, GST and payment terms, made clearer.", url: origin + "/tools", type: "website" },
@@ -27,7 +27,7 @@ export default function ToolsPage() {
         <div>
           <p className="tools-overline">Tammy tools</p>
           <h1>Good tools. <em>Clearer books.</em></h1>
-          <p>Make invoices, check GST and ABNs, calculate margins and break-even points, or estimate cash runway. Everyday business tools, without a signup.</p>
+          <p>Make invoices, check GST, prepare a BAS example, organise sole-trader tax records, or model business finances. Everyday business tools, without a signup.</p>
           <a className="tools-primary-link" href="#available-tools-heading">Find the right tool <span aria-hidden="true">↗</span></a>
         </div>
         <div className="tools-hero-art" aria-hidden="true"><img className="tools-hero-illustration" src="/assets/tammy-ledger-helix.svg" alt="" /></div>

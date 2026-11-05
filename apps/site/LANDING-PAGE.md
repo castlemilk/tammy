@@ -102,3 +102,11 @@ The tax content was checked against relevant ATO and Australian Government sourc
 - `scripts/live-site-preflight.mjs`: read-only production checker for HTTPS routes, canonical links, sitemap and robots. Can only confirm a domain after Sites has really published it; it does not alter DNS, host or deploy.
 - `lib/growth/events.ts`: strict event data allowlist with opt-in injected publisher. No network sink, cookies, form capture or analytics transport exists in this branch. Consent-dependent tracking remains unlaunched pending privacy review.
 - New quote route in the source catalogue, sitemap and llms.txt. Existing canonical stays on the Sites host until the custom domain is confirmed active; user-visible pages must not claim this is a paid product.
+
+## Self-lodgement preparation extension (5 November 2026)
+
+- `/tools/bas-workpaper`: strictly illustrative Simpler BAS GST-only G1, 1A, 1B exercise, user-classified inputs, whole-dollar label reference and a standard quarterly date. Does not determine GST eligibility, tax treatment, PAYG or lodgement deadline.
+- `/tools/sole-trader-tax-checklist`: local-only reader checklist for an individual tax-return preparation, with print and reset, no collected personal amounts.
+- Journal: `how-to-lodge-bas-yourself-australia`, `lodge-sole-trader-tax-return-mytax`, `quarterly-bas-due-dates-australia`; each includes ATO primary source, worked examples, article metadata and local SVG.
+- Updated catalogue, home navigation, RSS, sitemap, llms.txt and tests. Existing Sites canonical remains unchanged until the publication and custom-domain move are verified.
+- These free tools are **not** an authorised ATO submission channel and **not** a tax/BAS agent service.

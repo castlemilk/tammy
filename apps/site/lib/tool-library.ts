@@ -1,5 +1,5 @@
 /** Public, browser-only Tammy utilities. Curated rather than scraped SEO inventory. */
-export type ToolCategory = "invoicing" | "gst" | "pricing" | "cashflow";
+export type ToolCategory = "invoicing" | "gst" | "tax" | "pricing" | "cashflow";
 
 export interface PublicTool {
   readonly href: string;
@@ -16,7 +16,8 @@ export interface PublicTool {
 export const toolCategories: ReadonlyArray<{ id: ToolCategory | "all"; label: string }> = [
   { id: "all", label: "All tools" },
   { id: "invoicing", label: "Invoicing" },
-  { id: "gst", label: "Tax & GST" },
+  { id: "gst", label: "GST & BAS" },
+  { id: "tax", label: "Tax returns" },
   { id: "pricing", label: "Pricing" },
   { id: "cashflow", label: "Cash flow" },
 ];
@@ -42,6 +43,20 @@ export const publicTools: readonly PublicTool[] = [
     summary: "Add GST or extract the 10% component from an inclusive amount.",
     category: "gst", categoryLabel: "Tax & GST", icon: "gst-bas",
     note: "Inclusive and exclusive", keywords: "tax gst inclusive exclusive 10 percent",
+  },
+  {
+    href: "/tools/bas-workpaper",
+    name: "Simpler BAS workpaper",
+    summary: "Review a narrow G1, 1A and 1B GST example before using your official ATO statement.",
+    category: "gst", categoryLabel: "GST & BAS", icon: "gst-bas",
+    note: "Preparation only", keywords: "BAS self lodge activity statement worksheet 1A 1B G1",
+  },
+  {
+    href: "/tools/sole-trader-tax-checklist",
+    name: "Sole trader tax checklist",
+    summary: "Print and review the business records needed before lodging your individual myTax return.",
+    category: "tax", categoryLabel: "Tax returns", icon: "review",
+    note: "Printable, local only", keywords: "myTax income tax return sole trader deduction records lodge",
   },
   {
     href: "/tools/abn-checker",
