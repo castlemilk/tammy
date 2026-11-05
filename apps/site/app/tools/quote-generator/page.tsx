@@ -28,7 +28,7 @@ export default function QuoteGeneratorPage() {
     <section className="tools-explain" aria-labelledby="quote-explain">
       <h2 id="quote-explain">Quote first, invoice later.</h2>
       <p>A quote communicates a proposed price, scope and validity period. It is not an issued tax invoice or evidence that a customer has accepted the work. Use explicit assumptions and confirm the terms directly with your customer.</p>
-      <p>For a business registered for GST, this tool can include standard taxable and GST-free quoted lines. Non-GST-registered businesses should not charge GST. The totals use the same validated integer-cent arithmetic as Tammy's invoice model, but printing a quote does not post sales, GST or receivables.</p>
+      <p>For a business registered for GST, this tool can include standard taxable and GST-free quoted lines. Non-GST-registered businesses should not charge GST. The totals use the same validated integer-cent arithmetic as Tammy&apos;s invoice model, but printing a quote does not post sales, GST or receivables.</p>
       <p>The browser print dialog provides a Save as PDF option in supported browsers. Direct one-click PDF downloading and quote-to-invoice conversion are separate backlog items, not claimed features here.</p>
       <p>See <a href="https://business.gov.au/finance/payments-and-invoicing/how-to-invoice" rel="noopener noreferrer" target="_blank">Australian Government invoicing guidance</a> before turning accepted work into an invoice.</p>
     </section>

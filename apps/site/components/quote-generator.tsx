@@ -89,7 +89,7 @@ export function QuoteGenerator() {
       <div className="tools-form-actions">
         <button className="tools-download" type="button" onClick={print}>Print or save quote as PDF</button>
         {message && <output className="tools-error">{message}</output>}
-        <p className="tools-help">Printing opens your browser's print dialog; choose Save as PDF to create a PDF. No account, upload, issue posting or delivery occurs.</p>
+        <p className="tools-help">Printing opens your browser&apos;s print dialog; choose Save as PDF to create a PDF. No account, upload, issue posting or delivery occurs.</p>
       </div>
     </section>
     <aside className="tools-quote-preview" aria-label="Live quote preview">
