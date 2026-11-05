@@ -7,6 +7,7 @@ import { init } from "@formepdf/core/worker";
 import wasmUrl from "@formepdf/core/pkg-web/forme_bg.wasm?url";
 import type { InvoicePdfData } from "./pdf.ts";
 import { renderInvoicePdf } from "./pdf.ts";
+import { renderQuotePdf, type QuotePdfData } from "./quote-pdf.ts";
 
 let initPromise: Promise<void> | undefined;
 
@@ -23,4 +24,16 @@ export async function renderBrowserInvoicePdf(data: InvoicePdfData): Promise<Uin
     throw error;
   }
   return renderInvoicePdf(data);
+}
+
+/** Browser-only quote PDF, sharing the exact local WASM engine with invoices. */
+export async function renderBrowserQuotePdf(data: QuotePdfData): Promise<Uint8Array> {
+  initPromise ??= (async () => {
+    const response = await fetch(wasmUrl);
+    if (!response.ok) throw new Error("Unable to load the local PDF engine. Please retry.");
+    await init(await response.arrayBuffer());
+  })();
+  try {await initPromise;}
+  catch (error) {initPromise=undefined;throw error;}
+  return renderQuotePdf(data);
 }

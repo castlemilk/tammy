@@ -5,13 +5,13 @@ import { ToolStructuredData, ToolsBreadcrumb, ToolsShell } from "../../../compon
 
 export const metadata: Metadata = {
   title: "Free Australian quote and estimate generator",
-  description: "Create an itemised Australian business quote with GST treatment, reference and validity date. Print or save as PDF in your browser. No signup or upload.",
+  description: "Create an itemised Australian business quote with GST treatment, reference and validity date. Download a PDF directly or save a local draft JSON. No signup or upload.",
   alternates: { canonical: "/tools/quote-generator" },
   keywords: ["free quote generator Australia", "small business estimate template", "GST quote template", "print quote as PDF"],
   openGraph: {
     type: "website",
     title: "Australian quote generator | Tammy",
-    description: "Itemised quotes with GST, preview and browser Save as PDF.",
+    description: "Itemised quotes with GST, direct PDF export and user-controlled local drafts.",
     url: "/tools/quote-generator",
   },
 };
@@ -29,7 +29,7 @@ export default function QuoteGeneratorPage() {
       <h2 id="quote-explain">Quote first, invoice later.</h2>
       <p>A quote communicates a proposed price, scope and validity period. It is not an issued tax invoice or evidence that a customer has accepted the work. Use explicit assumptions and confirm the terms directly with your customer.</p>
       <p>For a business registered for GST, this tool can include standard taxable and GST-free quoted lines. Non-GST-registered businesses should not charge GST. The totals use the same validated integer-cent arithmetic as Tammy&apos;s invoice model, but printing a quote does not post sales, GST or receivables.</p>
-      <p>The browser print dialog provides a Save as PDF option in supported browsers. Direct one-click PDF downloading and quote-to-invoice conversion are separate backlog items, not claimed features here.</p>
+      <p>Download your quote as a PDF from the browser, use Print as a fallback, or explicitly export a draft JSON file that you can reopen later. Draft files contain the details you entered and are not encrypted. Quote-to-invoice conversion and accounting posting remain separate future work.</p>
       <p>See <a href="https://business.gov.au/finance/payments-and-invoicing/how-to-invoice" rel="noopener noreferrer" target="_blank">Australian Government invoicing guidance</a> before turning accepted work into an invoice.</p>
     </section>
     <aside className="tools-related" aria-label="Related resources">

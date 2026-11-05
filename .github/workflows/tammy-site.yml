@@ -42,6 +42,8 @@ jobs:
         run: pnpm --dir apps/site typecheck
       - name: Site lint
         run: pnpm --dir apps/site lint
+      - name: Invoice and quote PDF model tests
+        run: pnpm --dir packages/invoices test
       - name: Site tests
         run: pnpm --dir apps/site test
       - name: Editorial MDX prose audit
