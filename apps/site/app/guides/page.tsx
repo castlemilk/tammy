@@ -29,6 +29,10 @@ export default function GuidesIndexPage() {
       <div><p className="tools-overline">Prefer to work with the numbers?</p><h2>Try the calculators.</h2><p>Invoice, GST, ABN and profitability tools are available without signing up.</p></div>
       <a href="/tools" className="tools-primary-link">Browse free tools <span aria-hidden="true">↗</span></a>
     </section>
+    <aside className="tools-related" aria-label="More reading">
+      <a href="/blog">Read the Tammy Journal <span aria-hidden="true">↗</span></a>
+      <a href="/blog/the-12-week-cash-flow-view">See a rolling cash-flow example <span aria-hidden="true">↗</span></a>
+    </aside>
     <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
       "@context": "https://schema.org", "@type": "CollectionPage",
       name: "Australian invoicing and GST guides", url: origin + "/guides",

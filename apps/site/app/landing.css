@@ -1413,3 +1413,29 @@ body {
 /* Companion editorial resources stay secondary to the main product story. */
 .landing-guides-link { margin-left: 22px; }
 @media (max-width: 700px) { .landing-guides-link { display: flex !important; margin: 18px 0 0; } }
+
+/* Journal index: one editorial list, no decorative feature-card triad. */
+.landing-journal {
+  display: grid;
+  grid-template-columns: minmax(0, .87fr) minmax(0, 1.13fr);
+  gap: clamp(38px, 6.4vw, 100px);
+  align-items: center;
+}
+.landing-journal-intro > p:not(.landing-kicker) { max-width: 460px; line-height: 1.7; color: var(--l-muted); }
+.landing-journal-intro .landing-text-link { margin-top: 14px; }
+.landing-journal-stories { border-top: 1px solid var(--l-rule); }
+.landing-journal-stories a {
+  display: grid;
+  grid-template-columns: minmax(0,1fr) 26px;
+  gap: 8px 15px;
+  align-items: center;
+  padding: 23px 6px;
+  border-bottom: 1px solid var(--l-rule);
+}
+.landing-journal-stories a > span:first-child { grid-column: 1; font-size: 13px; color: var(--l-muted); }
+.landing-journal-stories strong { grid-column: 1; font-family: var(--l-serif); font-size: clamp(25px,2.6vw,36px); font-weight: 500; line-height: 1.14; letter-spacing: -.025em; }
+.landing-journal-stories a > span:last-child { grid-column: 2; grid-row: 2; justify-self: end; font-size: 22px; color: var(--l-forest); }
+.landing-journal-stories a:hover strong { color: var(--l-forest); }
+@media (max-width: 840px) {
+  .landing-journal { grid-template-columns: 1fr; gap: 30px; }
+}

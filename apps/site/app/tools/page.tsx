@@ -5,9 +5,9 @@ import { ToolsShell, origin } from "../../components/tools-shell";
 
 export const metadata: Metadata = {
   title: "Free Australian business tools",
-  description: "Free Australian invoice PDF generator, GST calculator, ABN checker, margin calculator and payment-date tool. No account or data upload required.",
+  description: "Free Australian invoice PDF generator, GST and ABN checker, margin, break-even, cash runway and payment-date calculators. No signup or upload.",
   alternates: { canonical: "/tools" },
-  keywords: ["Australian business calculators", "free invoice generator Australia", "GST calculator Australia", "ABN checker", "profit margin calculator"],
+  keywords: ["Australian business calculators", "free invoice generator Australia", "GST calculator Australia", "ABN checker", "profit margin calculator", "break even calculator", "cash runway calculator"],
   openGraph: { title: "Free business tools | Tammy", description: "Invoices, GST and payment terms, made clearer.", url: origin + "/tools", type: "website" },
 };
 
@@ -17,6 +17,8 @@ const items = [
   { number: "03", href: "/tools/invoice-due-date-calculator", icon: "review", title: "Invoice due-date calculator", detail: "Work out when payment is due from an invoice date and agreed terms.", meta: "7, 14, 30, 45 or 60 days" },
   { number: "04", href: "/tools/abn-checker", icon: "abn-form", title: "ABN checker", detail: "Validate an Australian Business Number checksum before checking official registration details.", meta: "11-digit, modulus-89 format check" },
   { number: "05", href: "/tools/profit-margin-calculator", icon: "margin-scale", title: "Profit margin calculator", detail: "Compare gross profit, markup and margin from your cost and selling price.", meta: "Ex-GST AUD pricing" },
+  { number: "06", href: "/tools/break-even-calculator", icon: "ledger", title: "Break-even calculator", detail: "Calculate how many units you need to sell to cover fixed costs.", meta: "Contribution per unit and sales" },
+  { number: "07", href: "/tools/cash-runway-calculator", icon: "reconciliation", title: "Cash runway calculator", detail: "Estimate how far your available cash will go at a steady monthly burn.", meta: "Simple monthly cash flow" },
 ] as const;
 
 export default function ToolsPage() {
@@ -33,7 +35,7 @@ export default function ToolsPage() {
         <div>
           <p className="tools-overline">Tammy tools</p>
           <h1>Good tools. <em>Clearer books.</em></h1>
-          <p>Create invoices, calculate GST, check an ABN, understand margins and work out payment dates. Useful, no-account tools for everyday business numbers.</p>
+          <p>Make invoices, check GST and ABNs, calculate margins and break-even points, or estimate cash runway. Everyday business tools, without a signup.</p>
           <a className="tools-primary-link" href="/tools/invoice-generator">Create an invoice <span aria-hidden="true">↗</span></a>
         </div>
         <div className="tools-hero-art" aria-hidden="true"><img className="tools-hero-illustration" src="/assets/tools-workflow-engraving.svg" alt="" /></div>
@@ -50,7 +52,7 @@ export default function ToolsPage() {
         </div>
       </section>
       <section className="tools-guides-callout" aria-labelledby="tools-guide-heading">
-        <div className="tools-guides-callout-copy"><p className="tools-overline">Practical reading</p><h2 id="tools-guide-heading">Understand the numbers behind the tools.</h2><p>Original Australian invoicing and GST explainers, with source references and examples you can check yourself.</p><a href="/guides" className="tools-secondary-link">Browse all guides <span aria-hidden="true">↗</span></a></div>
+        <div className="tools-guides-callout-copy"><p className="tools-overline">Practical reading</p><h2 id="tools-guide-heading">Understand the numbers behind the tools.</h2><p>Original Australian invoicing and GST explainers, with source references and examples you can check yourself.</p><a href="/guides" className="tools-secondary-link">Browse all guides <span aria-hidden="true">↗</span></a><a href="/blog" className="tools-secondary-link tools-journal-link">Read the Tammy Journal <span aria-hidden="true">↗</span></a></div>
         <div className="tools-guides-callout-links">
           <a href="/guides/australian-tax-invoice-checklist"><span>Invoicing</span><strong>What an Australian tax invoice needs</strong><span aria-hidden="true">↗</span></a>
           <a href="/guides/gst-inclusive-vs-exclusive"><span>GST</span><strong>Inclusive and exclusive GST, explained</strong><span aria-hidden="true">↗</span></a>

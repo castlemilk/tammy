@@ -324,3 +324,13 @@
   .tools-example-comparison { grid-template-columns: 1fr; }
   .tools-hero-art { min-height: 250px; }
 }
+
+/* Library expansion. Invoice making is the signature task, not a seventh equal icon card. */
+.tools-card:first-child { grid-column: span 4; background: var(--t-sage); }
+.tools-journal-link { margin-left: 27px !important; }
+@media (max-width: 960px) {
+  .tools-card:first-child { grid-column: auto; }
+}
+@media (max-width: 760px) {
+  .tools-journal-link { display: inline-block; margin: 16px 0 0 !important; }
+}
