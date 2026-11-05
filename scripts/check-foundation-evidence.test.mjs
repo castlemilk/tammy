@@ -176,9 +176,11 @@ test("retains runner provisioning, evidence classification, and artifacts around
     assert.match(workflow, /corepack enable pnpm\n {10}corepack prepare pnpm@11\.15\.0 --activate/);
     assert.match(workflow, /pnpm install --frozen-lockfile/);
   }
-  assert.match(foundationWorkflow, /runs-on: ubuntu-24\.04[\s\S]*timeout-minutes: 30/);
+  assert.match(foundationWorkflow, /runs-on: \[self-hosted, Linux, ARM64, cuttlefish, container\][\s\S]*timeout-minutes: 30/);
   assert.match(foundationWorkflow, /runs-on: macos-15\n\s*timeout-minutes: 40/);
   assert.match(foundationWorkflow, /runs-on: windows-2025[\s\S]*timeout-minutes: 30/);
+  assert.match(foundationWorkflow, /Verify Cuttlefish Linux runner identity[\s\S]*RUNNER_NOT_CUTTLEFISH/);
+  assert.match(foundationWorkflow, /github\.event\.pull_request\.head\.repo\.full_name == github\.repository/);
   assert.match(foundationWorkflow, /name: Contracts and local foundation/);
   assert.match(foundationWorkflow, /name: macOS 15 arm64 packaged E2E/);
   assert.match(
@@ -443,7 +445,7 @@ test("pins provisioning and evidence ownership independently for every CI job", 
 
   const contracts = foundation.jobs.contracts;
   assert.equal(contracts.name, "Contracts and local foundation");
-  assert.equal(contracts["runs-on"], "ubuntu-24.04");
+  assert.deepEqual(contracts["runs-on"], ["self-hosted", "Linux", "ARM64", "cuttlefish", "container"]);
   assert.equal(contracts["timeout-minutes"], 30);
   assertSharedCiProvisioning(contracts, "bash");
   assert.equal(

@@ -36,3 +36,13 @@ If registration fails, inspect GitHub user permissions and the rig's Docker/runn
 5. Do not allow untrusted fork pull-request code to execute on this repo-scoped runner while the rig mounts the shared Docker daemon. Restrict self-hosted pull-request jobs to branches in this repository, with read-only token permissions.
 
 A pending job on a `self-hosted` label proves only that GitHub is waiting for a matching runner. **It is not proof the job ran on Cuttlefish.** Do not silently fall back to GitHub-hosted runners.
+
+## Pending migration branch
+
+[Runner probe #42076973768](https://github.com/castlemilk/tammy/actions/runs/42076973768) was **queued without an assigned runner** at the time of preparation. The repository-scoped `castlemilk/tammy` runner still needs to be registered and verified; neither a queued job nor labels alone proves execution.
+
+The proposed workflow changes are staged in a draft PR: the existing Linux jobs for the desktop foundation, Tammy marketing site, and roadmap validation require exactly `[self-hosted, Linux, ARM64, cuttlefish, container]`, with no GitHub-hosted fallback and an explicit runner-name identity check. For security, the jobs refuse fork-originated PRs, because the Cuttlefish Linux runner has access to its rig's Docker daemon.
+
+**Do not merge while the smoke job is queued.** Native macOS 14 ARM64 packaged E2E, Windows Server 2025 smoke, and the separately gated Windows 11 release workflow are intentionally unchanged. A Linux ARM64 container cannot supply evidence for those release platforms.
+
+The pinned Node 24.18.0, Go 1.26.4, pnpm 11.15.0, Task 3.52.0 and existing test commands remain unchanged. After runner registration, the smoke and each Linux CI job must pass on the actual `cuttlefish-linux-*` runner before this routing becomes the main-branch configuration.
