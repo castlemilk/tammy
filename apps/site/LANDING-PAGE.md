@@ -119,3 +119,15 @@ The tax content was checked against relevant ATO and Australian Government sourc
 - Quotes now use direct Forme/PDFcn PDF generation from the shared invoice engine but render a true QUOTE (never an issued invoice); an explicit local JSON draft download/import allows reuse without cloud accounts, backend calls or automatic storage. JSON draft files contain user-entered customer data and are not encrypted.
 - Existing print and Save as PDF route remains as a fallback. Tests cover renderer identity, money, draft formats, forecast, CSV and the component system.
 - These code changes are not a ChatGPT Sites deployment or a Vercel project configuration change.
+
+## Shared UI component adoption (5 November 2026)
+
+Site controls use Tailwind v4 semantic tokens and the existing shadcn/UI
+configuration, with locally owned accessible Button, Input, Select, Checkbox,
+Label and Card primitives. The BAS quarter switch is the owner's actual Gamma
+SegmentedControl, vendored with its maintained CSS and mapped to Soft Precision
+through `app/design-system.css`. Tax/checklist and quote forms reuse these
+primitives. See `UI-COMPONENT-STANDARD.md` and
+`components/gamma/README.md` for design-system authority, review gates and
+the remaining gradual migration. This changes presentation only, not GST,
+BAS, quote arithmetic, customer data handling, publishing or ATO integration.

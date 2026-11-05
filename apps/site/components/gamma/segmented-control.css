@@ -1,0 +1,134 @@
+/* Segmented control */
+
+
+
+
+
+.segmented-control {
+  display: inline-flex;
+  align-items: stretch;
+  gap: 2px;
+  max-width: 100%;
+  padding: 3px;
+  border: var(--gamma-hairline) solid var(--gamma-border);
+  border-radius: var(--gamma-radius-control);
+  background: var(--gamma-surface-2);
+  font-family: var(--gamma-font-ui);
+}
+.segmented-control[data-block="true"] {
+  display: flex;
+  width: 100%;
+}
+.segmented-control[data-orientation="vertical"] {
+  flex-direction: column;
+  align-items: stretch;
+  width: 100%;
+}
+.segmented-control[data-orientation="vertical"] .segmented-control-option {
+  justify-content: flex-start;
+}
+.segmented-control[data-orientation="vertical"] .segmented-control-face {
+  width: 100%;
+  justify-content: flex-start;
+}
+.segmented-control[data-block="true"] .segmented-control-option {
+  flex: 1 1 0;
+}
+.segmented-control-option {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  cursor: pointer;
+}
+.segmented-control-option[data-disabled="true"],
+.segmented-control-input:disabled + .segmented-control-face {
+  cursor: not-allowed;
+}
+.segmented-control-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+.segmented-control-face {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 0 11px;
+  border-radius: calc(var(--gamma-radius-control) - 2px);
+  color: color-mix(in srgb, var(--gamma-ink) 76%, var(--gamma-bg));
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  transition:
+    background var(--gamma-duration-fast) var(--gamma-ease-standard),
+    color var(--gamma-duration-fast) var(--gamma-ease-standard);
+}
+.segmented-control[data-size="sm"] .segmented-control-face {
+  min-height: 26px;
+  padding: 0 9px;
+  font-size: 12px;
+}
+.segmented-control-option:hover .segmented-control-face {
+  color: var(--gamma-ink);
+}
+.segmented-control-input:checked + .segmented-control-face {
+  background: var(--gamma-bg);
+  color: var(--gamma-ink);
+}
+.segmented-control-input:focus-visible + .segmented-control-face {
+  outline: 2px solid var(--gamma-accent);
+  outline-offset: 1px;
+}
+.segmented-control-input:disabled + .segmented-control-face {
+  color: color-mix(in srgb, var(--gamma-muted) 55%, transparent);
+}
+.segmented-control-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.segmented-control-count {
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: color-mix(in srgb, var(--gamma-ink) 72%, var(--gamma-bg));
+  padding: 1px 6px;
+  border-radius: var(--gamma-radius-pill);
+  background: color-mix(in srgb, var(--gamma-muted) 14%, transparent);
+}
+.segmented-control-input:checked
+  + .segmented-control-face
+  .segmented-control-count {
+  color: var(--gamma-accent);
+  background: var(--gamma-accent-soft);
+}
+.segmented-control-description {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+@media (prefers-reduced-motion: reduce) {
+  .segmented-control-face {
+    transition: none;
+  }
+}
+/* Tammy implementation-specific accessibility and mobile controls. */
+.tools-shell .segmented-control-face { min-height: 44px; }
+.tools-shell .segmented-control[data-block="true"] { flex-wrap: wrap; }
+@media (max-width: 640px) {
+  .tools-shell .segmented-control[data-block="true"] {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+  }
+  .tools-shell .segmented-control-option { min-width: 0; }
+  .tools-shell .segmented-control-face { width: 100%; }
+}

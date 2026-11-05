@@ -2,6 +2,8 @@
 import { useMemo, useState, type ChangeEvent } from "react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
+import { Checkbox } from "./ui/checkbox";
+import { Select } from "./ui/select";
 import { Textarea } from "./ui/textarea";
 import { serializeQuoteDraft, parseQuoteDraft } from "../lib/tools/local-quote-draft";
 import type { QuoteInput } from "../lib/tools/quote";
@@ -124,7 +126,7 @@ export function QuoteGenerator() {
           <label className="tools-field" htmlFor="quote-seller-abn"><span>ABN (optional)</span><Input id="quote-seller-abn" inputMode="numeric" maxLength={20} value={sellerAbn} onChange={(event) => setSellerAbn(event.target.value)} /></label>
         </div>
         <label className="tools-field" htmlFor="quote-seller-address"><span>Business address</span><Textarea id="quote-seller-address" value={sellerAddress} rows={2} maxLength={1000} onChange={(event) => setSellerAddress(event.target.value)} /></label>
-        <label className="tools-check"><input type="checkbox" checked={gstRegistered} onChange={(event) => setGstRegistered(event.target.checked)} /><span>My business is registered for GST</span></label>
+        <label className="tools-check" htmlFor="quote-gst-registered"><Checkbox id="quote-gst-registered" checked={gstRegistered} onChange={(event) => setGstRegistered(event.target.checked)} /><span>My business is registered for GST</span></label>
       </fieldset>
       <fieldset className="tools-form-section"><legend>Customer</legend>
         <div className="tools-form-two">
@@ -145,7 +147,7 @@ export function QuoteGenerator() {
           <div className="tools-form-three">
             <label className="tools-field" htmlFor={"quote-line-quantity-"+i}><span>Quantity</span><Input id={"quote-line-quantity-"+i} inputMode="decimal" value={line.quantity} onChange={(e) => updateLine(i, { quantity: e.target.value })}/></label>
             <label className="tools-field" htmlFor={"quote-line-price-"+i}><span>Unit price (ex GST, AUD)</span><Input id={"quote-line-price-"+i} inputMode="decimal" value={line.unitPrice} onChange={(e) => updateLine(i, { unitPrice: e.target.value })}/></label>
-            {gstRegistered && <label className="tools-field"><span>Tax treatment</span><select value={line.treatment} onChange={(e) => updateLine(i, { treatment: e.target.value as QuoteLineInput["treatment"] })}><option value="taxable">Taxable (10%)</option><option value="gst-free">GST-free</option></select></label>}
+            {gstRegistered && <label className="tools-field" htmlFor={"quote-line-treatment-"+i}><span>Tax treatment</span><Select id={"quote-line-treatment-"+i} value={line.treatment} onChange={(e) => updateLine(i, { treatment: e.target.value as QuoteLineInput["treatment"] })}><option value="taxable">Taxable (10%)</option><option value="gst-free">GST-free</option></Select></label>}
           </div>
           {lines.length > 1 && <Button variant="outline" size="sm" className="tools-quote-remove" type="button" onClick={() => setLines((previous) => previous.filter((_, j) => i !== j))}>Remove line {i + 1}</Button>}
         </div>)}

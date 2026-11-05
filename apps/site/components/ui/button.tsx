@@ -23,11 +23,11 @@ export function Button({
   };
   const sizes: Record<ButtonSize, string> = {
     default: "min-h-11 px-4 py-2",
-    sm: "min-h-10 px-3 py-1.5 text-xs",
+    sm: "min-h-11 px-3 py-2 text-xs",
     lg: "min-h-12 px-6 py-3",
     icon: "size-11 p-2",
   };
-  return <button type={type} disabled={disabled || loading} aria-busy={loading || undefined}
+  return <button data-slot="button" type={type} disabled={disabled || loading} aria-busy={loading || undefined}
     className={cn(
       "inline-flex cursor-pointer items-center justify-center gap-2 whitespace-normal rounded-md",
       "font-semibold text-sm leading-5 transition-colors duration-150",
