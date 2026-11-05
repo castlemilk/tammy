@@ -201,6 +201,7 @@ export default function Home() {
           <nav className="landing-header-nav" aria-label="Primary navigation">
             <a href="#workflow">How it works</a>
             <a href="#features">Features</a>
+            <a href="/tools">Free tools</a>
             <a href="#privacy-first">Local-first</a>
             <a href="#questions">Questions</a>
           </nav>
@@ -367,6 +368,21 @@ export default function Home() {
             </div>
           </section>
 
+
+          <section className="landing-section landing-tools-section" id="free-tools" aria-labelledby="landing-tools-heading">
+            <div className="landing-tools-intro">
+              <p className="landing-kicker">For the everyday numbers</p>
+              <h2 id="landing-tools-heading">Little tools. <br />Big clarity.</h2>
+              <p>Create an Australian invoice, calculate GST or work out a payment due date. Simple, free tools that keep your information in your browser.</p>
+              <a className="landing-text-link" href="/tools">Explore all free tools <span aria-hidden="true">↗</span></a>
+            </div>
+            <div className="landing-tools-list">
+              <a href="/tools/invoice-generator"><span className="landing-tools-number">01</span><strong>Australian invoice generator</strong><span>Make and download an invoice PDF</span><span aria-hidden="true">↗</span></a>
+              <a href="/tools/gst-calculator"><span className="landing-tools-number">02</span><strong>GST calculator</strong><span>Add or remove 10% GST</span><span aria-hidden="true">↗</span></a>
+              <a href="/tools/invoice-due-date-calculator"><span className="landing-tools-number">03</span><strong>Invoice due-date calculator</strong><span>Work out payment terms</span><span aria-hidden="true">↗</span></a>
+            </div>
+          </section>
+
           <section className="landing-closing" id="availability" aria-labelledby="closing-heading">
             <img src="/assets/contour-lines.svg" className="landing-closing-contours" alt="" aria-hidden="true" />
             <div>
@@ -387,6 +403,7 @@ export default function Home() {
           <nav aria-label="Footer navigation">
             <a href="#workflow">How it works</a>
             <a href="#features">Features</a>
+            <a href="/tools">Free tools</a>
             <a href="/privacy">Privacy policy</a>
             <a href="/support">Support</a>
           </nav>

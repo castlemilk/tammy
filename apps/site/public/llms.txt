@@ -20,3 +20,12 @@ Support: https://tammy-accounting.castlemilk.chatgpt.site/support
 Tammy is development software, not a publicly qualified Mac App Store release. It does not offer a hosted business account, cloud sync, online bank feeds, automated tax lodgement or ATO-approved production SBR submission.
 
 For access enquiries use the Support page. The public website contains no account signup or application download.
+
+## Free tools (public website)
+
+- [All tools](https://tammy-accounting.castlemilk.chatgpt.site/tools) - Australian business utilities without signup.
+- [Invoice generator](https://tammy-accounting.castlemilk.chatgpt.site/tools/invoice-generator) - build a regular invoice or tax invoice and download a PDF locally in the browser; not a desktop-app issue action.
+- [GST calculator](https://tammy-accounting.castlemilk.chatgpt.site/tools/gst-calculator) - add or extract standard 10% Australian GST.
+- [Invoice due-date calculator](https://tammy-accounting.castlemilk.chatgpt.site/tools/invoice-due-date-calculator) - calendar-day terms.
+
+These public tools do not upload customer records or modify local Tammy desktop data. PDF export uses Tammy's pdfcn/Forme adapted invoice renderer.

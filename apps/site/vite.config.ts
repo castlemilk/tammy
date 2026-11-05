@@ -44,6 +44,11 @@ export default defineConfig(async () => {
   const { cloudflare } = await import("@cloudflare/vite-plugin");
 
   return {
+    // Forme's browser default imports raw WASM that Vite 8 does not instantiate.
+    // The explicit worker entry is initialized with a URL-emitted wasm asset.
+    resolve: {
+      alias: [{ find: /^@formepdf\/core$/, replacement: "@formepdf/core/worker" }],
+    },
     css: { postcss: { plugins: [tailwindcss()] } },
     server: isCodexSeatbeltSandbox
       ? { watch: { useFsEvents: false, usePolling: true } }
