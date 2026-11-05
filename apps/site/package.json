@@ -15,7 +15,9 @@
     "typecheck": "tsc --noEmit",
     "format": "oxfmt",
     "seo:check": "node scripts/seo-check.mjs",
-    "editorial:lint": "node scripts/editorial-lint.mjs"
+    "editorial:lint": "node scripts/editorial-lint.mjs",
+    "site:preflight": "node scripts/live-site-preflight.mjs",
+    "site:preflight:test": "node --test scripts/live-site-preflight.test.mjs"
   },
   "dependencies": {
     "@tammy/invoices": "workspace:*",

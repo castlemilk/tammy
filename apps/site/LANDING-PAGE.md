@@ -95,3 +95,10 @@ The tax content was checked against relevant ATO and Australian Government sourc
 - No external chart service, fake company testimonials, automatic ATO lodgement, bank syncing, public Mac app downloads or third-party tracking has been introduced.
 
 **Release:** These repository edits are not a ChatGPT Sites deployment. Keep the original Sites host canonical until `tammy.tax` is confirmed live with TLS and the intended content.
+
+## Growth foundation: functional quote and release verification (5 November 2026)
+
+- `/tools/quote-generator`: anonymous quote editor, item lines, quote validity date, optional ABN, GST/non-GST treatment, live totals and browser Print / Save as PDF. Reuses the validated invoice model's integer-cent math but does not issue a tax invoice or post accounting. Direct one-click PDF export and quote-to-invoice handoff are separate acceptance tasks.
+- `scripts/live-site-preflight.mjs`: read-only production checker for HTTPS routes, canonical links, sitemap and robots. Can only confirm a domain after Sites has really published it; it does not alter DNS, host or deploy.
+- `lib/growth/events.ts`: strict event data allowlist with opt-in injected publisher. No network sink, cookies, form capture or analytics transport exists in this branch. Consent-dependent tracking remains unlaunched pending privacy review.
+- New quote route in the source catalogue, sitemap and llms.txt. Existing canonical stays on the Sites host until the custom domain is confirmed active; user-visible pages must not claim this is a paid product.

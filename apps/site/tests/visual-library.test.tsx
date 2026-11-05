@@ -9,7 +9,7 @@ afterEach(cleanup);
 
 describe("Tammy practical tools directory", () => {
   it("lists every real tool once with unique, descriptive categories and valid local routes", () => {
-    expect(publicTools).toHaveLength(7);
+    expect(publicTools).toHaveLength(8);
     expect(new Set(publicTools.map((tool) => tool.href)).size).toBe(publicTools.length);
     expect(publicTools.filter((tool) => tool.featured)).toHaveLength(1);
     for (const tool of publicTools) {
@@ -22,7 +22,7 @@ describe("Tammy practical tools directory", () => {
   });
 
   it("matches by task, key term and category without inventing new results", () => {
-    expect(matchTools("", "all")).toHaveLength(7);
+    expect(matchTools("", "all")).toHaveLength(8);
     expect(matchTools("GST", "gst")).toHaveLength(2);
     expect(matchTools("markup", "all").map((tool) => tool.href)).toEqual(["/tools/profit-margin-calculator"]);
     expect(matchTools("cash", "invoicing")).toHaveLength(0);
@@ -32,7 +32,7 @@ describe("Tammy practical tools directory", () => {
 
   it("filters tool cards accessibly and preserves navigable links", () => {
     render(<ToolsPage />);
-    expect(screen.getByRole("status").textContent).toContain("7 tools");
+    expect(screen.getByRole("status").textContent).toContain("8 tools");
     expect(screen.getByRole("link", { name: /Invoice generator/i })).toBeTruthy();
 
     fireEvent.click(screen.getByRole("button", { name: /Tax & GST/i }));
@@ -53,7 +53,7 @@ describe("Tammy practical tools directory", () => {
     fireEvent.change(search, { target: { value: "no-such-service-xyz" } });
     expect(screen.getByText("No matching tools.")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Show all tools" }));
-    expect(screen.getByRole("status").textContent).toContain("7 tools");
+    expect(screen.getByRole("status").textContent).toContain("8 tools");
     expect(screen.getByRole("link", { name: /GST calculator/i })).toBeTruthy();
   });
 

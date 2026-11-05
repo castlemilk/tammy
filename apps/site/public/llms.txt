@@ -81,3 +81,5 @@ These stories are authored in .mdx, using registered local components for source
 - [The month-end close that found $220.](https://tammy-accounting.castlemilk.chatgpt.site/blog/the-month-end-review-that-found-220) - A $220 duplicate payment explains a difference between the closing bank statement and ledger; includes a working review checklist.
 
 These new MDX posts use an accessible scenario explorer, validated balanced journal entries, and/or a local-only reader checklist. Numbers are illustrative, source-backed and never taken from real business records.
+
+- [Quote generator](https://tammy-accounting.castlemilk.chatgpt.site/tools/quote-generator) - anonymous itemised quote, browser printing or Save as PDF; never issues invoices, collects payments, posts accounting or uploads customer details.

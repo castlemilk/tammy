@@ -48,5 +48,7 @@ jobs:
         run: pnpm --dir apps/site editorial:lint
       - name: SEO and canonical audit
         run: pnpm --dir apps/site seo:check
+      - name: Sites publication preflight contract tests
+        run: pnpm --dir apps/site site:preflight:test
       - name: Site build
         run: pnpm --dir apps/site build
