@@ -56,3 +56,12 @@ The guides cite ATO/ABR primary sources. Neither the calculator nor the guide ce
 - [See the next twelve weeks](https://tammy-accounting.castlemilk.chatgpt.site/blog/the-12-week-cash-flow-view) - a rolling weekly cash forecast and a worked four-week example.
 
 Posts are authored explanatory material, not tax filing services, consumer testimonials, or a claim that Tammy automatically sends invoices or collects payments.
+
+## Journal additions (5 November 2026)
+
+- [When GST registration becomes necessary.](https://tammy-accounting.castlemilk.chatgpt.site/blog/when-to-register-for-gst-australia) - The Australian $75,000 GST turnover threshold, projected turnover, the 21-day rule and registration exceptions.
+- [Keep the evidence behind the entry.](https://tammy-accounting.castlemilk.chatgpt.site/blog/business-receipts-five-year-record-keeping) - Retaining business receipts and source records, five-year baseline, exceptions and digital record safeguards.
+- [Three BAS labels. One clear workpaper.](https://tammy-accounting.castlemilk.chatgpt.site/blog/simpler-bas-g1-1a-1b-explained) - Simpler BAS G1 total sales, 1A GST on sales and 1B eligible GST credits with a worked example.
+- [Make the bank and ledger agree.](https://tammy-accounting.castlemilk.chatgpt.site/blog/bank-statement-reconciliation-steps) - Trace statement rows, resolve unexplained differences, and retain a verifiable reconciliation.
+
+Each article includes an original locally hosted illustration, an explicitly illustrative numerical example, and links to Australian government or ATO primary sources. These are educational articles, not evidence that Tammy offers ATO lodgement, cloud sync, bank feeds or customer payment collection.

@@ -194,3 +194,98 @@
   .blog-feature-watermark { width: 74%; opacity: .20; }
   .blog-feature-figure { min-height: 310px; }
 }
+
+/* Four new source-backed entries: specimen artwork meets real financial examples.
+   No raster text is used for amounts, headings or source references. */
+.blog-feature-figure:has(.blog-feature-hero-art) {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  place-items: stretch;
+  padding: 0;
+  background: var(--t-sage);
+}
+.blog-feature-hero-art {
+  display: block;
+  width: 100%;
+  height: clamp(210px, 25vw, 335px);
+  object-fit: cover;
+  object-position: center;
+}
+.blog-feature-key-figure {
+  display: grid;
+  grid-template-columns: minmax(0, 0.75fr) minmax(0, 1.25fr);
+  gap: 4px 22px;
+  align-items: baseline;
+  background: var(--t-forest);
+  color: var(--t-paper);
+  padding: 24px clamp(23px, 3vw, 41px) 27px;
+}
+.blog-feature-key-figure > span { font-size: 12px; color: var(--t-sage); grid-column: 1 / -1; }
+.blog-feature-key-figure > strong {
+  font-family: var(--t-display);
+  font-size: clamp(37px, 4vw, 56px);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.05;
+}
+.blog-feature-key-figure > p { font-size: 13px; line-height: 1.5; margin: 0; color: var(--t-paper); }
+.blog-feature-key-figure > small { grid-column: 1 / -1; color: var(--t-sage); font-size: 11px; margin-top: 9px; }
+.blog-archive-story { min-width: 0; }
+.blog-archive-story:has(.blog-archive-art) {
+  display: grid;
+  grid-template-columns: minmax(110px, 172px) minmax(0, 1fr);
+  align-items: center;
+  gap: clamp(17px, 2.3vw, 31px);
+}
+.blog-archive-art {
+  display: block;
+  width: 100%;
+  aspect-ratio: 5 / 3.5;
+  height: auto;
+  object-fit: cover;
+  border-radius: 7px;
+  background: var(--t-sage);
+}
+.blog-archive-story > div { min-width: 0; }
+.blog-story-heading .blog-story-figure-illustrated {
+  background: var(--t-sage);
+  background-image: none;
+  color: var(--t-ink);
+  padding: 0;
+  overflow: hidden;
+}
+.blog-story-illustration {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 5 / 3;
+  object-fit: cover;
+  background: var(--t-sage);
+}
+.blog-story-figure-content { padding: 0; }
+.blog-story-figure-illustrated .blog-story-figure-content {
+  padding: clamp(22px, 3.4vw, 38px);
+  background: var(--t-forest);
+  color: var(--t-paper);
+}
+.blog-story-figure-illustrated .blog-story-figure-content > span,
+.blog-story-figure-illustrated .blog-story-figure-content > small { color: var(--t-sage); }
+.blog-story-figure-illustrated .blog-story-figure-content > strong {
+  font-size: clamp(35px, 5vw, 62px);
+  padding: 16px 0 14px;
+  overflow-wrap: anywhere;
+}
+.blog-story-figure-illustrated .blog-story-figure-content > p { color: var(--t-paper); }
+.blog-story-copy .blog-data-table { width: 100%; }
+@media (max-width: 990px) {
+  .blog-feature-hero-art { height: auto; max-height: 360px; aspect-ratio: 5 / 3; }
+  .blog-archive-story:has(.blog-archive-art) { grid-template-columns: minmax(100px, 145px) minmax(0, 1fr); }
+}
+@media (max-width: 660px) {
+  .blog-feature-key-figure { grid-template-columns: 1fr; }
+  .blog-feature-key-figure > strong { font-size: 49px; }
+  .blog-feature-key-figure > span, .blog-feature-key-figure > small { grid-column: auto; }
+  .blog-archive-story:has(.blog-archive-art) { grid-template-columns: 1fr; gap: 15px; }
+  .blog-archive-art { max-height: 200px; aspect-ratio: 2.2 / 1; }
+  .blog-story-figure-illustrated .blog-story-figure-content { padding: 25px; }
+}

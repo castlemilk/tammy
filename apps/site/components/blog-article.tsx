@@ -1,4 +1,5 @@
 /* oxlint-disable next/no-html-link-for-pages -- Vinext serves static same-origin routes. */
+/* oxlint-disable next/no-img-element -- Original local editorial vector illustrations. */
 import type { ReactNode } from "react";
 import { ToolsShell, origin } from "./tools-shell";
 import type { BlogPost } from "../lib/blog/posts";
@@ -35,9 +36,12 @@ export function BlogArticle({ post, children }: {
           <h1>{post.title}</h1>
           <p className="blog-story-description">{post.description}</p>
         </div>
-        <aside className="blog-story-figure" aria-label="Illustrative example">
-          <span>Worked example</span><strong>{post.figure}</strong>
-          <p>{post.figureLabel}</p><small>{post.figureFoot}</small>
+        <aside className={post.cover ? "blog-story-figure blog-story-figure-illustrated" : "blog-story-figure"} aria-label="Illustrative example">
+          {post.cover && <img className="blog-story-illustration" src={post.cover} alt={post.coverAlt ?? ""} width="1200" height="720" loading="eager" />}
+          <div className="blog-story-figure-content">
+            <span>Worked example</span><strong>{post.figure}</strong>
+            <p>{post.figureLabel}</p><small>{post.figureFoot}</small>
+          </div>
         </aside>
       </header>
       <div className="blog-story-body">

@@ -10,10 +10,87 @@ export interface BlogPost {
   figureLabel: string;
   figureFoot: string;
   toc: readonly { id: string; label: string }[];
+  cover?: string;
+  coverAlt?: string;
 }
 
 export const blogPosts: readonly BlogPost[] = [
   {
+    slug: "when-to-register-for-gst-australia",
+    title: "When GST registration becomes necessary.",
+    description: "The $75,000 threshold is about turnover, not profit. Learn to compare your current and projected twelve-month GST turnover and what changes after registration.",
+    category: "GST",
+    publishedAt: "2026-11-05",
+    publishedLabel: "5 November 2026",
+    figure: "$75,000",
+    figureLabel: "standard annual GST turnover threshold for Australian businesses",
+    figureFoot: "Different thresholds and exceptions apply to some activities and organisations.",
+    cover: "/assets/journal-gst-threshold.svg",
+    coverAlt: "Abstract arc gauge indicating a turnover threshold, surrounded by concentric ledger rings",
+    toc: [
+      { id: "turnover-not-profit", label: "Turnover, not profit" },
+      { id: "two-windows", label: "Two twelve-month windows" },
+      { id: "deadline-and-exceptions", label: "Registration and exceptions" },
+      { id: "after-registering", label: "What changes next" },
+    ],
+  },
+  {
+    slug: "business-receipts-five-year-record-keeping",
+    title: "Keep the evidence behind the entry.",
+    description: "A tidy ledger needs its source documents. What Australian businesses generally keep, why five years is a baseline, and how to protect electronic records.",
+    category: "Records",
+    publishedAt: "2026-11-05",
+    publishedLabel: "5 November 2026",
+    figure: "5 years",
+    figureLabel: "general minimum retention period for many Australian business records",
+    figureFoot: "Some retention periods start later or run longer.",
+    cover: "/assets/journal-records-archive.svg",
+    coverAlt: "Layered archival receipts and folders with an organised filing pattern",
+    toc: [
+      { id: "source-evidence", label: "What evidence explains" },
+      { id: "keep-these-records", label: "What records to keep" },
+      { id: "five-years-and-beyond", label: "Five years and exceptions" },
+      { id: "protect-and-recover", label: "Digital integrity and backup" },
+    ],
+  },
+  {
+    slug: "simpler-bas-g1-1a-1b-explained",
+    title: "Three BAS labels. One clear workpaper.",
+    description: "How G1, 1A and 1B fit together under Simpler BAS, illustrated with taxable sales, eligible GST credits and a review checklist.",
+    category: "BAS",
+    publishedAt: "2026-11-05",
+    publishedLabel: "5 November 2026",
+    figure: "G1 / 1A / 1B",
+    figureLabel: "three GST fields ordinarily reported under Simpler BAS",
+    figureFoot: "Other BAS obligations may still require additional reporting fields.",
+    cover: "/assets/journal-bas-workpaper.svg",
+    coverAlt: "Three neat columns of an accounting workpaper connected by a balance line",
+    toc: [
+      { id: "the-three-labels", label: "What the labels mean" },
+      { id: "worked-period", label: "A small worked period" },
+      { id: "claim-only-eligible", label: "Check credit eligibility" },
+      { id: "draft-before-lodgement", label: "Review before lodging" },
+    ],
+  },
+  {
+    slug: "bank-statement-reconciliation-steps",
+    title: "Make the bank and ledger agree.",
+    description: "A practical bank-statement reconciliation method: compare balances, trace transactions, explain timing differences and retain evidence.",
+    category: "Bookkeeping",
+    publishedAt: "2026-11-05",
+    publishedLabel: "5 November 2026",
+    figure: "$40",
+    figureLabel: "illustrative unrecorded bank fee found during reconciliation",
+    figureFoot: "A difference to investigate, not an amount to force into balance.",
+    cover: "/assets/journal-bank-reconciliation.svg",
+    coverAlt: "Two accounting registers connected by fine matching arcs and a reconciliation marker",
+    toc: [
+      { id: "same-period", label: "Compare the same period" },
+      { id: "trace-the-rows", label: "Trace the transactions" },
+      { id: "resolve-differences", label: "Explain differences" },
+      { id: "save-the-trail", label: "Retain the evidence" },
+    ],
+  },  {
     slug: "margin-is-not-markup",
     title: "Margin is not markup.",
     description: "The two percentages describe the same profit from different sides of a sale. One quiet mix-up can make a pricing plan look healthier than it is.",
@@ -64,6 +141,8 @@ export const blogPosts: readonly BlogPost[] = [
       { id: "check-the-forecast", label: "Check estimates against actuals" },
     ],
   },
+
+
 ] as const;
 
 export function findBlogPost(slug: string): BlogPost {

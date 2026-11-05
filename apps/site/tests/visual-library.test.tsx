@@ -70,7 +70,7 @@ describe("Tammy practical tools directory", () => {
       expect(svg.length).toBeLessThan(12_000);
     }
     const { container } = render(<BlogPage />);
-    expect(container.querySelector(".blog-feature-watermark")?.getAttribute("src"))
-      .toBe("/assets/tammy-margin-orbit.svg");
+    expect(container.querySelector(".blog-feature-hero-art")?.getAttribute("src"))
+      .toBe("/assets/journal-gst-threshold.svg");
   });
 });
