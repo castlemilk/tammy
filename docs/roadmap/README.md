@@ -1,5 +1,19 @@
 # Tammy product roadmap
 
+## Growth and acquisition (parallel to accounting release gates)
+
+- [Free tools → paid accounting funnel](free-tools-funnel-roadmap-2026-11-05.md): positioning, release dependencies, journey design, milestones and first delivery order.
+- [Actionable growth backlog](growth-backlog-2026-11-05.csv): **43 proposed acceptance-level tasks** mapped to the seven [Growth epics #32–#38](https://github.com/castlemilk/tammy/issues/31).
+- [Australian search strategy](seo-strategy-2026-11-05.md): technical launch/migration sequencing, original content clusters, page quality and distribution.
+- [SEO intent-to-URL map](seo-content-map-2026-11-05.csv): **29 intent rows**, differentiating source-implemented draft pages from planned routes (no invented search volume).
+- [Privacy-first measurement specification](growth-measurement-2026-11-05.md): event allowlist, funnel denominators, consent, data minimisation and regression guardrails.
+
+**Scope boundary:** site tools and Journal are built in draft source PRs #13–#20, not verified deployed or indexed. `tammy.tax` is the planned domain, not proven canonical in this snapshot. Commercial checkout and paid desktop release are not asserted. Growth P0 is an *acquisition workstream priority* and does not supersede G0–G2 accounting safety dependencies.
+
+Run `node scripts/check-growth-backlog.mjs` after changing growth or SEO data. The roadmap CI also validates this machine-readable plan.
+
+## Accounting capability and Xero replacement
+
 - [Xero replacement roadmap](xero-replacement-roadmap.md): market target, release gates, dependencies, migration plan, release-quality acceptance, and first engineering epics.
 - [Xero feature-parity inventory](xero-feature-inventory-2026-11-05.csv): **259 decomposed features across 20 domains**, with each item's documented development-state classification, priority, acceptance gate and Xero evidence URL.
 - [Current capability source](../development/tech-state.md): what is connected in the real development build.
