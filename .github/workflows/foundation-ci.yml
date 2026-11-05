@@ -15,9 +15,21 @@ concurrency:
 jobs:
   contracts:
     name: Contracts and local foundation
-    runs-on: ubuntu-24.04
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: [self-hosted, linux, ARM64, tammy-linux-ci]
     timeout-minutes: 30
     steps:
+      - name: Verify Cuttlefish Linux runner identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${RUNNER_OS}" = Linux
+          test "${RUNNER_ARCH}" = ARM64
+          test "$(uname -m)" = aarch64
+          case "${RUNNER_NAME}" in
+            cf-vm-*) ;;
+            *) printf 'RUNNER_NOT_CUTTLEFISH: %s\n' "${RUNNER_NAME}" >&2; exit 1 ;;
+          esac
       - name: Check out the complete comparison history
         uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
         with:
