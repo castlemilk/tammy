@@ -1,0 +1,54 @@
+name: Tammy Cuttlefish runner readiness
+
+# This job intentionally has NO GitHub-hosted fallback. It proves an actual
+# repository-scoped Cuttlefish runner can accept jobs for castlemilk/tammy.
+on:
+  push:
+    branches:
+      - ci/cuttlefish-runner-readiness-2026-11-06
+    paths:
+      - .github/workflows/cuttlefish-runner-readiness.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify-cuttlefish:
+    name: Verify Cuttlefish Linux runner for Tammy
+    runs-on: [self-hosted, Linux, ARM64, cuttlefish, container]
+    timeout-minutes: 10
+    steps:
+      - name: Verify Cuttlefish identity and isolation boundaries
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${RUNNER_OS}" = Linux
+          test "${RUNNER_ARCH}" = ARM64
+          test "$(uname -m)" = aarch64
+          case "${RUNNER_NAME}" in
+            cuttlefish-linux-*) ;;
+            *) echo "RUNNER_NOT_CUTTLEFISH: ${RUNNER_NAME}" >&2; exit 1 ;;
+          esac
+          test "${GITHUB_REPOSITORY}" = castlemilk/tammy
+          printf 'Cuttlefish runner: %s (%s/%s)\n' "${RUNNER_NAME}" "${RUNNER_OS}" "${RUNNER_ARCH}"
+      - name: Verify build prerequisites without project secrets
+        shell: bash
+        run: |
+          set -euo pipefail
+          command -v git
+          command -v node
+          command -v docker
+          command -v xvfb-run
+          docker version
+      - name: Check exact repository and checkout
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
+        with:
+          clean: true
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Confirm the workflow runs on Cuttlefish
+        shell: bash
+        run: |
+          test -f .github/workflows/cuttlefish-runner-readiness.yml
+          printf 'RUNNER_VERIFIED_ON_CUTTLEFISH\n'
