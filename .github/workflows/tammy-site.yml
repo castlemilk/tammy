@@ -1,14 +1,33 @@
 name: Tammy marketing site
 
 on:
+  workflow_dispatch:
   push:
     paths:
       - "apps/site/**"
+      - "packages/invoices/**"
+      - "package.json"
+      - ".npmrc"
+      - "tsconfig.base.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - "patches/**"
+      - "scripts/site-release*"
       - ".github/workflows/tammy-site.yml"
+      - ".github/actionlint.yaml"
   pull_request:
     paths:
       - "apps/site/**"
+      - "packages/invoices/**"
+      - "package.json"
+      - ".npmrc"
+      - "tsconfig.base.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - "patches/**"
+      - "scripts/site-release*"
       - ".github/workflows/tammy-site.yml"
+      - ".github/actionlint.yaml"
 
 permissions:
   contents: read
@@ -20,9 +39,23 @@ concurrency:
 jobs:
   verify-site:
     name: Typecheck, lint, test and build
-    runs-on: ubuntu-24.04
+    # Registration and qualification are tracked in issue #47 / draft PR #46.
+    # Fork pull requests must never execute on the repo-scoped Cuttlefish pool.
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: [self-hosted, linux, ARM64, tammy-linux-ci]
     timeout-minutes: 20
     steps:
+      - name: Verify Cuttlefish Linux runner identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${RUNNER_OS}" = Linux
+          test "${RUNNER_ARCH}" = ARM64
+          test "$(uname -m)" = aarch64
+          case "${RUNNER_NAME}" in
+            cf-vm-*) ;;
+            *) printf 'RUNNER_NOT_CUTTLEFISH: %s\n' "${RUNNER_NAME}" >&2; exit 1 ;;
+          esac
       - name: Check out source
         uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
         with:
@@ -36,21 +69,63 @@ jobs:
         run: |
           corepack enable pnpm
           corepack prepare pnpm@11.15.0 --activate
+      - name: Release preparation and provenance tests
+        run: node --test scripts/site-release.test.mjs
+      - name: Export the exact checked-out source and workspace dependencies
+        run: node scripts/site-release.mjs prepare --output "$RUNNER_TEMP/tammy-site-source"
       - name: Install site dependencies from lockfile
+        working-directory: ${{ runner.temp }}/tammy-site-source
         run: pnpm install --frozen-lockfile --filter sites-project...
       - name: Site typecheck
+        working-directory: ${{ runner.temp }}/tammy-site-source
         run: pnpm --dir apps/site typecheck
       - name: Site lint
+        working-directory: ${{ runner.temp }}/tammy-site-source
         run: pnpm --dir apps/site lint
+      - name: Shared invoice package typecheck
+        working-directory: ${{ runner.temp }}/tammy-site-source
+        run: pnpm --dir packages/invoices typecheck
       - name: Invoice and quote PDF model tests
+        working-directory: ${{ runner.temp }}/tammy-site-source
         run: pnpm --dir packages/invoices test
       - name: Site tests
+        working-directory: ${{ runner.temp }}/tammy-site-source
         run: pnpm --dir apps/site test
       - name: Editorial MDX prose audit
+        working-directory: ${{ runner.temp }}/tammy-site-source
         run: pnpm --dir apps/site editorial:lint
       - name: SEO and canonical audit
+        working-directory: ${{ runner.temp }}/tammy-site-source
         run: pnpm --dir apps/site seo:check
       - name: Sites publication preflight contract tests
+        working-directory: ${{ runner.temp }}/tammy-site-source
         run: pnpm --dir apps/site site:preflight:test
-      - name: Site build
-        run: pnpm --dir apps/site build
+      - name: Build and stage the Worker from the exported source
+        working-directory: ${{ runner.temp }}/tammy-site-source
+        run: pnpm build
+      - name: Verify source and Worker provenance
+        working-directory: ${{ runner.temp }}/tammy-site-source
+        run: node scripts/site-release.mjs verify
+      - name: Bundle source, Worker output and provenance
+        working-directory: ${{ runner.temp }}/tammy-site-source
+        run: node scripts/site-release.mjs bundle --output "$RUNNER_TEMP/tammy-site-artifact"
+      - name: Retain deployment preparation artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: tammy-site-preparation-${{ github.sha }}
+          path: ${{ runner.temp }}/tammy-site-artifact/
+          # Includes dist/.openai/hosting.json; the bundle excludes credentials,
+          # Git metadata, dependency stores and node_modules.
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14
+      - name: Record the preparation boundary
+        shell: bash
+        run: |
+          {
+            printf '## Tammy Sites preparation\n\n'
+            printf 'Source commit: %s\n\n' "$GITHUB_SHA"
+            printf 'Cuttlefish runner: %s (%s / %s)\n\n' "$RUNNER_NAME" "$RUNNER_OS" "$RUNNER_ARCH"
+            printf 'Artifact contains the source closure, Worker output and provenance.\n\n'
+            printf 'This workflow does not synchronize Sites source, save a Sites version or publish. Follow apps/site/SITE-RELEASE-RUNBOOK.md for the separate supported save/publication steps.\n'
+          } >> "$GITHUB_STEP_SUMMARY"
