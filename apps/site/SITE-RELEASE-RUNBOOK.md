@@ -38,7 +38,26 @@ Use an isolated checkout. Preserve concurrent working trees and open pull reques
 
 Commit all intended source changes before preparation. Keep generated release output outside the checkout. The exporter uses committed source and refuses dirty inputs rather than quietly assigning a commit SHA to uncommitted work.
 
-From the GitHub checkout, substitute an absolute, unused output path:
+Before exporting, refresh the normal descriptor attestation against that clean source commit. `DESCRIPTOR_SOURCE_REVISION_MISMATCH` means the retained descriptor manifest does not attest the current source revision; a successful site build does not satisfy this repository check. Finish **all source and documentation changes first**, then run from the GitHub checkout with the pinned toolchain:
+
+```sh
+TAMMY_DESCRIPTOR_SHA_BEFORE="$(shasum -a 256 compliance/contracts/descriptors.pb)"
+TAMMY_SOURCE_REVISION="$(git rev-parse HEAD)" pnpm proto:descriptors:evidence
+test "$TAMMY_DESCRIPTOR_SHA_BEFORE" = "$(shasum -a 256 compliance/contracts/descriptors.pb)"
+pnpm proto:descriptors:verify
+git diff -- compliance/contracts
+git add -- compliance/contracts/descriptor-manifest.json compliance/contracts/descriptors.pb
+git diff --cached --name-only
+git commit -m "Refresh descriptor evidence for release source"
+pnpm proto:descriptors:verify
+git rev-parse HEAD
+```
+
+Stop on any command failure. For this site-only release, `descriptors.pb` must retain its expected bytes and SHA-256; investigate any hash change rather than accepting it as metadata refresh. Review the staged paths before committing: the immediate child commit may contain **only** `compliance/contracts/descriptor-manifest.json` and `compliance/contracts/descriptors.pb`. The normal verifier accepts that evidence-only child of the attested source commit. Do not weaken its revision check or describe descriptor evidence as site-test coverage.
+
+The final release candidate SHA is the evidence commit, and verification must pass again at that final HEAD. Export from it. Any subsequent source or documentation edit requires a new clean source commit, evidence refresh and verification before preparing another candidate.
+
+From the final GitHub candidate checkout, substitute an absolute, unused output path:
 
 ```sh
 node scripts/site-release.mjs prepare --output /absolute/path/to/tammy-release-candidate

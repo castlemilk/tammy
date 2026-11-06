@@ -5,7 +5,9 @@ Copy this checklist into the release record. Follow [SITE-RELEASE-RUNBOOK.md](SI
 ## Candidate and artifacts
 
 - [ ] GitHub PR URL and exact tested GitHub commit SHA recorded; synthetic merge SHA distinguished from PR head if applicable.
-- [ ] Isolated checkout used; concurrent work preserved; intended source committed.
+- [ ] Isolated checkout used; concurrent work preserved; intended source and documentation committed before descriptor attestation.
+- [ ] `TAMMY_SOURCE_REVISION="$(git rev-parse HEAD)" pnpm proto:descriptors:evidence` run on the clean source commit; expected `descriptors.pb` bytes/SHA-256 unchanged for this site-only release.
+- [ ] `pnpm proto:descriptors:verify` passed before and after an immediate evidence-only child commit containing only the two retained files under `compliance/contracts`; final candidate/export SHA is that evidence commit.
 - [ ] Existing project ID `appgprj_6a93f33631748191b7c064c033f72b53`, public audience and `d1/r2: null` retained.
 - [ ] Source export verified, including `packages/invoices`, root lockfile/workspace/dependency inputs, patches and shared TypeScript config.
 - [ ] Exported workspace installed with frozen lockfile and pinned Node/pnpm.
@@ -41,7 +43,8 @@ Copy this checklist into the release record. Follow [SITE-RELEASE-RUNBOOK.md](SI
 | Evidence | Value |
 | --- | --- |
 | Date / operator | |
-| PR / GitHub commit | |
+| PR / final GitHub evidence commit | |
+| Attested source commit / descriptor SHA-256 / verification results | |
 | Source provenance manifest / hash | |
 | Local validation commands / results | |
 | CI run / job / actual SHA / result | |
