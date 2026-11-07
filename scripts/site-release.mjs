@@ -19,6 +19,7 @@ import { fileURLToPath } from "node:url";
 import { isDeepStrictEqual } from "node:util";
 
 export const PROJECT_ID = "appgprj_6a93f33631748191b7c064c033f72b53";
+export const CLOUDFLARE_WORKER_NAME = "tammy-site-direct";
 export const SOURCE_PATHS = [
   "apps/site",
   "packages/invoices",
@@ -37,8 +38,8 @@ const BUILD_SCRIPT = "node scripts/site-release.mjs build";
 const hash = (value) => createHash("sha256").update(value).digest("hex");
 const json = (file) => JSON.parse(readFileSync(file, "utf8"));
 const writeJson = (file, value) => writeFileSync(file, `${JSON.stringify(value, null, 2)}\n`);
-const capture = (command, args, cwd) =>
-  execFileSync(command, args, { cwd, encoding: "utf8", maxBuffer: 32 * 1024 * 1024 });
+const capture = (command, args, cwd, env = process.env) =>
+  execFileSync(command, args, { cwd, env, encoding: "utf8", maxBuffer: 32 * 1024 * 1024 });
 const run = (command, args, cwd) => execFileSync(command, args, { cwd, stdio: "inherit" });
 const digest = (files) => hash(JSON.stringify(files));
 function fail(message) {
@@ -107,12 +108,14 @@ function safeSourcePath(name) {
           part === "dist" ||
           part === ".wrangler" ||
           part.startsWith(".env") ||
+          part.startsWith(".dev.vars") ||
           /\.(pem|key|p12)$/i.test(part),
       )
   )
     fail(`Unexpected generated or sensitive source path: ${name}`);
 }
-export function prepare(root, output) {
+export function prepare(root, output, target = "sites") {
+  if (!["sites", "cloudflare"].includes(target)) fail("Unknown release target.");
   root = realpathSync(root);
   if (capture("git", ["rev-parse", "--show-toplevel"], root).trim() !== root)
     fail("Prepare from the GitHub repository root.");
@@ -155,6 +158,7 @@ export function prepare(root, output) {
   // Only scripts change. Dependency inputs stay byte-identical to the frozen lockfile.
   pkg.scripts = { build: BUILD_SCRIPT, "release:verify": "node scripts/site-release.mjs verify" };
   writeJson(path.join(out, "package.json"), pkg);
+  writeJson(path.join(out, ".release-target.json"), { target });
   mkdirSync(path.join(out, ".openai"));
   cpSync(path.join(out, "apps/site/.openai/hosting.json"), path.join(out, ".openai/hosting.json"));
   writeFileSync(
@@ -164,6 +168,7 @@ export function prepare(root, output) {
   const files = inventory(out);
   const provenance = {
     schema_version: 1,
+    target,
     project_id: PROJECT_ID,
     github: { repository: "castlemilk/tammy", commit_sha: sha },
     sites: { commit_sha: null, saved_version: null, publication: "not-performed" },
@@ -211,6 +216,11 @@ export function verifySource(root) {
     !/^[a-f0-9]{40}$/.test(source.github?.commit_sha)
   )
     fail("Invalid source provenance.");
+  if (
+    !["sites", "cloudflare"].includes(source.target) ||
+    json(path.join(root, ".release-target.json")).target !== source.target
+  )
+    fail("Release target differs from the prepared source.");
   const files = inventory(root, regularFiles(root, ignoredGenerated));
   if (digest(files) !== source.source_sha256 || digest(source.files) !== source.source_sha256)
     fail("Source differs from the prepared GitHub snapshot; prepare and build again.");
@@ -251,21 +261,179 @@ export function verifySource(root) {
   }
   return source;
 }
-function workerFiles(root) {
+function rejectSecrets(names) {
+  for (const name of names) {
+    if (
+      name
+        .split("/")
+        .some(
+          (part) =>
+            part.startsWith(".env") ||
+            part.startsWith(".dev.vars") ||
+            /\.(pem|key|p12)$/i.test(part),
+        )
+    ) {
+      fail(`Unexpected sensitive artifact path: ${name}`);
+    }
+  }
+}
+export function assertCloudflareConfig(config) {
+  const allowed = new Set([
+    "$schema",
+    "topLevelName",
+    "dev",
+    "name",
+    "compatibility_date",
+    "compatibility_flags",
+    "workers_dev",
+    "preview_urls",
+    "assets",
+    "observability",
+    "main",
+    "no_bundle",
+    "jsx_factory",
+    "jsx_fragment",
+    "rules",
+    "build",
+    "legacy_env",
+    "python_modules",
+    "cloudchamber",
+    "vars",
+    "define",
+    "durable_objects",
+    "kv_namespaces",
+    "queues",
+    "r2_buckets",
+    "d1_databases",
+    "vectorize",
+    "ai_search_namespaces",
+    "ai_search",
+    "hyperdrive",
+    "workflows",
+    "secrets_store_secrets",
+    "artifacts",
+    "services",
+    "analytics_engine_datasets",
+    "unsafe_hello_world",
+    "flagship",
+    "ratelimits",
+    "worker_loaders",
+    "migrations",
+    "triggers",
+    "dispatch_namespaces",
+    "logfwdr",
+    "send_email",
+    "mtls_certificates",
+    "pipelines",
+    "vpc_services",
+    "vpc_networks",
+  ]);
+  for (const key of Object.keys(config))
+    if (!allowed.has(key)) fail(`Unreviewed Cloudflare configuration key: ${key}`);
+  if (config.observability && !isDeepStrictEqual(config.observability, { enabled: false }))
+    fail("Only disabled Cloudflare observability is reviewed for this target.");
+  if (config.python_modules && !isDeepStrictEqual(config.python_modules, { exclude: ["**/*.pyc"] }))
+    fail("Unexpected Python module configuration in the JavaScript Worker.");
+  if (
+    config.rules &&
+    !isDeepStrictEqual(config.rules, [{ type: "ESModule", globs: ["**/*.js", "**/*.mjs"] }])
+  )
+    fail("Unreviewed Cloudflare module rules; modules must stay inside the verified output.");
+  if (config.topLevelName && config.topLevelName !== CLOUDFLARE_WORKER_NAME)
+    fail("Unexpected top-level Worker name.");
+  if (
+    config.name !== CLOUDFLARE_WORKER_NAME ||
+    config.main !== "index.js" ||
+    config.no_bundle !== true ||
+    config.compatibility_date !== "2026-05-15" ||
+    !isDeepStrictEqual(config.compatibility_flags, ["nodejs_compat"]) ||
+    config.workers_dev !== true ||
+    config.preview_urls !== false ||
+    config.assets?.directory !== "../client" ||
+    config.assets?.binding !== "ASSETS" ||
+    config.assets?.not_found_handling !== "none" ||
+    config.assets?.run_worker_first ||
+    config.route != null ||
+    config.routes != null ||
+    config.account_id != null ||
+    config.build?.command ||
+    config.env ||
+    config.site ||
+    config.unsafe ||
+    (config.assets?.html_handling && config.assets.html_handling !== "auto-trailing-slash")
+  )
+    fail("Unexpected direct Cloudflare Worker configuration; review target and routing.");
+  for (const key of [
+    "vars",
+    "define",
+    "d1_databases",
+    "r2_buckets",
+    "kv_namespaces",
+    "services",
+    "queues",
+    "durable_objects",
+    "workflows",
+    "dispatch_namespaces",
+    "containers",
+    "ai",
+    "ai_search",
+    "ai_search_namespaces",
+    "vectorize",
+    "hyperdrive",
+    "secrets_store_secrets",
+    "analytics_engine_datasets",
+    "send_email",
+    "mtls_certificates",
+    "pipelines",
+    "vpc_services",
+    "vpc_networks",
+    "worker_loaders",
+    "ratelimits",
+    "logfwdr",
+    "triggers",
+    "migrations",
+    "artifacts",
+    "unsafe_hello_world",
+    "flagship",
+    "cloudchamber",
+  ]) {
+    const value = config[key];
+    const nonempty = (v) =>
+      v &&
+      (Array.isArray(v)
+        ? v.length > 0
+        : typeof v === "object"
+          ? Object.values(v).some(nonempty)
+          : true);
+    if (nonempty(value)) fail(`Unreviewed Cloudflare binding or runtime setting: ${key}`);
+  }
+}
+function workerFiles(root, target = "sites") {
   const dist = path.join(root, "dist");
   const files = inventory(dist);
-  for (const required of ["server/index.js", "server/wrangler.json", ".openai/hosting.json"])
+  rejectSecrets(files.map((entry) => entry.path));
+  for (const required of [
+    "server/index.js",
+    "server/wrangler.json",
+    ...(target === "sites" ? [".openai/hosting.json"] : []),
+  ])
     if (!files.some((entry) => entry.path === required)) fail(`Missing Worker output: ${required}`);
   if (!files.some((entry) => entry.path.startsWith("client/") && entry.path.endsWith(".wasm")))
     fail("Missing invoice PDF WASM asset in client output.");
-  assertHosting(json(path.join(dist, ".openai/hosting.json")));
+  if (target === "sites") assertHosting(json(path.join(dist, ".openai/hosting.json")));
+  else {
+    if (existsSync(path.join(dist, ".openai")))
+      fail("Direct Cloudflare output must not contain Sites deployment metadata.");
+    assertCloudflareConfig(json(path.join(dist, "server/wrangler.json")));
+  }
   return files;
 }
 export function recordBuild(root, runtime) {
   const source = verifySource(root);
-  const files = workerFiles(root);
+  const files = workerFiles(root, source.target);
   const record = {
     schema_version: 1,
+    target: source.target,
     project_id: PROJECT_ID,
     github: source.github,
     source_sha256: source.source_sha256,
@@ -277,9 +445,9 @@ export function recordBuild(root, runtime) {
   return record;
 }
 export function build(root) {
-  verifySource(root);
+  const source = verifySource(root);
   const pkg = json(path.join(root, "package.json"));
-  const pnpm = capture("pnpm", ["--version"], root).trim();
+  const pnpm = capture("pnpm", ["--version"], root, cloudflareEnvironment()).trim();
   if (process.versions.node !== pkg.engines.node || `pnpm@${pnpm}` !== pkg.packageManager)
     fail(`Use Node ${pkg.engines.node} and ${pkg.packageManager} for release builds.`);
   // These directories are generated exclusively by this release pipeline.
@@ -290,7 +458,11 @@ export function build(root) {
     rmSync(filename, { recursive: true, force: true });
   }
   rmSync(path.join(root, BUILD_RECORD), { force: true });
-  run("pnpm", ["--dir", "apps/site", "build"], root);
+  execFileSync("pnpm", ["--dir", "apps/site", "build"], {
+    cwd: root,
+    stdio: "inherit",
+    env: { ...cloudflareEnvironment(), TAMMY_DEPLOY_TARGET: source.target },
+  });
   regularFiles(path.join(root, "apps/site/dist"));
   cpSync(path.join(root, "apps/site/dist"), path.join(root, "dist"), {
     recursive: true,
@@ -306,8 +478,9 @@ export function build(root) {
 export function verify(root) {
   const source = verifySource(root);
   const built = json(path.join(root, BUILD_RECORD));
-  const files = workerFiles(root);
+  const files = workerFiles(root, source.target);
   if (
+    built.target !== source.target ||
     built.source_sha256 !== source.source_sha256 ||
     built.github?.commit_sha !== source.github.commit_sha ||
     built.build_sha256 !== digest(files) ||
@@ -331,7 +504,19 @@ export function bundle(root, output) {
     cpSync(path.join(root, name), path.join(out, name));
   const manifest = {
     schema_version: 1,
-    kind: "github-source-and-worker-build",
+    target: source.target,
+    kind:
+      source.target === "cloudflare" ? "cloudflare-worker-build" : "github-source-and-worker-build",
+    ...(source.target === "cloudflare"
+      ? {
+          cloudflare: {
+            worker_name: CLOUDFLARE_WORKER_NAME,
+            config: "dist/server/wrangler.json",
+            version_id: null,
+            url: null,
+          },
+        }
+      : {}),
     project_id: PROJECT_ID,
     github: source.github,
     sites: source.sites,
@@ -345,6 +530,8 @@ export function bundle(root, output) {
 }
 export function packageWorker(root, output, pluginRoot) {
   const { source, built } = verify(root);
+  if (source.target !== "sites")
+    fail("Sites packaging requires a Sites target; use cloudflare-dry-run for direct Workers.");
   if (!pluginRoot || !path.isAbsolute(pluginRoot))
     fail("Provide --sites-plugin with the absolute installed Sites plugin directory.");
   const helper = path.join(pluginRoot, "scripts/package-site.mjs");
@@ -392,25 +579,174 @@ export function packageWorker(root, output, pluginRoot) {
   writeJson(path.join(out, "worker-manifest.json"), manifest);
   return manifest;
 }
+export function cloudflareEnvironment(credentials = false) {
+  const env = Object.fromEntries(
+    Object.entries(process.env).filter(
+      ([key]) => !/^(CLOUDFLARE_|CF_|WRANGLER_|TAMMY_DEPLOY_TARGET$)/.test(key),
+    ),
+  );
+  Object.assign(env, {
+    WRANGLER_SEND_METRICS: "false",
+    WRANGLER_WRITE_LOGS: "false",
+    CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV: "false",
+    CLOUDFLARE_INCLUDE_PROCESS_ENV: "false",
+    CI: "true",
+  });
+  if (credentials) {
+    const { CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID } = process.env;
+    if (
+      !/^[a-f0-9]{32}$/.test(CLOUDFLARE_ACCOUNT_ID ?? "") ||
+      (process.env.GITHUB_ACTIONS === "true" && !CLOUDFLARE_API_TOKEN)
+    )
+      fail(
+        "Direct deployment requires a verified CLOUDFLARE_ACCOUNT_ID and existing authorized authentication; GitHub Actions also requires CLOUDFLARE_API_TOKEN. No login or credential creation is performed.",
+      );
+    env.CLOUDFLARE_ACCOUNT_ID = CLOUDFLARE_ACCOUNT_ID;
+    if (CLOUDFLARE_API_TOKEN) env.CLOUDFLARE_API_TOKEN = CLOUDFLARE_API_TOKEN;
+  }
+  return env;
+}
+function directBuild(root) {
+  const verified = verify(root);
+  if (verified.source.target !== "cloudflare")
+    fail("Direct deployment requires a cloudflare target, not a Sites artifact.");
+  const pkg = json(path.join(root, "package.json"));
+  if (
+    process.versions.node !== pkg.engines.node ||
+    capture("pnpm", ["--version"], root, cloudflareEnvironment()).trim() !==
+      pkg.packageManager.replace("pnpm@", "")
+  )
+    fail("Use the pinned Node and pnpm versions for Cloudflare release operations.");
+  const wranglerPackage = json(path.join(root, "apps/site/node_modules/wrangler/package.json"));
+  if (wranglerPackage.version !== "4.92.0")
+    fail("Use pinned Wrangler 4.92.0; do not download a newer CLI.");
+  return verified;
+}
+function wrangler(root, args, env) {
+  execFileSync(
+    process.execPath,
+    [
+      path.join(root, "apps/site/node_modules/wrangler/bin/wrangler.js"),
+      "deploy",
+      "--config",
+      path.join(root, "dist/server/wrangler.json"),
+      ...args,
+    ],
+    { cwd: root, stdio: "inherit", env },
+  );
+}
+export function cloudflareDryRun(root, output) {
+  const { source, built } = directBuild(root);
+  const out = newOutput(root, output);
+  wrangler(root, ["--dry-run", "--outdir", path.join(out, "worker")], cloudflareEnvironment());
+  verify(root);
+  const files = inventory(out);
+  rejectSecrets(files.map((entry) => entry.path));
+  const record = {
+    schema_version: 1,
+    target: "cloudflare",
+    worker_name: CLOUDFLARE_WORKER_NAME,
+    github: source.github,
+    source_sha256: source.source_sha256,
+    build_sha256: built.build_sha256,
+    wrangler: "4.92.0",
+    files,
+    publication: "not-performed",
+  };
+  writeJson(path.join(out, "dry-run-record.json"), record);
+  return record;
+}
+export function cloudflareDeploymentResult(entries) {
+  const result = entries.filter((entry) => entry.type === "deploy").at(-1);
+  if (
+    result?.version !== 1 ||
+    result.worker_name !== CLOUDFLARE_WORKER_NAME ||
+    result.worker_name_overridden ||
+    !/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(
+      result.version_id ?? "",
+    ) ||
+    result.targets?.length !== 1 ||
+    typeof result.targets[0] !== "string"
+  )
+    fail("Wrangler deployment outcome is uncertain; inspect the existing Worker before retrying.");
+  const url = new URL(result.targets[0]);
+  if (
+    url.protocol !== "https:" ||
+    url.username ||
+    url.password ||
+    url.port ||
+    url.search ||
+    url.hash ||
+    url.pathname !== "/" ||
+    !new RegExp(`^${CLOUDFLARE_WORKER_NAME}\\.[a-z0-9-]+\\.workers\\.dev$`).test(url.hostname)
+  )
+    fail("Unexpected deployed route; reconcile the Worker outcome before retrying.");
+  return { version_id: result.version_id, url: url.href };
+}
+export function deployCloudflare(root, output) {
+  const { source, built } = directBuild(root);
+  const env = cloudflareEnvironment(true);
+  const out = newOutput(root, output);
+  const record = {
+    schema_version: 1,
+    target: "cloudflare",
+    worker_name: CLOUDFLARE_WORKER_NAME,
+    github: source.github,
+    source_sha256: source.source_sha256,
+    build_sha256: built.build_sha256,
+    account_id: env.CLOUDFLARE_ACCOUNT_ID,
+    wrangler: "4.92.0",
+    status: "started",
+    live_verification: "pending",
+    version_id: null,
+    url: null,
+  };
+  const recordPath = path.join(out, "deployment-record.json");
+  const outputPath = path.join(out, "wrangler-output.jsonl");
+  writeJson(recordPath, record);
+  try {
+    wrangler(root, ["--message", `GitHub ${source.github.commit_sha}`], {
+      ...env,
+      WRANGLER_OUTPUT_FILE_PATH: outputPath,
+    });
+    const result = cloudflareDeploymentResult(
+      readFileSync(outputPath, "utf8")
+        .trim()
+        .split("\n")
+        .map((line) => JSON.parse(line)),
+    );
+    Object.assign(record, result, { status: "published" });
+    verify(root);
+    writeJson(recordPath, record);
+    return record;
+  } catch (error) {
+    record.status = "outcome-uncertain";
+    writeJson(recordPath, record);
+    throw error;
+  }
+}
 function main() {
   const [command, ...args] = process.argv.slice(2);
   const options = {};
   while (args.length) {
     const key = args.shift();
-    if (!["--output", "--sites-plugin"].includes(key) || !args[0] || options[key])
+    if (!["--output", "--sites-plugin", "--target"].includes(key) || !args[0] || options[key])
       fail(
-        "Usage: site-release.mjs prepare|build|verify|bundle|package [--output ABS_DIR] [--sites-plugin ABS_PLUGIN_ROOT]",
+        "Usage: site-release.mjs prepare|build|verify|bundle|package|cloudflare-dry-run|cloudflare-deploy [--target sites|cloudflare] [--output ABS_DIR] [--sites-plugin ABS_PLUGIN_ROOT]",
       );
     options[key] = args.shift();
   }
   const root = process.cwd();
   let result;
-  if (command === "prepare") result = prepare(root, options["--output"]);
+  if (options["--target"] && command !== "prepare")
+    fail("Choose the target at preparation; build/deployment must use that recorded target.");
+  if (command === "prepare") result = prepare(root, options["--output"], options["--target"]);
   else if (command === "build") result = build(root);
   else if (command === "verify") {
     const { source, built } = verify(root);
     result = {
       github: source.github,
+      target: source.target,
       source_sha256: source.source_sha256,
       build_sha256: built.build_sha256,
       publication: "not-performed",
@@ -418,7 +754,12 @@ function main() {
   } else if (command === "bundle") result = bundle(root, options["--output"]);
   else if (command === "package")
     result = packageWorker(root, options["--output"], options["--sites-plugin"]);
-  else fail("Expected prepare, build, verify, bundle or package.");
+  else if (command === "cloudflare-dry-run") result = cloudflareDryRun(root, options["--output"]);
+  else if (command === "cloudflare-deploy") result = deployCloudflare(root, options["--output"]);
+  else
+    fail(
+      "Expected prepare, build, verify, bundle, package, cloudflare-dry-run or cloudflare-deploy.",
+    );
   console.log(
     JSON.stringify(
       command === "prepare"

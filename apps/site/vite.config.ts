@@ -36,6 +36,10 @@ const localBindingConfig = {
 };
 
 export default defineConfig(async () => {
+  const target = process.env.TAMMY_DEPLOY_TARGET ?? "sites";
+  if (!["sites", "cloudflare"].includes(target)) {
+    throw new Error("Unknown TAMMY_DEPLOY_TARGET; use sites or cloudflare.");
+  }
   // Keep Wrangler and Miniflare state project-local. These are non-secret tool
   // settings; application environment belongs in ignored `.env*` files.
   process.env.WRANGLER_WRITE_LOGS ??= "false";
@@ -58,10 +62,12 @@ export default defineConfig(async () => {
     plugins: [
       { enforce: "pre", ...mdx({ remarkPlugins: [remarkGfm] }) },
       vinext(),
-      sites(),
+      ...(target === "sites" ? [sites()] : []),
       cloudflare({
         viteEnvironment: { name: "rsc", childEnvironments: ["ssr"] },
-        config: localBindingConfig,
+        ...(target === "cloudflare"
+          ? { configPath: "wrangler.cloudflare.json" }
+          : { config: localBindingConfig }),
       }),
     ],
   };

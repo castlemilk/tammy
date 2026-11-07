@@ -1,6 +1,6 @@
 # Tammy: GitHub source to ChatGPT Sites
 
-This runbook separates a reproducible GitHub release candidate, a saved Sites version, and production publication. GitHub Actions prepares source and build evidence; it does not publish Tammy. Use the [release checklist](SITE-RELEASE-CHECKLIST.md) to retain evidence for each candidate.
+This runbook covers the **ChatGPT Sites** target: a reproducible GitHub release candidate, a saved Sites version, and separate Sites publication. Use the [Sites checklist](SITE-RELEASE-CHECKLIST.md) for that path. The user subsequently requested direct Cloudflare deployment and CI on 7 November 2026; follow the [direct Cloudflare release runbook](CLOUDFLARE-RELEASE-RUNBOOK.md) for that authorized route. Direct Worker publication does not publish a Sites version or move tammy.tax.
 
 ## Baseline and release boundaries
 
@@ -20,11 +20,11 @@ Observed on 6 November 2026; refresh these values before a later release:
 
 `get_site` confirmed the existing project, public audience, live URL and version 12 during this preparation. These observations do not establish that the latest GitHub source is live. DNS is not the current release blocker. Vercel manages the domain, but its hosting-specific configuration recommendations are not instructions to replace Sites records.
 
-This change prepares source, tests, build output and documentation only. It must not create credentials, register runners, change permissions, alter DNS/audience/canonical configuration, or call any deployment operation. Saving an unpublished version is permitted only if existing approved source access is available and pushing cannot trigger publication.
+The 6 November **Sites preparation** was save-only: source, tests, build output and documentation, without production publication. That boundary still applies to the Sites preparation flow described here. The later direct Cloudflare request authorizes a separate Worker deployment through its own runbook; it does not authorize Sites publication, credential creation, runner registration, permission changes, or DNS/audience/canonical migration. Saving an unpublished Sites version still requires existing approved source access and confirmation that pushing cannot trigger publication.
 
 ## What is automated
 
-`.github/workflows/tammy-site.yml` watches the site, shared invoice package, root dependency/configuration inputs, patches, release scripts and its own workflow. It checks the source and prepares a downloadable release artifact on the isolated Cuttlefish lane. It has read-only repository permissions and no Sites credentials or publication step.
+`.github/workflows/tammy-site.yml` watches the site, shared invoice package, root dependency/configuration inputs, patches, release scripts and its own workflow. It checks the source and prepares a downloadable release artifact on the isolated Cuttlefish lane. It has read-only repository permissions and no Sites credentials or Sites publication step. Its separate direct Cloudflare target/job is documented in the [direct release runbook](CLOUDFLARE-RELEASE-RUNBOOK.md#4-ci-deployment-contract).
 
 The runner contract is `[self-hosted, linux, ARM64, tammy-linux-ci]`, with `RUNNER_NAME` matching `cf-vm-*` and `uname -m` reporting `aarch64`. Fork pull requests do not execute on this pool. Local validation is useful evidence, but does not qualify the Cuttlefish runner.
 

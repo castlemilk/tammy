@@ -1,6 +1,6 @@
 # Tammy Sites release checklist
 
-Copy this checklist into the release record. Follow [SITE-RELEASE-RUNBOOK.md](SITE-RELEASE-RUNBOOK.md). Mark a step complete only from its own evidence; build, save and publication are separate outcomes.
+This checklist applies to the **ChatGPT Sites** target and its earlier save-only preparation. For the direct Cloudflare deployment and CI requested on 7 November 2026, use the [direct runbook and record](CLOUDFLARE-RELEASE-RUNBOOK.md#release-checklist-and-record). Copy this Sites checklist into a Sites release record and follow [SITE-RELEASE-RUNBOOK.md](SITE-RELEASE-RUNBOOK.md). Mark a step complete only from its own evidence; build, save, direct Worker publication and Sites publication are separate outcomes.
 
 ## Candidate and artifacts
 
