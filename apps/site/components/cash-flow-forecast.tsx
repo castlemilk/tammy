@@ -1,5 +1,5 @@
 "use client";
-import { useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore, type KeyboardEvent } from "react";
 import { addCalendarDays, aud } from "../lib/tools/calculations";
 import {
   computeCashForecast, exampleForecast, forecastToCsv, parseForecastMoney,
@@ -46,8 +46,25 @@ export function CashFlowForecast() {
   const [opening,setOpening]=useState("12000.00");
   const [lines,setLines]=useState<EditableMovement[]>([]);
   const [notice,setNotice]=useState("");
+  const [confirmSample,setConfirmSample]=useState(false);
+  const sampleButton=useRef<HTMLButtonElement>(null);
+  const keepButton=useRef<HTMLButtonElement>(null);
   const sequence=useRef(0);
+  useEffect(()=>{
+    if(confirmSample) keepButton.current?.focus();
+  },[confirmSample]);
+  function keepForecast() {
+    setConfirmSample(false);
+    sampleButton.current?.focus();
+  }
+  function cancelOnEscape(event:KeyboardEvent<HTMLButtonElement>) {
+    if(event.key==="Escape") {
+      event.preventDefault();
+      keepForecast();
+    }
+  }
   function add() {
+    setConfirmSample(false);
     sequence.current+=1;
     setLines(prev=>[...prev,{
       id:"row-"+sequence.current,date:start,description:"",
@@ -56,6 +73,7 @@ export function CashFlowForecast() {
     setNotice("");
   }
   function update(id:string,patch:Partial<EditableMovement>) {
+    setConfirmSample(false);
     setLines(prev=>prev.map(line=>line.id===id?{...line,...patch}:line));
     setNotice("");
   }
@@ -66,7 +84,13 @@ export function CashFlowForecast() {
       ...item,amount:(item.amountCents/100).toFixed(2),
     })));
     sequence.current=items.length;
+    setConfirmSample(false);
     setNotice("Illustrative scenario loaded. Replace the example figures before using this as your own forecast.");
+    sampleButton.current?.focus();
+  }
+  function requestExample() {
+    if(lines.length>0 || opening!=="12000.00") setConfirmSample(true);
+    else fillExample();
   }
   let result:ReturnType<typeof computeCashForecast>|null=null;
   let error="";
@@ -90,19 +114,33 @@ export function CashFlowForecast() {
       <CardContent className="space-y-5 pt-5">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <label className="space-y-2 text-sm font-medium" htmlFor="forecast-start">First week begins
-            <Input id="forecast-start" type="date" value={start} onChange={(e)=>{setSelectedStart(e.target.value);setNotice("");}} />
+            <Input id="forecast-start" type="date" value={start} onChange={(e)=>{setSelectedStart(e.target.value);setNotice("");setConfirmSample(false);}} />
           </label>
           <label className="space-y-2 text-sm font-medium" htmlFor="forecast-opening">Available opening cash (AUD)
-            <Input id="forecast-opening" inputMode="decimal" value={opening} onChange={(e)=>{setOpening(e.target.value);setNotice("");}} />
+            <Input id="forecast-opening" inputMode="decimal" value={opening} onChange={(e)=>{setOpening(e.target.value);setNotice("");setConfirmSample(false);}} />
           </label>
         </div>
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-3">
           <h3 className="font-semibold">Expected movements</h3>
           <div className="flex flex-wrap gap-2">
-            <Button variant="outline" size="sm" disabled={!start} onClick={fillExample}>Use sample figures</Button>
+            <Button ref={sampleButton} variant="outline" size="sm" disabled={!lastDay} onClick={requestExample}
+              aria-expanded={confirmSample} aria-controls={confirmSample?"forecast-sample-confirmation":undefined}>Use sample figures</Button>
             <Button variant="secondary" size="sm" onClick={add} disabled={lines.length>=150}>Add movement</Button>
           </div>
         </div>
+        {confirmSample && <fieldset id="forecast-sample-confirmation"
+          aria-describedby="forecast-sample-description"
+          className="m-0 min-w-0 space-y-3 border-0 border-b border-border p-0 pb-5">
+          <legend className="tools-forecast-confirmation-title">Replace your forecast with sample figures?</legend>
+          <p id="forecast-sample-description" className="text-sm leading-6 text-muted-foreground">
+            This replaces your opening cash{lines.length>0?" and "+lines.length+" entered "+(lines.length===1?"movement":"movements"):""}.
+            {" "}Your start date stays the same. Export your CSV first if you want to keep a copy.
+          </p>
+          <div className="flex flex-wrap gap-3">
+            <Button ref={keepButton} variant="outline" onClick={keepForecast} onKeyDown={cancelOnEscape}>Keep my forecast</Button>
+            <Button variant="destructive" onClick={fillExample} onKeyDown={cancelOnEscape}>Replace with sample</Button>
+          </div>
+        </fieldset>}
         {lines.length===0
           ? <GammaEmptyState title="No receipts or payments yet" description="Add the cash you expect to receive or pay, or load an editable sample to understand the calculation.">
               <Button variant="outline" onClick={add}>Add first movement</Button>
@@ -110,7 +148,7 @@ export function CashFlowForecast() {
           : <div className="space-y-3">{lines.map((line,index)=><div className="rounded-lg border border-border bg-background/70 p-3" key={line.id}>
             <div className="mb-3 flex items-center justify-between gap-2">
               <strong className="text-sm">Movement {index+1}</strong>
-              <Button variant="ghost" size="sm" onClick={()=>setLines(prev=>prev.filter(x=>x.id!==line.id))}
+              <Button variant="ghost" size="sm" onClick={()=>{setLines(prev=>prev.filter(x=>x.id!==line.id));setConfirmSample(false);}}
                 aria-label={"Remove movement "+(index+1)}>Remove</Button>
             </div>
             <div className="grid grid-cols-2 gap-3">
@@ -151,10 +189,10 @@ export function CashFlowForecast() {
       <CardContent className="space-y-5 pt-5">
         {result
           ? <>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               <div className="rounded-lg bg-secondary p-4"><span className="text-xs text-muted-foreground">Week 12 cash</span><strong className="mt-2 block font-[family-name:var(--t-display)] text-2xl tabular-nums">{aud(result.endingCents)}</strong></div>
               <div className="rounded-lg bg-secondary p-4"><span className="text-xs text-muted-foreground">Lowest closing</span><strong className="mt-2 block font-[family-name:var(--t-display)] text-2xl tabular-nums">{aud(result.lowestClosingCents)}</strong></div>
-              <div className="col-span-2 rounded-lg bg-secondary p-4 sm:col-span-1"><span className="text-xs text-muted-foreground">Cash out</span><strong className="mt-2 block font-[family-name:var(--t-display)] text-2xl tabular-nums">{aud(result.totalPaymentsCents)}</strong></div>
+              <div className="rounded-lg bg-secondary p-4"><span className="text-xs text-muted-foreground">Cash out</span><strong className="mt-2 block font-[family-name:var(--t-display)] text-2xl tabular-nums">{aud(result.totalPaymentsCents)}</strong></div>
             </div>
             {result.lowestClosingCents<0 && <output className="block rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950">One or more weeks closes below zero. Check the timing and feasibility of forecast receipts.</output>}
             <div className="overflow-x-auto overscroll-x-contain">

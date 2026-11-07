@@ -1,0 +1,353 @@
+{
+  "baseline_commit": "ab522aa0558f9710eee0668bcb814e2ed81814f5",
+  "baseline": {
+    "source": "ab522aa0558f9710eee0668bcb814e2ed81814f5",
+    "before": {
+      "opening": "9750.37",
+      "description": "SYNTHETIC CUSTOMER PAYMENT",
+      "amount": "250.19"
+    },
+    "after": {
+      "opening": "12000.00",
+      "descriptions": [
+        "Customer payment",
+        "Supplier payment",
+        "Payroll and operating costs",
+        "Client invoice receipt"
+      ]
+    },
+    "unconfirmedReplacementReproduced": true,
+    "errors": []
+  },
+  "local_browser": {
+    "checks": [
+      "Fresh planner loads sample in one click",
+      "Keyboard opening preserves entries and focuses Keep",
+      "Confirmation fits desktop, intermediate and narrow widths with 44px actions",
+      "Escape from Replace keeps figures and returns focus",
+      "Keep preserves all entered data",
+      "Current forecast remains exportable while confirmation is open",
+      "Editing a movement dismisses the pending replacement",
+      "Loaded protection works offline",
+      "Reduced motion preserves immediate actions",
+      "Forced colours retains visible keyboard focus",
+      "Explicit replacement loads four sample movements and keeps start date",
+      "Sample action disabled for empty start date",
+      "Opening cash alone is protected",
+      "Emulated touch keeps opening cash"
+    ],
+    "measures": [
+      {
+        "viewport": 1440,
+        "page": 1425,
+        "scroll": 1425,
+        "titleFont": "16px",
+        "titleFamily": "\"Avenir Next\", \"Segoe UI Variable\", \"Helvetica Neue\", sans-serif",
+        "titleWeight": "650",
+        "buttons": [
+          {
+            "text": "Keep my forecast",
+            "width": 146.28125,
+            "height": 44,
+            "color": "rgb(48, 42, 37)",
+            "background": "rgb(255, 252, 246)"
+          },
+          {
+            "text": "Replace with sample",
+            "width": 165.828125,
+            "height": 44,
+            "color": "rgb(255, 252, 246)",
+            "background": "rgb(161, 53, 43)"
+          }
+        ]
+      },
+      {
+        "viewport": 768,
+        "page": 753,
+        "scroll": 753,
+        "titleFont": "16px",
+        "titleFamily": "\"Avenir Next\", \"Segoe UI Variable\", \"Helvetica Neue\", sans-serif",
+        "titleWeight": "650",
+        "buttons": [
+          {
+            "text": "Keep my forecast",
+            "width": 146.28125,
+            "height": 44,
+            "color": "rgb(48, 42, 37)",
+            "background": "rgb(255, 252, 246)"
+          },
+          {
+            "text": "Replace with sample",
+            "width": 165.828125,
+            "height": 44,
+            "color": "rgb(255, 252, 246)",
+            "background": "rgb(161, 53, 43)"
+          }
+        ]
+      },
+      {
+        "viewport": 390,
+        "page": 375,
+        "scroll": 375,
+        "titleFont": "16px",
+        "titleFamily": "\"Avenir Next\", \"Segoe UI Variable\", \"Helvetica Neue\", sans-serif",
+        "titleWeight": "650",
+        "buttons": [
+          {
+            "text": "Keep my forecast",
+            "width": 146.28125,
+            "height": 44,
+            "color": "rgb(48, 42, 37)",
+            "background": "rgb(255, 252, 246)"
+          },
+          {
+            "text": "Replace with sample",
+            "width": 165.828125,
+            "height": 44,
+            "color": "rgb(255, 252, 246)",
+            "background": "rgb(161, 53, 43)"
+          }
+        ]
+      },
+      {
+        "viewport": 320,
+        "page": 305,
+        "scroll": 305,
+        "titleFont": "16px",
+        "titleFamily": "\"Avenir Next\", \"Segoe UI Variable\", \"Helvetica Neue\", sans-serif",
+        "titleWeight": "650",
+        "buttons": [
+          {
+            "text": "Keep my forecast",
+            "width": 146.28125,
+            "height": 44,
+            "color": "rgb(48, 42, 37)",
+            "background": "rgb(255, 252, 246)"
+          },
+          {
+            "text": "Replace with sample",
+            "width": 165.828125,
+            "height": 44,
+            "color": "rgb(255, 252, 246)",
+            "background": "rgb(161, 53, 43)"
+          }
+        ]
+      }
+    ],
+    "motion": "0s",
+    "focus": {
+      "style": "solid",
+      "width": "3px"
+    },
+    "errors": [],
+    "coverage": "Local production build in Chromium with desktop/mobile viewport and touch emulation. No physical hardware, other engine or screen-reader qualification."
+  },
+  "site_tests": 100,
+  "new_regression_tests": 5,
+  "csvs": [
+    {
+      "file": "before-custom.csv",
+      "bytes": 1194,
+      "sha256": "520e6973a0daed342686816fb8bd79c9c10885138a7748e890da415ccf062130"
+    },
+    {
+      "file": "after-kept.csv",
+      "bytes": 1194,
+      "sha256": "520e6973a0daed342686816fb8bd79c9c10885138a7748e890da415ccf062130"
+    },
+    {
+      "file": "after-sample.csv",
+      "bytes": 1382,
+      "sha256": "2935d3084c00cc9051a0e8e525b8b1879462d60919e16c87a231152e48d4de43"
+    }
+  ],
+  "assets": [
+    {
+      "file": "assets/evidence/forecast-replacement/before-custom-390.webp",
+      "source_png_sha256": "c467eae17699ee28ce6e5c5b078c45b96e9d6d66f8f09ce022b6b69a353c99b5",
+      "sha256": "0c33ff5adcdc13bad16d77df5abbfecf732f5fc90c70ca8311e80b13340f34e5",
+      "dimensions": [375, 3850],
+      "capture": "live baseline"
+    },
+    {
+      "file": "assets/evidence/forecast-replacement/preview-baseline-320.webp",
+      "source_png_sha256": "af788cc1ab2d0cb4a4738085d555832f164755bd0b6d73a145472569f7279911",
+      "sha256": "252e49996377eeee478d31ad847e1b011bf885526d758304d754050b32f88771",
+      "dimensions": [320, 844],
+      "capture": "live baseline"
+    },
+    {
+      "file": "assets/evidence/forecast-replacement/after-confirm-1440.webp",
+      "source_png_sha256": "84e2ff0a9797d3a36897fb108f7d99f61c27beefc078272f7b45a3629f10a408",
+      "sha256": "1f24779fa534c087a5ff792c105008737a5f9dd2a824538dc525518e8ab4914c",
+      "dimensions": [1425, 2327],
+      "capture": "local production build"
+    },
+    {
+      "file": "assets/evidence/forecast-replacement/after-confirm-390.webp",
+      "source_png_sha256": "96b760b1ca6aac2e28dc5de12706db6a124d824273e8d9be63b214209b41d8e5",
+      "sha256": "c55a66db6ad2dace37183421d04ec33c22a3f9fc512bde3f30fd313fb9c72e3d",
+      "dimensions": [375, 4235],
+      "capture": "local production build"
+    },
+    {
+      "file": "assets/evidence/forecast-replacement/confirmation-320.webp",
+      "source_png_sha256": "1cf89ebf430425e553cfc29599eea3e8898c8e8d2c175782bf8b8f65192c79e9",
+      "sha256": "9329abbcedf3b77c3e52cd13848a2d462c8d4a6c41865700662cdbcddff75508",
+      "dimensions": [231, 278],
+      "capture": "local production build"
+    },
+    {
+      "file": "assets/evidence/forecast-replacement/confirmation-forced-colors.webp",
+      "source_png_sha256": "5cdfa8190541801e7d536d3f93985a391c0ff862ec851235cd6b7b37508c1eae",
+      "sha256": "fcf286091533605b425c8d682f4a10a99a9f44330551efd39ec5991cb1ebd9c5",
+      "dimensions": [234, 278],
+      "capture": "local production build"
+    },
+    {
+      "file": "assets/evidence/forecast-replacement/summary-fixed-320.webp",
+      "source_png_sha256": "ddbd7121696b1a6b7a112f95bcdd05ddf2f317b224a33cba7e17a66eae011cb4",
+      "sha256": "ebd37f340c4adbd453eb638ccee4ba158125cc8b69a247150f33e5ecd141a9c8",
+      "dimensions": [320, 844],
+      "capture": "local production build"
+    },
+    {
+      "file": "assets/evidence/forecast-replacement/summary-fixed-390.webp",
+      "source_png_sha256": "57d51671964279298dbd0ca32ebb18b1ca6901a83226d346c75063020a9be012",
+      "sha256": "a326b6935f77bf0f75de40d7a4c6a9c55e73fb65e56eb1f409740de644632877",
+      "dimensions": [390, 844],
+      "capture": "local production build"
+    }
+  ],
+  "source_hashes": {
+    "apps/site/components/cash-flow-forecast.tsx": "fa591ad9572ca50af481a1f88044195b891993698adacddbf1933b8dfe20198b",
+    "apps/site/app/tools/tools.css": "f35123ef4457c65409fcc3d38aa132e47e1e8c5464e1510336c0e30572339fe2",
+    "apps/site/lib/tools/cash-forecast.ts": "fbdaadbbc1b45a6009b4df64d7bf6bcb48971af3a4a4f1442a8eee857fa56e20",
+    "apps/site/lib/tools/calculations.ts": "b62f74b341aebfb37bee28ec6bd9cb9a44bc00c3aa7a9afb52ff351ff0ac0586"
+  },
+  "limitations": [
+    "No live publication claim for the changed source in this pre-release document",
+    "One initial forced-colour focus assertion used pointer focus; corrected to real keyboard navigation, with no application workaround",
+    "Tax/calculation, CSV serializer, PDF and persistence helpers unchanged",
+    "No new detector, Hallmark or Appllama tool execution in this bounded pass",
+    "Full-page captures taken during existing smooth scrolling had a blank lower preview; the targeted final viewport capture waited for scroll stability and confirms visible figures"
+  ],
+  "confirmation_contrast": {
+    "body": 5.82,
+    "keep": 13.82,
+    "replace": 6.7
+  },
+  "summary_confirmation": {
+    "measures": [
+      {
+        "width": 320,
+        "values": [
+          {
+            "text": "$10,000.56",
+            "available": 199,
+            "textWidth": 128.34375,
+            "x": 53,
+            "y": 601.25
+          },
+          {
+            "text": "$9,750.37",
+            "available": 199,
+            "textWidth": 114.09375,
+            "x": 53,
+            "y": 709.25
+          },
+          {
+            "text": "$0.00",
+            "available": 199,
+            "textWidth": 64.171875,
+            "x": 53,
+            "y": 817.25
+          }
+        ],
+        "overflow": false
+      },
+      {
+        "width": 390,
+        "values": [
+          {
+            "text": "$10,000.56",
+            "available": 269,
+            "textWidth": 128.34375,
+            "x": 53,
+            "y": 583.65625
+          },
+          {
+            "text": "$9,750.37",
+            "available": 269,
+            "textWidth": 114.09375,
+            "x": 53,
+            "y": 691.65625
+          },
+          {
+            "text": "$0.00",
+            "available": 269,
+            "textWidth": 64.171875,
+            "x": 53,
+            "y": 799.65625
+          }
+        ],
+        "overflow": false
+      },
+      {
+        "width": 768,
+        "values": [
+          {
+            "text": "$10,000.56",
+            "available": 176,
+            "textWidth": 128.34375,
+            "x": 69,
+            "y": 637.640625
+          },
+          {
+            "text": "$9,750.37",
+            "available": 176,
+            "textWidth": 114.09375,
+            "x": 288.65625,
+            "y": 637.640625
+          },
+          {
+            "text": "$0.00",
+            "available": 176,
+            "textWidth": 64.171875,
+            "x": 508.328125,
+            "y": 637.640625
+          }
+        ],
+        "overflow": false
+      },
+      {
+        "width": 1440,
+        "values": [
+          {
+            "text": "$10,000.56",
+            "available": 183,
+            "textWidth": 128.34375,
+            "x": 663.578125,
+            "y": 637.109375
+          },
+          {
+            "text": "$9,750.37",
+            "available": 183,
+            "textWidth": 114.09375,
+            "x": 890.203125,
+            "y": 637.109375
+          },
+          {
+            "text": "$0.00",
+            "available": 183,
+            "textWidth": 64.171875,
+            "x": 1116.84375,
+            "y": 637.109375
+          }
+        ],
+        "overflow": false
+      }
+    ],
+    "scope": "Targeted confirmation of previously clipped ordinary AUD summary figures; broader extreme-value layout not assessed"
+  }
+}

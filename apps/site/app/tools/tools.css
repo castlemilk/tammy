@@ -42,6 +42,7 @@
 .tools-shell h1 { font-size: clamp(51px, 6.3vw, 98px); }
 .tools-shell h2 { font-size: clamp(35px, 4.4vw, 59px); }
 .tools-shell h3 { font-family: var(--t-display); font-size: 29px; font-weight: 550; letter-spacing: -.025em; }
+.tools-shell .tools-forecast-confirmation-title { font: 650 16px/1.5 var(--t-body); letter-spacing: 0; margin-bottom: 0; }
 .tools-shell :is(h1,h2,h3) { color: var(--t-ink); }
 .tools-hero {
   min-height: 560px; display: grid; grid-template-columns: minmax(0, .92fr) minmax(0, 1.08fr);

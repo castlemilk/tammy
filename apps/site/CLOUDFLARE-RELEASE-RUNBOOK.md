@@ -4,11 +4,13 @@ The user explicitly requested direct Cloudflare deployment and deployment throug
 
 The direct target is `tammy-site-direct` on the selected account's existing `workers.dev` subdomain. Deploying it does not move `tammy.tax`, change DNS/canonicals, or publish a Sites version. Keep the current Sites project, public audience and hosting source manifests intact.
 
-The later [feature-led design review](../../docs/design/2026-11-07-site-feature-review.md) is a separate, unpublished candidate. Its design-publication approval is pending. The subsequent [landing journey refinement](../../docs/design/2026-11-07-landing-journey-refinement.md) records the next unpublished review pass. The requested [tammy.tax migration plan](../../docs/release/cloudflare/tammy-tax-domain-plan.md) records the absent Cloudflare zone, missing authorized DNS inventory and exact routing prerequisites; no domain change has occurred.
+The subsequent [feature-led design review](../../docs/design/2026-11-07-site-feature-review.md), [landing refinement](../../docs/design/2026-11-07-landing-journey-refinement.md) and [Soft Precision system](../../docs/design/2026-11-07-soft-precision-system.md) were integrated in [PR48](https://github.com/castlemilk/tammy/pull/48) after the user's explicit merge/release instruction. [PR49](https://github.com/castlemilk/tammy/pull/49) then fixed a first-entry loading race found by live review. Its source `ab522aa0558f9710eee0668bcb814e2ed81814f5` published as version `2b7534d7-33cd-4a7f-a17a-fa3ac733e6e1`, independently read back at 100% traffic on 7 November 2026. These releases used the existing authorized Wrangler session, not CI. Refresh the active version before another release; historical receipts retain their own source/artifact identities.
 
-## Current evidence and blockers
+The requested [tammy.tax migration plan](../../docs/release/cloudflare/tammy-tax-domain-plan.md) records the absent Cloudflare zone, missing authorized DNS inventory and exact routing prerequisites. Runner registration/qualification, CI credentials and DNS migration remain separate gates; the merge/release instruction did not authorize their setup.
 
-Observed 7 November 2026 (Australia/Melbourne, AEDT); refresh before a later release:
+## Initial deployment evidence and continuing setup gates
+
+Historical first-publication record from 7 November 2026 (Australia/Melbourne, AEDT), superseded by the releases above. Its hashes and version still identify that original artifact. Refresh setup and active-version checks before each release:
 
 | Check | Observation |
 | --- | --- |
