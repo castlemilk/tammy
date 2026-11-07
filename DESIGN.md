@@ -4,12 +4,14 @@ name: Tammy Soft Precision
 description: Warm local accounting with the precision of a financial instrument.
 colors:
   primary: '#235C4B'
+  primary-deep: '#102F27'
   background: '#F7F3EA'
   surface: '#FFFCF6'
   foreground: '#302A25'
   muted: '#EEE8DC'
   muted-foreground: '#6C6258'
   border: '#DCD3C5'
+  field-border: '#8D8275'
   success-soft: '#E7EDE2'
   warning: '#845020'
   warning-soft: '#FBECD6'
@@ -42,9 +44,9 @@ components:
 
 ## Overview
 
-### Creative North Star
+**Creative North Star: "A warm studio desk with the precision of a financial instrument."**
 
-A warm studio desk with the precision of a financial instrument. The approved
+The approved
 [Soft Precision pack](https://github.com/castlemilk/tammy/tree/19533020422b6ea2f0c77dc3117a051483f9f9ce/docs/design/soft-precision-2026-10-22)
 is the visual reference. Boards 3, 8, 9 and 11 informed this implementation.
 
@@ -53,12 +55,23 @@ is the visual reference. Boards 3, 8, 9 and 11 informed this implementation.
 Tammy serves Australian small businesses using a local desktop accounting workspace.
 This is a product interface: readable records, explicit actions and trustworthy state
 come first. English Australian dates and AUD financial values follow existing contracts.
-README.md and docs/development/tech-state.md distinguish connected features from planned
-suite work. Generated screens cannot establish new financial or security behaviour.
+[PRODUCT.md](PRODUCT.md) indexes current capabilities and boundaries;
+docs/development/tech-state.md retains the detailed native record. Generated screens
+cannot establish new financial or security behaviour.
 
-Runtime token ownership: apps/desktop/src/app/styles.css is canonical. This document
-mirrors its accepted palette; shared Button, Badge, Card and AppShell consume the tokens.
-There is no generated token export or external font dependency.
+Runtime token ownership is per surface: apps/desktop/src/app/styles.css owns desktop,
+and apps/site/app/tokens.css owns the public site. Both implement this accepted system;
+public adapters and their scope are recorded in [apps/site/DESIGN-SYSTEM.md](apps/site/DESIGN-SYSTEM.md).
+The public deep-forest hover and stronger field-border roles extend the accepted palette
+without replacing its existing values. [.impeccable/design.json](.impeccable/design.json)
+extends this contract with component specimens, motion and responsive metadata; it is
+not a generated runtime token source. There is no external font dependency.
+
+**Key Characteristics:**
+
+- Warm light materials with restrained forest actions and explicit record states.
+- Humanist sans controls and readable financial figures, with serif editorial headings.
+- Native control semantics, visible focus and source-aware product boundaries.
 
 ## Colors
 
@@ -67,12 +80,19 @@ success support. Apricot and butter belong to arrival art or supportive surfaces
 never low-contrast body text. Warnings and errors have explicit text as well as colour.
 The app uses one light theme; forced-colour mode retains system-operable scrollbars.
 
+**The Token Owner Rule.** Reuse each surface's runtime tokens through its adapters;
+do not create a parallel palette in a component or route.
+
 ## Typography
 
-Use soft system serif display type only for wordmark and major headings, 28–36px,
+In the desktop app, use soft system serif display type only for wordmark and major headings, 28–36px,
 1.2 line-height. Controls/body use a humanist system sans at 14px; secondary metadata
 is at least 12px. Financial tables use lining tabular numerals. Account codes and
 technical references may use mono. Dense data never uses display serif type.
+
+The public site keeps the same families but uses a larger editorial heading scale.
+Its shared two-leaf wordmark uses the sans family; the public hierarchy and local
+exceptions are documented in apps/site/DESIGN-SYSTEM.md, not imposed on native screens.
 
 ## Layout
 
@@ -136,6 +156,9 @@ transitions and removes spinner animation; it never changes financial values.
 Use calm, specific language. Keep Suggested, Reviewed, Matched and Reconciled distinct.
 GST remains Draft — not lodged. Local activity is not audit-chain verification. The
 approved transparent paper-loop art appears only at arrival/completion, outside tables.
+
+**The Record State Rule.** Labels describe the actual record state; a visual status
+change is never evidence of posting, payment, reconciliation or lodgement.
 
 ## Do's and Don'ts
 
@@ -213,3 +236,31 @@ implementation precedence, accessibility checks and adoption inventory.
 The macOS desktop's `apps/desktop/src/app/styles.css` remains the canonical
 desktop token implementation. A website control migration does not imply that
 new desktop accounting or ATO features exist.
+
+## Public system consolidation (2026-11-07)
+
+`apps/site/app/tokens.css` now implements the accepted Soft Precision palette and
+families for the public site. Tailwind and Gamma consume semantic adapters;
+landing/tools variable names map to that owner. This resolves the earlier drift
+between the public site's three similar palettes without changing the desktop
+implementation. Public field borders use a stronger, separately named contrast
+token. [Public design system](apps/site/DESIGN-SYSTEM.md) records the ownership map,
+component contracts, migration limits and a locally generated interactive reference.
+
+`SiteBrand` gives landing, tools and Journal one two-leaf mark and wordmark.
+`AccountingStatus` preserves Draft, Reviewed, Posted, Not matched and Issued as
+separate static labels. The GST calculator reuses the same Gamma native-radio
+selector and shared input as other tools; tax arithmetic remains domain-owned.
+
+Shared public `Input` and `Select`, plus the existing tools-field wrapper, now consume
+the stronger field-border token and accepted control radius. Invoice/quote paper,
+Journal geometry and remaining route-specific treatments stay local. The locally
+generated `output/design-system/index.html` uses the actual React components and
+production CSS; the JSON sidecar's standalone specimens are documentation companions.
+
+This was a code-led extension of the established world. The generated
+`docs/design/assets/soft-precision-tools-study.webp` is a critique study, not an
+approved pixel comp. No new seed or comp approval is recorded by this pass, and it
+adds no native capability, publication or native-test claim. Legacy eyebrow styles,
+glyph arrows and hard-coded illustrative tints are not new reusable rules; they
+remain outside this consolidation's scope.

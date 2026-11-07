@@ -1,7 +1,9 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+@import "./tokens.css";
 @import "./design-system.css";
+@import "./site-brand.css";
 
 @theme inline {
   --color-background: var(--background);
@@ -17,46 +19,60 @@
   --color-accent: var(--sage-soft);
   --color-accent-foreground: var(--forest);
   --color-border: var(--border);
-  --color-input: var(--border);
-  --color-ring: var(--sage);
+  --color-input: var(--tammy-field-border);
+  --color-ring: var(--tammy-forest);
+  --color-destructive: var(--tammy-danger);
+  --font-sans: var(--tammy-font-body);
+  --font-serif: var(--tammy-font-display);
   --color-gamma-surface: var(--gamma-surface);
   --color-gamma-muted: var(--gamma-muted);
   --color-gamma-accent: var(--gamma-accent);
   --radius-sm: 0.25rem;
-  --radius-md: 0.4rem;
-  --radius-lg: 0.55rem;
-  --radius-xl: 0.7rem;
-}
-
-:root {
-  --background: #f5f2e9;
-  --warm-white: #fffdf7;
-  --surface: #fbf8ef;
-  --foreground: #17352c;
-  --forest: #173f32;
-  --sage: #8ca691;
-  --sage-soft: #e0e8dc;
-  --muted-foreground: #596a61;
-  --border: #cfd7cb;
+  --radius-md: var(--tammy-radius-control);
+  --radius-lg: var(--tammy-radius-control);
+  --radius-xl: var(--tammy-radius-surface);
 }
 
 * {
   box-sizing: border-box;
-  border-color: var(--border);
+}
+
+@layer base {
+  * { border-color: var(--border); }
 }
 
 html {
   background: var(--background);
   color: var(--foreground);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: var(--tammy-font-body);
   text-rendering: optimizeLegibility;
+  scrollbar-color: var(--tammy-field-border) var(--tammy-canvas);
+  scrollbar-width: auto;
+  scrollbar-gutter: stable;
 }
 
 body {
   margin: 0;
-  min-width: 320px;
+  min-width: 0;
   min-height: 100vh;
   background: var(--background);
+}
+
+* {
+  scrollbar-color: var(--tammy-field-border) var(--tammy-canvas);
+  scrollbar-width: auto;
+}
+*::-webkit-scrollbar { width: 12px; height: 12px; }
+*::-webkit-scrollbar-track { background: var(--tammy-canvas); }
+*::-webkit-scrollbar-thumb { background: var(--tammy-field-border); border: 3px solid var(--tammy-canvas); border-radius: var(--tammy-radius-control); }
+*::-webkit-scrollbar-thumb:hover { background: var(--tammy-muted); }
+*::-webkit-scrollbar-thumb:active { background: var(--tammy-forest); }
+::selection { background: var(--tammy-sage); color: var(--tammy-ink); }
+input, textarea { caret-color: var(--tammy-forest); }
+@media (forced-colors: active) {
+  html, * { scrollbar-color: auto; }
+  *::-webkit-scrollbar-track { background: Canvas; }
+  *::-webkit-scrollbar-thumb { background: ButtonText; border-color: Canvas; }
 }
 
 a {
@@ -389,7 +405,8 @@ h1 {
 
 .warning {
   padding: 1rem 1.1rem;
-  border-left: 4px solid var(--forest);
+  border: 1px solid var(--border);
+  border-radius: var(--tammy-radius-control);
   background: var(--sage-soft);
   font-weight: 650;
 }

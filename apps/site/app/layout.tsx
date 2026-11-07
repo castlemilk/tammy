@@ -8,6 +8,7 @@ const publicOrigin = SITE_ORIGIN;
 const socialImage = `${publicOrigin}/og.png`;
 
 export const metadata: Metadata = {
+  icons: { icon: "/favicon.svg" },
   metadataBase: new URL(publicOrigin),
   alternates: { types: { "application/rss+xml": "/rss.xml" } },
   title: {

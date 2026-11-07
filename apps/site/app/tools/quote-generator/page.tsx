@@ -1,5 +1,6 @@
 /* oxlint-disable next/no-html-link-for-pages -- Vinext serves same-origin static routes. */
 import type { Metadata } from "next";
+import { LinkArrow } from "../../../components/link-arrow";
 import { QuoteGenerator } from "../../../components/quote-generator";
 import { ToolStructuredData, ToolsBreadcrumb, ToolsShell } from "../../../components/tools-shell";
 
@@ -20,7 +21,6 @@ export default function QuoteGeneratorPage() {
   return <ToolsShell>
     <ToolsBreadcrumb current="Quote generator" />
     <header className="tools-page-heading">
-      <p className="tools-overline">Free business tool</p>
       <h1>A clear quote, before the work begins.</h1>
       <p>Set out your proposed work, GST treatment and validity date. Print it or save as a PDF in your browser. No signup and no data upload.</p>
     </header>
@@ -33,8 +33,8 @@ export default function QuoteGeneratorPage() {
       <p>See <a href="https://business.gov.au/finance/payments-and-invoicing/how-to-invoice" rel="noopener noreferrer" target="_blank">Australian Government invoicing guidance</a> before turning accepted work into an invoice.</p>
     </section>
     <aside className="tools-related" aria-label="Related resources">
-      <a href="/tools/invoice-generator">Create an invoice <span aria-hidden="true">↗</span></a>
-      <a href="/tools/gst-calculator">Calculate GST <span aria-hidden="true">↗</span></a>
+      <a href="/tools/invoice-generator">Create an invoice <LinkArrow /></a>
+      <a href="/tools/gst-calculator">Calculate GST <LinkArrow /></a>
     </aside>
     <ToolStructuredData name="Australian quote generator" description="Prepare an estimate with itemised GST and print or save it as a PDF without uploading data." path="/tools/quote-generator" />
   </ToolsShell>;

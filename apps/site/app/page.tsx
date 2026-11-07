@@ -4,6 +4,8 @@ import type { Metadata } from "next";
 import { publicContent } from "../content/public-content.generated";
 import "./landing.css";
 import { SITE_ORIGIN } from "../lib/site-config";
+import { SiteBrand, TammyMark } from "../components/site-brand";
+import { AccountingStatus } from "../components/accounting-status";
 
 const { identity, marketingVersion } = publicContent;
 const minimumMacOSLabel = identity.minimumMacOSVersion.replace(/\.0$/, "");
@@ -119,21 +121,11 @@ const structuredData = {
 };
 
 function Mark() {
-  return (
-    <span className="landing-mark" aria-hidden="true">
-      <span />
-      <span />
-    </span>
-  );
+  return <TammyMark className="landing-mark" />;
 }
 
 function Wordmark() {
-  return (
-    <a className="landing-wordmark" href="/" aria-label="Tammy home">
-      <Mark />
-      <span>Tammy</span>
-    </a>
-  );
+  return <SiteBrand className="landing-wordmark" />;
 }
 
 function Glyph({ name }: { readonly name: string }) {
@@ -168,15 +160,15 @@ function WorkspacePreview() {
           </div>
           <div className="landing-preview-row">
             <span>Office equipment</span>
-            <span className="landing-preview-status">Posted</span>
+            <AccountingStatus status="posted" />
           </div>
           <div className="landing-preview-row landing-preview-row-selected">
             <span>Monthly insurance</span>
-            <span className="landing-preview-status">Reviewed</span>
+            <AccountingStatus status="reviewed" />
           </div>
           <div className="landing-preview-row">
             <span>Manual adjustment</span>
-            <span className="landing-preview-status">Draft</span>
+            <AccountingStatus status="draft" />
           </div>
           <div className="landing-preview-summary">
             <span className="landing-preview-summary-icon"><Glyph name="source-document" /></span>
@@ -194,7 +186,7 @@ function FeatureExample({ kind }: { readonly kind: (typeof capabilities)[number]
   if (kind === "journals") {
     return (
       <figure className="landing-feature-example">
-        <div className="landing-feature-example-head"><span>Office supplies</span><span className="landing-feature-state">Draft</span></div>
+        <div className="landing-feature-example-head"><span>Office supplies</span><AccountingStatus status="draft" /></div>
         <table className="landing-feature-table">
           <caption>Journal EXAMPLE-J001 · AUD</caption>
           <thead><tr><th scope="col">Account</th><th scope="col">Dr</th><th scope="col">Cr</th></tr></thead>
@@ -214,7 +206,7 @@ function FeatureExample({ kind }: { readonly kind: (typeof capabilities)[number]
   if (kind === "document") {
     return (
       <figure className="landing-feature-example">
-        <div className="landing-feature-example-head"><span>Retained invoice</span><span className="landing-feature-state">Reviewed</span></div>
+        <div className="landing-feature-example-head"><span>Retained invoice</span><AccountingStatus status="reviewed" /></div>
         <dl className="landing-feature-record">
           <div><dt>Reference</dt><dd>EXAMPLE-018</dd></div>
           <div><dt>Supplier</dt><dd>Example Supplies</dd></div>
@@ -230,7 +222,7 @@ function FeatureExample({ kind }: { readonly kind: (typeof capabilities)[number]
   if (kind === "reconciliation") {
     return (
       <figure className="landing-feature-example">
-        <div className="landing-feature-example-head"><span>Statement comparison</span><span className="landing-feature-state">Not matched</span></div>
+        <div className="landing-feature-example-head"><span>Statement comparison</span><AccountingStatus status="unmatched" /></div>
         <table className="landing-feature-table">
           <caption>File import · 7 November 2026 · AUD</caption>
           <thead><tr><th scope="col">Record</th><th scope="col">Money out</th></tr></thead>
@@ -247,7 +239,7 @@ function FeatureExample({ kind }: { readonly kind: (typeof capabilities)[number]
 
   return (
     <figure className="landing-feature-example">
-      <div className="landing-feature-example-head"><span>Invoice EXAMPLE-004</span><span className="landing-feature-state">Issued</span></div>
+      <div className="landing-feature-example-head"><span>Invoice EXAMPLE-004</span><AccountingStatus status="issued" /></div>
       <div className="landing-feature-invoice">
         <p><strong>Example Customer</strong><span>Design services · 2 × AUD 100.00</span></p>
         <dl className="landing-feature-record">

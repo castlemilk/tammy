@@ -5,20 +5,20 @@
  * and Impeccable design principles. No automated review pass is claimed.
  */
 .landing {
-  --l-ink: #172f29;
-  --l-forest: #184c3b;
-  --l-forest-deep: #102f27;
-  --l-paper: #f7f3ea;
-  --l-ivory: #fffdf7;
-  --l-oat: #eee8dc;
-  --l-sage: #dfe9dc;
-  --l-cocoa: #564f47;
-  --l-muted: #6d6a61;
-  --l-rule: #dcd5c9;
-  --l-accent: #e5cba7;
-  --l-serif: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
-  --l-sans: "Avenir Next", "Segoe UI Variable", "Helvetica Neue", Arial, sans-serif;
-  --l-mono: "SFMono-Regular", "Cascadia Mono", Consolas, monospace;
+  --l-ink: var(--tammy-ink);
+  --l-forest: var(--tammy-forest);
+  --l-forest-deep: var(--tammy-forest-deep);
+  --l-paper: var(--tammy-canvas);
+  --l-ivory: var(--tammy-paper);
+  --l-oat: var(--tammy-oat);
+  --l-sage: var(--tammy-sage);
+  --l-cocoa: var(--tammy-ink);
+  --l-muted: var(--tammy-muted);
+  --l-rule: var(--tammy-rule);
+  --l-accent: var(--tammy-apricot);
+  --l-serif: var(--tammy-font-display);
+  --l-sans: var(--tammy-font-body);
+  --l-mono: var(--tammy-font-mono);
   background: var(--l-paper);
   color: var(--l-ink);
   min-height: 100vh;
@@ -74,49 +74,7 @@ body {
   z-index: 5;
 }
 
-.landing-wordmark {
-  display: inline-flex;
-  align-items: center;
-  gap: 11px;
-  justify-self: start;
-  font-family: var(--l-sans);
-  font-size: 28px;
-  font-weight: 770;
-  letter-spacing: -0.04em;
-  line-height: 1;
-  min-height: 48px;
-  white-space: nowrap;
-}
-
-.landing-mark {
-  position: relative;
-  display: inline-block;
-  width: 28px;
-  height: 29px;
-  flex: 0 0 auto;
-}
-
-.landing-mark span {
-  position: absolute;
-  display: block;
-  width: 14px;
-  height: 23px;
-  background: var(--l-forest);
-}
-
-.landing-mark span:first-child {
-  left: 0;
-  top: 4px;
-  border-radius: 13px 1px 13px 1px;
-  transform: rotate(-12deg);
-}
-
-.landing-mark span:last-child {
-  right: 0;
-  top: 0;
-  border-radius: 1px 13px 1px 13px;
-  transform: rotate(12deg);
-}
+.landing-wordmark { justify-self: start; }
 
 .landing-header-nav {
   display: flex;

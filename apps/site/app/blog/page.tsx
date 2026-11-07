@@ -18,7 +18,7 @@ const lead = blogPosts[0];
 const others = blogPosts.slice(1);
 
 export default function BlogPage() {
-  return <ToolsShell>
+  return <ToolsShell section="journal">
     <nav className="tools-breadcrumb" aria-label="Breadcrumb">
       <a href="/">Home</a><span aria-hidden="true">/</span><span aria-current="page">Journal</span>
     </nav>

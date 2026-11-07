@@ -1,5 +1,6 @@
 /* oxlint-disable next/no-html-link-for-pages -- Vinext serves these static same-origin routes. */
 import type { Metadata } from "next";
+import { LinkArrow } from "../../../components/link-arrow";
 import { ToolStructuredData, ToolsBreadcrumb, ToolsShell } from "../../../components/tools-shell";
 import { InvoiceGenerator } from "../../../components/invoice-generator";
 
@@ -14,7 +15,6 @@ export default function InvoiceGeneratorPage() {
   return <ToolsShell>
     <ToolsBreadcrumb current="Invoice generator" />
     <header className="tools-page-heading">
-      <p className="tools-overline">Free business tool</p>
       <h1>Make an invoice worth keeping.</h1>
       <p>Prepare a regular invoice or an Australian tax invoice, check the totals and download a PDF. Your details stay in your browser, with no account or data upload.</p>
     </header>
@@ -26,8 +26,8 @@ export default function InvoiceGeneratorPage() {
       <p>The PDF uses Tammy’s existing pdfcn-adapted Forme renderer and is created within your browser. Downloading it does not issue an invoice in the Tammy desktop app, post accounting entries or send anything to your customer.</p>
     </section>
     <aside className="tools-related" aria-label="Related calculators">
-      <a href="/tools/gst-calculator">Calculate GST <span aria-hidden="true">↗</span></a>
-      <a href="/tools/invoice-due-date-calculator">Work out payment terms <span aria-hidden="true">↗</span></a>
+      <a href="/tools/gst-calculator">Calculate GST <LinkArrow /></a>
+      <a href="/tools/invoice-due-date-calculator">Work out payment terms <LinkArrow /></a>
     </aside>
     <ToolStructuredData name="Australian invoice generator" description="Create an A4 invoice PDF locally in your browser with ABN and GST fields." path="/tools/invoice-generator" />
   </ToolsShell>;

@@ -1,0 +1,49 @@
+/* Public-site implementation of DESIGN.md's Soft Precision system.
+ * Runtime owner: this file. Tailwind, Gamma and route CSS consume aliases.
+ * The desktop implementation remains independently owned by desktop/styles.css.
+ */
+:root {
+  --tammy-canvas: #f7f3ea;
+  --tammy-paper: #fffcf6;
+  --tammy-ink: #302a25;
+  --tammy-forest: #235c4b;
+  --tammy-forest-deep: #102f27;
+  --tammy-muted: #6c6258;
+  --tammy-rule: #dcd3c5;
+  --tammy-field-border: #8d8275;
+  --tammy-oat: #eee8dc;
+  --tammy-sage: #e7ede2;
+  --tammy-warning: #845020;
+  --tammy-warning-soft: #fbecd6;
+  --tammy-danger: #a1352b;
+  --tammy-apricot: #f2bfa5;
+  --tammy-butter: #f4dc91;
+  --tammy-font-body:
+    'Avenir Next', 'Segoe UI Variable', 'Helvetica Neue', sans-serif;
+  --tammy-font-display: 'Iowan Old Style', 'Palatino Linotype', Georgia, serif;
+  --tammy-font-mono:
+    'SFMono-Regular', 'Cascadia Mono', 'Roboto Mono', monospace;
+  --tammy-radius-control: 12px;
+  --tammy-radius-surface: 20px;
+  --tammy-radius-arrival: 28px;
+  --tammy-duration-fast: 140ms;
+  --tammy-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --tammy-space-1: 4px;
+  --tammy-space-2: 8px;
+  --tammy-space-3: 12px;
+  --tammy-space-4: 16px;
+  --tammy-space-6: 24px;
+  --tammy-space-8: 32px;
+  --tammy-space-12: 48px;
+  --tammy-space-16: 64px;
+
+  --background: var(--tammy-canvas);
+  --warm-white: var(--tammy-paper);
+  --surface: var(--tammy-paper);
+  --foreground: var(--tammy-ink);
+  --forest: var(--tammy-forest);
+  --sage: var(--tammy-forest);
+  --sage-soft: var(--tammy-sage);
+  --muted-foreground: var(--tammy-muted);
+  --border: var(--tammy-rule);
+}

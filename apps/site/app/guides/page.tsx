@@ -15,7 +15,7 @@ const guides = [
 ] as const;
 
 export default function GuidesIndexPage() {
-  return <ToolsShell>
+  return <ToolsShell section="guides">
     <nav className="tools-breadcrumb" aria-label="Breadcrumb"><a href="/">Home</a><span aria-hidden="true">/</span><span aria-current="page">Guides</span></nav>
     <header className="tools-page-heading tools-guides-intro"><p className="tools-overline">A clearer way through the details</p><h1>Useful notes for the books.</h1><p>Practical Australian business explanations with worked examples, links to primary sources and free tools you can use directly.</p></header>
     <section className="tools-guide-index" aria-label="Available guides">

@@ -123,7 +123,7 @@ export function InvoiceGenerator() {
 
   return <div className="tools-invoice-grid">
     <div className="tools-invoice-form">
-      <div className="tools-form-heading"><div><p className="tools-overline">Invoice details</p><h2>Make it yours.</h2></div><span className="tools-local-indicator">On-device only</span></div>
+      <div className="tools-form-heading"><div><h2>Invoice details</h2></div><span className="tools-local-indicator">On-device only</span></div>
       <fieldset className="tools-form-section"><legend>From</legend>
         <div className="tools-form-two">
           <label className="tools-field"><span>Business name *</span><input value={sellerName} maxLength={256} onChange={e => setSellerName(e.target.value)} placeholder="Your business name" /></label>

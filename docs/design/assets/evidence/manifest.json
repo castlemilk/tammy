@@ -1,0 +1,114 @@
+{
+  "capturedAt": "2026-11-07",
+  "kind": "Actual local Chromium captures; not generated imagery",
+  "baselineCommit": "c63c67d3c8eef558b6250fb1a2b78b974889acaa",
+  "candidate": "Working source committed with this evidence; exact final candidate recorded in PR #48",
+  "conversion": "cwebp -q 88; no resizing, cropping, retouching or compositing",
+  "files": [
+    {
+      "file": "tools-before-1440.webp",
+      "sourceCapture": "before-tools-1440.png",
+      "sourceSha256": "e89b52a1c7aa885c4d5c8621040a92c19f2bf5bf796746b0f1599f72a27cef70",
+      "sha256": "37eaec4178992988f0b6c1e8b60d9279fafe2117fee9c0057955ad248980713b",
+      "bytes": 197568
+    },
+    {
+      "file": "tools-after-1440.webp",
+      "sourceCapture": "after-tools-1440.png",
+      "sourceSha256": "b520d80f898b8fda92f98ae337ab3339de395899d278ecbdd0bbe55ffea2950a",
+      "sha256": "9ef52c00d0bd0549968234a464daae8cdf84017ead2efae3ce00c36aebc57f32",
+      "bytes": 162842
+    },
+    {
+      "file": "tools-before-390.webp",
+      "sourceCapture": "before-tools-390.png",
+      "sourceSha256": "c00689718ee4d67e1f78579000a58e0f692e80ff5504a7330a8d0585d4266914",
+      "sha256": "93a193f5fbb765f74a7112529e63d45a61c6bdb09bd93566591ef8b4bf4f2ae1",
+      "bytes": 162508
+    },
+    {
+      "file": "tools-after-390.webp",
+      "sourceCapture": "after-tools-390.png",
+      "sourceSha256": "73dec70c71629570a31945bb167120d50576c9906cc9d6a78d824f12a9c8242c",
+      "sha256": "18ca57e85543615e593293e1f13a721b552f951edf9586015d2b306a4b631495",
+      "bytes": 146660
+    },
+    {
+      "file": "gst-before-390.webp",
+      "sourceCapture": "before-gst-390.png",
+      "sourceSha256": "a87906b1a4bfdde9a568994321d6f03d68d75cd4286fd97bd8fcc9f99f0dc75c",
+      "sha256": "587c00c882b32badeafb6693c9cb5b75b1a18de98a2a128a29a5c73454f5dc9a",
+      "bytes": 69172
+    },
+    {
+      "file": "gst-after-390.webp",
+      "sourceCapture": "after-gst-390.png",
+      "sourceSha256": "bd0416bc350b14482977f3e9d152713a95df6cd3ed99e667332e7417f91cc6af",
+      "sha256": "7831f1f7bb66611ec1e91ad6c02cf4e54c6cc25b7f1e65ea679b30b2e27a3df9",
+      "bytes": 65378
+    },
+    {
+      "file": "components-1440.webp",
+      "sourceCapture": "component-reference-1440.png",
+      "sourceSha256": "51364d7f47b863bd7d3dab3d6081eab09f487fb1d3934bb9432ace75513254ba",
+      "sha256": "baf2fa7207393c92191b82f2e921585015a3dda5719433dea569679e43a5b614",
+      "bytes": 66536
+    },
+    {
+      "file": "components-390.webp",
+      "sourceCapture": "component-reference-390.png",
+      "sourceSha256": "2a249319a4a498d707ac00387929bb6ac6947505f34fa65cc72657bd2e81d444",
+      "sha256": "1658ce1323d4939a905c2f11a5b5cf7315e14cbff2eb852ae5afc3a27cd606f5",
+      "bytes": 61268
+    },
+    {
+      "file": "tools-empty-state.webp",
+      "sourceCapture": "tools-empty-state.png",
+      "sourceSha256": "96db1bf74d19168e800db7fba701c6e0c9ce8ca6503009db9fefdc4885c2e79c",
+      "sha256": "f1f51b804e04f38cb2b636f74b56e1055cd310ce749bebfc937b5b0a5058d5fd",
+      "bytes": 36624
+    },
+    {
+      "file": "gst-error-state.webp",
+      "sourceCapture": "gst-error-state.png",
+      "sourceSha256": "a1bcf328df2b956aa4a5caaf8d83a0855bcffeb27b283ecd8878c453e0cea733",
+      "sha256": "ded1dda18f8b97cf3798cef0fcdbaab270366b2971fb470a9bb2e364c70f5698",
+      "bytes": 34936
+    },
+    {
+      "file": "quote-table-scroll-390.webp",
+      "sourceCapture": "quote-table-scroll-390.png",
+      "sourceSha256": "aed1cce6c299c88cc3d6c3d0f10fb8b2b48cadbfd9aeda720413afceb8cc466a",
+      "sha256": "51160eea34e2188d515bfdc88e7e668b1a3464a12bea92b764e383397159eda2",
+      "bytes": 20554
+    },
+    {
+      "file": "quote-pending-390.webp",
+      "sourceCapture": "quote-pending-390.png",
+      "sourceSha256": "57362ee23e6c607702d964a52d232aae250417c5814d2f6aafb960a298189146",
+      "sha256": "8dba57e606c7da82dcea0c018c678ea34c158d60932dfcbc8ace476ee56ecd7e",
+      "bytes": 19496
+    },
+    {
+      "file": "invoice-filled-390.webp",
+      "sourceCapture": "invoice-filled-390.png",
+      "sourceSha256": "05abc744e149bf870de99e098553d1d80b24f94bb898157924688e2143b75deb",
+      "sha256": "c5cefc6a2aafe500ad5dfc605dcdd4abe88298bf80a476edb3e9f23186ce8a65",
+      "bytes": 148216
+    },
+    {
+      "file": "quote-filled-390.webp",
+      "sourceCapture": "quote-filled-390.png",
+      "sourceSha256": "8bb47c21274b4627bf461f29d4a243ac718d5694c1cd0a01bb35153567b12193",
+      "sha256": "30c0c90f4b8abcb794d4cd628fda56a3623890e1890939f99de3ee46cfe6c3c0",
+      "bytes": 150120
+    },
+    {
+      "file": "quote-filled-320.webp",
+      "sourceCapture": "quote-filled-320.png",
+      "sourceSha256": "da80f695d37a666eb347701e0463d29fa889445da9afdeb69b135ca53f6989b3",
+      "sha256": "607ea0fd8d54f670623bb3b2738aab5d5a4ff0994a2136bfa94357774f5c2aa5",
+      "bytes": 148380
+    }
+  ]
+}

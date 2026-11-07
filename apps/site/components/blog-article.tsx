@@ -23,7 +23,7 @@ export function BlogArticle({ post, children }: {
     publisher: { "@type": "Organization", name: "Gamma Systems Pty Ltd" },
   };
 
-  return <ToolsShell>
+  return <ToolsShell section="journal">
     <nav className="tools-breadcrumb" aria-label="Breadcrumb">
       <a href="/">Home</a><span aria-hidden="true">/</span>
       <a href="/blog">Journal</a><span aria-hidden="true">/</span>

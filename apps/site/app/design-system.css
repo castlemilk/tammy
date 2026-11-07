@@ -1,12 +1,11 @@
 /*
  * Tammy Soft Precision bridge for shadcn/Tailwind v4 and the owned Gamma
- * component catalogue. Semantic values remain the single source of truth in
- * globals.css and tools.css, not a second unrelated palette.
+ * component catalogue. tokens.css owns the public site's semantic values.
  */
 :root {
-  --radius: 0.55rem;
-  --input: var(--border);
-  --ring: var(--sage);
+  --radius: var(--tammy-radius-control);
+  --input: var(--tammy-field-border);
+  --ring: var(--tammy-forest);
   --gamma-bg: var(--background);
   --gamma-surface: var(--surface);
   --gamma-surface-2: var(--sage-soft);
@@ -16,13 +15,13 @@
   --gamma-hairline: 1px;
   --gamma-accent: var(--forest);
   --gamma-accent-soft: color-mix(in srgb, var(--forest) 12%, transparent);
-  --gamma-focus-ring: 0 0 0 3px color-mix(in srgb, var(--sage) 45%, transparent);
-  --gamma-font-ui: "Avenir Next", "Segoe UI", system-ui, sans-serif;
-  --gamma-font-display: "Iowan Old Style", Baskerville, Georgia, serif;
+  --gamma-focus-ring: 0 0 0 3px var(--tammy-forest);
+  --gamma-font-ui: var(--tammy-font-body);
+  --gamma-font-display: var(--tammy-font-display);
   --gamma-radius-control: var(--radius);
   --gamma-radius-pill: 999px;
-  --gamma-duration-fast: 130ms;
-  --gamma-ease-standard: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --gamma-duration-fast: var(--tammy-duration-fast);
+  --gamma-ease-standard: var(--tammy-ease);
 }
 .tools-shell {
   --gamma-bg: var(--t-paper);
@@ -34,4 +33,29 @@
   --gamma-accent: var(--t-forest);
   --gamma-font-ui: var(--t-body);
   --gamma-font-display: var(--t-display);
+}
+
+.accounting-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border: 1px solid var(--tammy-rule);
+  border-radius: var(--tammy-radius-control);
+  background: var(--tammy-paper);
+  color: var(--tammy-ink);
+  font: 650 12px/1.5 var(--tammy-font-body);
+  white-space: nowrap;
+}
+.accounting-status[data-state="draft"], .accounting-status[data-state="unmatched"] {
+  color: var(--tammy-warning);
+  background: var(--tammy-warning-soft);
+  border-color: transparent;
+}
+.accounting-status[data-state="posted"], .accounting-status[data-state="issued"] {
+  color: var(--tammy-forest);
+  background: var(--tammy-sage);
+  border-color: transparent;
+}
+@media (forced-colors: active) {
+  .accounting-status { border: 1px solid CanvasText; }
 }

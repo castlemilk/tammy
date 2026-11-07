@@ -7,7 +7,7 @@
 - **React 19 + Vinext + Tailwind v4** for public Tammy Tools/Journal. `apps/site/app/globals.css` already imports `tailwindcss`, `tw-animate-css` and `shadcn/tailwind.css`.
 - **shadcn/ui** is already configured in `apps/site/components.json` (base-nova, CSS variables, @ alias, Tailwind v4). Locally owned native primitives now live under `components/ui/` and expose `data-slot`, semantic tokens and Tailwind utilities. Keep shared UI source in the repository, per shadcn's copy-and-own model.
 - **Gamma** is the owner's maintained component catalogue. The first actual vendored component, `SegmentedControl`, is copied from the user's Shorted/Gamma library; see `components/gamma/README.md` for provenance. It preserves native radio semantics and has the original Gamma CSS block, with documented Tammy-only responsive adjustments.
-- **Soft Precision token bridge**: `app/design-system.css` maps Gamma CSS variables to Tammy's existing semantic colours, fonts, radii and motion, including scoped `.tools-shell` overrides. Do **not** add an independent Gamma theme or mix another brand palette into financial forms.
+- **Soft Precision token bridge**: `app/tokens.css` owns the accepted public palette; `app/design-system.css` maps Gamma CSS variables to these semantic colours, fonts, radii and motion, including scoped `.tools-shell` overrides. Do **not** add an independent Gamma theme or mix another brand palette into financial forms.
 
 ## Use this hierarchy for new work
 
@@ -21,6 +21,7 @@
 
 | Surface | Shared components | Legacy role that remains |
 | --- | --- | --- |
+| GST calculator | Shared Input/Label and existing Gamma SegmentedControl; associated error/help text | Integer-cent calculation helpers unchanged |
 | BAS GST workpaper | shadcn-style Card, Input, Label, Select; genuine Gamma SegmentedControl for Q1–Q4 | Financial calculation and results/list layout from proven tool CSS |
 | Sole-trader self-lodgement checklist | shadcn-style Card, Checkbox, Label, Select and Button | Print-oriented page and checklist layout |
 | Anonymous quote generator | shadcn-style Input, Select, Checkbox and Button | Quote paper/print CSS; existing invoice-domain calculations |
@@ -58,3 +59,5 @@ pnpm --dir apps/site build
 - [ ] Keyboard, focus, label, error, disabled, mobile and print states reviewed
 - [ ] MDX/SEO metadata and original financial examples reviewed where applicable
 - [ ] Exact-head CI green; deployment status reported separately from source completion
+
+The [public design-system contract](DESIGN-SYSTEM.md) documents shared brand, record states, token ownership, navigation and the local interactive component reference.

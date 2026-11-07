@@ -20,7 +20,7 @@ const essentials = [
 ] as const;
 
 export default function TaxInvoiceChecklistPage() {
-  return <ToolsShell>
+  return <ToolsShell section="guides">
     <nav className="tools-breadcrumb" aria-label="Breadcrumb"><a href="/">Home</a><span aria-hidden="true">/</span><a href="/guides">Guides</a><span aria-hidden="true">/</span><span aria-current="page">Tax invoice checklist</span></nav>
     <article className="tools-editorial">
       <header className="tools-editorial-heading">

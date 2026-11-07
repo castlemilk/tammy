@@ -1,0 +1,392 @@
+{
+  "reviewDate": "2026-11-07",
+  "sourceContext": "Working source committed with this report; final attested candidate recorded in PR #48. Captures use the production build on localhost, not the published Worker.",
+  "capture": {
+    "captures": [
+      {
+        "label": "home",
+        "width": 1440,
+        "height": 6898,
+        "title": "Local-first accounting for Australian businesses — Tammy Accounting"
+      },
+      {
+        "label": "tools",
+        "width": 1440,
+        "height": 2332,
+        "title": "Free Australian business tools — Tammy Accounting"
+      },
+      {
+        "label": "gst",
+        "width": 1440,
+        "height": 1596,
+        "title": "Australian GST calculator | Add or remove 10% — Tammy Accounting"
+      },
+      {
+        "label": "journal",
+        "width": 1440,
+        "height": 3921,
+        "title": "Tammy Journal | Australian accounting, invoicing and cash flow — Tammy Accounting"
+      },
+      {
+        "label": "home",
+        "width": 390,
+        "height": 10732,
+        "title": "Local-first accounting for Australian businesses — Tammy Accounting"
+      },
+      {
+        "label": "tools",
+        "width": 390,
+        "height": 4315,
+        "title": "Free Australian business tools — Tammy Accounting"
+      },
+      {
+        "label": "gst",
+        "width": 390,
+        "height": 2102,
+        "title": "Australian GST calculator | Add or remove 10% — Tammy Accounting"
+      },
+      {
+        "label": "journal",
+        "width": 390,
+        "height": 6917,
+        "title": "Tammy Journal | Australian accounting, invoicing and cash flow — Tammy Accounting"
+      }
+    ],
+    "measures": [
+      {
+        "label": "home",
+        "width": 320,
+        "clientWidth": 305,
+        "scrollWidth": 305,
+        "headerHeight": 120,
+        "foreground": "#302a25"
+      },
+      {
+        "label": "tools",
+        "width": 320,
+        "clientWidth": 305,
+        "scrollWidth": 305,
+        "headerHeight": 105,
+        "firstToolTop": 794.8125,
+        "foreground": "#302a25"
+      },
+      {
+        "label": "gst",
+        "width": 320,
+        "clientWidth": 305,
+        "scrollWidth": 305,
+        "headerHeight": 105,
+        "foreground": "#302a25"
+      },
+      {
+        "label": "journal",
+        "width": 320,
+        "clientWidth": 305,
+        "scrollWidth": 305,
+        "headerHeight": 105,
+        "foreground": "#302a25"
+      },
+      {
+        "label": "home",
+        "width": 390,
+        "clientWidth": 375,
+        "scrollWidth": 375,
+        "headerHeight": 120,
+        "foreground": "#302a25"
+      },
+      {
+        "label": "tools",
+        "width": 390,
+        "clientWidth": 375,
+        "scrollWidth": 375,
+        "headerHeight": 105,
+        "firstToolTop": 671.9375,
+        "foreground": "#302a25"
+      },
+      {
+        "label": "gst",
+        "width": 390,
+        "clientWidth": 375,
+        "scrollWidth": 375,
+        "headerHeight": 105,
+        "foreground": "#302a25"
+      },
+      {
+        "label": "journal",
+        "width": 390,
+        "clientWidth": 375,
+        "scrollWidth": 375,
+        "headerHeight": 105,
+        "foreground": "#302a25"
+      },
+      {
+        "label": "home",
+        "width": 768,
+        "clientWidth": 753,
+        "scrollWidth": 753,
+        "headerHeight": 120,
+        "foreground": "#302a25"
+      },
+      {
+        "label": "tools",
+        "width": 768,
+        "clientWidth": 753,
+        "scrollWidth": 753,
+        "headerHeight": 133,
+        "firstToolTop": 742.8125,
+        "foreground": "#302a25"
+      },
+      {
+        "label": "gst",
+        "width": 768,
+        "clientWidth": 753,
+        "scrollWidth": 753,
+        "headerHeight": 133,
+        "foreground": "#302a25"
+      },
+      {
+        "label": "journal",
+        "width": 768,
+        "clientWidth": 753,
+        "scrollWidth": 753,
+        "headerHeight": 133,
+        "foreground": "#302a25"
+      },
+      {
+        "label": "home",
+        "width": 1280,
+        "clientWidth": 1265,
+        "scrollWidth": 1265,
+        "headerHeight": 92,
+        "foreground": "#302a25"
+      },
+      {
+        "label": "tools",
+        "width": 1280,
+        "clientWidth": 1265,
+        "scrollWidth": 1265,
+        "headerHeight": 84,
+        "firstToolTop": 545.078125,
+        "foreground": "#302a25"
+      },
+      {
+        "label": "gst",
+        "width": 1280,
+        "clientWidth": 1265,
+        "scrollWidth": 1265,
+        "headerHeight": 84,
+        "foreground": "#302a25"
+      },
+      {
+        "label": "journal",
+        "width": 1280,
+        "clientWidth": 1265,
+        "scrollWidth": 1265,
+        "headerHeight": 84,
+        "foreground": "#302a25"
+      },
+      {
+        "label": "home",
+        "width": 1440,
+        "clientWidth": 1425,
+        "scrollWidth": 1425,
+        "headerHeight": 92,
+        "foreground": "#302a25"
+      },
+      {
+        "label": "tools",
+        "width": 1440,
+        "clientWidth": 1425,
+        "scrollWidth": 1425,
+        "headerHeight": 84,
+        "firstToolTop": 545.078125,
+        "foreground": "#302a25"
+      },
+      {
+        "label": "gst",
+        "width": 1440,
+        "clientWidth": 1425,
+        "scrollWidth": 1425,
+        "headerHeight": 84,
+        "foreground": "#302a25"
+      },
+      {
+        "label": "journal",
+        "width": 1440,
+        "clientWidth": 1425,
+        "scrollWidth": 1425,
+        "headerHeight": 84,
+        "foreground": "#302a25"
+      }
+    ],
+    "consoleErrors": []
+  },
+  "journeys": {
+    "checks": [
+      "Keyboard reaches skip link first",
+      "Skip link targets main content",
+      "Task filter and query combine",
+      "Clear restores focus",
+      "Clear preserves category",
+      "Search has one outer focus outline",
+      "No-results recovery is visible",
+      "Reset restores complete catalogue",
+      "Gamma choice works with arrow keys",
+      "GST extraction retains exact AUD result",
+      "Invalid GST amount is exposed",
+      "GST error is associated with input",
+      "Actual GST field and error/focus match system",
+      "GST correction clears error",
+      "Loaded GST tool works offline",
+      "Gamma reduced-motion preference removes transition",
+      "BAS sibling retains quarter result",
+      "Native BAS year select exercised by keyboard",
+      "FAQ retains honest lodgement boundary",
+      "Journal current-section state",
+      "Journal lead opens a single titled article",
+      "Pending button preserves geometry",
+      "Pending button blocks repeat activation",
+      "Pending specimen resets",
+      "Shared field border uses the intended token",
+      "Invalid shared field uses semantic danger border",
+      "Forced colours keeps system scrollbar"
+    ],
+    "motion": "0s",
+    "pendingGeometry": {
+      "before": {
+        "x": 32,
+        "y": 418.859375,
+        "width": 130.28125,
+        "height": 44
+      },
+      "after": {
+        "x": 32,
+        "y": 418.859375,
+        "width": 130.28125,
+        "height": 44
+      }
+    }
+  },
+  "pdfBrowser": {
+    "downloads": [
+      {
+        "type": "invoice",
+        "name": "invoice-REVIEW-INV-001.pdf",
+        "error": null
+      },
+      {
+        "type": "invoice",
+        "name": "invoice-REVIEW-INV-002.pdf",
+        "error": null
+      },
+      {
+        "type": "quote",
+        "name": "quote-REVIEW-QUO-001.pdf",
+        "error": null
+      },
+      {
+        "type": "quote",
+        "name": "quote-REVIEW-QUO-002.pdf",
+        "error": null
+      }
+    ],
+    "errors": [],
+    "pendingGeometry": {
+      "before": {
+        "x": 16,
+        "y": 2153.234375,
+        "width": 172.109375,
+        "height": 44
+      },
+      "after": {
+        "x": 16,
+        "y": 412.234375,
+        "width": 172.109375,
+        "height": 44
+      },
+      "disabled": true,
+      "busy": "true"
+    },
+    "scroll": {
+      "left": 9,
+      "client": 315,
+      "width": 430,
+      "focus": true
+    },
+    "narrow": {
+      "client": 320,
+      "width": 305
+    },
+    "successFeedback": "forest status",
+    "errorFeedback": "alert"
+  },
+  "pdfInspection": {
+    "coverage": "Actual local production Chromium downloads; text/page assertions and Poppler PNG render; synthetic review examples only.",
+    "files": [
+      {
+        "file": "invoice-REVIEW-INV-001.pdf",
+        "sha256": "36761a0c9e48ca13268f08a9c830d7af04d036edb936c769e4c4aa2610b0b87e",
+        "bytes": 35350,
+        "pages": 1,
+        "reference": "REVIEW-INV-001",
+        "totalAUD": "220.00"
+      },
+      {
+        "file": "invoice-REVIEW-INV-002.pdf",
+        "sha256": "3f13812d51ffc13ebb4088ec6c70dec92306115ec9c3fffc760cbe2b1c696395",
+        "bytes": 35560,
+        "pages": 1,
+        "reference": "REVIEW-INV-002",
+        "totalAUD": "275.00"
+      },
+      {
+        "file": "quote-REVIEW-QUO-001.pdf",
+        "sha256": "8344cdbe92c39456b5809637333273682fa2058049b62510ad46c728ef4c9ff3",
+        "bytes": 36255,
+        "pages": 1,
+        "reference": "REVIEW-QUO-001",
+        "totalAUD": "220.00"
+      },
+      {
+        "file": "quote-REVIEW-QUO-002.pdf",
+        "sha256": "07e6d5cc8b38e860d810138567436ecca15e41a46d8cdb1a202957c1acc8164a",
+        "bytes": 36470,
+        "pages": 1,
+        "reference": "REVIEW-QUO-002",
+        "totalAUD": "275.00"
+      }
+    ]
+  },
+  "touch": {
+    "checks": ["Emulated touch filter", "Emulated touch Gamma selection and exact GST result"],
+    "measures": {
+      "innerWidth": 390,
+      "clientWidth": 390,
+      "scrollWidth": 390,
+      "maxTouchPoints": 1
+    },
+    "coverage": "Chromium mobile/touch emulation; not physical hardware"
+  },
+  "independentReview": {
+    "model": "gpt-6-astra",
+    "reasoning": "max",
+    "initialDisposition": "fix",
+    "findings": 7,
+    "fixBatch": 1,
+    "confirmDisposition": "ship",
+    "resolved": 7,
+    "partial": 0,
+    "unresolved": 0,
+    "validConfirmCaptures": 20,
+    "scope": "Scored fixes only; not a whole-application certification"
+  },
+  "limits": [
+    "Native application tests not executed",
+    "No screen reader",
+    "No physical touch device",
+    "No alternate browser engine",
+    "No OS print dialog",
+    "No new design publication",
+    "Hallmark and Appllama were manual guidance only"
+  ]
+}

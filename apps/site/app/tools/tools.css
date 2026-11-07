@@ -4,16 +4,16 @@
  * All layout and interactive elements are semantic and keyboard-operable.
  */
 .tools-shell {
-  --t-forest: #173f32;
-  --t-ink: #152d28;
-  --t-ivory: #fbf8ef;
-  --t-paper: #fffdf8;
-  --t-sage: #dce7d8;
-  --t-fog: #eee9dd;
-  --t-line: #d7d8ca;
-  --t-muted: #52645b;
-  --t-display: "Iowan Old Style", "Baskerville", Georgia, serif;
-  --t-body: "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --t-forest: var(--tammy-forest);
+  --t-ink: var(--tammy-ink);
+  --t-ivory: var(--tammy-canvas);
+  --t-paper: var(--tammy-paper);
+  --t-sage: var(--tammy-sage);
+  --t-fog: var(--tammy-oat);
+  --t-line: var(--tammy-rule);
+  --t-muted: var(--tammy-muted);
+  --t-display: var(--tammy-font-display);
+  --t-body: var(--tammy-font-body);
   width: min(1248px, calc(100% - 64px));
   margin: 0 auto;
   color: var(--t-ink);
@@ -32,23 +32,13 @@
   display: flex; justify-content: space-between; align-items: center; gap: 20px;
   min-height: 84px; padding: 12px 0; border-bottom: 1px solid var(--t-line);
 }
-.tools-logo {
-  display: inline-flex; gap: 12px; align-items: center; white-space: nowrap;
-  font-family: var(--t-display); font-size: 29px; font-weight: 700; letter-spacing: -.04em;
-}
-.tools-leaf {
-  width: 26px; height: 26px; background: var(--t-forest);
-  border-radius: 2px 19px 2px 19px; transform: rotate(-12deg); display: inline-block;
-  position: relative;
-}
-.tools-leaf::after { content: ""; position: absolute; inset: 0 40% 0 45%; background: var(--t-paper); transform: rotate(23deg); }
 .tools-header nav, .tools-footer nav { display: flex; align-items: center; flex-wrap: wrap; gap: 18px 27px; font-size: 14px; font-weight: 650; }
 .tools-header nav a:hover, .tools-footer nav a:hover { text-decoration: underline; text-underline-offset: 5px; }
 .tools-back { padding: 10px 17px; border: 1px solid var(--t-forest); border-radius: 10px; font-size: 13px; font-weight: 700; white-space: nowrap; }
 .tools-back:hover { background: var(--t-sage); }
 .tools-overline { color: var(--t-forest); font-size: 13px; font-weight: 750; letter-spacing: .025em; margin: 0 0 13px; }
 .tools-shell :is(h1,h2,h3,p) { margin-top: 0; }
-.tools-shell :is(h1,h2) { font-family: var(--t-display); font-weight: 500; letter-spacing: -.042em; line-height: 1.02; overflow-wrap: break-word; }
+.tools-shell :is(h1,h2) { font-family: var(--t-display); font-weight: 500; letter-spacing: -.03em; line-height: 1.02; overflow-wrap: break-word; }
 .tools-shell h1 { font-size: clamp(51px, 6.3vw, 98px); }
 .tools-shell h2 { font-size: clamp(35px, 4.4vw, 59px); }
 .tools-shell h3 { font-family: var(--t-display); font-size: 29px; font-weight: 550; letter-spacing: -.025em; }
@@ -106,7 +96,7 @@
   display: grid; grid-template-columns: 1fr 1fr; gap: 18px 48px;
   border-top: 1px solid var(--t-line); padding: 40px 0 50px; color: var(--t-muted);
 }
-.tools-footer .tools-logo { color: var(--t-ink); font-size: 25px; }
+.tools-footer .tammy-brand { font-size: 25px; }
 .tools-footer small { grid-column: 1/-1; max-width: 690px; line-height: 1.6; }
 .tools-breadcrumb { display: flex; flex-wrap: wrap; gap: 11px; align-items: center; padding: 22px 0 8px; color: var(--t-muted); font-size: 13px; }
 .tools-breadcrumb a { text-decoration: underline; text-underline-offset: 3px; }
@@ -126,11 +116,11 @@
 .tools-segmented label:has(input:checked) { background: var(--t-sage); border-color: var(--t-forest); }
 .tools-field { display: flex; flex-direction: column; min-width: 0; gap: 7px; font-size: 13px; font-weight: 650; color: var(--t-ink); }
 .tools-field > :is(input,select,textarea) {
-  width: 100%; min-width: 0; min-height: 45px; padding: 11px 12px; border: 1px solid #a6b6a9;
-  border-radius: 8px; color: var(--t-ink); background: white; font: 500 15px/1.35 var(--t-body);
+  width: 100%; min-width: 0; min-height: 45px; padding: 11px 12px; border: 1px solid var(--tammy-field-border);
+  border-radius: var(--tammy-radius-control); color: var(--t-ink); background: var(--t-paper); font: 500 15px/1.35 var(--t-body);
 }
 .tools-field textarea { resize: vertical; }
-.tools-field :is(input,select,textarea)[aria-invalid="true"] { border-color: #a33a34; }
+.tools-field :is(input,select,textarea)[aria-invalid="true"] { border-color: var(--tammy-danger); }
 .tools-field :is(input,select,textarea):hover { border-color: var(--t-forest); }
 .tools-calculator-input > .tools-field + .tools-field { margin-top: 20px; }
 .tools-help { font-size: 12px; line-height: 1.6; color: var(--t-muted); }
@@ -144,8 +134,8 @@
 .tools-date-result { font-family: var(--t-display); font-size: clamp(36px, 4vw, 55px); line-height: 1.1; }
 .tools-date-iso { color: var(--t-muted); }
 .tools-date-placeholder { font-size: 21px; color: var(--t-muted); }
-.tools-error { color: #9f2f2e; font-size: 13px; line-height: 1.5; }
-.tools-success { color: #1c6145; font-size: 13px; line-height: 1.5; }
+.tools-error { color: var(--tammy-danger); font-size: 13px; line-height: 1.5; }
+.tools-success { color: var(--tammy-forest); font-size: 13px; line-height: 1.5; }
 .tools-explain { max-width: 850px; padding: 78px 0; }
 .tools-explain h2 { font-size: clamp(34px,4vw,48px); margin-bottom: 20px; }
 .tools-explain p { color: var(--t-muted); font-size: 16px; line-height: 1.75; margin-bottom: 17px; }
@@ -212,7 +202,7 @@
   .tools-header { min-height: 66px; }
   .tools-header nav { font-size: 12px; gap: 8px 16px; }
   .tools-back { padding: 8px 10px; font-size: 11px; }
-  .tools-logo { font-size: 26px; }
+  .tools-header .tammy-brand { font-size: 26px; }
   .tools-hero { min-height: 0; grid-template-columns: 1fr; padding: 58px 0; }
   .tools-hero > div > p:not(.tools-overline) { font-size: 16px; }
   .tools-hero-art { min-height: 250px; }
@@ -249,9 +239,9 @@
 .tools-guides-callout .tools-secondary-link { display: inline-block; margin: 8px 0 0; }
 .tools-guides-callout-links { border-top: 1px solid var(--t-line); }
 .tools-guides-callout-links a { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 7px 14px; padding: 23px 10px; border-bottom: 1px solid var(--t-line); }
-.tools-guides-callout-links a span:first-child { font-size: 12px; color: var(--t-muted); }
+.tools-guides-callout-links a small { grid-column: 1; font-size: 12px; color: var(--t-muted); }
 .tools-guides-callout-links a strong { grid-column: 1; font-family: var(--t-display); font-size: clamp(24px,3vw,33px); font-weight: 500; line-height: 1.12; }
-.tools-guides-callout-links a span:last-child { grid-column: 2; grid-row: 2; font-size: 24px; align-self: center; }
+.tools-guides-callout-links a .tammy-link-arrow { grid-column: 2; grid-row: 1; align-self: center; }
 .tools-guides-callout-links a:hover strong { color: var(--t-forest); }
 .tools-external-link { display: inline-flex; gap: 12px; margin-top: 25px; color: var(--t-forest) !important; font-size: 14px; font-weight: 700; text-decoration: underline; text-underline-offset: 4px; }
 .tools-check-result { font-family: var(--t-display); font-size: clamp(33px,4vw,53px); font-weight: 500; line-height: 1.1; margin: 9px 0 20px; }
@@ -334,3 +324,26 @@
 @media (max-width: 760px) {
   .tools-journal-link { display: inline-block; margin: 16px 0 0 !important; }
 }
+
+/* Shared public chrome: concise navigation keeps the working surface in view. */
+.tools-header nav a, .tools-footer nav a, .tools-back {
+  display: inline-flex; align-items: center; min-height: 44px;
+}
+.tools-header { column-gap: var(--tammy-space-6); }
+.tools-header nav { margin-left: auto; }
+.tools-header .tools-back { border-radius: var(--tammy-radius-control); }
+.tools-calculator-input .segmented-control { margin-bottom: var(--tammy-space-6); }
+.tools-gst-calculator .tools-calculator-result h2 { font: 650 16px/1.4 var(--t-body); letter-spacing: 0; }
+.tools-gst-calculator .tools-result-list dd { font-family: var(--t-body); font-weight: 600; }
+.tools-gst-calculator .tools-result-total dd { font-size: clamp(28px, 3vw, 40px); }
+.tools-field [aria-invalid="true"] { border-color: var(--tammy-danger); }
+.tools-gst-calculator .tools-error { margin-top: var(--tammy-space-3); }
+.tammy-link-arrow { display: inline-block; flex: none; vertical-align: middle; }
+.tools-secondary-link .tammy-link-arrow { margin-left: var(--tammy-space-2); }
+@media (max-width: 760px) {
+  .tools-header { gap: 0 var(--tammy-space-4); padding: var(--tammy-space-2) 0; }
+  .tools-header nav { order: 3; width: 100%; justify-content: flex-start; gap: var(--tammy-space-6); margin-left: 0; }
+  .tools-header .tools-back { font-size: 12px; padding: 8px 10px; }
+}
+
+.tools-header nav a[aria-current="location"] { color: var(--t-forest); text-decoration: underline; text-underline-offset: 6px; text-decoration-thickness: 2px; }

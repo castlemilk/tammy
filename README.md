@@ -4,7 +4,7 @@ Tammy is a local-first Australian accounting desktop application. The current de
 
 Today the connected application can create and reopen an encrypted workspace, confirm its recovery code, sign in, create the organisation and AU chart of accounts, post balanced manual journals, show a trial balance, review retained documents, import and reconcile bank-statement rows, create a local BAS draft, and show consolidated local activity.
 
-The invoice builder supports reviewed expense costs, editable line items, exact AUD/GST totals, encrypted drafts, immutable issued invoices, and offline customer PDFs adapted from pdfcn. Issuing freezes the invoice document; it does not post a receivable, send email, or track payment. See [Invoice builder](docs/development/invoice-builder.md).
+The invoice builder supports reviewed expense costs, editable line items, exact AUD/GST totals, encrypted drafts, immutable issued invoices, and offline customer PDFs adapted from pdfcn. Issuing atomically posts business income, receivables and basis-aware GST; separately recorded dated receipts reduce the balance owing. Older issued documents can remain unposted and require explicit review before adding them to accounts. Issue and PDF export do not email or deliver the invoice. See [Invoice builder](docs/development/invoice-builder.md).
 
 The native Integrations menu can enable a session-scoped local API and stdio MCP adapter for the signed-in organisation. Clients can read data and stage an invoice proposal for human review; they cannot save or issue invoices or post accounting entries. Access requires Tammy's private connection file. See [Local API and MCP](docs/development/local-api-mcp.md) for pairing and client setup.
 
@@ -57,6 +57,7 @@ Inspect the redacted Mac App Store state with `mise exec -- task release:state` 
 
 ## Documentation
 
+- [Product truth](PRODUCT.md) — current native capabilities, independent browser tools and their boundaries, with primary repo references.
 - [Current technical state](docs/development/tech-state.md) — implemented, development-only, deferred, and external boundaries.
 - [Xero replacement roadmap](docs/roadmap/xero-replacement-roadmap.md) — 259-feature parity matrix, milestone gates, and first engineering backlog.
 - [Developer handbook](docs/development/foundation.md) — setup, commands, repository map, local data, and safe changes.

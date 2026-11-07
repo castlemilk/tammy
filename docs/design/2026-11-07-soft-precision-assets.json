@@ -1,0 +1,53 @@
+{
+  "assets": [
+    {
+      "id": "tools-study",
+      "tool": "image_gen.imagegen",
+      "model": "not exposed by tool",
+      "created": "2026-11-07",
+      "sourceFile": "exec-ef1a3c84-a155-43d9-bc6c-043237f56666.png",
+      "sourceSha256": "5613011f43c52f8e0b6994dd41e3c05f37fc5ea7a873356c50e726dc645567c8",
+      "prompt": "Create a high-fidelity design study board for Tammy, an Australian local accounting product, titled 'Tammy / Soft Precision'. This is a DESIGN STUDY, not a screenshot of a shipping app. Use a landscape 3:2 board, warm oat #F7F3EA, ivory #FFFCF6, forest #235C4B, cocoa #302A25, muted cocoa #6C6258, crisp warm hairline rules. Established identity: two simple leaf shapes next to a heavy humanist sans Tammy wordmark; restrained Iowan-style serif headings, Avenir-like humanist sans body, tabular numbers. No gradients, glass, blobs, glow or financial charts as decoration. Three carefully separated columns with readable short text: (1) desktop 'Free business tools' web page wireframe, compact top navigation Tammy / Free tools / Guides / Journal, brief supporting copy 'Invoices, GST and cash flow. In your browser.', labelled search 'Find a tool', understated task filters, clear flat directory links 'Invoice generator', 'Quote generator', 'GST calculator', 'BAS workpaper', 'Cash flow forecast', 'Expense organiser'. The page is an instrument, with first tools visible immediately. Small restrained editorial still life of an ivory calculator and blank folded paper sits to the side of the heading, no oversized hero. (2) a tall mobile counterpart: same content and wordmark, compact wrapping navigation, search before filters, stacked directory, all labels readable, no browser or phone hardware frame. (3) a working component specimen: primary/secondary buttons labelled 'Download PDF' / 'Clear search', labelled Amount field '100.00', Gamma-like native-radio quarter control Q1 Q2 Q3 Q4, distinct understated Draft / Reviewed / Posted status labels, and short token chips for oat, paper, forest, cocoa. Footer note 'Concept study • synthetic content • no account or lodgement'. Precise optical alignment, useful information density, generous but purposeful spacing. Do not show pricing, testimonials, a live bank feed, cloud sync, ATO submission, a mobile app, sales metrics, or fabricated capabilities. Show refined believable UI composition, not a moodboard of floating cards.",
+      "promptNote": "Exact generation prompt. Impeccable embed-prompt used its documented WebP sidecar fallback; no embedded binary metadata is claimed.",
+      "usage": "Design study only; not a screenshot or approval. Desktop/mobile tools directory plus controls in the accepted Soft Precision palette.",
+      "outputs": [
+        {
+          "path": "docs/design/assets/soft-precision-tools-study.webp",
+          "bytes": 106400,
+          "sha256": "69ddb2fb79eb4e9267589ef3422b418b2af80c6b2ccf6fdeea46f22ae7266663",
+          "promptSidecar": "docs/design/assets/soft-precision-tools-study.webp.json",
+          "promptSidecarSha256": "800bcf5015a9c1a68d789269fcbe5e40c97688d37472cb47be58ea4d053f2a86"
+        }
+      ]
+    },
+    {
+      "id": "tools-desk",
+      "tool": "image_gen.imagegen",
+      "model": "not exposed by tool",
+      "created": "2026-11-07",
+      "sourceFile": "exec-2db40e41-0e59-4cf0-b02d-5245aa683a91.png",
+      "sourceSha256": "19ca0adb1fc0e88be33721e3d38bf055880cce8a8467616c39e55a7758b23dc9",
+      "prompt": "Use case: stylized-concept. Asset type: small editorial still-life illustration for the Tammy free business tools page. Create one beautifully restrained, original accounting desk still life: a simple ivory desktop calculator with a small blank unlit display, clean unlabeled keys, a single blank sheet of softly folded ivory paper beside it, and a slender forest-green pencil placed parallel. Low three-quarter view, the objects resting naturally with delicate contact shadows, arranged compactly in the centre-right. Warm oat matte background #F7F3EA, ivory #FFFCF6, small forest accents #235C4B, muted cocoa shadows. Fine tactile paper and lightly worn ceramic-plastic surfaces, soft diffused daylight from upper left, calm precise studio craftsmanship. Clear silhouettes readable at 240px wide. Landscape 3:2 composition, generous clear space on the left, no extraneous objects. No text, numbers, logos, symbols on keys, receipt data, currency, screens of apps, people, hands, neon, gradient wash, glossy 3D, floating shapes, or dramatic shadows. This is supporting art, not a mockup or an infographic.",
+      "promptNote": "Exact generation prompt. Impeccable embed-prompt used its documented WebP sidecar fallback; no embedded binary metadata is claimed.",
+      "usage": "Decorative supporting still life on the tools index; hidden on narrow screens.",
+      "outputs": [
+        {
+          "path": "apps/site/public/assets/tammy-tools-desk.webp",
+          "bytes": 15898,
+          "sha256": "a9efb951818289d49ac2157da720765f4e755e37a662f07a32713171be2ace6b",
+          "promptSidecar": "apps/site/public/assets/tammy-tools-desk.webp.json",
+          "promptSidecarSha256": "656b864dbfa187e9773580ec054a6c18a7f7841d00b2d24be0d2cc6a19000a6c"
+        },
+        {
+          "path": "apps/site/public/assets/tammy-tools-desk-small.webp",
+          "bytes": 6468,
+          "sha256": "2f6078faab0f3c4b0238cc08f15e94a0ad34578e4d89834e3c33cc4be65b4305",
+          "promptSidecar": "apps/site/public/assets/tammy-tools-desk-small.webp.json",
+          "promptSidecarSha256": "915a54cedd9eddb650ad7ed9ad93ff5aab5756f960e01c4fd290e41cb630e8b1"
+        }
+      ]
+    }
+  ],
+  "processing": "cwebp 85 quality at 900/480px for production; study 1400px quality 88; no compositing or hand-drawn replacement.",
+  "publication": "Local and PR assets only; no new design deployment."
+}

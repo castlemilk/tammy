@@ -7,9 +7,8 @@ export function Select({ className, ...props }: ComponentProps<"select">) {
     data-slot="select"
     className={cn(
       "min-h-11 w-full min-w-0 rounded-md border border-input bg-card",
-      "px-3 py-2 text-sm text-foreground shadow-xs",
-      "focus-visible:outline-none focus-visible:border-ring",
-      "focus-visible:ring-[3px] focus-visible:ring-ring/35",
+      "px-3 py-2 text-sm text-foreground cursor-pointer",
+      "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
       "disabled:cursor-not-allowed disabled:opacity-50",
       className,
     )}

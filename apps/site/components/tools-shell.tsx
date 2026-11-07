@@ -1,29 +1,29 @@
 /* oxlint-disable next/no-html-link-for-pages -- Vinext handles these static same-origin routes. */
 import type { ReactNode } from "react";
 import { SITE_ORIGIN } from "../lib/site-config";
+import { SiteBrand } from "./site-brand";
 
 export const origin = SITE_ORIGIN;
 
-export function ToolsShell({ children }: { readonly children: ReactNode }) {
+export function ToolsShell({ children, section = "tools" }: {
+  readonly children: ReactNode;
+  readonly section?: "tools" | "guides" | "journal";
+}) {
   return (
     <div className="tools-shell">
       <a href="#tools-main" className="skip-link">Skip to content</a>
       <header className="tools-header">
-        <a href="/" className="tools-logo" aria-label="Tammy home"><span className="tools-leaf" aria-hidden="true" />Tammy</a>
+        <SiteBrand />
         <nav aria-label="Tools navigation">
-          <a href="/tools">All tools</a>
-          <a href="/tools/invoice-generator">Invoices</a>
-          <a href="/tools/quote-generator">Quotes</a>
-          <a href="/tools/gst-calculator">GST</a>
-          <a href="/tools/bas-workpaper">BAS</a>
-          <a href="/guides">Guides</a>
-          <a href="/blog">Journal</a>
+          <a href="/tools" aria-current={section === "tools" ? "location" : undefined}>All tools</a>
+          <a href="/guides" aria-current={section === "guides" ? "location" : undefined}>Guides</a>
+          <a href="/blog" aria-current={section === "journal" ? "location" : undefined}>Journal</a>
         </nav>
         <a href="/" className="tools-back">About Tammy</a>
       </header>
       <main id="tools-main">{children}</main>
       <footer className="tools-footer">
-        <div><a className="tools-logo" href="/">Tammy</a><p>Business tools and accounting guides for Australia.</p></div>
+        <div><SiteBrand /><p>Business tools and accounting guides for Australia.</p></div>
         <nav aria-label="Tools footer">
           <a href="/tools">All tools</a><a href="/guides">Guides</a><a href="/blog">Journal</a><a href="/privacy">Privacy</a><a href="/support">Support</a>
         </nav>

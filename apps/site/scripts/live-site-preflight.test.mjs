@@ -26,30 +26,30 @@ function fixture({
     };
   };
 }
-describe("Sites production preflight", () => {
-  it("accepts a valid fully canonicalised page set", async () => {
+void describe("Sites production preflight", () => {
+  void it("accepts a valid fully canonicalised page set", async () => {
     const result = await inspectLiveSite({ origin: ORIGIN, routes: ROUTES, fetcher: fixture() });
     assert.equal(result.ok, true, result.failures.join("; "));
     assert.equal(result.checked.length, ROUTES.length);
   });
-  it("rejects non-HTTPS and pathful origins", () => {
+  void it("rejects non-HTTPS and pathful origins", () => {
     for (const value of ["http://tammy.tax", "https://tammy.tax/tools", "ftp://tammy.tax", "https://a:b@tammy.tax"]) {
       assert.throws(() => assertTargetOrigin(value));
     }
   });
-  it("fails canonical mismatches and noindex without redirecting", async () => {
+  void it("fails canonical mismatches and noindex without redirecting", async () => {
     const result = await inspectLiveSite({ origin: ORIGIN, routes: ROUTES, fetcher: fixture({ canonicalHost:"https://old.chatgpt.site", noindex:true }) });
     assert.equal(result.ok, false);
     assert(result.failures.some((x) => x.includes("canonical")));
     assert(result.failures.some((x) => x.includes("noindex")));
   });
-  it("fails source-host redirects and invalid sitemap domains", async () => {
+  void it("fails source-host redirects and invalid sitemap domains", async () => {
     const result = await inspectLiveSite({ origin: ORIGIN, routes: ROUTES, fetcher: fixture({ redirectHost: "https://other.example", sitemapHost:"https://other.example" }) });
     assert.equal(result.ok, false);
     assert(result.failures.some((x) => x.includes("redirected off")));
     assert(result.failures.some((x) => x.includes("foreign-origin")));
   });
-  it("distinguishes unavailable routes from valid pages", async () => {
+  void it("distinguishes unavailable routes from valid pages", async () => {
     const result = await inspectLiveSite({ origin: ORIGIN, routes: ROUTES, fetcher: fixture({missing:"/blog"}) });
     assert.equal(result.ok, false);
     assert(result.failures.some((x) => x.startsWith("/blog: unavailable")));

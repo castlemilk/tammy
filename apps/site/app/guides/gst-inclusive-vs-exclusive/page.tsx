@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 };
 
 export default function GstGuidePage() {
-  return <ToolsShell>
+  return <ToolsShell section="guides">
     <nav className="tools-breadcrumb" aria-label="Breadcrumb"><a href="/">Home</a><span aria-hidden="true">/</span><a href="/guides">Guides</a><span aria-hidden="true">/</span><span aria-current="page">GST inclusive vs exclusive</span></nav>
     <article className="tools-editorial">
       <header className="tools-editorial-heading">

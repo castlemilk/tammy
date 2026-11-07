@@ -26,6 +26,11 @@ export function QuoteGenerator() {
   const [notes, setNotes] = useState("");
   const [lines, setLines] = useState<QuoteLineInput[]>([emptyLine()]);
   const [message, setMessage] = useState("");
+  const [messageKind, setMessageKind] = useState<"success" | "error">("error");
+  function feedback(text: string, kind: "success" | "error" = "error") {
+    setMessage(text);
+    setMessageKind(kind);
+  }
   const [pdfBusy, setPdfBusy] = useState(false);
 
   const compiled = useMemo(() => {
@@ -50,7 +55,7 @@ export function QuoteGenerator() {
       setMessage("");
       window.print();
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Unable to print. Check your quote.");
+      feedback(error instanceof Error ? error.message : "Unable to print. Check your quote.");
     }
   }
 
@@ -69,8 +74,8 @@ export function QuoteGenerator() {
       link.download="tammy-quote-"+(reference.replace(/[^a-zA-Z0-9_-]/g,"-").slice(0,40)||"draft")+".json";
       document.body.appendChild(link);link.click();link.remove();
       window.setTimeout(()=>URL.revokeObjectURL(url),1000);
-      setMessage("Draft saved to your device as JSON. It remains your responsibility to keep the file private.");
-    }catch(e){setMessage(e instanceof Error?e.message:"Unable to export quote draft.");}
+      feedback("Draft saved to your device as JSON. It remains your responsibility to keep the file private.", "success");
+    }catch(e){feedback(e instanceof Error?e.message:"Unable to export quote draft.");}
   }
   async function loadDraft(event: ChangeEvent<HTMLInputElement>) {
     const file=event.target.files?.[0];
@@ -84,14 +89,14 @@ export function QuoteGenerator() {
       setQuoteDate(data.quoteDate);setValidUntil(data.validUntil);
       setGstRegistered(data.gstRegistered);setNotes(data.notes);
       setLines([...data.lines]);
-      setMessage("Draft loaded from your local file. Review it before exporting a quote.");
-    }catch(e){setMessage(e instanceof Error?e.message:"Unable to open quote draft.");}
+      feedback("Draft loaded from your local file. Review it before exporting a quote.", "success");
+    }catch(e){feedback(e instanceof Error?e.message:"Unable to open quote draft.");}
     finally{event.target.value="";}
   }
 
   async function downloadQuotePdf() {
     setMessage("");
-    if(!compiled.result){setMessage(compiled.error||"Complete valid quote details first.");return;}
+    if(!compiled.result){feedback(compiled.error||"Complete valid quote details first.");return;}
     setPdfBusy(true);
     try{
       // Exactly the same local WASM renderer as invoices, with a quote-only template.
@@ -109,15 +114,15 @@ export function QuoteGenerator() {
       link.download="quote-"+(reference.replace(/[^a-zA-Z0-9_-]/g,"-").slice(0,40)||"estimate")+".pdf";
       document.body.appendChild(link);link.click();link.remove();
       window.setTimeout(()=>URL.revokeObjectURL(url),1000);
-      setMessage("Quote PDF generated locally. This has not issued an invoice or saved an accounting entry.");
-    }catch(e){setMessage(e instanceof Error?e.message:"Unable to generate the quote PDF.");}
+      feedback("Quote PDF generated locally. This has not issued an invoice or saved an accounting entry.", "success");
+    }catch(e){feedback(e instanceof Error?e.message:"Unable to generate the quote PDF.");}
     finally{setPdfBusy(false);}
   }
 
   return <div className="tools-quote-layout">
     <section className="tools-quote-form" aria-labelledby="quote-editor-heading">
       <div className="tools-form-heading">
-        <div><p className="tools-overline">Quote editor</p><h2 id="quote-editor-heading">Prepare an estimate.</h2></div>
+        <div><h2 id="quote-editor-heading">Prepare an estimate.</h2></div>
         <span className="tools-local-indicator">Browser only</span>
       </div>
       <fieldset className="tools-form-section"><legend>From</legend>
@@ -156,14 +161,14 @@ export function QuoteGenerator() {
       <label className="tools-field tools-quote-notes" htmlFor="quote-notes"><span>Notes and assumptions</span><Textarea id="quote-notes" rows={3} maxLength={2000} value={notes} onChange={(e) => setNotes(e.target.value)}/></label>
       <div className="tools-form-actions">
         <div className="flex flex-wrap items-center gap-2">
-          <Button loading={pdfBusy} onClick={()=>void downloadQuotePdf()}>{pdfBusy?"Generating PDF...":"Download quote PDF"}</Button>
+          <Button loading={pdfBusy} onClick={()=>void downloadQuotePdf()}>Download quote PDF</Button>
           <Button variant="outline" onClick={print}>Print or save quote as PDF</Button>
           <Button variant="secondary" onClick={saveDraft}>Download draft JSON</Button>
         </div>
         <label htmlFor="quote-draft-upload" className="mt-3 block text-sm font-semibold text-foreground">Import a saved quote draft</label>
         <Input id="quote-draft-upload" type="file" accept=".json,application/json"
           aria-label="Import quote draft JSON" onChange={(event)=>void loadDraft(event)} className="mt-1 cursor-pointer" />
-        {message && <output className="tools-error">{message}</output>}
+        {message && (messageKind === "error" ? <p className="tools-error" role="alert">{message}</p> : <output className="tools-success">{message}</output>)}
         <p className="tools-help">The PDF and optional JSON draft are created locally. The JSON draft contains the customer details you entered and is not encrypted; keep it in a private location. No account, upload, invoicing or delivery occurs.</p>
       </div>
     </section>
@@ -173,6 +178,9 @@ export function QuoteGenerator() {
         <div className="tools-quote-paper-header"><div><p className="tools-overline">Estimate</p><h2>QUOTE</h2></div><p>{sellerName || "Your business"}</p></div>
         <div className="tools-quote-meta"><span>Reference <strong>{reference || "—"}</strong></span><span>Date <strong>{quoteDate || "—"}</strong></span><span>Valid until <strong>{validUntil || "—"}</strong></span></div>
         <div className="tools-quote-parties"><div><small>Prepared by</small><strong>{sellerName || "Business name"}</strong><p>{sellerAddress}</p>{sellerAbn && <p>ABN {sellerAbn}</p>}</div><div><small>Prepared for</small><strong>{customerName || "Customer name"}</strong><p>{customerAddress}</p></div></div>
+        <p className="tools-quote-scroll-hint" id="quote-scroll-hint">Scroll the line items to see GST and totals.</p>
+        {/* oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- The named overflow region needs focus for keyboard scrolling. */}
+        <section className="tools-quote-table-scroll" aria-label="Quote line items" aria-describedby="quote-scroll-hint" tabIndex={0}>
         <table className="tools-paper-items">
           <thead><tr><th scope="col">Description</th><th scope="col">Qty</th><th scope="col">Ex GST</th><th scope="col">GST</th><th scope="col">Total</th></tr></thead>
           <tbody>{lines.map((line, i) => <tr key={i}>
@@ -182,6 +190,7 @@ export function QuoteGenerator() {
             <td>{compiled.result?.totals.lines[i] ? formatAud(compiled.result.totals.lines[i].totalMinor) : "—"}</td>
           </tr>)}</tbody>
         </table>
+        </section>
         <dl className="tools-paper-totals">
           <div><dt>Subtotal (ex GST)</dt><dd>{compiled.result ? formatAud(compiled.result.totals.subtotalMinor) : "—"}</dd></div>
           <div><dt>GST</dt><dd>{compiled.result ? formatAud(compiled.result.totals.gstMinor) : "—"}</dd></div>

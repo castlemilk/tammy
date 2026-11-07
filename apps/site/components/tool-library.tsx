@@ -21,19 +21,6 @@ export function ToolLibrary() {
 
   return <>
     <div className="tools-library-controls">
-      <fieldset className="tools-library-filter-group"><legend>Filter by business task</legend>
-        <div className="tools-library-filters">
-        {toolCategories.map((item) => {
-          const count = item.id === "all"
-            ? publicTools.length
-            : publicTools.filter((tool) => tool.category === item.id).length;
-          return <Button key={item.id} type="button" variant="ghost" className="tools-library-filter"
-            aria-pressed={category === item.id} onClick={() => setCategory(item.id)}>
-            {item.label}<span className="tools-library-filter-count">{count}</span>
-          </Button>;
-        })}
-      </div>
-      </fieldset>
       <div className="tools-library-search">
         <label htmlFor="tammy-tool-search">Find a tool</label>
         <span className="tools-library-search-input">
@@ -48,6 +35,19 @@ export function ToolLibrary() {
             onClick={() => { setQuery(""); searchInput.current?.focus(); }}>Clear</Button>}
         </span>
       </div>
+      <fieldset className="tools-library-filter-group"><legend>Filter by business task</legend>
+        <div className="tools-library-filters">
+        {toolCategories.map((item) => {
+          const count = item.id === "all"
+            ? publicTools.length
+            : publicTools.filter((tool) => tool.category === item.id).length;
+          return <Button key={item.id} type="button" variant="ghost" className="tools-library-filter"
+            aria-pressed={category === item.id} onClick={() => setCategory(item.id)}>
+            {item.label}<span className="tools-library-filter-count">{count}</span>
+          </Button>;
+        })}
+      </div>
+      </fieldset>
     </div>
 
     <output className="tools-library-count" aria-live="polite">
@@ -56,9 +56,8 @@ export function ToolLibrary() {
     </output>
     {results.length > 0 ? <div className="tools-card-grid tools-library-grid" id="tool-results">
       {results.map((tool) => <a className="tools-card tools-library-item"
-          key={tool.href} href={tool.href} data-featured={tool.featured && category === "all" && !query.trim() ? "true" : undefined}>
+          key={tool.href} href={tool.href} aria-label={tool.name}>
         <div className="tools-library-top">
-          <span className="tools-library-type">{tool.categoryLabel}</span>
           <span className="tools-library-icon" aria-hidden="true">
             <img src={"/assets/" + tool.icon + ".svg"} alt="" width="34" height="34" loading="lazy"/>
           </span>
@@ -67,11 +66,8 @@ export function ToolLibrary() {
           <h3>{tool.name}</h3>
           <p>{tool.summary}</p>
         </div>
-        {tool.featured && category === "all" && !query.trim() && <div className="tools-library-paper" aria-hidden="true">
-          <img src="/assets/tammy-invoice-fold.svg" alt="" width="340" height="270" loading="lazy" />
-        </div>}
         <span className="tools-card-foot">
-          {tool.note}
+          <span>{tool.note}</span>
           <span className="tools-library-direction" aria-hidden="true">
             <svg viewBox="0 0 24 24" width="20" height="20" fill="none">
               <path d="M5 12h14m-6-6 6 6-6 6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>

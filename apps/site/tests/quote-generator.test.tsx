@@ -50,6 +50,7 @@ describe("Tammy anonymous quote generator", () => {
       const btn = screenReact.getByRole("button", { name: "Print or save quote as PDF" });
       fireReact.click(btn);
       expect(spy).not.toHaveBeenCalled();
+      expect(screenReact.getByRole("alert").textContent).toContain("Business name");
       expect(screenReact.getAllByText(/Business name/).length).toBeGreaterThan(0);
 
       fireReact.change(screenReact.getByLabelText("Business name *"), { target: { value: "Sample Business" } });
@@ -60,6 +61,8 @@ describe("Tammy anonymous quote generator", () => {
       fireReact.change(screenReact.getByLabelText("Unit price (ex GST, AUD)"), { target: { value: "100.00" } });
       fireReact.click(btn);
       expect(spy).toHaveBeenCalledOnce();
+      expect(screenReact.queryByRole("alert")).toBeNull();
+      expect(screenReact.getByRole("region", { name: "Quote line items" }).tabIndex).toBe(0);
       expect(screenReact.getByText(/Not a tax invoice or payment request/)).toBeTruthy();
       expect(metadata.alternates).toEqual({ canonical: "/tools/quote-generator" });
     } finally {

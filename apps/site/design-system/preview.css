@@ -1,0 +1,101 @@
+.design-preview {
+  padding-bottom: 48px;
+}
+.design-preview > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 24px 0;
+  border-bottom: 1px solid var(--t-line);
+}
+.design-preview > header > span,
+.design-preview footer {
+  font-size: 13px;
+  color: var(--t-muted);
+}
+.design-preview > h1 {
+  font-size: clamp(38px, 5vw, 64px);
+  margin: 48px 0 16px;
+}
+.design-preview-intro {
+  max-width: 70ch;
+  color: var(--t-muted);
+}
+.design-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 32px 48px;
+  margin: 40px 0;
+}
+.design-preview-grid > section {
+  padding: 24px 0;
+  border-top: 1px solid var(--t-line);
+  min-width: 0;
+}
+.design-preview h2 {
+  font-size: 30px;
+  margin: 0 0 16px;
+}
+.design-preview-grid p {
+  color: var(--t-muted);
+  font-size: 14px;
+}
+.design-preview-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 16px 0;
+}
+.design-preview [data-slot='label'] {
+  display: block;
+  margin: 16px 0 8px;
+}
+.design-preview .design-preview-error {
+  color: var(--tammy-danger);
+}
+.design-preview .design-preview-subhead {
+  margin-top: 32px;
+}
+.design-preview .gamma-empty-state {
+  text-align: left;
+}
+.design-preview-palette {
+  border-top: 1px solid var(--t-line);
+  padding: 24px 0 32px;
+}
+.design-preview-palette > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+.design-preview-palette figure {
+  margin: 0;
+}
+.design-preview-palette figure > span {
+  display: block;
+  width: 76px;
+  height: 56px;
+  border: 1px solid var(--t-line);
+  border-radius: var(--tammy-radius-control);
+}
+.design-preview-palette figcaption {
+  margin-top: 8px;
+  font-size: 13px;
+}
+.design-preview footer {
+  padding-top: 24px;
+  border-top: 1px solid var(--t-line);
+}
+@media (max-width: 760px) {
+  .design-preview > header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .design-preview-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+}

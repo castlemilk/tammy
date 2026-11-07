@@ -1,0 +1,398 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-07T09:53:31Z",
+  "title": "Design System: Tammy Soft Precision",
+  "extensions": {
+    "colorMeta": {
+      "primary": {
+        "role": "primary",
+        "displayName": "Forest",
+        "tonalRamp": [
+          "oklch(15.00% 0.06639 170.58)",
+          "oklch(26.43% 0.06639 170.58)",
+          "oklch(37.86% 0.06639 170.58)",
+          "oklch(49.29% 0.06639 170.58)",
+          "oklch(60.71% 0.06639 170.58)",
+          "oklch(72.14% 0.06639 170.58)",
+          "oklch(83.57% 0.06639 170.58)",
+          "oklch(95.00% 0.06639 170.58)"
+        ]
+      },
+      "primary-deep": {
+        "role": "primary",
+        "displayName": "Deep forest",
+        "tonalRamp": [
+          "oklch(15.00% 0.03989 173.87)",
+          "oklch(26.43% 0.03989 173.87)",
+          "oklch(37.86% 0.03989 173.87)",
+          "oklch(49.29% 0.03989 173.87)",
+          "oklch(60.71% 0.03989 173.87)",
+          "oklch(72.14% 0.03989 173.87)",
+          "oklch(83.57% 0.03989 173.87)",
+          "oklch(95.00% 0.03989 173.87)"
+        ]
+      },
+      "background": {
+        "role": "neutral",
+        "displayName": "Oat canvas",
+        "tonalRamp": [
+          "oklch(15.00% 0.01268 86.83)",
+          "oklch(26.43% 0.01268 86.83)",
+          "oklch(37.86% 0.01268 86.83)",
+          "oklch(49.29% 0.01268 86.83)",
+          "oklch(60.71% 0.01268 86.83)",
+          "oklch(72.14% 0.01268 86.83)",
+          "oklch(83.57% 0.01268 86.83)",
+          "oklch(95.00% 0.01268 86.83)"
+        ]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Ivory paper",
+        "tonalRamp": [
+          "oklch(15.00% 0.00854 84.57)",
+          "oklch(26.43% 0.00854 84.57)",
+          "oklch(37.86% 0.00854 84.57)",
+          "oklch(49.29% 0.00854 84.57)",
+          "oklch(60.71% 0.00854 84.57)",
+          "oklch(72.14% 0.00854 84.57)",
+          "oklch(83.57% 0.00854 84.57)",
+          "oklch(95.00% 0.00854 84.57)"
+        ]
+      },
+      "foreground": {
+        "role": "neutral",
+        "displayName": "Cocoa ink",
+        "tonalRamp": [
+          "oklch(15.00% 0.01256 62.12)",
+          "oklch(26.43% 0.01256 62.12)",
+          "oklch(37.86% 0.01256 62.12)",
+          "oklch(49.29% 0.01256 62.12)",
+          "oklch(60.71% 0.01256 62.12)",
+          "oklch(72.14% 0.01256 62.12)",
+          "oklch(83.57% 0.01256 62.12)",
+          "oklch(95.00% 0.01256 62.12)"
+        ]
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "Oat material",
+        "tonalRamp": [
+          "oklch(15.00% 0.01728 84.59)",
+          "oklch(26.43% 0.01728 84.59)",
+          "oklch(37.86% 0.01728 84.59)",
+          "oklch(49.29% 0.01728 84.59)",
+          "oklch(60.71% 0.01728 84.59)",
+          "oklch(72.14% 0.01728 84.59)",
+          "oklch(83.57% 0.01728 84.59)",
+          "oklch(95.00% 0.01728 84.59)"
+        ]
+      },
+      "muted-foreground": {
+        "role": "neutral",
+        "displayName": "Secondary cocoa",
+        "tonalRamp": [
+          "oklch(15.00% 0.02011 67.34)",
+          "oklch(26.43% 0.02011 67.34)",
+          "oklch(37.86% 0.02011 67.34)",
+          "oklch(49.29% 0.02011 67.34)",
+          "oklch(60.71% 0.02011 67.34)",
+          "oklch(72.14% 0.02011 67.34)",
+          "oklch(83.57% 0.02011 67.34)",
+          "oklch(95.00% 0.02011 67.34)"
+        ]
+      },
+      "border": {
+        "role": "neutral",
+        "displayName": "Warm rule",
+        "tonalRamp": [
+          "oklch(15.00% 0.02143 79.08)",
+          "oklch(26.43% 0.02143 79.08)",
+          "oklch(37.86% 0.02143 79.08)",
+          "oklch(49.29% 0.02143 79.08)",
+          "oklch(60.71% 0.02143 79.08)",
+          "oklch(72.14% 0.02143 79.08)",
+          "oklch(83.57% 0.02143 79.08)",
+          "oklch(95.00% 0.02143 79.08)"
+        ]
+      },
+      "field-border": {
+        "role": "neutral",
+        "displayName": "Field boundary",
+        "tonalRamp": [
+          "oklch(15.00% 0.02336 71.98)",
+          "oklch(26.43% 0.02336 71.98)",
+          "oklch(37.86% 0.02336 71.98)",
+          "oklch(49.29% 0.02336 71.98)",
+          "oklch(60.71% 0.02336 71.98)",
+          "oklch(72.14% 0.02336 71.98)",
+          "oklch(83.57% 0.02336 71.98)",
+          "oklch(95.00% 0.02336 71.98)"
+        ]
+      },
+      "success-soft": {
+        "role": "supporting",
+        "displayName": "Pale sage",
+        "tonalRamp": [
+          "oklch(15.00% 0.01595 130.42)",
+          "oklch(26.43% 0.01595 130.42)",
+          "oklch(37.86% 0.01595 130.42)",
+          "oklch(49.29% 0.01595 130.42)",
+          "oklch(60.71% 0.01595 130.42)",
+          "oklch(72.14% 0.01595 130.42)",
+          "oklch(83.57% 0.01595 130.42)",
+          "oklch(95.00% 0.01595 130.42)"
+        ]
+      },
+      "warning": {
+        "role": "warning",
+        "displayName": "Warning ochre",
+        "tonalRamp": [
+          "oklch(15.00% 0.09330 59.98)",
+          "oklch(26.43% 0.09330 59.98)",
+          "oklch(37.86% 0.09330 59.98)",
+          "oklch(49.29% 0.09330 59.98)",
+          "oklch(60.71% 0.09330 59.98)",
+          "oklch(72.14% 0.09330 59.98)",
+          "oklch(83.57% 0.09330 59.98)",
+          "oklch(95.00% 0.09330 59.98)"
+        ]
+      },
+      "warning-soft": {
+        "role": "warning",
+        "displayName": "Pale warning",
+        "tonalRamp": [
+          "oklch(15.00% 0.03329 77.60)",
+          "oklch(26.43% 0.03329 77.60)",
+          "oklch(37.86% 0.03329 77.60)",
+          "oklch(49.29% 0.03329 77.60)",
+          "oklch(60.71% 0.03329 77.60)",
+          "oklch(72.14% 0.03329 77.60)",
+          "oklch(83.57% 0.03329 77.60)",
+          "oklch(95.00% 0.03329 77.60)"
+        ]
+      },
+      "danger": {
+        "role": "danger",
+        "displayName": "Validation red",
+        "tonalRamp": [
+          "oklch(15.00% 0.14481 28.78)",
+          "oklch(26.43% 0.14481 28.78)",
+          "oklch(37.86% 0.14481 28.78)",
+          "oklch(49.29% 0.14481 28.78)",
+          "oklch(60.71% 0.14481 28.78)",
+          "oklch(72.14% 0.14481 28.78)",
+          "oklch(83.57% 0.14481 28.78)",
+          "oklch(95.00% 0.14481 28.78)"
+        ]
+      },
+      "apricot": {
+        "role": "supporting",
+        "displayName": "Apricot",
+        "tonalRamp": [
+          "oklch(15.00% 0.06872 48.36)",
+          "oklch(26.43% 0.06872 48.36)",
+          "oklch(37.86% 0.06872 48.36)",
+          "oklch(49.29% 0.06872 48.36)",
+          "oklch(60.71% 0.06872 48.36)",
+          "oklch(72.14% 0.06872 48.36)",
+          "oklch(83.57% 0.06872 48.36)",
+          "oklch(95.00% 0.06872 48.36)"
+        ]
+      },
+      "butter": {
+        "role": "supporting",
+        "displayName": "Butter",
+        "tonalRamp": [
+          "oklch(15.00% 0.09772 92.36)",
+          "oklch(26.43% 0.09772 92.36)",
+          "oklch(37.86% 0.09772 92.36)",
+          "oklch(49.29% 0.09772 92.36)",
+          "oklch(60.71% 0.09772 92.36)",
+          "oklch(72.14% 0.09772 92.36)",
+          "oklch(83.57% 0.09772 92.36)",
+          "oklch(95.00% 0.09772 92.36)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "sans": {
+        "displayName": "Humanist sans",
+        "purpose": "Native/public controls and financial records. Public shared fields/actions use 14px; public body uses 16px; AccountingStatus uses 12px. Public SiteBrand also uses this family at 28px."
+      },
+      "serif": {
+        "displayName": "Soft editorial serif",
+        "purpose": "Native major headings remain compact. Public landing and tools headings use their own responsive editorial scales; never apply those scales to dense financial data."
+      },
+      "mono": {
+        "displayName": "Reference mono",
+        "purpose": "Account codes and technical references where implemented."
+      }
+    },
+    "shadows": [
+      {
+        "name": "public-card-small",
+        "value": "0 1px 3px 0 #0000001a, 0 1px 2px -1px #0000001a",
+        "purpose": "Existing shared public Card shadow compiled from shadow-sm; calculator working surfaces explicitly remove it. Does not standardize local invoice-paper shadows."
+      }
+    ],
+    "motion": [
+      {
+        "name": "public-fast",
+        "value": "140ms",
+        "purpose": "--tammy-duration-fast for Gamma and directory state transitions."
+      },
+      {
+        "name": "public-ease",
+        "value": "cubic-bezier(0.2, 0.8, 0.2, 1)",
+        "purpose": "--tammy-ease for Gamma and directory state transitions."
+      },
+      {
+        "name": "public-button-transition",
+        "value": "150ms cubic-bezier(0.4, 0, 0.2, 1)",
+        "purpose": "Existing Button utility transition for background, text and border; reduced motion removes it."
+      },
+      {
+        "name": "public-pending-spin",
+        "value": "1s linear infinite",
+        "purpose": "Existing Button pending indicator only; reduced motion removes animation. Financial values never animate."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "landing-medium",
+        "value": "1140px"
+      },
+      {
+        "name": "tools-directory-medium",
+        "value": "1100px"
+      },
+      {
+        "name": "landing-stacked",
+        "value": "840px"
+      },
+      {
+        "name": "tools-directory-narrow",
+        "value": "760px"
+      },
+      {
+        "name": "gamma-block-two-columns",
+        "value": "640px"
+      },
+      {
+        "name": "landing-narrow",
+        "value": "600px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button",
+      "description": "The default variant in apps/site/components/ui/button.tsx. Native type=button specimen with the shared base focus and disabled treatment; no financial handler is attached. React loading disables repeat actions, preserves the label's dimensions and sets aria-busy; the live reference demonstrates that behaviour.",
+      "html": "<button type=\"button\" class=\"ds-button ds-button-primary\">Download PDF</button><button type=\"button\" class=\"ds-button ds-button-primary\" disabled aria-busy=\"true\" aria-label=\"Download PDF\"><span class=\"ds-button-pending-label\">Download PDF</span><span class=\"ds-button-spinner\" aria-hidden=\"true\"></span></button>",
+      "css": ".ds-button { position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 8px 16px; border: 0; border-radius: var(--tammy-radius-control); cursor: pointer; white-space: normal; font: 600 14px/20px var(--tammy-font-body); transition: background-color 150ms cubic-bezier(0.4, 0, 0.2, 1), color 150ms cubic-bezier(0.4, 0, 0.2, 1), border-color 150ms cubic-bezier(0.4, 0, 0.2, 1); } .ds-button:focus-visible { outline: 2px solid var(--tammy-forest); outline-offset: 2px; } .ds-button:disabled { pointer-events: none; opacity: .45; } @media (prefers-reduced-motion: reduce) { .ds-button { transition: none; } } .ds-button-primary { background: var(--tammy-forest); color: var(--tammy-paper); } .ds-button-primary:hover { background: color-mix(in oklab, var(--tammy-forest) 90%, transparent); } .ds-button-pending-label { opacity: 0; } .ds-button-spinner { position: absolute; width: 14px; height: 14px; border: 2px solid currentColor; border-top-color: transparent; border-radius: 50%; animation: ds-button-spin 1s linear infinite; } @keyframes ds-button-spin { to { transform: rotate(360deg); } } @media (prefers-reduced-motion: reduce) { .ds-button-spinner { animation: none; } }"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button",
+      "description": "The secondary variant in apps/site/components/ui/button.tsx. Native type=button specimen with the shared base focus and disabled treatment; no financial handler is attached.",
+      "html": "<button type=\"button\" class=\"ds-button ds-button-secondary\">Download draft JSON</button>",
+      "css": ".ds-button { position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 8px 16px; border: 0; border-radius: var(--tammy-radius-control); cursor: pointer; white-space: normal; font: 600 14px/20px var(--tammy-font-body); transition: background-color 150ms cubic-bezier(0.4, 0, 0.2, 1), color 150ms cubic-bezier(0.4, 0, 0.2, 1), border-color 150ms cubic-bezier(0.4, 0, 0.2, 1); } .ds-button:focus-visible { outline: 2px solid var(--tammy-forest); outline-offset: 2px; } .ds-button:disabled { pointer-events: none; opacity: .45; } @media (prefers-reduced-motion: reduce) { .ds-button { transition: none; } } .ds-button-secondary { background: var(--tammy-sage); color: var(--tammy-forest); } .ds-button-secondary:hover { background: color-mix(in oklab, var(--tammy-sage) 80%, transparent); }"
+    },
+    {
+      "name": "Outline Button",
+      "kind": "button",
+      "refersTo": "button",
+      "description": "The outline variant in apps/site/components/ui/button.tsx. Native type=button specimen with the shared base focus and disabled treatment; no financial handler is attached.",
+      "html": "<button type=\"button\" class=\"ds-button ds-button-outline\">Reset example</button>",
+      "css": ".ds-button { position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 8px 16px; border: 0; border-radius: var(--tammy-radius-control); cursor: pointer; white-space: normal; font: 600 14px/20px var(--tammy-font-body); transition: background-color 150ms cubic-bezier(0.4, 0, 0.2, 1), color 150ms cubic-bezier(0.4, 0, 0.2, 1), border-color 150ms cubic-bezier(0.4, 0, 0.2, 1); } .ds-button:focus-visible { outline: 2px solid var(--tammy-forest); outline-offset: 2px; } .ds-button:disabled { pointer-events: none; opacity: .45; } @media (prefers-reduced-motion: reduce) { .ds-button { transition: none; } } .ds-button-outline { border: 1px solid var(--tammy-rule); background: var(--tammy-paper); color: var(--tammy-ink); } .ds-button-outline:hover { background: var(--tammy-sage); }"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button",
+      "description": "The ghost variant in apps/site/components/ui/button.tsx. Native type=button specimen with the shared base focus and disabled treatment; no financial handler is attached.",
+      "html": "<button type=\"button\" class=\"ds-button ds-button-ghost\">Supporting action</button>",
+      "css": ".ds-button { position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 8px 16px; border: 0; border-radius: var(--tammy-radius-control); cursor: pointer; white-space: normal; font: 600 14px/20px var(--tammy-font-body); transition: background-color 150ms cubic-bezier(0.4, 0, 0.2, 1), color 150ms cubic-bezier(0.4, 0, 0.2, 1), border-color 150ms cubic-bezier(0.4, 0, 0.2, 1); } .ds-button:focus-visible { outline: 2px solid var(--tammy-forest); outline-offset: 2px; } .ds-button:disabled { pointer-events: none; opacity: .45; } @media (prefers-reduced-motion: reduce) { .ds-button { transition: none; } } .ds-button-ghost { background: transparent; color: var(--tammy-ink); } .ds-button-ghost:hover { background: var(--tammy-sage); }"
+    },
+    {
+      "name": "Destructive Button",
+      "kind": "button",
+      "refersTo": "button",
+      "description": "The destructive variant in apps/site/components/ui/button.tsx. Native type=button specimen with the shared base focus and disabled treatment; no financial handler is attached.",
+      "html": "<button type=\"button\" class=\"ds-button ds-button-destructive\">Destructive action</button>",
+      "css": ".ds-button { position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 8px 16px; border: 0; border-radius: var(--tammy-radius-control); cursor: pointer; white-space: normal; font: 600 14px/20px var(--tammy-font-body); transition: background-color 150ms cubic-bezier(0.4, 0, 0.2, 1), color 150ms cubic-bezier(0.4, 0, 0.2, 1), border-color 150ms cubic-bezier(0.4, 0, 0.2, 1); } .ds-button:focus-visible { outline: 2px solid var(--tammy-forest); outline-offset: 2px; } .ds-button:disabled { pointer-events: none; opacity: .45; } @media (prefers-reduced-motion: reduce) { .ds-button { transition: none; } } .ds-button-destructive { background: var(--tammy-danger); color: var(--tammy-paper); } .ds-button-destructive:hover { background: color-mix(in oklab, var(--tammy-danger) 90%, transparent); }"
+    },
+    {
+      "name": "Native fields",
+      "kind": "input",
+      "refersTo": "field",
+      "description": "Input, Select and Label from apps/site/components/ui. Shared base specimens; the tools shell uses a larger focus outline. Native select popups remain platform-owned. The legacy tools-field wrapper now shares the field-border and control-radius tokens.",
+      "html": "<div class=\"ds-fields\"><label class=\"ds-label\" for=\"ds-amount\">Amount in AUD</label><input class=\"ds-input\" id=\"ds-amount\" inputmode=\"decimal\" value=\"100.00\"><label class=\"ds-label\" for=\"ds-year\">Financial year</label><select class=\"ds-select\" id=\"ds-year\"><option>2025–26</option><option>2026–27</option></select><label class=\"ds-label\" for=\"ds-invalid\">Invalid example</label><input class=\"ds-input\" id=\"ds-invalid\" value=\"100.001\" aria-invalid=\"true\" aria-describedby=\"ds-invalid-message\"><p class=\"ds-field-error\" id=\"ds-invalid-message\">Enter an AUD amount with up to two decimal places.</p><label class=\"ds-label\" for=\"ds-disabled\">Disabled example</label><input class=\"ds-input\" id=\"ds-disabled\" value=\"Unavailable\" disabled></div>",
+      "css": ".ds-fields { display: grid; gap: 8px; max-width: 400px; font-family: var(--tammy-font-body); } .ds-label { color: var(--tammy-ink); font-size: 14px; font-weight: 600; line-height: 1.375; } .ds-input, .ds-select { display: flex; width: 100%; min-width: 0; min-height: 44px; padding: 8px 12px; border: 1px solid var(--tammy-field-border); border-radius: var(--tammy-radius-control); background: var(--tammy-paper); color: var(--tammy-ink); font: 400 14px/20px var(--tammy-font-body); } .ds-input::placeholder { color: var(--tammy-muted); } .ds-input:focus-visible, .ds-select:focus-visible { outline: 2px solid var(--tammy-forest); outline-offset: 2px; } .ds-input:focus-visible { border-color: var(--tammy-forest); } .ds-input[aria-invalid=true] { border-color: var(--tammy-danger); } .ds-input:disabled, .ds-select:disabled { cursor: not-allowed; opacity: .5; } .ds-select { cursor: pointer; } .ds-field-error { margin: 0; color: var(--tammy-danger); font: 400 13px/1.5 var(--tammy-font-body); }"
+    },
+    {
+      "name": "Public navigation and SiteBrand",
+      "kind": "nav",
+      "refersTo": "navigation",
+      "description": "Shared SiteBrand from components/site-brand.tsx with the ToolsShell destinations, current-location semantics and narrow layout. The two-leaf mark is CSS geometry from app/site-brand.css.",
+      "html": "<header class=\"ds-header\"><a class=\"ds-brand\" href=\"/\" aria-label=\"Tammy home\"><span class=\"ds-brand-mark\" aria-hidden=\"true\"><span></span><span></span></span><span>Tammy</span></a><nav class=\"ds-nav\" aria-label=\"Tools navigation\"><a href=\"/tools\" aria-current=\"location\">All tools</a><a href=\"/guides\">Guides</a><a href=\"/blog\">Journal</a></nav><a class=\"ds-back\" href=\"/\">About Tammy</a></header>",
+      "css": ".ds-header { display: flex; justify-content: space-between; align-items: center; gap: 20px 24px; min-height: 84px; padding: 12px 0; border-bottom: 1px solid var(--tammy-rule); color: var(--tammy-ink); font-family: var(--tammy-font-body); } .ds-brand { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; font: 770 28px/1 var(--tammy-font-body); letter-spacing: -.04em; color: var(--tammy-ink); white-space: nowrap; text-decoration: none; } .ds-brand:hover { color: var(--tammy-forest); } .ds-brand-mark { position: relative; display: inline-block; width: 28px; height: 29px; flex: none; } .ds-brand-mark span { position: absolute; display: block; width: 14px; height: 23px; background: var(--tammy-forest); } .ds-brand-mark span:first-child { left: 0; top: 4px; border-radius: 13px 1px 13px 1px; transform: rotate(-12deg); } .ds-brand-mark span:last-child { right: 0; top: 0; border-radius: 1px 13px 1px 13px; transform: rotate(12deg); } .ds-nav { display: flex; align-items: center; flex-wrap: wrap; gap: 18px 27px; margin-left: auto; font: 650 14px/1.5 var(--tammy-font-body); } .ds-nav a { display: inline-flex; align-items: center; min-height: 44px; color: inherit; text-decoration: none; } .ds-nav a:hover { text-decoration: underline; text-underline-offset: 5px; } .ds-nav a[aria-current=location] { color: var(--tammy-forest); text-decoration: underline; text-underline-offset: 6px; text-decoration-thickness: 2px; } .ds-back { display: inline-flex; align-items: center; min-height: 44px; padding: 10px 17px; border: 1px solid var(--tammy-forest); border-radius: var(--tammy-radius-control); color: inherit; text-decoration: none; white-space: nowrap; font: 700 13px/1.5 var(--tammy-font-body); } .ds-back:hover { background: var(--tammy-sage); } .ds-header a:focus-visible { outline: 3px solid var(--tammy-forest); outline-offset: 3px; } @media (max-width: 760px) { .ds-header { flex-wrap: wrap; gap: 0 16px; padding: 8px 0; } .ds-nav { order: 3; width: 100%; justify-content: flex-start; gap: 24px; margin-left: 0; } .ds-back { font-size: 12px; padding: 8px 10px; } }"
+    },
+    {
+      "name": "AccountingStatus",
+      "kind": "chip",
+      "description": "Static record labels from components/accounting-status.tsx and app/design-system.css. Reviewed is neutral; Draft/Not matched are warning; Posted/Issued share a supportive colour but retain different words. No role=status, live announcement or mutation.",
+      "html": "<div class=\"ds-statuses\"><span class=\"ds-status\" data-state=\"draft\">Draft</span><span class=\"ds-status\" data-state=\"reviewed\">Reviewed</span><span class=\"ds-status\" data-state=\"posted\">Posted</span><span class=\"ds-status\" data-state=\"unmatched\">Not matched</span><span class=\"ds-status\" data-state=\"issued\">Issued</span></div>",
+      "css": ".ds-statuses { display: flex; flex-wrap: wrap; gap: 8px; } .ds-status { display: inline-flex; align-items: center; padding: 3px 8px; border: 1px solid var(--tammy-rule); border-radius: var(--tammy-radius-control); background: var(--tammy-paper); color: var(--tammy-ink); font: 650 12px/1.5 var(--tammy-font-body); white-space: nowrap; } .ds-status[data-state=draft], .ds-status[data-state=unmatched] { color: var(--tammy-warning); background: var(--tammy-warning-soft); border-color: transparent; } .ds-status[data-state=posted], .ds-status[data-state=issued] { color: var(--tammy-forest); background: var(--tammy-sage); border-color: transparent; } @media (forced-colors: active) { .ds-status { border: 1px solid CanvasText; } }"
+    },
+    {
+      "name": "Shared Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "The generic Card, CardHeader and CardContent in components/ui/card.tsx. Its inherited small shadow is removed explicitly by calculator working surfaces; this is not a rule for invoice-paper geometry.",
+      "html": "<section class=\"ds-card\"><div class=\"ds-card-header\"><h3 class=\"ds-card-title\">Expense worksheet</h3><p class=\"ds-card-description\">Review entries, export, or reopen a previously saved worksheet. Nothing is stored automatically.</p></div><div class=\"ds-card-content\">Synthetic component example.</div></section>",
+      "css": ".ds-card { max-width: 440px; border: 1px solid var(--tammy-rule); border-radius: var(--tammy-radius-surface); background: var(--tammy-paper); color: var(--tammy-ink); font: 400 16px/1.5 var(--tammy-font-body); box-shadow: 0 1px 3px 0 #0000001a, 0 1px 2px -1px #0000001a; } .ds-card-header { display: flex; flex-direction: column; gap: 4px; padding: 20px 20px 12px; } .ds-card-title { margin: 0; color: var(--tammy-ink); font: 600 20px/1.25 var(--tammy-font-body); } .ds-card-description { margin: 0; color: var(--tammy-muted); font: 400 14px/24px var(--tammy-font-body); } .ds-card-content { padding: 8px 20px 20px; }"
+    },
+    {
+      "name": "Gamma segmented choice",
+      "kind": "custom",
+      "description": "Native-radio semantics retained from components/gamma/segmented-control.tsx and .css, with the tools adapter's 44px faces and two-column narrow treatment. The specimen can change selection without JavaScript.",
+      "html": "<div class=\"ds-segmented\" role=\"radiogroup\" aria-label=\"Example quarter\"><label class=\"ds-segmented-option\"><input class=\"ds-segmented-input\" type=\"radio\" name=\"ds-quarter\" value=\"1\" checked><span class=\"ds-segmented-face\">Q1</span></label><label class=\"ds-segmented-option\"><input class=\"ds-segmented-input\" type=\"radio\" name=\"ds-quarter\" value=\"2\"><span class=\"ds-segmented-face\">Q2</span></label><label class=\"ds-segmented-option\"><input class=\"ds-segmented-input\" type=\"radio\" name=\"ds-quarter\" value=\"3\"><span class=\"ds-segmented-face\">Q3</span></label><label class=\"ds-segmented-option\"><input class=\"ds-segmented-input\" type=\"radio\" name=\"ds-quarter\" value=\"4\"><span class=\"ds-segmented-face\">Q4</span></label></div>",
+      "css": ".ds-segmented { display: flex; flex-wrap: wrap; align-items: stretch; width: 100%; max-width: 440px; gap: 2px; padding: 3px; border: 1px solid var(--tammy-rule); border-radius: var(--tammy-radius-control); background: var(--tammy-sage); font-family: var(--tammy-font-body); } .ds-segmented-option { position: relative; display: inline-flex; align-items: center; justify-content: center; flex: 1 1 0; min-width: 0; cursor: pointer; } .ds-segmented-input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; } .ds-segmented-face { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 11px; border-radius: calc(var(--tammy-radius-control) - 2px); color: color-mix(in srgb, var(--tammy-ink) 76%, var(--gamma-bg, var(--tammy-paper))); font: 600 13px/1.5 var(--tammy-font-body); white-space: nowrap; transition: background var(--tammy-duration-fast) var(--tammy-ease), color var(--tammy-duration-fast) var(--tammy-ease); } .ds-segmented-option:hover .ds-segmented-face { color: var(--tammy-ink); } .ds-segmented-input:checked + .ds-segmented-face { background: var(--gamma-bg, var(--tammy-paper)); color: var(--tammy-ink); } .ds-segmented-input:focus-visible + .ds-segmented-face { outline: 2px solid var(--tammy-forest); outline-offset: 1px; } .ds-segmented-input:disabled + .ds-segmented-face { cursor: not-allowed; color: color-mix(in srgb, var(--tammy-muted) 55%, transparent); } @media (max-width: 640px) { .ds-segmented { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); } .ds-segmented-face { width: 100%; } } @media (prefers-reduced-motion: reduce) { .ds-segmented-face { transition: none; } }"
+    }
+  ],
+  "narrative": {
+    "northStar": "A warm studio desk with the precision of a financial instrument.",
+    "overview": "The approved\n[Soft Precision pack](https://github.com/castlemilk/tammy/tree/19533020422b6ea2f0c77dc3117a051483f9f9ce/docs/design/soft-precision-2026-10-22)\nis the visual reference. Boards 3, 8, 9 and 11 informed this implementation.\n\nTammy serves Australian small businesses using a local desktop accounting workspace.\nThis is a product interface: readable records, explicit actions and trustworthy state\ncome first. English Australian dates and AUD financial values follow existing contracts.\n[PRODUCT.md](PRODUCT.md) indexes current capabilities and boundaries;\ndocs/development/tech-state.md retains the detailed native record. Generated screens\ncannot establish new financial or security behaviour.\n\nRuntime token ownership is per surface: apps/desktop/src/app/styles.css owns desktop,\nand apps/site/app/tokens.css owns the public site. Both implement this accepted system;\npublic adapters and their scope are recorded in [apps/site/DESIGN-SYSTEM.md](apps/site/DESIGN-SYSTEM.md).\nThe public deep-forest hover and stronger field-border roles extend the accepted palette\nwithout replacing its existing values. [.impeccable/design.json](.impeccable/design.json)\nextends this contract with component specimens, motion and responsive metadata; it is\nnot a generated runtime token source. There is no external font dependency.",
+    "keyCharacteristics": [
+      "Warm light materials with restrained forest actions and explicit record states.",
+      "Humanist sans controls and readable financial figures, with serif editorial headings.",
+      "Native control semantics, visible focus and source-aware product boundaries."
+    ],
+    "rules": [
+      {
+        "name": "The Token Owner Rule",
+        "body": "Reuse each surface's runtime tokens through its adapters; do not create a parallel palette in a component or route.",
+        "section": "colors"
+      },
+      {
+        "name": "The Record State Rule",
+        "body": "Labels describe the actual record state; a visual status change is never evidence of posting, payment, reconciliation or lodgement.",
+        "section": "components"
+      }
+    ],
+    "dos": [
+      "Do reuse semantic tokens and shared controls across connected screens.",
+      "Do verify real packaged screenshots with isolated synthetic data.",
+      "Do preserve core authorization, amounts, tax rules and idempotency.",
+      "Use planned reference screens only for capabilities now implemented and tested.\n  Invoice editing and reporting are implemented; bank feeds and stock tracking remain planned."
+    ],
+    "donts": [
+      "Don't add art to financial tables or copy generated financial examples as contracts."
+    ]
+  }
+}

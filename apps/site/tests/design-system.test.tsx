@@ -12,6 +12,7 @@ import { SegmentedControl } from "../components/gamma/segmented-control";
 import BasWorkpaperPage from "../app/tools/bas-workpaper/page";
 import TaxChecklistPage from "../app/tools/sole-trader-tax-checklist/page";
 import QuotePage from "../app/tools/quote-generator/page";
+import { GstCalculator } from "../components/gst-calculator";
 
 afterEach(cleanup);
 
@@ -73,6 +74,22 @@ describe("Tammy shadcn / Gamma / Tailwind contract", () => {
     const quote = render(<QuotePage />);
     expect(quote.container.querySelectorAll('[data-slot="input"]').length).toBeGreaterThanOrEqual(5);
     expect(quote.container.querySelector('[data-slot="button"]')).toBeTruthy();
+  });
+
+  it("connects GST invalid input to its error and recovers without losing mode", () => {
+    const { container } = render(<GstCalculator />);
+    fireEvent.click(screen.getByRole("radio", { name: "Extract GST" }));
+    const amount = screen.getByLabelText("Amount including GST (AUD)");
+    expect(amount.getAttribute("data-slot")).toBe("input");
+    fireEvent.change(amount, { target: { value: "110.001" } });
+    expect(amount.getAttribute("aria-invalid")).toBe("true");
+    expect(amount.getAttribute("aria-describedby")).toContain(screen.getByRole("alert").id);
+    expect(container.querySelector(".tools-result-total dd")?.textContent).toBe("–");
+    fireEvent.change(amount, { target: { value: "110.00" } });
+    expect(amount.getAttribute("aria-invalid")).toBe("false");
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(screen.getByText("$10.00")).toBeTruthy();
+    expect((screen.getByRole("radio", { name: "Extract GST" }) as HTMLInputElement).checked).toBe(true);
   });
 
   it("keeps one Soft Precision token bridge and scoped, reduced-motion Gamma styling", () => {
