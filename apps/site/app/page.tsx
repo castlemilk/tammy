@@ -1,5 +1,5 @@
 /* oxlint-disable next/no-html-link-for-pages -- Vinext serves static same-origin routes. */
-/* oxlint-disable next/no-img-element -- These local SVGs are vector assets, not raster photos; Vinext does not require Next image optimization. */
+/* oxlint-disable next/no-img-element -- Local SVGs and responsive artwork use native images; Vinext does not require Next image optimization. */
 import type { Metadata } from "next";
 import { publicContent } from "../content/public-content.generated";
 import "./landing.css";
@@ -49,28 +49,28 @@ const steps = [
 
 const capabilities = [
   {
-    icon: "journals",
+    example: "journals",
     title: "Journals and trial balance",
-    body: "Record balanced entries in a ledger you can inspect, rather than a black box.",
+    body: "Record balanced entries and inspect the ledger and trial balance.",
     detail: "Manual posting with visible accounting records",
   },
   {
-    icon: "source-document",
+    example: "document",
     title: "Source-document review",
     body: "Keep invoices, receipts and other imported evidence close to the decisions they inform.",
     detail: "Encrypted local evidence and review states",
   },
   {
-    icon: "reconciliation",
+    example: "reconciliation",
     title: "Bank-statement reconciliation",
     body: "Import statement rows and review matches against the records you keep.",
     detail: "File import, not automatic bank feeds",
   },
   {
-    icon: "invoices",
+    example: "invoice",
     title: "Customer invoicing",
     body: "Prepare, review and issue invoices, with customer PDFs you can export.",
-    detail: "No automatic email, payment collection or ledger posting",
+    detail: "Issue to the local ledger; export a customer PDF",
   },
 ] as const;
 
@@ -93,7 +93,7 @@ const questions = [
   {
     question: "Can Tammy create and send invoices?",
     answer:
-      "Tammy supports encrypted drafts, issuing an invoice and exporting a customer PDF. Issuing does not send an email, post a receivable or track payments.",
+      "Tammy supports encrypted drafts and customer PDF exports. The explicit issue action posts receivables, income and GST according to the workspace's accounting basis. It does not email the invoice or collect payment. Receipts are recorded separately.",
   },
   {
     question: "What Mac do I need?",
@@ -147,47 +147,121 @@ function Glyph({ name }: { readonly name: string }) {
 function WorkspacePreview() {
   return (
     <figure className="landing-preview" aria-label="Illustrative Tammy workspace">
-      <div className="landing-preview-rail">
-        <div className="landing-preview-identity">
-          <Mark />
-          Tammy
+      <div className="landing-preview-workspace">
+        <div className="landing-preview-rail">
+          <div className="landing-preview-identity">
+            <Mark />
+            Tammy
+          </div>
+          <span className="landing-preview-nav-item">Overview</span>
+          <span className="landing-preview-nav-item landing-preview-nav-active">Journals</span>
+          <span className="landing-preview-nav-item">Documents</span>
+          <span className="landing-preview-nav-item">Banking</span>
+          <span className="landing-preview-nav-item">GST &amp; BAS</span>
         </div>
-        <span className="landing-preview-nav-item">Overview</span>
-        <span className="landing-preview-nav-item landing-preview-nav-active">Journals</span>
-        <span className="landing-preview-nav-item">Documents</span>
-        <span className="landing-preview-nav-item">Banking</span>
-        <span className="landing-preview-nav-item">GST &amp; BAS</span>
-      </div>
-      <div className="landing-preview-main">
-        <div className="landing-preview-topline">
-          <span>Local accounting workspace</span>
-          <span className="landing-preview-local">On this Mac</span>
-        </div>
-        <h3>Journals</h3>
-        <p>Review the records behind every balance.</p>
-        <div className="landing-preview-columns" aria-hidden="true">
-          <span>Record</span>
-          <span>State</span>
-        </div>
-        <div className="landing-preview-row">
-          <span>Office equipment</span>
-          <span className="landing-preview-status">Posted</span>
-        </div>
-        <div className="landing-preview-row landing-preview-row-selected">
-          <span>Monthly insurance</span>
-          <span className="landing-preview-status">Reviewed</span>
-        </div>
-        <div className="landing-preview-row">
-          <span>Manual adjustment</span>
-          <span className="landing-preview-status">Draft</span>
-        </div>
-        <div className="landing-preview-summary">
-          <span className="landing-preview-summary-icon"><Glyph name="source-document" /></span>
-          <span><strong>Source evidence</strong><small>Retained in the encrypted workspace</small></span>
-          <span className="landing-preview-check" aria-hidden="true">✓</span>
+        <div className="landing-preview-main">
+          <div className="landing-preview-topline">
+            <span>Local accounting workspace</span>
+            <span className="landing-preview-local">On this Mac</span>
+          </div>
+          <h3>Journals</h3>
+          <p>Review the records behind every balance.</p>
+          <div className="landing-preview-columns" aria-hidden="true">
+            <span>Record</span>
+            <span>State</span>
+          </div>
+          <div className="landing-preview-row">
+            <span>Office equipment</span>
+            <span className="landing-preview-status">Posted</span>
+          </div>
+          <div className="landing-preview-row landing-preview-row-selected">
+            <span>Monthly insurance</span>
+            <span className="landing-preview-status">Reviewed</span>
+          </div>
+          <div className="landing-preview-row">
+            <span>Manual adjustment</span>
+            <span className="landing-preview-status">Draft</span>
+          </div>
+          <div className="landing-preview-summary">
+            <span className="landing-preview-summary-icon"><Glyph name="source-document" /></span>
+            <span><strong>Source evidence</strong><small>Retained in the encrypted workspace</small></span>
+            <span className="landing-preview-check" aria-hidden="true">✓</span>
+          </div>
         </div>
       </div>
       <figcaption>Illustrative interface. Synthetic examples, not a live account or actual application capture.</figcaption>
+    </figure>
+  );
+}
+
+function FeatureExample({ kind }: { readonly kind: (typeof capabilities)[number]["example"] }) {
+  if (kind === "journals") {
+    return (
+      <figure className="landing-feature-example">
+        <div className="landing-feature-example-head"><span>Office supplies</span><span className="landing-feature-state">Draft</span></div>
+        <table className="landing-feature-table">
+          <caption>Journal EXAMPLE-J001 · AUD</caption>
+          <thead><tr><th scope="col">Account</th><th scope="col">Dr</th><th scope="col">Cr</th></tr></thead>
+          <tbody>
+            <tr><th scope="row">Stationery expense</th><td>100.00</td><td>—</td></tr>
+            <tr><th scope="row">GST paid</th><td>10.00</td><td>—</td></tr>
+            <tr><th scope="row">Bank</th><td>—</td><td>110.00</td></tr>
+          </tbody>
+          <tfoot><tr><th scope="row">Total</th><td>110.00</td><td>110.00</td></tr></tfoot>
+        </table>
+        <p className="landing-feature-note">Debits and credits balance. Posting remains a separate action.</p>
+        <figcaption>Synthetic journal example, not an app screenshot.</figcaption>
+      </figure>
+    );
+  }
+
+  if (kind === "document") {
+    return (
+      <figure className="landing-feature-example">
+        <div className="landing-feature-example-head"><span>Retained invoice</span><span className="landing-feature-state">Reviewed</span></div>
+        <dl className="landing-feature-record">
+          <div><dt>Reference</dt><dd>EXAMPLE-018</dd></div>
+          <div><dt>Supplier</dt><dd>Example Supplies</dd></div>
+          <div><dt>Total</dt><dd>AUD 110.00</dd></div>
+          <div><dt>Ledger status</dt><dd>Not posted</dd></div>
+        </dl>
+        <p className="landing-feature-note">Reviewed means the document details were checked. It does not mean a journal was posted.</p>
+        <figcaption>Synthetic source-review example, not an app screenshot.</figcaption>
+      </figure>
+    );
+  }
+
+  if (kind === "reconciliation") {
+    return (
+      <figure className="landing-feature-example">
+        <div className="landing-feature-example-head"><span>Statement comparison</span><span className="landing-feature-state">Not matched</span></div>
+        <table className="landing-feature-table">
+          <caption>File import · 7 November 2026 · AUD</caption>
+          <thead><tr><th scope="col">Record</th><th scope="col">Money out</th></tr></thead>
+          <tbody>
+            <tr><th scope="row">Imported statement row<small>Example Supplies</small></th><td>110.00</td></tr>
+            <tr><th scope="row">Ledger payment<small>Example Supplies</small></th><td>110.00</td></tr>
+          </tbody>
+        </table>
+        <p className="landing-feature-note">Compare the imported row with your records and choose a match manually. Equal amounts alone do not establish a match.</p>
+        <figcaption>Synthetic reconciliation example, not an app screenshot.</figcaption>
+      </figure>
+    );
+  }
+
+  return (
+    <figure className="landing-feature-example">
+      <div className="landing-feature-example-head"><span>Invoice EXAMPLE-004</span><span className="landing-feature-state">Issued</span></div>
+      <div className="landing-feature-invoice">
+        <p><strong>Example Customer</strong><span>Design services · 2 × AUD 100.00</span></p>
+        <dl className="landing-feature-record">
+          <div><dt>Subtotal</dt><dd>AUD 200.00</dd></div>
+          <div><dt>GST</dt><dd>AUD 20.00</dd></div>
+          <div className="landing-feature-invoice-total"><dt>Total</dt><dd>AUD 220.00</dd></div>
+        </dl>
+      </div>
+      <p className="landing-feature-note">An issued invoice can be exported as a customer PDF. Issuing does not email it or record a payment.</p>
+      <figcaption>Synthetic PDF specimen, not an app screenshot or a real invoice.</figcaption>
     </figure>
   );
 }
@@ -227,14 +301,7 @@ export default function Home() {
               <p className="landing-platform"><Glyph name="desktop" /> {platformLabel}</p>
             </div>
             <div className="landing-hero-art">
-              <img className="landing-contours landing-contours-hero" src="/assets/contour-lines.svg" alt="" aria-hidden="true" />
-              <div className="landing-hero-art-slab" aria-hidden="true" />
               <WorkspacePreview />
-              <div className="landing-source-slip" aria-hidden="true">
-                <span>Source document</span>
-                <span className="landing-slip-lines"><i /><i /><i /></span>
-                <span className="landing-slip-check">Reviewed ✓</span>
-              </div>
             </div>
           </section>
 
@@ -247,7 +314,6 @@ export default function Home() {
           <section className="landing-section landing-workflow" id="workflow" aria-labelledby="workflow-heading">
             <div className="landing-section-heading landing-section-heading-split">
               <div>
-                <p className="landing-kicker">A clear accounting process</p>
                 <h2 id="workflow-heading">From source records{" "}<br />to a balanced ledger.</h2>
               </div>
               <p>Bring evidence into view, make deliberate accounting decisions, and keep the result inspectable.</p>
@@ -266,17 +332,19 @@ export default function Home() {
 
           <section className="landing-section landing-features" id="features" aria-labelledby="features-heading">
             <div className="landing-section-heading">
-              <p className="landing-kicker">The essentials, considered</p>
-              <h2 id="features-heading">Accounting without the noise.</h2>
-              <p>Familiar tools, exact financial records and a place for the evidence that matters.</p>
+              <h2 id="features-heading">Accounting tools</h2>
+              <p>Review documents, match imported statements, record journals and prepare customer invoices.</p>
             </div>
             <div className="landing-feature-grid">
               {capabilities.map((capability) => (
                 <article className="landing-feature" key={capability.title}>
-                  <span className="landing-feature-icon"><Glyph name={capability.icon} /></span>
                   <h3>{capability.title}</h3>
                   <p>{capability.body}</p>
+                  <FeatureExample kind={capability.example} />
                   <span className="landing-feature-detail">{capability.detail}</span>
+                  {capability.example === "invoice" && (
+                    <a className="landing-feature-tool-link" href="/tools/invoice-generator">Try the free invoice generator <span aria-hidden="true">↗</span></a>
+                  )}
                 </article>
               ))}
             </div>
@@ -284,32 +352,27 @@ export default function Home() {
 
           <section className="landing-section landing-product" id="product" aria-labelledby="product-heading">
             <div className="landing-product-copy">
-              <p className="landing-kicker">Designed to be understood</p>
-              <h2 id="product-heading">Know what changed.{" "}<br />Know why.</h2>
+              <h2 id="product-heading">Review the records behind each entry.</h2>
               <p>Keep a close eye on the books, with source evidence, explicit review states and financial records that remain available to inspect.</p>
               <a className="landing-text-link" href="#workflow">Explore the accounting process <span aria-hidden="true">↗</span></a>
             </div>
-            <div className="landing-product-visual">
-              <div className="landing-product-paper">
-                <span>Retained document</span>
-                <Glyph name="source-document" />
-                <i /><i /><i />
-                <strong>Reviewed</strong>
-              </div>
-              <div className="landing-product-book">
-                <div className="landing-product-book-head"><Glyph name="ledger" /><span>Journal detail</span></div>
-                <div className="landing-product-book-line"><span>Account</span><span>Debit</span><span>Credit</span></div>
-                <div className="landing-product-book-line"><span>Expense account</span><span>Dr</span><span>–</span></div>
-                <div className="landing-product-book-line"><span>Business account</span><span>–</span><span>Cr</span></div>
-                <div className="landing-product-book-foot">Balanced entry</div>
-              </div>
-              <div className="landing-product-stamp">Source. Review. Record.</div>
-            </div>
+            <figure className="landing-product-visual">
+              <img
+                src="/assets/source-ledger-1200.webp"
+                srcSet="/assets/source-ledger-640.webp 640w, /assets/source-ledger-1200.webp 1200w"
+                sizes="(max-width: 600px) calc(100vw - 32px), (max-width: 840px) calc(100vw - 48px), (max-width: 1460px) 60vw, 830px"
+                width={1200}
+                height={800}
+                loading="lazy"
+                decoding="async"
+                alt="Illustration of a receipt, pencil and ruled accounting ledger"
+              />
+              <figcaption>Original illustration. Source documents and journal entries remain separate, reviewable records.</figcaption>
+            </figure>
           </section>
 
           <section className="landing-section landing-bas" id="bas" aria-labelledby="bas-heading">
             <div className="landing-bas-copy">
-              <p className="landing-kicker">Australian accounting, thoughtfully scoped</p>
               <h2 id="bas-heading">Prepared is not lodged.</h2>
               <p>Tammy helps you prepare local GST/BAS workpapers with reviewable calculations and retained sources. The current release does not submit tax reports to the ATO.</p>
               <a className="landing-text-link" href="/privacy">Understand the reporting boundary <span aria-hidden="true">↗</span></a>
@@ -330,7 +393,6 @@ export default function Home() {
               </div>
             </div>
             <div className="landing-privacy-copy">
-              <p className="landing-kicker">Local by design</p>
               <h2 id="privacy-heading">Your data stays{" "}<br />in your hands.</h2>
               <p>Tammy stores accounting records in an encrypted workspace on your Mac. Some credentials live in macOS Keychain. There is no hosted Tammy business account or cloud sync in this release.</p>
               <ul>
@@ -344,8 +406,7 @@ export default function Home() {
 
           <section className="landing-section landing-australia" aria-labelledby="australia-heading">
             <div className="landing-australia-heading">
-              <p className="landing-kicker">Made for the way you work</p>
-              <h2 id="australia-heading">Australian by design.{" "}<br />Focused by choice.</h2>
+              <h2 id="australia-heading">Australian accounting</h2>
             </div>
             <div className="landing-australia-content">
               <p>AUD amounts, GST workflows, Australian chart-of-accounts conventions and local reporting drafts are part of Tammy’s current accounting foundation.</p>
@@ -355,9 +416,8 @@ export default function Home() {
 
           <section className="landing-section landing-faq" id="questions" aria-labelledby="questions-heading">
             <div className="landing-faq-intro">
-              <p className="landing-kicker">Useful answers</p>
-              <h2 id="questions-heading">The details matter.</h2>
-              <p>No feature promises hiding in the fine print. Here is what Tammy does today, and what it does not.</p>
+              <h2 id="questions-heading">Questions about Tammy</h2>
+              <p>What Tammy does today, and what it does not.</p>
               <a className="landing-text-link" href="/support">See support and technical details <span aria-hidden="true">↗</span></a>
             </div>
             <div className="landing-faq-items">
@@ -373,32 +433,30 @@ export default function Home() {
 
           <section className="landing-section landing-tools-section" id="free-tools" aria-labelledby="landing-tools-heading">
             <div className="landing-tools-intro">
-              <p className="landing-kicker">For the everyday numbers</p>
-              <h2 id="landing-tools-heading">Little tools. <br />Big clarity.</h2>
+              <h2 id="landing-tools-heading">Free business tools</h2>
               <p>Create invoices, calculate GST, check an ABN, or understand pricing margins. Free utilities that keep your information in this browser tab.</p>
               <a className="landing-text-link" href="/tools">Explore all free tools <span aria-hidden="true">↗</span></a>
               <a className="landing-text-link landing-guides-link" href="/guides">Read the Australian accounting guides <span aria-hidden="true">↗</span></a>
             </div>
             <div className="landing-tools-list">
-              <a href="/tools/invoice-generator"><span className="landing-tools-number">01</span><strong>Australian invoice generator</strong><span>Make and download an invoice PDF</span><span aria-hidden="true">↗</span></a>
-              <a href="/tools/quote-generator"><span className="landing-tools-number">02</span><strong>Quote and estimate generator</strong><span>Build and download a quote PDF</span><span aria-hidden="true">↗</span></a>
-              <a href="/tools/bas-workpaper"><span className="landing-tools-number">03</span><strong>Simpler BAS workpaper</strong><span>Review GST figures before lodging</span><span aria-hidden="true">↗</span></a>
-              <a href="/tools/sole-trader-tax-checklist"><span className="landing-tools-number">04</span><strong>Sole trader tax checklist</strong><span>Prepare your myTax records</span><span aria-hidden="true">↗</span></a>
-              <a href="/tools/expense-organiser"><span className="landing-tools-number">05</span><strong>Receipt and expense organiser</strong><span>Keep a private source record worksheet</span><span aria-hidden="true">↗</span></a>
-              <a href="/tools/gst-calculator"><span className="landing-tools-number">06</span><strong>GST calculator</strong><span>Add or remove 10% GST</span><span aria-hidden="true">↗</span></a>
-              <a href="/tools/invoice-due-date-calculator"><span className="landing-tools-number">07</span><strong>Invoice due-date calculator</strong><span>Work out payment terms</span><span aria-hidden="true">↗</span></a>
-              <a href="/tools/abn-checker"><span className="landing-tools-number">08</span><strong>ABN format checker</strong><span>Check the number before the register</span><span aria-hidden="true">↗</span></a>
-              <a href="/tools/profit-margin-calculator"><span className="landing-tools-number">09</span><strong>Profit margin calculator</strong><span>Understand markup and gross margin</span><span aria-hidden="true">↗</span></a>
-              <a href="/tools/break-even-calculator"><span className="landing-tools-number">10</span><strong>Break-even calculator</strong><span>Know the unit sales target</span><span aria-hidden="true">↗</span></a>
-              <a href="/tools/cash-runway-calculator"><span className="landing-tools-number">11</span><strong>Cash runway calculator</strong><span>Estimate monthly cash coverage</span><span aria-hidden="true">↗</span></a>
-              <a href="/tools/cash-flow-forecast"><span className="landing-tools-number">12</span><strong>12-week cash flow forecast</strong><span>Plan dated receipts and payments</span><span aria-hidden="true">↗</span></a>
+              <a href="/tools/invoice-generator"><strong>Australian invoice generator</strong><span>Make and download an invoice PDF</span><span aria-hidden="true">↗</span></a>
+              <a href="/tools/quote-generator"><strong>Quote and estimate generator</strong><span>Build and download a quote PDF</span><span aria-hidden="true">↗</span></a>
+              <a href="/tools/bas-workpaper"><strong>Simpler BAS workpaper</strong><span>Review GST figures before lodging</span><span aria-hidden="true">↗</span></a>
+              <a href="/tools/sole-trader-tax-checklist"><strong>Sole trader tax checklist</strong><span>Prepare your myTax records</span><span aria-hidden="true">↗</span></a>
+              <a href="/tools/expense-organiser"><strong>Receipt and expense organiser</strong><span>Keep a private source record worksheet</span><span aria-hidden="true">↗</span></a>
+              <a href="/tools/gst-calculator"><strong>GST calculator</strong><span>Add or remove 10% GST</span><span aria-hidden="true">↗</span></a>
+              <a href="/tools/invoice-due-date-calculator"><strong>Invoice due-date calculator</strong><span>Work out payment terms</span><span aria-hidden="true">↗</span></a>
+              <a href="/tools/abn-checker"><strong>ABN format checker</strong><span>Check the number before the register</span><span aria-hidden="true">↗</span></a>
+              <a href="/tools/profit-margin-calculator"><strong>Profit margin calculator</strong><span>Understand markup and gross margin</span><span aria-hidden="true">↗</span></a>
+              <a href="/tools/break-even-calculator"><strong>Break-even calculator</strong><span>Know the unit sales target</span><span aria-hidden="true">↗</span></a>
+              <a href="/tools/cash-runway-calculator"><strong>Cash runway calculator</strong><span>Estimate monthly cash coverage</span><span aria-hidden="true">↗</span></a>
+              <a href="/tools/cash-flow-forecast"><strong>12-week cash flow forecast</strong><span>Plan dated receipts and payments</span><span aria-hidden="true">↗</span></a>
             </div>
           </section>
 
           <section className="landing-section landing-journal" aria-labelledby="landing-journal-heading">
             <div className="landing-journal-intro">
-              <p className="landing-kicker">The Tammy Journal</p>
-              <h2 id="landing-journal-heading">Better questions, clearer numbers.</h2>
+              <h2 id="landing-journal-heading">The Tammy Journal</h2>
               <p>Carefully worked notes on GST timing, bank receipts, month-end reviews and business decisions.</p>
               <a className="landing-text-link" href="/blog">Explore the journal <span aria-hidden="true">↗</span></a>
             </div>
@@ -413,8 +471,7 @@ export default function Home() {
           <section className="landing-closing" id="availability" aria-labelledby="closing-heading">
             <img src="/assets/contour-lines.svg" className="landing-closing-contours" alt="" aria-hidden="true" />
             <div>
-              <p className="landing-kicker">Tammy is in development</p>
-              <h2 id="closing-heading">Your books deserve{" "}<br />a quieter home.</h2>
+              <h2 id="closing-heading">Tammy is in development</h2>
               <p>Explore the local-first approach and contact the publisher about development access. A public Mac download is not available from this site yet.</p>
               <div className="landing-closing-actions">
                 <a className="landing-button landing-button-light" href={"mailto:" + identity.supportEmail + "?subject=Tammy%20development%20access"}>Enquire about Tammy <span aria-hidden="true">↗</span></a>

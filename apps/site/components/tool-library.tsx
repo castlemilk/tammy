@@ -1,19 +1,22 @@
 "use client";
 /* oxlint-disable next/no-html-link-for-pages -- Vinext serves these same-origin routes. */
 /* oxlint-disable next/no-img-element -- Local vector category icons have no raster payload. */
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
+import { GammaEmptyState } from "./gamma/empty-state";
 import { matchTools, publicTools, toolCategories, type ToolCategory } from "../lib/tool-library";
 
 export function ToolLibrary() {
   const [category, setCategory] = useState<ToolCategory | "all">("all");
   const [query, setQuery] = useState("");
+  const searchInput = useRef<HTMLInputElement>(null);
   const results = matchTools(query, category);
 
   function reset() {
     setQuery("");
     setCategory("all");
+    searchInput.current?.focus();
   }
 
   return <>
@@ -31,18 +34,20 @@ export function ToolLibrary() {
         })}
       </div>
       </fieldset>
-      <label className="tools-library-search" htmlFor="tammy-tool-search">
-        <span>Find a tool</span>
+      <div className="tools-library-search">
+        <label htmlFor="tammy-tool-search">Find a tool</label>
         <span className="tools-library-search-input">
           <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" width="19" height="19">
             <circle cx="10.5" cy="10.5" r="6.5" stroke="currentColor" strokeWidth="1.7"/>
             <path d="m15.3 15.3 4.4 4.4" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/>
           </svg>
-          <Input id="tammy-tool-search" type="search" name="tool-search" value={query}
+          <Input ref={searchInput} id="tammy-tool-search" type="search" name="tool-search" value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="GST, pricing, invoices..." autoComplete="off" />
+          {query && <Button type="button" variant="ghost" className="tools-library-clear" aria-label="Clear search"
+            onClick={() => { setQuery(""); searchInput.current?.focus(); }}>Clear</Button>}
         </span>
-      </label>
+      </div>
     </div>
 
     <output className="tools-library-count" aria-live="polite">
@@ -74,10 +79,9 @@ export function ToolLibrary() {
           </span>
         </span>
       </a>)}
-    </div> : <div className="tools-library-empty">
-      <strong>No matching tools.</strong>
-      <p>Try searching for an accounting task, or browse the complete library.</p>
+    </div> : <GammaEmptyState className="tools-library-empty" title="No matching tools."
+      description="Try a different search, or reset the filters to see all twelve tools.">
       <Button type="button" onClick={reset}>Show all tools</Button>
-    </div>}
+    </GammaEmptyState>}
   </>;
 }

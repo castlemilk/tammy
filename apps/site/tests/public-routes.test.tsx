@@ -38,7 +38,9 @@ describe("Tammy public routes", () => {
     expect(screen.getByText("Can Tammy lodge my BAS with the ATO?")).toBeTruthy();
     expect(screen.getByText(/Automatic bank feeds and bank-account syncing are not part/i))
       .toBeTruthy();
-    expect(screen.getByText(/Issuing does not send an email/i)).toBeTruthy();
+    expect(screen.getByText(/explicit issue action posts receivables, income and GST/i)).toBeTruthy();
+    expect(screen.getByText(/does not email the invoice or collect payment/i)).toBeTruthy();
+    expect(screen.queryByText(/does not.*post a receivable/i)).toBeNull();
     expect(screen.getByText(/There is no Tammy cloud workspace/i)).toBeTruthy();
     expect(screen.getByRole("navigation", { name: "Primary navigation" })).toBeTruthy();
     expect(screen.getByRole("navigation", { name: "Footer navigation" })).toBeTruthy();

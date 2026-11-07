@@ -34,9 +34,9 @@ export const publicTools: readonly PublicTool[] = [
   {
     href: "/tools/quote-generator",
     name: "Quote generator",
-    summary: "Create an itemised estimate with GST and save it as a PDF from the print dialog.",
+    summary: "Create an itemised estimate with GST and download a quote PDF.",
     category: "invoicing", categoryLabel: "Invoicing", icon: "invoices",
-    note: "Print or save PDF", keywords: "quote estimate proposal price terms printable",
+    note: "PDF export", keywords: "quote estimate proposal price terms printable",
   },
   {
     href: "/tools/gst-calculator",

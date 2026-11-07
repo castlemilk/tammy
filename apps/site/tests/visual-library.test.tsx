@@ -55,6 +55,22 @@ describe("Tammy practical tools directory", () => {
     fireEvent.click(screen.getByRole("button", { name: "Show all tools" }));
     expect(screen.getByRole("status").textContent).toContain("12 tools");
     expect(screen.getByRole("link", { name: /GST calculator/i })).toBeTruthy();
+    expect(document.activeElement).toBe(search);
+  });
+
+  it("clears search while retaining the selected task and returning focus", () => {
+    render(<ToolsPage />);
+    const gstFilter = screen.getByRole("button", { name: /GST & BAS/i });
+    fireEvent.click(gstFilter);
+    const search = screen.getByRole("searchbox", { name: "Find a tool" }) as HTMLInputElement;
+    fireEvent.change(search, { target: { value: "ABN" } });
+    expect(screen.getByRole("status").textContent).toContain("1 tool");
+    fireEvent.click(screen.getByRole("button", { name: "Clear search" }));
+    expect(search.value).toBe("");
+    expect(document.activeElement).toBe(search);
+    expect(gstFilter.getAttribute("aria-pressed")).toBe("true");
+    expect(screen.getByRole("status").textContent).toContain("3 tools");
+    expect(screen.queryByRole("button", { name: "Clear search" })).toBeNull();
   });
 
   it("adds real scalable illustration assets rather than baking in bogus interface copy", () => {

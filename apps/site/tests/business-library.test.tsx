@@ -79,7 +79,7 @@ describe("new calculators and articles are usable and indexable", () => {
 
   it("renders a curated journal with working article links", () => {
     render(<BlogIndex />);
-    expect(screen.getByRole("heading", { level: 1 }).textContent).toContain("Keeping the books");
+    expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Tammy Journal");
     expect(screen.getByRole("link", { name: /Margin is not markup/ })).toBeTruthy();
     expect(screen.getByRole("link", { name: /An invoice is not cash/i })).toBeTruthy();
     expect(blogPosts.length).toBeGreaterThanOrEqual(13);

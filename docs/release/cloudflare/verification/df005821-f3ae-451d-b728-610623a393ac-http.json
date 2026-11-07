@@ -18,9 +18,7 @@
       "title": "Local-first accounting for Australian businesses \u2014 Tammy Accounting",
       "h1": "Your books. On your Mac.",
       "not_found_marker": false,
-      "canonicals": [
-        "https://tammy-accounting.castlemilk.chatgpt.site"
-      ],
+      "canonicals": ["https://tammy-accounting.castlemilk.chatgpt.site"],
       "canonical_prior_origin_retained": true,
       "workers_dev_canonical_mismatch": true,
       "content_type_matches": true
@@ -36,9 +34,7 @@
       "title": "Free Australian business tools \u2014 Tammy Accounting",
       "h1": "Good tools. Clearer books.",
       "not_found_marker": false,
-      "canonicals": [
-        "https://tammy-accounting.castlemilk.chatgpt.site/tools"
-      ],
+      "canonicals": ["https://tammy-accounting.castlemilk.chatgpt.site/tools"],
       "canonical_prior_origin_retained": true,
       "workers_dev_canonical_mismatch": true,
       "content_type_matches": true
@@ -54,9 +50,7 @@
       "title": "Free Australian invoice generator | PDF \u2014 Tammy Accounting",
       "h1": "Make an invoice worth keeping.",
       "not_found_marker": false,
-      "canonicals": [
-        "https://tammy-accounting.castlemilk.chatgpt.site/tools/invoice-generator"
-      ],
+      "canonicals": ["https://tammy-accounting.castlemilk.chatgpt.site/tools/invoice-generator"],
       "canonical_prior_origin_retained": true,
       "workers_dev_canonical_mismatch": true,
       "content_type_matches": true
@@ -72,9 +66,7 @@
       "title": "Free Australian quote and estimate generator \u2014 Tammy Accounting",
       "h1": "A clear quote, before the work begins.",
       "not_found_marker": false,
-      "canonicals": [
-        "https://tammy-accounting.castlemilk.chatgpt.site/tools/quote-generator"
-      ],
+      "canonicals": ["https://tammy-accounting.castlemilk.chatgpt.site/tools/quote-generator"],
       "canonical_prior_origin_retained": true,
       "workers_dev_canonical_mismatch": true,
       "content_type_matches": true
@@ -90,9 +82,7 @@
       "title": "Tammy Journal | Australian accounting, invoicing and cash flow \u2014 Tammy Accounting",
       "h1": "Keeping the books, thinking ahead.",
       "not_found_marker": false,
-      "canonicals": [
-        "https://tammy-accounting.castlemilk.chatgpt.site/blog"
-      ],
+      "canonicals": ["https://tammy-accounting.castlemilk.chatgpt.site/blog"],
       "canonical_prior_origin_retained": true,
       "workers_dev_canonical_mismatch": true,
       "content_type_matches": true
@@ -108,9 +98,7 @@
       "title": "Privacy policy \u2014 Tammy Accounting",
       "h1": "Privacy policy",
       "not_found_marker": false,
-      "canonicals": [
-        "https://tammy-accounting.castlemilk.chatgpt.site/privacy"
-      ],
+      "canonicals": ["https://tammy-accounting.castlemilk.chatgpt.site/privacy"],
       "canonical_prior_origin_retained": true,
       "workers_dev_canonical_mismatch": true,
       "content_type_matches": true
@@ -183,10 +171,7 @@
       "local_sha256": "e5197f54d52deb3b2b83e3d00d8b04c775f234a43fd655d6ece6e41daefff0e3",
       "matches_built_asset": true,
       "content_type_matches": true,
-      "accepted_mime_types": [
-        "text/javascript",
-        "application/javascript"
-      ]
+      "accepted_mime_types": ["text/javascript", "application/javascript"]
     },
     {
       "path": "/_next/static/chunks/quote-generator-Bg13ByhG.js",
@@ -199,10 +184,7 @@
       "local_sha256": "d18fab002c8a79dc55c0fa91a4087104c45cfeae115391f5f200287086d152ea",
       "matches_built_asset": true,
       "content_type_matches": true,
-      "accepted_mime_types": [
-        "text/javascript",
-        "application/javascript"
-      ]
+      "accepted_mime_types": ["text/javascript", "application/javascript"]
     },
     {
       "path": "/assets/journal-self-lodge-bas.svg",
@@ -249,9 +231,7 @@
       "sha256": "a8e024a1d733bfa14f2a788f0a72c4e3aa079bd6abf95fc7fbf0353af6a9968e",
       "pass": true,
       "url_count": 36,
-      "url_origins": [
-        "https://tammy-accounting.castlemilk.chatgpt.site"
-      ],
+      "url_origins": ["https://tammy-accounting.castlemilk.chatgpt.site"],
       "prior_origin_retained": true,
       "content_type_matches": true
     },
@@ -263,9 +243,7 @@
       "bytes": 94,
       "sha256": "19c50df339ec92fdc00e341b9d71ac04c6d529b35d25332c809673ac2922de20",
       "pass": true,
-      "sitemap_urls": [
-        "https://tammy-accounting.castlemilk.chatgpt.site/sitemap.xml"
-      ],
+      "sitemap_urls": ["https://tammy-accounting.castlemilk.chatgpt.site/sitemap.xml"],
       "prior_origin_retained": true,
       "content_type_matches": true
     },
@@ -278,9 +256,7 @@
       "sha256": "ec4cea9becb5d72893198dc53f96465625d40ddd818a467ca910bdb1c8d47d36",
       "pass": true,
       "url_count": 33,
-      "url_origins": [
-        "https://tammy-accounting.castlemilk.chatgpt.site"
-      ],
+      "url_origins": ["https://tammy-accounting.castlemilk.chatgpt.site"],
       "prior_origin_retained": true,
       "content_type_matches": true
     }

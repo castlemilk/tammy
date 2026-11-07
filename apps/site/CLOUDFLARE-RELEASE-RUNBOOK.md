@@ -4,6 +4,8 @@ The user explicitly requested direct Cloudflare deployment and deployment throug
 
 The direct target is `tammy-site-direct` on the selected account's existing `workers.dev` subdomain. Deploying it does not move `tammy.tax`, change DNS/canonicals, or publish a Sites version. Keep the current Sites project, public audience and hosting source manifests intact.
 
+The later [feature-led design review](../../docs/design/2026-11-07-site-feature-review.md) is a separate, unpublished candidate. Its design-publication approval is pending. The requested [tammy.tax migration plan](../../docs/release/cloudflare/tammy-tax-domain-plan.md) records the absent Cloudflare zone, missing authorized DNS inventory and exact routing prerequisites; no domain change has occurred.
+
 ## Current evidence and blockers
 
 Observed 7 November 2026 (Australia/Melbourne, AEDT); refresh before a later release:
@@ -161,10 +163,10 @@ The [original deployment receipt](../../docs/release/cloudflare/deployments/df00
 | Remote deployment message | `GitHub 56bd4ef4091a7df58e004b7ddb643e6f4c58cd7b` |
 | Published URL | <https://tammy-site-direct.ben-ebsworth.workers.dev/> |
 | HTTP / assets / missing route checks | 18/18 passed at 14:47:02 AEDT: seven pages, genuine 404, seven assets with matching build hashes/MIME types, and sitemap/robots/RSS |
-| HTTP evidence | [Public HTTP acceptance JSON](../../docs/release/cloudflare/verification/df005821-f3ae-451d-b728-610623a393ac-http.json); SHA-256 `8df8903cd8a881f5647fadf0f39cb209fa4ef8ece27401255e4cf274598b0821` |
+| HTTP evidence | [Public HTTP acceptance JSON](../../docs/release/cloudflare/verification/df005821-f3ae-451d-b728-610623a393ac-http.json); SHA-256 `119a6f48a3d70f9cc411aecdeb0067680b883e6a762f034a9dd7716c9858595d` |
 | Canonical review | All seven pages and sitemap/robots/RSS retain the prior Sites origin; workers.dev canonical mismatch remains expected and separate from HTTP health |
 | Repeated invoice/quote PDF downloads and browser checks | Four real downloads passed independent text/totals and rendered-layout/glyph review; each is one clean A4 page. Changed references/quantities/totals and distinct hashes establish fresh results. Desktop homepage → tools → invoice → quote → blog navigation and download success messages passed |
-| Browser/PDF evidence | [Sanitized verification metadata](../../docs/release/cloudflare/verification/df005821-f3ae-451d-b728-610623a393ac-browser-pdf.json); SHA-256 `68e41a0f35ae589fef5188c31ff7e621491d43e177405c3ec7d0f00ef7e74cf3`. PDF review recorded at 14:48:56 AEDT; original review JSON SHA-256 `37352ea4251b70d646a1c9c2be3530b09e0cd4343265f0ffadf2b8fed2c0ac3d` |
+| Browser/PDF evidence | [Sanitized verification metadata](../../docs/release/cloudflare/verification/df005821-f3ae-451d-b728-610623a393ac-browser-pdf.json); SHA-256 `e88eea66f2d975dd1e6495375e94115599c8b7d5b3fe954be2760fa5fc8b4840`. PDF review recorded at 14:48:56 AEDT; original review JSON SHA-256 `37352ea4251b70d646a1c9c2be3530b09e0cd4343265f0ffadf2b8fed2c0ac3d` |
 | Mobile / keyboard / physical-touch checks | Simulated 320×740 quote, invoice and blog: viewport and scroll width both 320, no horizontal overflow. Added a second quote item, then removed it using Enter. Physical touch and OS print dialog untested |
 | Sites / tammy.tax readback | Native readback confirmed exact project `appgprj_6a93f33631748191b7c064c033f72b53`, active/public, latest version 12, live URL `https://tammy.tax`; no Sites/DNS/canonical changes performed |
 | CI deployment / Cuttlefish qualification | Incomplete; CI credentials and runner registration remain unapproved |

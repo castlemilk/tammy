@@ -25,26 +25,24 @@ export default function ToolsPage() {
     <ToolsShell>
       <section className="tools-hero tools-index-hero">
         <div>
-          <p className="tools-overline">Tammy tools</p>
-          <h1>Good tools. <em>Clearer books.</em></h1>
-          <p>Make invoices, check GST, prepare a BAS example, organise sole-trader tax records, or model business finances. Everyday business tools, without a signup.</p>
-          <a className="tools-primary-link" href="#available-tools-heading">Find the right tool <span aria-hidden="true">↗</span></a>
+          <h1>Free business tools</h1>
+          <p>Create an invoice or quote, calculate GST, or plan cash flow. Use all twelve tools in your browser, without an account.</p>
         </div>
         <div className="tools-hero-art" aria-hidden="true"><img className="tools-hero-illustration" src="/assets/tammy-ledger-helix.svg" alt="" /></div>
       </section>
-      <section className="tools-content-section" aria-labelledby="available-tools-heading">
-        <div className="tools-section-heading"><p className="tools-overline">Business essentials</p><h2 id="available-tools-heading">Choose what you need.</h2></div>
+      <section className="tools-content-section tools-directory" aria-labelledby="available-tools-heading">
+        <h2 className="sr-only" id="available-tools-heading">Choose a business tool</h2>
         <ToolLibrary />
       </section>
       <section className="tools-guides-callout" aria-labelledby="tools-guide-heading">
-        <div className="tools-guides-callout-copy"><p className="tools-overline">Practical reading</p><h2 id="tools-guide-heading">Understand the numbers behind the tools.</h2><p>Original Australian invoicing and GST explainers, with source references and examples you can check yourself.</p><a href="/guides" className="tools-secondary-link">Browse all guides <span aria-hidden="true">↗</span></a><a href="/blog" className="tools-secondary-link tools-journal-link">Read the Tammy Journal <span aria-hidden="true">↗</span></a></div>
+        <div className="tools-guides-callout-copy"><h2 id="tools-guide-heading">Guides and worked examples</h2><p>Australian invoicing and GST explainers with source references and calculations you can check.</p><a href="/guides" className="tools-secondary-link">Browse all guides <span aria-hidden="true">↗</span></a><a href="/blog" className="tools-secondary-link tools-journal-link">Read the Tammy Journal <span aria-hidden="true">↗</span></a></div>
         <div className="tools-guides-callout-links">
           <a href="/guides/australian-tax-invoice-checklist"><span>Invoicing</span><strong>What an Australian tax invoice needs</strong><span aria-hidden="true">↗</span></a>
           <a href="/guides/gst-inclusive-vs-exclusive"><span>GST</span><strong>Inclusive and exclusive GST, explained</strong><span aria-hidden="true">↗</span></a>
         </div>
       </section>
-      <section className="tools-trust-band"><strong>Your numbers stay your numbers.</strong><p>Calculations and invoice data remain in this browser tab. There is no account, backend submission or tracking added by these tools.</p></section>
-      <section className="tools-content-section tools-index-bridge"><div><p className="tools-overline">A step further</p><h2>From quick calculations to a real ledger.</h2></div><p>Tammy is building a private Mac accounting workspace for journals, source documents and GST/BAS drafts. The public tools above work independently of that development software.</p><a href="/" className="tools-secondary-link">Explore Tammy</a></section>
+      <section className="tools-trust-band"><strong>Calculations stay in your browser.</strong><p>Calculations and invoice data remain in this browser tab. There is no account, backend submission or tracking added by these tools.</p></section>
+      <section className="tools-content-section tools-index-bridge"><div><h2>Tammy for Mac</h2></div><p>Tammy is building a private Mac accounting workspace for journals, source documents and GST/BAS drafts. These public tools work independently of that development software.</p><a href="/" className="tools-secondary-link">Explore Tammy</a></section>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(data) }} />
     </ToolsShell>
   );

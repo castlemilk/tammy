@@ -1,21 +1,24 @@
 # Tammy site: visual asset library
 
-Artwork added in `feat/site-visual-tool-library-2026-11-05`.
+Original SVG artwork was added in `feat/site-visual-tool-library-2026-11-05`. The November 7 feature pass adds the receipt-and-ledger illustration below.
 
 | Asset | Where used | Shape | Notes |
 | --- | --- | --- | --- |
 | `public/assets/tammy-ledger-helix.svg` | Tools index hero | 880 × 500 | Ornamental ledger papers, calculation rings and paper geometry. No synthetic UI or encoded copy. |
 | `public/assets/tammy-invoice-fold.svg` | Featured invoice generator tool | 380 × 290 | Folded invoice sheets and mathematical seal. Decorative; never presented as an actual issued invoice. |
 | `public/assets/tammy-margin-orbit.svg` | Tammy Journal margin feature | 540 × 500 | Concentric accounting proportion diagram. Decorative behind the real HTML calculation. |
+| `public/assets/source-ledger-1200.webp`, `source-ledger-640.webp` | Homepage source-review section | 1200 × 800 / 640 × 427 | Original generated receipt, pencil and ledger illustration. Responsive, lazy-loaded, 38 KB / 11 KB. No embedded words, amounts or real records. |
 
-All three are text-free, self-contained SVGs. They contain no remote image requests, fonts, scripts or logos from third parties. Their palette matches Soft Precision ivory, sage and forest. Their geometric, paper-based shapes continue the approved editorial concept rather than introducing another visual identity.
+The three SVGs are text-free and self-contained. All assets are served locally, with no remote image requests, fonts, scripts or third-party logos. Their palette matches Soft Precision ivory, sage and forest.
+
+The generated illustration follows the explicitly requested local Imagegen skill. Its CLI was unavailable because the API key and SDK were absent; the available image-generation tool produced the asset instead. No packages or credentials were added. One edit removed unwanted numerals from the first result. [Prompt, generation path and asset hashes](../../docs/design/source-ledger-illustration.json) record the actual provenance; the tool did not expose a model version. Only deterministic resizing and WebP compression followed generation. The source PNG remains in the local task's `output/imagegen/` directory. This is artwork, never an actual application screenshot. Readable feature examples stay in semantic HTML and disclose their synthetic status.
 
 ## Compositional rules
 
 - Keep all headings, invoice numbers, numeric results, filters and actions in semantic HTML.
 - Do not embed screenshots containing fictional customer data as authoritative product UI.
 - Keep the ledger hero as a single authored visual moment, not an animated screensaver.
-- Make the index searchable and filterable without a network call; all seven destination routes remain rendered in the default state.
+- Make the index searchable and filterable without a network call; all twelve destination routes remain rendered in the default state.
 - Focus and reset are visible and operable using keyboard alone.
 - Respect reduced-motion settings. Do not animate prices or financial calculations.
 - Keep the original `DESIGN.md` palette and reading typography; do not add external fonts to the public site.

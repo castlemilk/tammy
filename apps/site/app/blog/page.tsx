@@ -23,8 +23,8 @@ export default function BlogPage() {
       <a href="/">Home</a><span aria-hidden="true">/</span><span aria-current="page">Journal</span>
     </nav>
     <header className="blog-index-intro">
-      <div><p className="blog-volume">Tammy Journal</p><h1>Keeping the books, <span>thinking ahead.</span></h1></div>
-      <p>Short, researched notes on the numbers Australian small businesses use every day.</p>
+      <div><h1>Tammy Journal</h1></div>
+      <p>Australian accounting guides and worked examples, with sources you can check.</p>
     </header>
     <section className="blog-feature" aria-labelledby="blog-feature-title">
       <div className="blog-feature-copy">
@@ -42,7 +42,7 @@ export default function BlogPage() {
       </div>
     </section>
     <section className="blog-archive" aria-labelledby="blog-latest">
-      <div className="blog-archive-heading"><h2 id="blog-latest">From the journal</h2><p>Pricing, overdue invoices, cash flow, GST and bookkeeping, with worked examples.</p></div>
+      <div className="blog-archive-heading"><h2 id="blog-latest">More articles</h2></div>
       <div className="blog-archive-list">
         {others.map((post) => <a key={post.slug} href={blogPath(post)} className="blog-archive-item">
           <div><span className="blog-archive-category">{post.category}</span><time dateTime={post.publishedAt}>{post.publishedLabel}</time></div>
@@ -55,7 +55,7 @@ export default function BlogPage() {
       </div>
     </section>
     <aside className="blog-index-footer" aria-label="Related resources">
-      <div><h2>Numbers need context.</h2><p>Read the practical tax and GST guides, or work through a calculation yourself.</p></div>
+      <div><h2>Guides and tools</h2><p>Read the tax and GST guides, or work through a calculation yourself.</p></div>
       <div><a href="/guides">Australian business guides</a><a href="/tools">Free calculators and invoices</a></div>
     </aside>
     <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({

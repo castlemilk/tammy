@@ -23,7 +23,7 @@ export function ToolsShell({ children }: { readonly children: ReactNode }) {
       </header>
       <main id="tools-main">{children}</main>
       <footer className="tools-footer">
-        <div><a className="tools-logo" href="/">Tammy</a><p>Thoughtful tools for Australian businesses.</p></div>
+        <div><a className="tools-logo" href="/">Tammy</a><p>Business tools and accounting guides for Australia.</p></div>
         <nav aria-label="Tools footer">
           <a href="/tools">All tools</a><a href="/guides">Guides</a><a href="/blog">Journal</a><a href="/privacy">Privacy</a><a href="/support">Support</a>
         </nav>

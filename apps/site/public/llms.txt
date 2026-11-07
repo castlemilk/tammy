@@ -11,7 +11,7 @@ Support: https://tammy-accounting.castlemilk.chatgpt.site/support
 - Encrypted on-device macOS workspace (Apple silicon, macOS 14 or later).
 - Manual journals, trial balance, retained documents and review workflows.
 - File-based bank-statement import and reconciliation, not automatic bank feeds.
-- Customer invoice drafts, issue action and exported PDFs. Issuing does not send email, record receivables or collect payments.
+- Customer invoice drafts and exported PDFs. The explicit issue action posts receivables, income and basis-aware GST in the local ledger. It does not email the invoice or collect payment; receipts are recorded separately.
 - Local GST/BAS workpaper drafts for review, not ATO lodgement.
 - Optional, session-scoped, permission-limited local API/MCP adapter.
 

@@ -64,7 +64,7 @@ describe("Tammy business tools", () => {
 
   it("publishes distinct index and tool page routes", () => {
     render(<ToolsPage />);
-    expect(screen.getByRole("heading", { name: /Good tools/ })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Free business tools" })).toBeTruthy();
     expect(screen.getByRole("link", { name: /Invoice generator/i })).toBeTruthy();
     expect(screen.getByRole("link", { name: /Quote generator/i })).toBeTruthy();
     expect(screen.getByRole("link", { name: /GST calculator/i })).toBeTruthy();

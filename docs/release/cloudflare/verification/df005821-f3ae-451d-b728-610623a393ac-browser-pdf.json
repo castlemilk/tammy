@@ -104,13 +104,7 @@
   "browser_observations": {
     "observer": "Live Chrome browser observations",
     "desktop_navigation": {
-      "sequence": [
-        "/",
-        "/tools",
-        "/tools/invoice-generator",
-        "/tools/quote-generator",
-        "/blog"
-      ],
+      "sequence": ["/", "/tools", "/tools/invoice-generator", "/tools/quote-generator", "/blog"],
       "result": "passed"
     },
     "downloads": {

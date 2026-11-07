@@ -1,0 +1,133 @@
+{
+  "review_date": "2026-11-07",
+  "published_source": "56bd4ef4091a7df58e004b7ddb643e6f4c58cd7b",
+  "design_publication": "held; not deployed",
+  "screenshots": [
+    {
+      "file": "after-blog-1440.jpg",
+      "sha256": "3663d06fe87c74e7c96b9dab1887913783f2031f22ad9814dde37b5e3147e73c"
+    },
+    {
+      "file": "after-blog-320.jpg",
+      "sha256": "4492f7f1dc4da426c15b3611b27ea1602f3c4be4b982c85d2080c3456cbdfae0"
+    },
+    {
+      "file": "after-home-1440.jpg",
+      "sha256": "a8f5349056a969b8c9b799b1db91df96a65a8e565f6fb16379540d4c37f857eb"
+    },
+    {
+      "file": "after-home-320.jpg",
+      "sha256": "4a6ffa704fee6cc61e835705d0645eedbf4960a3a3cff1bdfa29a3856a1dea60"
+    },
+    {
+      "file": "after-tools-1440.jpg",
+      "sha256": "ba6f2b8fc33c618496a38611399e8e516311669e275d1c6700a2cbacca75fdf0"
+    },
+    {
+      "file": "after-tools-320.jpg",
+      "sha256": "d35784a9b618ddfe291a814941e289fa4166df140e91cbd7e7cfa8b39a647b6b"
+    },
+    {
+      "file": "before-blog-1440.jpg",
+      "sha256": "1f8fdb81da3ebef11488d167d48a9585dd038a5c921ed1113125f1cc276e5e33"
+    },
+    {
+      "file": "before-blog-320.jpg",
+      "sha256": "4915ed8dbfad81c504703c048a633344ebe6b64b0230093137f0bb6c5e3944cd"
+    },
+    {
+      "file": "before-home-1440.jpg",
+      "sha256": "156f0f2217f1029c2b3908e95a480ac945317ab5ece8f0ca31bea1deca3a325c"
+    },
+    {
+      "file": "before-home-320.jpg",
+      "sha256": "1e30b5d76caeca6d36a9a3350d07317f80f76926ab2afea9e85e35616bde41dd"
+    },
+    {
+      "file": "before-tools-1440.jpg",
+      "sha256": "d4b77d36ad9dc2e035f35172efa84adf0889cb4b3d8cf4d6679be3dd19566735"
+    },
+    {
+      "file": "before-tools-320.jpg",
+      "sha256": "f2b2aa657bb1c6a5b516bcaeb05f285d45011c9324bcc083e3fb72d6c1c66421"
+    }
+  ],
+  "responsive_checks": [
+    {
+      "route": "/",
+      "scrollWidth": 375,
+      "width": 390
+    },
+    {
+      "route": "/tools",
+      "scrollWidth": 375,
+      "width": 390
+    },
+    {
+      "route": "/blog",
+      "scrollWidth": 375,
+      "width": 390
+    },
+    {
+      "route": "/",
+      "scrollWidth": 753,
+      "width": 768
+    },
+    {
+      "route": "/tools",
+      "scrollWidth": 753,
+      "width": 768
+    },
+    {
+      "route": "/blog",
+      "scrollWidth": 753,
+      "width": 768
+    },
+    {
+      "route": "/",
+      "scrollWidth": 1265,
+      "width": 1280
+    },
+    {
+      "route": "/tools",
+      "scrollWidth": 1265,
+      "width": 1280
+    },
+    {
+      "route": "/blog",
+      "scrollWidth": 1265,
+      "width": 1280
+    }
+  ],
+  "browser_pdf_downloads": [
+    {
+      "file": "quote-DESIGN-QUOTE-001.pdf",
+      "bytes": 34714,
+      "sha256": "6e7f2eae70e1eb84ee13014efe72b6ef3cf147cc64f93cae2e24f9e28f39525c",
+      "pages": 1,
+      "format": "A4"
+    },
+    {
+      "file": "quote-DESIGN-QUOTE-002.pdf",
+      "bytes": 34642,
+      "sha256": "5d9232d5fc85524e48f7ca68d8feb0c4d07ba09854a6169ef18bddd8efd47acc",
+      "pages": 1,
+      "format": "A4"
+    },
+    {
+      "file": "invoice-DESIGN-QA-002.pdf",
+      "bytes": 34570,
+      "sha256": "284113138f4b1431c60b6dcf19b7bad85e3daf8fb5d9ce31f1ed4273cf65576e",
+      "pages": 1,
+      "format": "A4"
+    },
+    {
+      "file": "invoice-DESIGN-QA-001.pdf",
+      "bytes": 34530,
+      "sha256": "ebc06640e04f902e8a6b1cd8d46093eb8370d769f3332c04176a63014c7d6cfb",
+      "pages": 1,
+      "format": "A4"
+    }
+  ],
+  "independent_visual_verdict": "Pass for user design review; no material visual fixes remain in refreshed captures. Manual whole-composition pixel review only."
+}

@@ -36,10 +36,10 @@ export function BlogArticle({ post, children }: {
           <h1>{post.title}</h1>
           <p className="blog-story-description">{post.description}</p>
         </div>
-        <aside className={post.cover ? "blog-story-figure blog-story-figure-illustrated" : "blog-story-figure"} aria-label="Illustrative example">
+        <aside className={post.cover ? "blog-story-figure blog-story-figure-illustrated" : "blog-story-figure"} aria-label="Article at a glance">
           {post.cover && <img className="blog-story-illustration" src={post.cover} alt={post.coverAlt ?? ""} width="1200" height="720" loading="eager" />}
           <div className="blog-story-figure-content">
-            <span>Worked example</span><strong>{post.figure}</strong>
+            <span>At a glance</span><strong>{post.figure}</strong>
             <p>{post.figureLabel}</p><small>{post.figureFoot}</small>
           </div>
         </aside>
@@ -53,7 +53,7 @@ export function BlogArticle({ post, children }: {
       </div>
     </article>
     <section className="blog-end-note" aria-label="More Tammy resources">
-      <div><h2>Put the numbers to work.</h2><p>Explore the free calculators and the rest of Tammy’s accounting notebook.</p></div>
+      <div><h2>Guides and tools</h2><p>Browse the calculators, business guides and other Journal articles.</p></div>
       <nav aria-label="More resources">
         <a href="/tools">Explore tools</a><a href="/blog">More journal entries</a><a href="/guides">Practical guides</a>
       </nav>

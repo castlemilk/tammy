@@ -1,0 +1,30 @@
+{
+  "generator": "available image_gen.imagegen tool",
+  "model": "not exposed by tool",
+  "localSkill": "/Users/benebsworth/.codex/skills/imagegen/SKILL.md",
+  "localCliExecuted": false,
+  "reason": "OPENAI_API_KEY and openai SDK absent; no credential or dependency added",
+  "generated": "2026-11-07",
+  "prompt": "Use case: stylized-concept. Asset type: original wide editorial illustration for Tammy, local accounting software for Australian small businesses. Primary request: show the tangible relationship between source evidence and careful human bookkeeping. A restrained overhead still life of a cream paper receipt, a neatly ruled open accounting ledger, and a dark forest-green pencil resting between them on warm ivory paper. The receipt and ledger are separate objects; no arrows or automatic-transfer imagery. Quiet precision, tactile uncoated paper, subtle engraved/risograph linework with a little paper relief, fine sage-green rules, very soft natural side light, generous breathing room. Landscape 3:2 composition, objects centered, visually clear at small sizes. Palette warm ivory #F3F1E8, forest #173D32, muted sage #A4B4A2 and charcoal. No headings, words, legible numbers, branding, computer screens, UI mockups, logos, people, hands, decorative botanical props, floating objects, dramatic shadows, glossy plastic, stock-photo desk clutter, gradients, badges, or watermark. Synthetic illustration only, never an actual app screenshot or financial document. This supports document review and manual journals, not automated posting.",
+  "edit": "Use case: precise-object-edit. Change only the printed contents: remove EVERY numeral, decimal digit and word from the receipt and open ledger. Leave only the empty ruled lines. There must be absolutely no readable numbers or text anywhere. Keep all other composition, objects, forest green pencil, warm ivory paper texture, overhead angle, dimensions and lighting exactly unchanged. This remains a synthetic editorial illustration, not a document or screenshot.",
+  "original": "generated_images/exec-c74dbda6-8f58-4c7e-86f2-1fb92d7a9ba6.png",
+  "selected": "generated_images/exec-26aae4db-0494-418b-ab56-9be3179f92f1.png",
+  "purpose": "Synthetic editorial receipt-and-ledger illustration; no product screenshot or real financial evidence",
+  "selected_sha256": "28d2a5b8fff963093af29841f9bb5b87c93b14be43dc0144d2d8a24eb0134042",
+  "web_assets": [
+    {
+      "path": "public/assets/source-ledger-1200.webp",
+      "width": 1200,
+      "height": 800,
+      "bytes": 37898,
+      "sha256": "229ae4b985147a8249302af07e8589a29f7572b98d67cfcf3b1a7a74f6d24955"
+    },
+    {
+      "path": "public/assets/source-ledger-640.webp",
+      "width": 640,
+      "height": 427,
+      "bytes": 10698,
+      "sha256": "6e62f12fa5634aa117996fea18b1fa84dd59f33496f3424cabc8322f342592e7"
+    }
+  ]
+}
