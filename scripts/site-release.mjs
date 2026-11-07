@@ -280,6 +280,9 @@ function rejectSecrets(names) {
 export function assertCloudflareConfig(config) {
   const allowed = new Set([
     "$schema",
+    "configPath",
+    "userConfigPath",
+    "definedEnvironments",
     "topLevelName",
     "dev",
     "name",
@@ -396,6 +399,7 @@ export function assertCloudflareConfig(config) {
     "unsafe_hello_world",
     "flagship",
     "cloudchamber",
+    "definedEnvironments",
   ]) {
     const value = config[key];
     const nonempty = (v) =>
