@@ -10,15 +10,19 @@ Observed 7 November 2026; refresh before claiming readiness:
 
 | Check | Observation |
 | --- | --- |
-| Local Wrangler authentication | `whoami` failed with HTTP 400 during token refresh, then reported not logged in |
-| Local deployment environment | `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` absent |
-| GitHub deployment configuration | Repository secrets, variables and environments were empty |
-| Tammy Actions runners | Zero registered runners; site job queued |
-| Direct Worker publication | Not performed by this preparation |
+| Verified target | Gamma account `2132ccf47ceb5fff234c34d85490470a`; account subdomain `ben-ebsworth.workers.dev`; no Tammy project found in the reviewed account |
+| Approved local OAuth | User approved `account:read`, `workers_scripts:write` and Wrangler's automatically added `offline_access`; browser consent showed Account Read, Workers Scripts Write and Background Access on the intended account |
+| First sign-in attempt | Consent submitted; CLI timed out after 120 seconds and the localhost callback refused the connection. No usable session confirmed |
+| Same-scope retry | Wrangler rejected mismatched OAuth state and exited 1. No usable session confirmed |
+| Authentication handoff | Chrome focus moved outside this task; further authentication/native input stopped. Fresh normal sign-in remains pending |
+| GitHub deployment configuration | Repository secrets, variables and environments were empty; CI credential setup remains unapproved |
+| Tammy Actions runners | Zero registered runners; site job queued; registration remains unapproved |
+| Validated build candidate | `56bd4ef4091a7df58e004b7ddb643e6f4c58cd7b` |
+| Direct Worker publication | Not attempted; no deployment record, version or live Worker URL exists from these attempts |
 
-The missing existing Cloudflare credentials/account selection block local deployment. Missing CI credentials and the unregistered Tammy Cuttlefish pool block CI deployment. Code, tests, dry-run packaging and artifacts can be completed independently. Do not turn a queued job, successful build or successful dry run into a deployment claim.
+Local OAuth has not completed successfully, so publication remains blocked. Missing CI credentials and the unregistered Tammy Cuttlefish pool independently block CI deployment. The approved local sign-in does not authorize either CI setup step. Do not turn browser consent, a queued job, successful build or successful dry run into an authenticated session or deployment claim.
 
-The deploy wrapper does not log in or create credentials. Do not mint tokens, start login, persist local sessions, create accounts, expand permissions, register runners, or enable spending to work around these blockers. Continue only with existing approved access, a verified account and verified ownership/availability of the Worker name. If these are unavailable, retain the prepared candidate and report the exact remaining action.
+The deploy wrapper remains noninteractive and does not start login. The normal local Wrangler OAuth flow is explicitly approved for the account/scopes above; its secure completion is the remaining handoff. Do not extract or manually transfer credentials, mint API tokens, create accounts, expand scopes, register runners or enable spending as a workaround. Preserve the validated candidate and its provenance. A later documentation/evidence commit has its own SHA and does not change which source produced the existing build.
 
 ## Target contract
 
@@ -78,7 +82,21 @@ A dry run checks packaging without publishing. It does not establish account own
 
 Before first deployment or enabling CI credentials, verify the intended Cloudflare account, existing account subdomain, and whether `tammy-site-direct` already exists. Inspect an existing Worker's routes and custom domains before overwriting it; do not infer ownership from its name or deploy into whichever account Wrangler selects by default. Stop if existing access cannot establish the target. A workers.dev-only receipt describes this command's requested triggers, not all pre-existing routes attached to a Worker. Compare the returned URL with the exact URL established from the verified account subdomain. Record the previous direct Worker version/deployment, if any. Supported read-only account lookups include [Worker scripts](https://developers.cloudflare.com/api/resources/workers/subresources/scripts/methods/list/), [account subdomain](https://developers.cloudflare.com/api/resources/workers/subresources/subdomains/methods/get/) and [custom domains](https://developers.cloudflare.com/api/resources/workers/subresources/domains/methods/list/). Existing routes are [zone-scoped](https://developers.cloudflare.com/api/resources/workers/subresources/routes/methods/list/); incomplete zone visibility cannot prove that a pre-existing Worker has no other routes. Do not broaden permissions to complete this check without approval.
 
-Provide the verified `CLOUDFLARE_ACCOUNT_ID` to the deployment process through the approved execution environment. Locally, Wrangler can use an existing authorized session or `CLOUDFLARE_API_TOKEN`; GitHub Actions requires the token. Never include tokens in command arguments, files, output, provenance or artifacts. The wrapper is noninteractive and does not start login. The failed local session needs reauthorization through an approved normal Wrangler sign-in; its account and requested OAuth scopes are not yet known. CI credential configuration and Cuttlefish registration are separate access steps. With account/name ownership verified and the exact candidate unchanged:
+Provide the verified `CLOUDFLARE_ACCOUNT_ID` to the deployment process through the approved execution environment. Locally, Wrangler can use an authorized local session or `CLOUDFLARE_API_TOKEN`; GitHub Actions requires the token. Keep normal session handling inside Wrangler. Do not copy credentials into command arguments, hand-managed files, output, provenance or artifacts. The wrapper is noninteractive and does not start login. CI credential configuration and Cuttlefish registration remain separate, unapproved access steps.
+
+### Approved local sign-in handoff
+
+Resume through a fresh normal Wrangler sign-in in a task-owned terminal/browser context. From the validated candidate root, using its installed pinned Wrangler:
+
+```sh
+pnpm --dir apps/site exec wrangler login --scopes account:read workers_scripts:write
+```
+
+Wrangler adds `offline_access`; the approved consent is exactly Account Read, Workers Scripts Write and Background Access on the verified Gamma account. Use the consent page opened by the current live CLI process. Keep the normal localhost callback and PKCE/state checks intact. Do not reuse an expired callback, alter a state value, manually exchange a code, or bypass a mismatch. Authentication URLs, codes, state and credentials do not belong in release documentation or artifacts.
+
+Wait for that CLI process to report success, then use normal `wrangler whoami` to confirm the authenticated account and refresh target ownership checks before publication. A consent click alone is insufficient. If the process times out, rejects state, or browser focus leaves the task, record the failed/pending result and stop native input; hand off a fresh normal sign-in in a controlled context. The two recorded attempts above remain failed, and no deployment has occurred.
+
+With a successful authorized session, account/name ownership verified and the exact candidate unchanged:
 
 ```sh
 node scripts/site-release.mjs cloudflare-deploy --output /absolute/path/to/tammy-cloudflare-deployment
