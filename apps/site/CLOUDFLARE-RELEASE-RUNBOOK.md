@@ -4,7 +4,7 @@ The user explicitly requested direct Cloudflare deployment and deployment throug
 
 The direct target is `tammy-site-direct` on the selected account's existing `workers.dev` subdomain. Deploying it does not move `tammy.tax`, change DNS/canonicals, or publish a Sites version. Keep the current Sites project, public audience and hosting source manifests intact.
 
-The later [feature-led design review](../../docs/design/2026-11-07-site-feature-review.md) is a separate, unpublished candidate. Its design-publication approval is pending. The requested [tammy.tax migration plan](../../docs/release/cloudflare/tammy-tax-domain-plan.md) records the absent Cloudflare zone, missing authorized DNS inventory and exact routing prerequisites; no domain change has occurred.
+The later [feature-led design review](../../docs/design/2026-11-07-site-feature-review.md) is a separate, unpublished candidate. Its design-publication approval is pending. The subsequent [landing journey refinement](../../docs/design/2026-11-07-landing-journey-refinement.md) records the next unpublished review pass. The requested [tammy.tax migration plan](../../docs/release/cloudflare/tammy-tax-domain-plan.md) records the absent Cloudflare zone, missing authorized DNS inventory and exact routing prerequisites; no domain change has occurred.
 
 ## Current evidence and blockers
 

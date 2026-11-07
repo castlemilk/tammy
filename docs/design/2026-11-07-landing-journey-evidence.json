@@ -1,0 +1,139 @@
+{
+  "baseline_git_commit": "f1b417ecaac17d20fabce89f843afd3ab8bddf8e",
+  "candidate_reference": "PR48 exact-head release record; final source and immediate descriptor child are recorded there",
+  "source_files": [
+    {
+      "path": "apps/site/app/page.tsx",
+      "sha256": "645f5e37b2c7ad2cb1fb3af0aca606f7c59b1ed6c6102a5234b62fe0c4feb09c"
+    },
+    {
+      "path": "apps/site/app/landing.css",
+      "sha256": "03735bb2fe6ed7d4f3e1b68b14c1182af5ee45d23e5997ba42ea963e16e26417"
+    },
+    {
+      "path": "apps/site/tests/public-routes.test.tsx",
+      "sha256": "e3ba13c976c08b68da4264b7de764db1b623fc1c7b08865656eb9dad318f5137"
+    }
+  ],
+  "screenshots": [
+    {
+      "path": "/Users/benebsworth/Documents/Codex/2026-11-06/task-2/tmp/tammy-landing-refinement/before-home-1440.jpg",
+      "sha256": "a8f5349056a969b8c9b799b1db91df96a65a8e565f6fb16379540d4c37f857eb",
+      "bytes": 760665
+    },
+    {
+      "path": "/Users/benebsworth/Documents/Codex/2026-11-06/task-2/tmp/tammy-landing-refinement/before-home-320.jpg",
+      "sha256": "4a6ffa704fee6cc61e835705d0645eedbf4960a3a3cff1bdfa29a3856a1dea60",
+      "bytes": 497066
+    },
+    {
+      "path": "/Users/benebsworth/Documents/Codex/2026-11-06/task-2/tmp/tammy-landing-refinement/after-home-1440.jpg",
+      "sha256": "4320c30ecc148f930537fcecb823e6f986963330891138673ce41b1701b9cb4b",
+      "bytes": 640830
+    },
+    {
+      "path": "/Users/benebsworth/Documents/Codex/2026-11-06/task-2/tmp/tammy-landing-refinement/after-home-320.jpg",
+      "sha256": "d13a5b7a1225387b99efce9abef4f4f3c39242542ef1f3df693471bb4592679c",
+      "bytes": 459009
+    },
+    {
+      "path": "/Users/benebsworth/Documents/Codex/2026-11-06/task-2/tmp/tammy-landing-refinement/header-320.jpg",
+      "sha256": "25e8f22c2b887ce85ea4d8f17318ae763ef2c96c9e4c0dfe436dbc74827b5ef9",
+      "bytes": 38759
+    }
+  ],
+  "viewport_checks": [
+    {
+      "captions": ["12px", "12px", "12px", "12px", "12px", "12px"],
+      "documentWidth": 305,
+      "financialType": "13px",
+      "headerActionHeight": 44,
+      "headerActionRight": 304,
+      "headerFrameRight": 304,
+      "height": 11503,
+      "scrollWidth": 320,
+      "viewport": 320
+    },
+    {
+      "captions": ["12px", "12px", "12px", "12px", "12px", "12px"],
+      "documentWidth": 375,
+      "financialType": "13px",
+      "headerActionHeight": 44,
+      "headerActionRight": 359,
+      "headerFrameRight": 359,
+      "height": 10719,
+      "scrollWidth": 375,
+      "viewport": 390
+    },
+    {
+      "captions": ["12px", "12px", "12px", "12px", "12px", "12px"],
+      "documentWidth": 753,
+      "financialType": "13px",
+      "headerActionHeight": 44,
+      "headerActionRight": 729,
+      "headerFrameRight": 729,
+      "height": 8271,
+      "scrollWidth": 753,
+      "viewport": 768
+    },
+    {
+      "captions": ["12px", "12px", "12px", "12px", "12px", "12px"],
+      "documentWidth": 1265,
+      "financialType": "13px",
+      "headerActionHeight": 44,
+      "headerActionRight": 1225,
+      "headerFrameRight": 1225,
+      "height": 6706,
+      "scrollWidth": 1265,
+      "viewport": 1280
+    },
+    {
+      "captions": ["12px", "12px", "12px", "12px", "12px", "12px"],
+      "documentWidth": 1425,
+      "financialType": "13px",
+      "headerActionHeight": 44,
+      "headerActionRight": 1385,
+      "headerFrameRight": 1385,
+      "height": 6887,
+      "scrollWidth": 1425,
+      "viewport": 1440
+    }
+  ],
+  "pdf_checks": [
+    {
+      "filename": "invoice-REFINE-QA-001.pdf",
+      "sha256": "a016e9c52c7720c845b3eda5881b9aaff6a1c54d0a7512d3d6d4aecd581748c8",
+      "bytes": 34714,
+      "reference": "REFINE-QA-001",
+      "total_aud": "100.00",
+      "pages": 1
+    },
+    {
+      "filename": "invoice-REFINE-QA-002.pdf",
+      "sha256": "5bb3c75fd064403d761e1a6f9d7cbc10d776c91f4179168582e72260da3f9de5",
+      "bytes": 34756,
+      "reference": "REFINE-QA-002",
+      "total_aud": "200.00",
+      "pages": 1
+    },
+    {
+      "filename": "quote-REFINE-QUOTE-001.pdf",
+      "sha256": "f5fc5e5211d12896969660399460d5da7c0efdda13ae7d26339bacfeef54f52e",
+      "bytes": 34862,
+      "reference": "REFINE-QUOTE-001",
+      "total_aud": "150.00",
+      "pages": 1
+    },
+    {
+      "filename": "quote-REFINE-QUOTE-002.pdf",
+      "sha256": "4f71442366f5c79014935c988e3423112d67fd70e7f0a2ec9aef131d0f7ebd40",
+      "bytes": 34797,
+      "reference": "REFINE-QUOTE-002",
+      "total_aud": "300.00",
+      "pages": 1
+    }
+  ],
+  "independent_pixel_verdict": "Pass after 320px header fit correction; no material visual issues remain. All four before/after fullpage images reviewed; final header rechecked.",
+  "publication": "held; not performed",
+  "domain_changes": "not performed"
+}

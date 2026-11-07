@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, isInaccessible, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { metadata } from "../app/layout";
 import Home from "../app/page";
@@ -44,6 +44,75 @@ describe("Tammy public routes", () => {
     expect(screen.getByText(/There is no Tammy cloud workspace/i)).toBeTruthy();
     expect(screen.getByRole("navigation", { name: "Primary navigation" })).toBeTruthy();
     expect(screen.getByRole("navigation", { name: "Footer navigation" })).toBeTruthy();
+  });
+
+  it("retains all twelve tool destinations and four Journal stories on the homepage", () => {
+    render(<Home />);
+    const tools = within(screen.getByRole("region", { name: "Free business tools" }));
+    const toolDestinations = tools.getAllByRole("link")
+      .map((link) => link.getAttribute("href"))
+      .filter((href) => href?.startsWith("/tools/"));
+    expect(toolDestinations.sort((left, right) => (left ?? "").localeCompare(right ?? ""))).toEqual([
+      "/tools/invoice-generator",
+      "/tools/quote-generator",
+      "/tools/expense-organiser",
+      "/tools/invoice-due-date-calculator",
+      "/tools/bas-workpaper",
+      "/tools/sole-trader-tax-checklist",
+      "/tools/gst-calculator",
+      "/tools/abn-checker",
+      "/tools/profit-margin-calculator",
+      "/tools/break-even-calculator",
+      "/tools/cash-runway-calculator",
+      "/tools/cash-flow-forecast",
+    ].sort((left, right) => left.localeCompare(right)));
+
+    const journal = within(screen.getByRole("region", { name: "The Tammy Journal" }));
+    const storyDestinations = journal.getAllByRole("link")
+      .map((link) => link.getAttribute("href"))
+      .filter((href) => href?.startsWith("/blog/"));
+    expect(storyDestinations.sort((left, right) => (left ?? "").localeCompare(right ?? ""))).toEqual([
+      "/blog/which-quarter-gets-the-gst",
+      "/blog/not-every-bank-deposit-is-sales",
+      "/blog/the-month-end-review-that-found-220",
+      "/blog/the-price-rise-that-didnt-fix-margin",
+    ].sort((left, right) => left.localeCompare(right)));
+  });
+
+  it("resolves every homepage fragment link to one existing target", () => {
+    const { container } = render(<Home />);
+    const fragmentLinks = Array.from(container.querySelectorAll('a[href^="#"]'));
+    const targets = Array.from(container.querySelectorAll("[id]"));
+    expect(fragmentLinks.length).toBeGreaterThan(0);
+    for (const link of fragmentLinks) {
+      const fragment = link.getAttribute("href") as string;
+      const targetId = decodeURIComponent(fragment.slice(1));
+      expect(targetId, `Empty target for ${link.textContent}`).not.toBe("");
+      expect(targets.filter((target) => target.id === targetId), fragment).toHaveLength(1);
+    }
+  });
+
+  it("states availability in the hero and separates browser PDFs from native accounting", () => {
+    render(<Home />);
+    const hero = within(screen.getByRole("region", { name: /Your books\.\s*On your Mac\./ }));
+    const availability = hero.getByText("In development. Public Mac download not yet available.");
+    expect(isInaccessible(availability)).toBe(false);
+    expect(availability.closest("details:not([open])")).toBeNull();
+    expect(hero.getByRole("link", { name: "Release status" }).getAttribute("href"))
+      .toBe("#availability");
+    expect(hero.getByRole("link", { name: "Try free tools" }).getAttribute("href"))
+      .toBe("#free-tools");
+
+    const invoiceFeature = screen.getByRole("heading", { name: "Customer invoicing" })
+      .closest("article");
+    expect(invoiceFeature).not.toBeNull();
+    const invoice = within(invoiceFeature as HTMLElement);
+    expect(invoice.getByRole("link", { name: "Browser invoice generator" }).getAttribute("href"))
+      .toBe("/tools/invoice-generator");
+    const browserBoundary = invoice.getByText("Creates a PDF independently of your Mac workspace.");
+    expect(isInaccessible(browserBoundary)).toBe(false);
+    expect(browserBoundary.closest("details:not([open])")).toBeNull();
+    expect(invoice.getByText("Issue to the local ledger; export a customer PDF")).toBeTruthy();
   });
 
   it("renders the canonical app/site/support privacy boundaries", () => {

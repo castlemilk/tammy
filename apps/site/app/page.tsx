@@ -26,22 +26,18 @@ export const metadata: Metadata = {
 
 const steps = [
   {
-    icon: "source-document",
     title: "Bring in the source",
     body: "Import documents and bank-statement rows, or enter transactions yourself.",
   },
   {
-    icon: "review",
     title: "Check the detail",
     body: "Review retained evidence and reconcile imported bank transactions.",
   },
   {
-    icon: "journals",
     title: "Keep the ledger",
     body: "Post balanced manual journals and inspect a trial balance.",
   },
   {
-    icon: "gst-bas",
     title: "Prepare the draft",
     body: "Build a local GST/BAS workpaper for review, without submitting it.",
   },
@@ -274,31 +270,29 @@ export default function Home() {
         <header className="landing-header">
           <Wordmark />
           <nav className="landing-header-nav" aria-label="Primary navigation">
-            <a href="#workflow">How it works</a>
             <a href="#features">Features</a>
             <a href="/tools">Free tools</a>
             <a href="/blog">Journal</a>
-            <a href="#privacy-first">Local-first</a>
             <a href="#questions">Questions</a>
           </nav>
-          <a className="landing-header-action" href="#product">Explore Tammy <span aria-hidden="true">↗</span></a>
+          <a className="landing-header-action" href="#availability">Development access <span aria-hidden="true">↗</span></a>
         </header>
 
         <main id="main-content">
           <section className="landing-hero" aria-labelledby="landing-heading">
             <div className="landing-hero-copy">
-              <p className="landing-introduction">Private accounting for Australian businesses.</p>
               <h1 id="landing-heading">Your books.{" "}<br /><span>On your Mac.</span></h1>
               <p className="landing-hero-description">
-                The records behind your business, kept local. Review documents,
+                Accounting for Australian businesses, kept local. Review documents,
                 reconcile statements, post journals and prepare GST/BAS drafts in
                 one encrypted macOS workspace.
               </p>
               <div className="landing-hero-actions">
                 <a className="landing-button landing-button-primary" href="#workflow">See how it works <span aria-hidden="true">↗</span></a>
-                <a className="landing-button landing-button-outline" href="#availability">Release status</a>
+                <a className="landing-button landing-button-outline" href="#free-tools">Try free tools</a>
               </div>
               <p className="landing-platform"><Glyph name="desktop" /> {platformLabel}</p>
+              <p className="landing-availability-note">In development. Public Mac download not yet available. <a href="#availability">Release status</a></p>
             </div>
             <div className="landing-hero-art">
               <WorkspacePreview />
@@ -312,55 +306,26 @@ export default function Home() {
           </div>
 
           <section className="landing-section landing-workflow" id="workflow" aria-labelledby="workflow-heading">
-            <div className="landing-section-heading landing-section-heading-split">
-              <div>
-                <h2 id="workflow-heading">From source records{" "}<br />to a balanced ledger.</h2>
-              </div>
-              <p>Bring evidence into view, make deliberate accounting decisions, and keep the result inspectable.</p>
-            </div>
-            <ol className="landing-step-list">
-              {steps.map((step, index) => (
-                <li key={step.title}>
-                  <div className="landing-step-top"><span>{String(index + 1).padStart(2, "0")}</span><Glyph name={step.icon} /></div>
-                  <h3>{step.title}</h3>
-                  <p>{step.body}</p>
-                </li>
-              ))}
-            </ol>
-            <p className="landing-flow-note">These are distinct, human-controlled workflows, not a promise of automatic document-to-ledger posting.</p>
-          </section>
-
-          <section className="landing-section landing-features" id="features" aria-labelledby="features-heading">
             <div className="landing-section-heading">
-              <h2 id="features-heading">Accounting tools</h2>
-              <p>Review documents, match imported statements, record journals and prepare customer invoices.</p>
+              <h2 id="workflow-heading">From source records to a balanced ledger.</h2>
             </div>
-            <div className="landing-feature-grid">
-              {capabilities.map((capability) => (
-                <article className="landing-feature" key={capability.title}>
-                  <h3>{capability.title}</h3>
-                  <p>{capability.body}</p>
-                  <FeatureExample kind={capability.example} />
-                  <span className="landing-feature-detail">{capability.detail}</span>
-                  {capability.example === "invoice" && (
-                    <a className="landing-feature-tool-link" href="/tools/invoice-generator">Try the free invoice generator <span aria-hidden="true">↗</span></a>
-                  )}
-                </article>
-              ))}
-            </div>
-          </section>
-
-          <section className="landing-section landing-product" id="product" aria-labelledby="product-heading">
-            <div className="landing-product-copy">
-              <h2 id="product-heading">Review the records behind each entry.</h2>
-              <p>Keep a close eye on the books, with source evidence, explicit review states and financial records that remain available to inspect.</p>
-              <a className="landing-text-link" href="#workflow">Explore the accounting process <span aria-hidden="true">↗</span></a>
+            <div className="landing-workflow-content">
+              <ol className="landing-step-list">
+                {steps.map((step, index) => (
+                  <li key={step.title}>
+                    <div className="landing-step-top"><span>{String(index + 1).padStart(2, "0")}</span></div>
+                    <h3>{step.title}</h3>
+                    <p>{step.body}</p>
+                  </li>
+                ))}
+              </ol>
+              <p className="landing-flow-note">These are distinct, human-controlled workflows, not a promise of automatic document-to-ledger posting.</p>
             </div>
             <figure className="landing-product-visual">
               <img
                 src="/assets/source-ledger-1200.webp"
                 srcSet="/assets/source-ledger-640.webp 640w, /assets/source-ledger-1200.webp 1200w"
-                sizes="(max-width: 600px) calc(100vw - 32px), (max-width: 840px) calc(100vw - 48px), (max-width: 1460px) 60vw, 830px"
+                sizes="(max-width: 600px) calc(100vw - 32px), (max-width: 840px) calc(100vw - 48px), (max-width: 1460px) 50vw, 690px"
                 width={1200}
                 height={800}
                 loading="lazy"
@@ -371,46 +336,102 @@ export default function Home() {
             </figure>
           </section>
 
+          <section className="landing-section landing-features" id="features" aria-labelledby="features-heading">
+            <div className="landing-section-heading">
+              <h2 id="features-heading">Accounting tools</h2>
+            </div>
+            <div className="landing-feature-grid">
+              {capabilities.map((capability) => (
+                <article className="landing-feature" key={capability.title}>
+                  <h3>{capability.title}</h3>
+                  <p>{capability.body}</p>
+                  <FeatureExample kind={capability.example} />
+                  <span className="landing-feature-detail">{capability.detail}</span>
+                  {capability.example === "invoice" && (
+                    <>
+                      <a className="landing-feature-tool-link" href="/tools/invoice-generator">Browser invoice generator <span aria-hidden="true">↗</span></a>
+                      <p className="landing-browser-tool-note">Creates a PDF independently of your Mac workspace.</p>
+                    </>
+                  )}
+                </article>
+              ))}
+            </div>
+          </section>
+
           <section className="landing-section landing-bas" id="bas" aria-labelledby="bas-heading">
             <div className="landing-bas-copy">
-              <h2 id="bas-heading">Prepared is not lodged.</h2>
+              <h2 id="bas-heading">Australian accounting, with GST in view.</h2>
+              <p>AUD amounts, GST workflows, Australian chart-of-accounts conventions and local reporting drafts are part of Tammy’s current accounting foundation.</p>
+            </div>
+            <div className="landing-bas-boundary">
+              <h3>Prepared is not lodged.</h3>
               <p>Tammy helps you prepare local GST/BAS workpapers with reviewable calculations and retained sources. The current release does not submit tax reports to the ATO.</p>
               <a className="landing-text-link" href="/privacy">Understand the reporting boundary <span aria-hidden="true">↗</span></a>
-            </div>
-            <div className="landing-bas-stages" aria-label="Local BAS preparation stages">
-              <div><span>01</span><strong>Prepare</strong><small>Gather local GST evidence</small></div>
-              <div><span>02</span><strong>Review</strong><small>Check the draft and its sources</small></div>
-              <div className="landing-bas-stage-last"><span>03</span><strong>Draft, not lodged</strong><small>No ATO submission in this release</small></div>
             </div>
           </section>
 
           <section className="landing-section landing-privacy" id="privacy-first" aria-labelledby="privacy-heading">
-            <div className="landing-privacy-visual" aria-hidden="true">
-              <img src="/assets/contour-lines.svg" alt="" />
-              <div className="landing-lock-scene">
-                <span className="landing-lock-shackle" />
-                <span className="landing-lock-body"><Mark /></span>
-              </div>
-            </div>
             <div className="landing-privacy-copy">
-              <h2 id="privacy-heading">Your data stays{" "}<br />in your hands.</h2>
+              <h2 id="privacy-heading">An encrypted workspace on your Mac.</h2>
               <p>Tammy stores accounting records in an encrypted workspace on your Mac. Some credentials live in macOS Keychain. There is no hosted Tammy business account or cloud sync in this release.</p>
-              <ul>
-                <li>SQLCipher-encrypted local workspace</li>
-                <li>Explicit local document imports and exports</li>
-                <li>Optional, session-scoped local API and MCP access</li>
-              </ul>
               <a className="landing-text-link landing-text-link-light" href="/privacy">Read our privacy policy <span aria-hidden="true">↗</span></a>
+            </div>
+            <ul className="landing-privacy-facts">
+              <li>SQLCipher-encrypted local workspace</li>
+              <li>Explicit local document imports and exports</li>
+              <li>Optional, session-scoped local API and MCP access</li>
+            </ul>
+          </section>
+
+          <section className="landing-section landing-tools-section" id="free-tools" aria-labelledby="landing-tools-heading">
+            <div className="landing-tools-intro">
+              <h2 id="landing-tools-heading">Free business tools</h2>
+              <p>Create invoices, calculate GST, check an ABN, or understand pricing margins. Free utilities that keep your information in this browser tab.</p>
+              <a className="landing-text-link" href="/tools">Explore all free tools <span aria-hidden="true">↗</span></a>
+              <a className="landing-text-link landing-guides-link" href="/guides">Read the Australian accounting guides <span aria-hidden="true">↗</span></a>
+            </div>
+            <div className="landing-tools-groups">
+              <section className="landing-tools-group" aria-labelledby="landing-tools-invoices-records">
+                <h3 id="landing-tools-invoices-records">Invoices &amp; records</h3>
+                <div className="landing-tools-list">
+                  <a href="/tools/invoice-generator"><strong>Australian invoice generator</strong><span>Make and download an invoice PDF</span><span aria-hidden="true">↗</span></a>
+                  <a href="/tools/quote-generator"><strong>Quote and estimate generator</strong><span>Build and download a quote PDF</span><span aria-hidden="true">↗</span></a>
+                  <a href="/tools/expense-organiser"><strong>Receipt and expense organiser</strong><span>Keep a private source record worksheet</span><span aria-hidden="true">↗</span></a>
+                  <a href="/tools/invoice-due-date-calculator"><strong>Invoice due-date calculator</strong><span>Work out payment terms</span><span aria-hidden="true">↗</span></a>
+                </div>
+              </section>
+              <section className="landing-tools-group" aria-labelledby="landing-tools-tax-gst">
+                <h3 id="landing-tools-tax-gst">Tax &amp; GST</h3>
+                <div className="landing-tools-list">
+                  <a href="/tools/bas-workpaper"><strong>Simpler BAS workpaper</strong><span>Review GST figures before lodging</span><span aria-hidden="true">↗</span></a>
+                  <a href="/tools/sole-trader-tax-checklist"><strong>Sole trader tax checklist</strong><span>Prepare your myTax records</span><span aria-hidden="true">↗</span></a>
+                  <a href="/tools/gst-calculator"><strong>GST calculator</strong><span>Add or remove 10% GST</span><span aria-hidden="true">↗</span></a>
+                  <a href="/tools/abn-checker"><strong>ABN format checker</strong><span>Check the number before the register</span><span aria-hidden="true">↗</span></a>
+                </div>
+              </section>
+              <section className="landing-tools-group" aria-labelledby="landing-tools-planning-pricing">
+                <h3 id="landing-tools-planning-pricing">Planning &amp; pricing</h3>
+                <div className="landing-tools-list">
+                  <a href="/tools/profit-margin-calculator"><strong>Profit margin calculator</strong><span>Understand markup and gross margin</span><span aria-hidden="true">↗</span></a>
+                  <a href="/tools/break-even-calculator"><strong>Break-even calculator</strong><span>Know the unit sales target</span><span aria-hidden="true">↗</span></a>
+                  <a href="/tools/cash-runway-calculator"><strong>Cash runway calculator</strong><span>Estimate monthly cash coverage</span><span aria-hidden="true">↗</span></a>
+                  <a href="/tools/cash-flow-forecast"><strong>12-week cash flow forecast</strong><span>Plan dated receipts and payments</span><span aria-hidden="true">↗</span></a>
+                </div>
+              </section>
             </div>
           </section>
 
-          <section className="landing-section landing-australia" aria-labelledby="australia-heading">
-            <div className="landing-australia-heading">
-              <h2 id="australia-heading">Australian accounting</h2>
+          <section className="landing-section landing-journal" aria-labelledby="landing-journal-heading">
+            <div className="landing-journal-intro">
+              <h2 id="landing-journal-heading">The Tammy Journal</h2>
+              <p>Carefully worked notes on GST timing, bank receipts, month-end reviews and business decisions.</p>
+              <a className="landing-text-link" href="/blog">Explore the journal <span aria-hidden="true">↗</span></a>
             </div>
-            <div className="landing-australia-content">
-              <p>AUD amounts, GST workflows, Australian chart-of-accounts conventions and local reporting drafts are part of Tammy’s current accounting foundation.</p>
-              <p>Built as a focused desktop workspace, not an all-purpose business platform.</p>
+            <div className="landing-journal-stories">
+              <a href="/blog/which-quarter-gets-the-gst"><span>GST</span><strong>The BAS quarter has two clocks.</strong><span aria-hidden="true">↗</span></a>
+              <a href="/blog/not-every-bank-deposit-is-sales"><span>Bookkeeping</span><strong>Not every bank deposit is sales.</strong><span aria-hidden="true">↗</span></a>
+              <a href="/blog/the-month-end-review-that-found-220"><span>Bookkeeping</span><strong>The month-end close that found $220.</strong><span aria-hidden="true">↗</span></a>
+              <a href="/blog/the-price-rise-that-didnt-fix-margin"><span>Pricing</span><strong>The price rise that didn&apos;t fix the margin.</strong><span aria-hidden="true">↗</span></a>
             </div>
           </section>
 
@@ -430,46 +451,7 @@ export default function Home() {
             </div>
           </section>
 
-
-          <section className="landing-section landing-tools-section" id="free-tools" aria-labelledby="landing-tools-heading">
-            <div className="landing-tools-intro">
-              <h2 id="landing-tools-heading">Free business tools</h2>
-              <p>Create invoices, calculate GST, check an ABN, or understand pricing margins. Free utilities that keep your information in this browser tab.</p>
-              <a className="landing-text-link" href="/tools">Explore all free tools <span aria-hidden="true">↗</span></a>
-              <a className="landing-text-link landing-guides-link" href="/guides">Read the Australian accounting guides <span aria-hidden="true">↗</span></a>
-            </div>
-            <div className="landing-tools-list">
-              <a href="/tools/invoice-generator"><strong>Australian invoice generator</strong><span>Make and download an invoice PDF</span><span aria-hidden="true">↗</span></a>
-              <a href="/tools/quote-generator"><strong>Quote and estimate generator</strong><span>Build and download a quote PDF</span><span aria-hidden="true">↗</span></a>
-              <a href="/tools/bas-workpaper"><strong>Simpler BAS workpaper</strong><span>Review GST figures before lodging</span><span aria-hidden="true">↗</span></a>
-              <a href="/tools/sole-trader-tax-checklist"><strong>Sole trader tax checklist</strong><span>Prepare your myTax records</span><span aria-hidden="true">↗</span></a>
-              <a href="/tools/expense-organiser"><strong>Receipt and expense organiser</strong><span>Keep a private source record worksheet</span><span aria-hidden="true">↗</span></a>
-              <a href="/tools/gst-calculator"><strong>GST calculator</strong><span>Add or remove 10% GST</span><span aria-hidden="true">↗</span></a>
-              <a href="/tools/invoice-due-date-calculator"><strong>Invoice due-date calculator</strong><span>Work out payment terms</span><span aria-hidden="true">↗</span></a>
-              <a href="/tools/abn-checker"><strong>ABN format checker</strong><span>Check the number before the register</span><span aria-hidden="true">↗</span></a>
-              <a href="/tools/profit-margin-calculator"><strong>Profit margin calculator</strong><span>Understand markup and gross margin</span><span aria-hidden="true">↗</span></a>
-              <a href="/tools/break-even-calculator"><strong>Break-even calculator</strong><span>Know the unit sales target</span><span aria-hidden="true">↗</span></a>
-              <a href="/tools/cash-runway-calculator"><strong>Cash runway calculator</strong><span>Estimate monthly cash coverage</span><span aria-hidden="true">↗</span></a>
-              <a href="/tools/cash-flow-forecast"><strong>12-week cash flow forecast</strong><span>Plan dated receipts and payments</span><span aria-hidden="true">↗</span></a>
-            </div>
-          </section>
-
-          <section className="landing-section landing-journal" aria-labelledby="landing-journal-heading">
-            <div className="landing-journal-intro">
-              <h2 id="landing-journal-heading">The Tammy Journal</h2>
-              <p>Carefully worked notes on GST timing, bank receipts, month-end reviews and business decisions.</p>
-              <a className="landing-text-link" href="/blog">Explore the journal <span aria-hidden="true">↗</span></a>
-            </div>
-            <div className="landing-journal-stories">
-              <a href="/blog/which-quarter-gets-the-gst"><span>GST</span><strong>The BAS quarter has two clocks.</strong><span aria-hidden="true">↗</span></a>
-              <a href="/blog/not-every-bank-deposit-is-sales"><span>Bookkeeping</span><strong>Not every bank deposit is sales.</strong><span aria-hidden="true">↗</span></a>
-              <a href="/blog/the-month-end-review-that-found-220"><span>Bookkeeping</span><strong>The month-end close that found $220.</strong><span aria-hidden="true">↗</span></a>
-              <a href="/blog/the-price-rise-that-didnt-fix-margin"><span>Pricing</span><strong>The price rise that didn&apos;t fix the margin.</strong><span aria-hidden="true">↗</span></a>
-            </div>
-          </section>
-
           <section className="landing-closing" id="availability" aria-labelledby="closing-heading">
-            <img src="/assets/contour-lines.svg" className="landing-closing-contours" alt="" aria-hidden="true" />
             <div>
               <h2 id="closing-heading">Tammy is in development</h2>
               <p>Explore the local-first approach and contact the publisher about development access. A public Mac download is not available from this site yet.</p>
