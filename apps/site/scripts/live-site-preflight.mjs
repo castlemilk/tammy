@@ -1,6 +1,6 @@
 /**
  * Read-only production smoke audit. Does not deploy, publish, mutate DNS,
- * send customer data or submit any URL to Google. Run AFTER Sites publication.
+ * send customer data or submit any URL to Google. Run AFTER publication.
  * Usage: node scripts/live-site-preflight.mjs https://tammy.tax
  */
 import { pathToFileURL } from "node:url";
@@ -39,9 +39,12 @@ export function assertTargetOrigin(value) {
   return parsed.origin;
 }
 export async function inspectLiveSite({
-  origin, fetcher = fetch, routes = REQUIRED_ROUTES,
+  origin, canonicalOrigin = origin, fetcher = fetch, routes = REQUIRED_ROUTES,
 }) {
   const base = assertTargetOrigin(origin);
+  // The direct Worker deliberately retains the configured source canonical origin.
+  // Transport/redirect checks still apply to the independently verified Worker.
+  const canonicalBase = assertTargetOrigin(canonicalOrigin);
   const failures = [];
   const checked = [];
   const bodies = new Map();
@@ -60,15 +63,18 @@ export async function inspectLiveSite({
       if (response.status !== 200) failures.push(route + ": expected HTTP 200, got " + response.status);
       if (url.origin !== base) failures.push(route + ": redirected off the intended domain to " + url.origin);
       if (route.endsWith(".txt")) {
-        if (!body.includes("Sitemap: " + base + "/sitemap.xml")) {
-          failures.push(route + ": sitemap directive does not use " + base);
+        if (!body.includes("Sitemap: " + canonicalBase + "/sitemap.xml")) {
+          failures.push(route + ": sitemap directive does not use " + canonicalBase);
         }
       } else if (route.endsWith(".xml")) {
         if (!/<urlset\b/.test(body)) failures.push(route + ": expected XML sitemap urlset");
       } else {
         if (!/text\/html/i.test(contentType)) failures.push(route + ": expected HTML, got " + (contentType || "unknown"));
-        const expected = base + route;
-        if (canonical(body) !== expected) failures.push(route + ": canonical is " + (canonical(body) ?? "missing") + ", expected " + expected);
+        const expected = canonicalBase + route;
+        const actual = canonical(body);
+        // An origin URL and its explicit root slash are the same resource.
+        const matches = actual === expected || (route === "/" && actual === canonicalBase);
+        if (!matches) failures.push(route + ": canonical is " + (actual ?? "missing") + ", expected " + expected);
         if (hasNoindex(body)) failures.push(route + ": page advertises noindex");
       }
       checked.push({ route, status: response.status, canonical: route.endsWith(".xml") || route.endsWith(".txt") ? null : canonical(body) });
@@ -83,14 +89,14 @@ export async function inspectLiveSite({
     if (locations.length !== new Set(locations).size) failures.push("sitemap.xml has duplicate URLs");
     for (const loc of locations) {
       try {
-        if (new URL(loc).origin !== base) failures.push("sitemap contains foreign-origin URL " + loc);
+        if (new URL(loc).origin !== canonicalBase) failures.push("sitemap contains foreign-origin URL " + loc);
       } catch { failures.push("sitemap contains malformed URL " + loc); }
     }
     for (const route of routes.filter((x) => x !== "/robots.txt" && x !== "/sitemap.xml")) {
-      if (!locations.includes(base + route)) failures.push("sitemap missing " + route);
+      if (!locations.includes(canonicalBase + route)) failures.push("sitemap missing " + route);
     }
   }
-  return { origin: base, checked, failures, ok: failures.length === 0 };
+  return { origin: base, canonicalOrigin: canonicalBase, checked, failures, ok: failures.length === 0 };
 }
 
 async function main() {

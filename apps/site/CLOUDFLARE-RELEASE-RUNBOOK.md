@@ -112,7 +112,7 @@ The account's `workers.dev` subdomain enables deployment without onboarding `tam
 
 ## 4. CI deployment contract
 
-`.github/workflows/tammy-site.yml` handles both targets and separates validation/build/artifact preparation from the credential-bearing `deploy-cloudflare` job. That job depends on `verify-site` and requires repository `castlemilk/tammy`, ref `refs/heads/master`, and either a push or manual `deploy_cloudflare: true`. `workflow_dispatch` defaults that boolean to `false`. Pull requests and manual runs against other branches cannot publish and never receive deployment credentials.
+The **Tammy website** workflow (`.github/workflows/tammy-site.yml`) groups both targets and separates validation/build/artifact preparation from the credential-bearing `deploy-cloudflare` job. Run titles identify the PR or branch and whether the run verifies or deploys. PR events validate branch changes; push events are restricted to `master`, avoiding duplicate branch-push runs. Existing path filters still apply. That job depends on `verify-site` and requires repository `castlemilk/tammy`, ref `refs/heads/master`, and either a push or manual `deploy_cloudflare: true`. `workflow_dispatch` defaults that boolean to `false`. Pull requests and manual runs against other branches cannot publish and never receive deployment credentials.
 
 After the existing credentials and runner prerequisites are satisfied, an explicitly requested manual deployment uses:
 
@@ -126,6 +126,10 @@ Both validation and deployment run on the existing Cuttlefish lane `[self-hosted
 
 Only the deployment step receives repository secret `CLOUDFLARE_API_TOKEN` and repository variable `CLOUDFLARE_ACCOUNT_ID`. No GitHub environment is created or required by this workflow. A workflow in the repository does not establish that the secret, variable or runner pool exists. Read the final run/job result and actual runner identity before calling CI qualified or automatic deployment operational. Missing setup remains an explicit blocker; creating credentials, access or runner infrastructure needs its own authorized scope.
 
+After confirmed publication, `verify-direct-deployment.mjs` checks the exact receipt's repository, revision, account, Worker, URL and hashes, then requests twelve public routes. It requires the direct Worker to serve those routes itself while retaining the canonical origin imported from `lib/site-config.ts` (currently `https://tammy-accounting.castlemilk.chatgpt.site`). It writes a separate `live-verification.json`; it never rewrites `deployment-record.json` or republishes. CI retains only those two JSON files, and its summary distinguishes published, unhealthy and unconfirmed outcomes. A failed health check fails the job but does not roll back an already-published Worker. HTTP checks do not establish browser/PDF behavior or independently prove the active Cloudflare version; retain that readback separately.
+
+Read-only setup inspection on 7 November 2026 found **zero registered repository runners**, **no repository Actions secrets**, and **no `CLOUDFLARE_ACCOUNT_ID` repository variable**. PR #48's `f3c426ab` site job was queued; its foundation jobs passed on Ubuntu and Windows while macOS was cancelled. This is a setup blocker, not successful Cuttlefish execution. PR #46 remains the independently gated pool rollout. The existing authorized local Wrangler session is a separate release path and is not a substitute for CI qualification.
+
 ## 5. Live acceptance and fallback
 
 Verify the returned direct URL after a successful deployment, with sample data only:
@@ -133,10 +137,19 @@ Verify the returned direct URL after a successful deployment, with sample data o
 - HTTP success, expected HTML and representative content for `/`, `/tools`, invoice and quote generators, `/blog`, `/privacy`, and a representative Journal article. Check CSS/JS/image/font/WASM asset responses and a missing route's behavior.
 - In a real browser, create and download an invoice PDF and quote PDF, inspect the files, change inputs and download again. Verify repeated downloads contain the changed data and no stale result. Check print/Save as PDF where offered.
 - Exercise navigation and the tools at desktop and narrow/mobile widths (including 320px), keyboard access and error states. Record physical-touch coverage separately.
-- Preserve the source canonical origin and sitemap/robots/RSS values. The current strict live preflight expects the requested host to be canonical, so a `workers.dev` run will report mismatches. Record the canonical check separately; do not suppress failures or migrate canonicals to the Worker URL to make it pass.
+- Preserve the source canonical origin and sitemap/robots/RSS values. The strict general preflight still expects the requested host to be canonical. For this specific direct Worker, run the receipt-bound acceptance command below, which explicitly expects the configured source canonicals and rejects redirects away from the Worker. Do not migrate canonicals to workers.dev to make a check pass.
 - Confirm tammy.tax still serves the existing Sites deployment and that no DNS, routes, audience or Sites version was changed.
 
 The current Sites deployment remains the live tammy.tax fallback during direct-Worker validation. A direct deployment cannot serve as proof of domain cutover. For a failed direct update, use the recorded prior direct deployment/version for a reviewed rollback through supported Cloudflare tooling; do not modify Sites to compensate.
+
+```sh
+node apps/site/scripts/verify-direct-deployment.mjs \
+  --record /absolute/path/to/tammy-cloudflare-deployment/deployment-record.json \
+  --revision EXACT_PUBLISHED_GITHUB_SHA \
+  --output /absolute/path/to/tammy-cloudflare-deployment/live-verification.json
+```
+
+The output path must be new. Check the command exit status and retain the failures if acceptance fails; do not infer health merely from a successful publish receipt.
 
 ## Separate gate: moving tammy.tax
 

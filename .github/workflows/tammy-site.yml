@@ -1,4 +1,6 @@
-name: Tammy marketing site
+name: Tammy website
+run-name: >-
+  Tammy website · ${{ github.event_name == 'pull_request' && format('PR #{0}', github.event.pull_request.number) || github.ref_name }} · ${{ github.ref == 'refs/heads/master' && (github.event_name == 'push' || inputs.deploy_cloudflare) && 'deploy' || 'verify' }}
 
 on:
   workflow_dispatch:
@@ -9,6 +11,8 @@ on:
         required: false
         default: false
   push:
+    # PR validation already covers branch pushes; publish only from master.
+    branches: [master]
     paths:
       - "AGENTS.md"
       - "apps/site/**"
@@ -108,7 +112,7 @@ jobs:
         run: pnpm --dir apps/site seo:check
       - name: Sites publication preflight contract tests
         working-directory: ${{ runner.temp }}/tammy-site-source
-        run: pnpm --dir apps/site site:preflight:test
+        run: node --test apps/site/scripts/live-site-preflight.test.mjs apps/site/scripts/verify-direct-deployment.test.mjs
       - name: Build and stage the Worker from the exported source
         working-directory: ${{ runner.temp }}/tammy-site-source
         run: pnpm build
@@ -253,12 +257,51 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
         run: node scripts/site-release.mjs cloudflare-deploy --output "$RUNNER_TEMP/tammy-cloudflare-deployment"
+      - name: Check published direct routes and canonical metadata
+        id: health
+        working-directory: ${{ runner.temp }}/tammy-cloudflare-source
+        run: >-
+          node apps/site/scripts/verify-direct-deployment.mjs
+          --record "$RUNNER_TEMP/tammy-cloudflare-deployment/deployment-record.json"
+          --revision "$GITHUB_SHA"
+          --output "$RUNNER_TEMP/tammy-cloudflare-deployment/live-verification.json"
+      - name: Summarise publication and HTTP acceptance separately
+        if: ${{ always() && (steps.deploy.outcome == 'success' || steps.deploy.outcome == 'failure') }}
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE'
+          import { appendFileSync, existsSync, readFileSync } from 'node:fs';
+          import path from 'node:path';
+          const directory = path.join(process.env.RUNNER_TEMP, 'tammy-cloudflare-deployment');
+          const read = (name) => {
+            const file = path.join(directory, name);
+            return existsSync(file) ? JSON.parse(readFileSync(file, 'utf8')) : null;
+          };
+          const deployment = read('deployment-record.json');
+          const health = read('live-verification.json');
+          const lines = [
+            '## Tammy direct Worker', '',
+            '| Evidence | Result |', '| --- | --- |',
+            '| Git revision | ' + process.env.GITHUB_SHA + ' |',
+            '| Publication | ' + (deployment?.status ?? 'No confirmed receipt') + ' |',
+            '| Worker version | ' + (deployment?.version_id ?? 'Not confirmed') + ' |',
+            '| URL | ' + (deployment?.url ?? 'Not confirmed') + ' |',
+            '| HTTP acceptance | ' + (health ? (health.ok ? 'Passed' : 'Failed') : 'Not completed') + ' |',
+            '| Source hash | ' + (deployment?.source_sha256 ?? 'Not recorded') + ' |',
+            '| Build hash | ' + (deployment?.build_sha256 ?? 'Not recorded') + ' |', '',
+            'HTTP acceptance does not replace browser/PDF checks or independent version readback. A failed health check does not undo publication.',
+            'tammy.tax, Sites and DNS remain unchanged by this workflow.', '',
+          ];
+          appendFileSync(process.env.GITHUB_STEP_SUMMARY, lines.join('\n'));
+          NODE
       - name: Retain the deployment record
         if: ${{ always() && (steps.deploy.outcome == 'success' || steps.deploy.outcome == 'failure') }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: tammy-cloudflare-deployment-${{ github.sha }}-${{ github.run_attempt }}
           # Never upload Wrangler logs/output or any credential-bearing files.
-          path: ${{ runner.temp }}/tammy-cloudflare-deployment/deployment-record.json
+          path: |
+            ${{ runner.temp }}/tammy-cloudflare-deployment/deployment-record.json
+            ${{ runner.temp }}/tammy-cloudflare-deployment/live-verification.json
           if-no-files-found: ignore
           retention-days: 30

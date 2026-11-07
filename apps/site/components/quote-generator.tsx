@@ -178,14 +178,14 @@ export function QuoteGenerator() {
         <div className="tools-quote-paper-header"><div><p className="tools-overline">Estimate</p><h2>QUOTE</h2></div><p>{sellerName || "Your business"}</p></div>
         <div className="tools-quote-meta"><span>Reference <strong>{reference || "—"}</strong></span><span>Date <strong>{quoteDate || "—"}</strong></span><span>Valid until <strong>{validUntil || "—"}</strong></span></div>
         <div className="tools-quote-parties"><div><small>Prepared by</small><strong>{sellerName || "Business name"}</strong><p>{sellerAddress}</p>{sellerAbn && <p>ABN {sellerAbn}</p>}</div><div><small>Prepared for</small><strong>{customerName || "Customer name"}</strong><p>{customerAddress}</p></div></div>
-        <p className="tools-quote-scroll-hint" id="quote-scroll-hint">Scroll the line items to see GST and totals.</p>
+        <p className="tools-paper-scroll-hint" id="quote-scroll-hint">Scroll the line items to see GST and totals.</p>
         {/* oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- The named overflow region needs focus for keyboard scrolling. */}
-        <section className="tools-quote-table-scroll" aria-label="Quote line items" aria-describedby="quote-scroll-hint" tabIndex={0}>
+        <section className="tools-paper-table-scroll tools-quote-table-scroll" aria-label="Quote line items" aria-describedby="quote-scroll-hint" tabIndex={0}>
         <table className="tools-paper-items">
-          <thead><tr><th scope="col">Description</th><th scope="col">Qty</th><th scope="col">Ex GST</th><th scope="col">GST</th><th scope="col">Total</th></tr></thead>
+          <thead><tr><th scope="col">Description</th><th scope="col">Qty</th><th scope="col">Unit ex GST</th><th scope="col">GST</th><th scope="col">Total</th></tr></thead>
           <tbody>{lines.map((line, i) => <tr key={i}>
             <td>{line.description || "Work description"}</td><td>{line.quantity}</td>
-            <td>{compiled.result?.totals.lines[i] ? formatAud(compiled.result.totals.lines[i].netMinor) : "—"}</td>
+            <td>{compiled.result?.draft.lines[i] ? formatAud(compiled.result.draft.lines[i].unitPriceMinor) : "—"}</td>
             <td>{compiled.result?.totals.lines[i] ? formatAud(compiled.result.totals.lines[i].gstMinor) : "—"}</td>
             <td>{compiled.result?.totals.lines[i] ? formatAud(compiled.result.totals.lines[i].totalMinor) : "—"}</td>
           </tr>)}</tbody>

@@ -185,9 +185,13 @@ export function InvoiceGenerator() {
           <div><dt>Due</dt><dd>{dueDate || "Not set"}</dd></div>
         </dl>
         <div className="tools-paper-parties"><div><span>From</span><strong>{sellerName || "Business name"}</strong><p>{sellerAddress || "Business address"}</p><small>{sellerAbn ? `ABN ${formatAbn(sellerAbn)}` : "ABN required for PDF"}</small></div><div><span>Billed to</span><strong>{customerName || "Customer name"}</strong><p>{customerAddress || "Customer address"}</p>{customerAbn && <small>ABN {formatAbn(customerAbn)}</small>}</div></div>
-        <table className="tools-paper-items"><thead><tr><th scope="col">Description</th><th scope="col">Qty</th><th scope="col">Ex GST</th><th scope="col">GST</th><th scope="col">Total</th></tr></thead><tbody>
-          {lines.map((row, index) => <tr key={row.id}><td>{row.description || "Item description"}</td><td>{row.quantity}</td><td>{compiled.totals && compiled.totals.lines[index] ? formatAud(compiled.totals.lines[index].netMinor) : "–"}</td><td>{compiled.totals && compiled.totals.lines[index] ? formatAud(compiled.totals.lines[index].gstMinor) : "–"}</td><td>{compiled.totals && compiled.totals.lines[index] ? formatAud(compiled.totals.lines[index].totalMinor) : "–"}</td></tr>)}
+        <p className="tools-paper-scroll-hint" id="invoice-scroll-hint">Scroll the line items to see GST and totals.</p>
+        {/* oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- The named overflow region needs focus for keyboard scrolling. */}
+        <section className="tools-paper-table-scroll" aria-label="Invoice line items" aria-describedby="invoice-scroll-hint" tabIndex={0}>
+        <table className="tools-paper-items"><thead><tr><th scope="col">Description</th><th scope="col">Qty</th><th scope="col">Unit ex GST</th><th scope="col">GST</th><th scope="col">Total</th></tr></thead><tbody>
+          {lines.map((row, index) => <tr key={row.id}><td>{row.description || "Item description"}</td><td>{row.quantity}</td><td>{compiled.draft?.lines[index] ? formatAud(compiled.draft.lines[index].unitPriceMinor) : "–"}</td><td>{compiled.totals && compiled.totals.lines[index] ? formatAud(compiled.totals.lines[index].gstMinor) : "–"}</td><td>{compiled.totals && compiled.totals.lines[index] ? formatAud(compiled.totals.lines[index].totalMinor) : "–"}</td></tr>)}
         </tbody></table>
+        </section>
         <dl className="tools-paper-totals"><div><dt>Subtotal (ex GST)</dt><dd>{compiled.totals ? formatAud(compiled.totals.subtotalMinor) : "–"}</dd></div><div><dt>GST</dt><dd>{compiled.totals ? formatAud(compiled.totals.gstMinor) : "–"}</dd></div><div className="tools-paper-total"><dt>Total due</dt><dd>{compiled.totals ? formatAud(compiled.totals.totalMinor) : "–"}</dd></div></dl>
         {paymentInstructions && <p className="tools-paper-note"><strong>Payment</strong> {paymentInstructions}</p>}
         {notes && <p className="tools-paper-note"><strong>Notes</strong> {notes}</p>}

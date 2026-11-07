@@ -1,0 +1,247 @@
+{
+  "baseline": "f3c426ab5702ac0e928d2f4ed51c28f791ec079e",
+  "scope": "Local production build, synthetic data. Captures made before commit; final candidate is recorded in release receipt. No deployment claim.",
+  "captures": [
+    {
+      "view": "invoice 1440px",
+      "path": "docs/design/assets/evidence/document-preview/invoice-1440.webp",
+      "sha256": "9355b77b3ef3e6a6641b1e09b83b79636ee0dc46cea11165dbf240ad238db746",
+      "original_sha256": "b4ab9703a1109ddb03ea8b77c5ca4e563292056ee8607ccd3898b7cd6619594a"
+    },
+    {
+      "view": "invoice 390px",
+      "path": "docs/design/assets/evidence/document-preview/invoice-390.webp",
+      "sha256": "93bde043178fe587fc8efca17db2c71609919b3ac91bb74f1b11dc9a870ce6b5",
+      "original_sha256": "f6b54d4fd60c7003d9a0b52f08236ac28f9f66850780d0caba7610b4563e01bf"
+    },
+    {
+      "view": "invoice 320px",
+      "path": "docs/design/assets/evidence/document-preview/invoice-320.webp",
+      "sha256": "30b1cc3bcce655adefd9587159935a0c9fdfb47c60437a4832ef661cbcc64b2e",
+      "original_sha256": "abcd7c4f69d29888caa424a53f41df2783cdcf8f84e0029de4e6d1730ac0ef2e"
+    },
+    {
+      "view": "quote 1440px",
+      "path": "docs/design/assets/evidence/document-preview/quote-1440.webp",
+      "sha256": "961266faffb29427efba125a425c5f809360af92edebffa4904ec3007705377c",
+      "original_sha256": "5de329b3dafadcd7dc678ac5d0e5b86d4a9842de151cdd65c81c193f93bc243c"
+    },
+    {
+      "view": "quote 390px",
+      "path": "docs/design/assets/evidence/document-preview/quote-390.webp",
+      "sha256": "697cfe1d15a349d3e0b300aa648b0a316aa4eebb39393e3fea78243834e3a122",
+      "original_sha256": "492869cd85bfb568cd4dd0d6600e09598bdd51f7080016d05e035690a9642dfe"
+    },
+    {
+      "view": "quote 320px",
+      "path": "docs/design/assets/evidence/document-preview/quote-320.webp",
+      "sha256": "bfcb6f439082667afc3aa2057ee77b1f89a71102b3b398067ef4048b0649eb75",
+      "original_sha256": "b1b8687ddee0e7d6aceb779ddf5ce4ffbe71289d4b1443c624d12d6cba8da8e1"
+    }
+  ],
+  "browser": {
+    "previews": [
+      {
+        "type": "Invoice",
+        "width": 1440,
+        "font": "12px",
+        "client": 456,
+        "scroll": 456,
+        "page": 1425,
+        "viewport": 1425,
+        "tabindex": 0,
+        "hint": "none",
+        "headers": ["Description", "Qty", "Unit ex GST", "GST", "Total"],
+        "cells": ["Synthetic design review - not for payment", "2", "$125.00", "$25.00", "$275.00"]
+      },
+      {
+        "type": "Invoice",
+        "width": 390,
+        "font": "12px",
+        "client": 263,
+        "scroll": 440,
+        "page": 375,
+        "viewport": 375,
+        "tabindex": 0,
+        "hint": "block",
+        "headers": ["Description", "Qty", "Unit ex GST", "GST", "Total"],
+        "cells": ["Synthetic design review - not for payment", "2", "$125.00", "$25.00", "$275.00"],
+        "keyboardScroll": 3
+      },
+      {
+        "type": "Invoice",
+        "width": 320,
+        "font": "12px",
+        "client": 193,
+        "scroll": 440,
+        "page": 305,
+        "viewport": 305,
+        "tabindex": 0,
+        "hint": "block",
+        "headers": ["Description", "Qty", "Unit ex GST", "GST", "Total"],
+        "cells": ["Synthetic design review - not for payment", "2", "$125.00", "$25.00", "$275.00"],
+        "keyboardScroll": 2
+      },
+      {
+        "type": "Quote",
+        "width": 1440,
+        "font": "12px",
+        "client": 484,
+        "scroll": 484,
+        "page": 1425,
+        "viewport": 1425,
+        "tabindex": 0,
+        "hint": "none",
+        "headers": ["Description", "Qty", "Unit ex GST", "GST", "Total"],
+        "cells": [
+          "Synthetic design review - not for acceptance",
+          "2",
+          "$125.00",
+          "$25.00",
+          "$275.00"
+        ]
+      },
+      {
+        "type": "Quote",
+        "width": 390,
+        "font": "12px",
+        "client": 315,
+        "scroll": 440,
+        "page": 375,
+        "viewport": 375,
+        "tabindex": 0,
+        "hint": "block",
+        "headers": ["Description", "Qty", "Unit ex GST", "GST", "Total"],
+        "cells": [
+          "Synthetic design review - not for acceptance",
+          "2",
+          "$125.00",
+          "$25.00",
+          "$275.00"
+        ],
+        "keyboardScroll": 18
+      },
+      {
+        "type": "Quote",
+        "width": 320,
+        "font": "12px",
+        "client": 245,
+        "scroll": 440,
+        "page": 305,
+        "viewport": 305,
+        "tabindex": 0,
+        "hint": "block",
+        "headers": ["Description", "Qty", "Unit ex GST", "GST", "Total"],
+        "cells": [
+          "Synthetic design review - not for acceptance",
+          "2",
+          "$125.00",
+          "$25.00",
+          "$275.00"
+        ],
+        "keyboardScroll": 4
+      }
+    ],
+    "downloads": [
+      {
+        "type": "invoice",
+        "name": "invoice-REVIEW-INV-001.pdf",
+        "error": null
+      },
+      {
+        "type": "invoice",
+        "name": "invoice-REVIEW-INV-002.pdf",
+        "error": null
+      },
+      {
+        "type": "quote",
+        "name": "quote-REVIEW-QUO-001.pdf",
+        "error": null
+      },
+      {
+        "type": "quote",
+        "name": "quote-REVIEW-QUO-002.pdf",
+        "error": null
+      }
+    ],
+    "errors": [],
+    "pendingGeometry": {
+      "before": {
+        "x": 16,
+        "y": 2151.234375,
+        "width": 172.109375,
+        "height": 44
+      },
+      "after": {
+        "x": 16,
+        "y": 412.234375,
+        "width": 172.109375,
+        "height": 44
+      },
+      "disabled": true,
+      "busy": "true"
+    },
+    "scroll": {
+      "left": 15,
+      "client": 315,
+      "width": 440,
+      "focus": true
+    },
+    "narrow": {
+      "client": 320,
+      "width": 305
+    },
+    "successFeedback": "forest status",
+    "errorFeedback": "alert"
+  },
+  "pdfs": [
+    {
+      "name": "invoice-REVIEW-INV-001.pdf",
+      "sha256": "36761a0c9e48ca13268f08a9c830d7af04d036edb936c769e4c4aa2610b0b87e",
+      "bytes": 35350,
+      "same_as_previous": true,
+      "pages": 1
+    },
+    {
+      "name": "invoice-REVIEW-INV-002.pdf",
+      "sha256": "3f13812d51ffc13ebb4088ec6c70dec92306115ec9c3fffc760cbe2b1c696395",
+      "bytes": 35560,
+      "same_as_previous": true,
+      "pages": 1
+    },
+    {
+      "name": "quote-REVIEW-QUO-001.pdf",
+      "sha256": "8344cdbe92c39456b5809637333273682fa2058049b62510ad46c728ef4c9ff3",
+      "bytes": 36255,
+      "same_as_previous": true,
+      "pages": 1
+    },
+    {
+      "name": "quote-REVIEW-QUO-002.pdf",
+      "sha256": "07e6d5cc8b38e860d810138567436ecca15e41a46d8cdb1a202957c1acc8164a",
+      "bytes": 36470,
+      "same_as_previous": true,
+      "pages": 1
+    }
+  ],
+  "limitations": [
+    "Chromium desktop/mobile emulation only",
+    "No physical touch, screen reader, other engine or OS print dialog",
+    "No native app requalification"
+  ],
+  "print": {
+    "result": {
+      "tableFont": "10px",
+      "minimumWidth": "0px",
+      "overflow": "visible",
+      "hint": "none"
+    },
+    "scope": "Emulated print CSS, not an OS print dialog or physical print"
+  },
+  "review": {
+    "scored_findings": 2,
+    "resolved": 2,
+    "disposition": "ship",
+    "scope": "Bounded local capture/PDF confirm pass, not deployed release"
+  }
+}

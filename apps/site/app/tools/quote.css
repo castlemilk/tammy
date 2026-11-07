@@ -19,14 +19,11 @@
 .tools-quote-parties strong { display:block; font-size:14px; }
 .tools-quote-parties p { font-size:12px; margin:5px 0; white-space:pre-wrap; color:var(--t-muted); }
 .tools-quote-paper .tools-paper-items { width:100%; }
-.tools-quote-table-scroll { max-width:100%; overflow-x:auto; }
-.tools-quote-table-scroll:focus-visible { outline:2px solid var(--tammy-forest); outline-offset:3px; }
-.tools-quote-scroll-hint { display:none; }
 .tools-quote-form .tools-form-actions > :is(output,[role="alert"]) { display:block; margin-top:var(--tammy-space-4); }
 .tools-quote-paper-note { font-size:12px; line-height:1.6; white-space:pre-wrap; border-top:1px solid var(--t-line); margin-top:26px; padding-top:20px; }
 .tools-quote-disclaimer { margin-top:30px; padding-top:15px; border-top:1px solid var(--t-line); font-size:11px; color:var(--t-muted); line-height:1.65; }
 @media(max-width:1020px) { .tools-quote-layout { grid-template-columns:1fr; } .tools-quote-preview { position:static; } }
-@media(max-width:580px) { .tools-quote-parties { grid-template-columns:1fr; } .tools-quote-paper { padding:20px 13px; } .tools-quote-paper .tools-paper-items { min-width:430px; } .tools-quote-scroll-hint { display:block; margin:0 0 12px; color:var(--t-muted); font-size:12px; } }
+@media(max-width:580px) { .tools-quote-parties { grid-template-columns:1fr; } .tools-quote-paper { padding:20px 13px; } }
 @media print {
   @page { size:A4; margin:14mm; }
   body, html { background:white !important; overflow:visible !important; }
@@ -38,9 +35,9 @@
   .tools-quote-preview { position:static !important; display:block !important; width:100% !important; }
   .tools-quote-paper { min-height:0; margin:0; padding:0; border:0; box-shadow:none; width:100%; color:#162d27; }
   .tools-quote-paper table { page-break-inside:auto; }
-  .tools-quote-table-scroll { overflow:visible; outline:none; }
-  .tools-quote-scroll-hint { display:none; }
-  .tools-quote-paper .tools-paper-items { min-width:0; }
+  .tools-quote-paper .tools-paper-table-scroll { overflow:visible; outline:none; }
+  .tools-quote-paper .tools-paper-scroll-hint { display:none; }
+  .tools-quote-paper .tools-paper-items { min-width:0; font-size:10px; }
   .tools-quote-paper tr { break-inside:avoid; }
   .tools-quote-paper h2 { font-size:35px; }
 }

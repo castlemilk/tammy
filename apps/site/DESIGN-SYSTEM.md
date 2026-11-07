@@ -39,6 +39,7 @@ The public hierarchy is surface-specific: the shared sans wordmark is 28px/1 at 
 | Search recovery | `ToolLibrary`, Gamma `EmptyState` | Immediate local filtering; Clear preserves category and restores input focus; Show all resets both |
 | Site navigation | `ToolsShell` | Three stable destinations, current section labelled with `aria-current=location`, 44px links |
 | Scrollbars | `globals.css` | Global visible track/thumb tokens, engine fallback, forced-colours override |
+| Document preview tables | `tools/tools.css`, invoice/quote generators | 12px tabular figures; labelled keyboard-scroll region; unit ex GST agrees with the PDF; document totals stay outside the region |
 | Financial calculations | Existing domain helpers / `@tammy/invoices` | Integer AUD cents and validated tax rules; no logic in the theme |
 
 Native select and date popups remain platform-owned. This pass does not replace existing financial validation, document lifecycle or storage contracts. Search contains no business records, uses no requests and stays local to the current catalogue visit. Existing loading/error/export handling remains authoritative.
@@ -48,6 +49,8 @@ Shared `Input` and `Select` use `border-input`, mapped by `globals.css` to `--ta
 `AccountingStatus` uses text as well as colour: Draft and Not matched use warning material, Reviewed stays neutral, and Posted and Issued use sage/forest. Shared colour does not merge these five meanings. It is a static span, with no live-region or mutation semantics. Gamma choice controls retain native radio inputs and their labels; the tools adapter makes their faces 44px and lays a full-width choice group into two columns below 640px. Keep Gamma provenance and behaviour intact.
 
 ## Layout and art direction
+
+Invoice and quote previews use a shared 440px minimum line-item table inside a named, focusable horizontal scroll region. The paper's container width controls the scroll cue below 440px, including narrow desktop columns. Keep figures at 12px rather than shrinking them on mobile. The `Unit ex GST` column displays the validated unit price; quantity, line GST and line total remain separate. Subtotal/GST/document total stay outside the scrolling area. These rules affect browser previews only; PDF templates, tax arithmetic and print geometry retain their own contracts.
 
 A visitor to `/tools` should see search, task filters and real choices in the first desktop viewport. The directory’s compound selectors deliberately outrank generic guide-card and hero rules independent of stylesheet load order. Search precedes filters in reading and keyboard order. Keep all twelve tools, their summaries and their specific limitations.
 

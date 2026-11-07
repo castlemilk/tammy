@@ -37,6 +37,18 @@ void describe("Sites production preflight", () => {
       assert.throws(() => assertTargetOrigin(value));
     }
   });
+  void it("accepts an equivalent root canonical without weakening other route matching", async () => {
+    const inspect = async (route, canonicalValue) => inspectLiveSite({
+      origin: ORIGIN, routes: [route], fetcher: async (url) => {
+        const response = await fixture()(url);
+        return { ...response, text: async () => '<link rel="canonical" href="' + canonicalValue + '">' };
+      },
+    });
+    assert.equal((await inspect("/", ORIGIN)).ok, true);
+    for (const canonicalValue of [ORIGIN + "/tools/", ORIGIN + "/tools?other=1", ORIGIN, "https://foreign.example/tools"]) {
+      assert.equal((await inspect("/tools", canonicalValue)).ok, false);
+    }
+  });
   void it("fails canonical mismatches and noindex without redirecting", async () => {
     const result = await inspectLiveSite({ origin: ORIGIN, routes: ROUTES, fetcher: fixture({ canonicalHost:"https://old.chatgpt.site", noindex:true }) });
     assert.equal(result.ok, false);
@@ -53,5 +65,21 @@ void describe("Sites production preflight", () => {
     const result = await inspectLiveSite({ origin: ORIGIN, routes: ROUTES, fetcher: fixture({missing:"/blog"}) });
     assert.equal(result.ok, false);
     assert(result.failures.some((x) => x.startsWith("/blog: unavailable")));
+  });
+  void it("requires an explicit canonical origin for the independent direct Worker", async () => {
+    const direct = "https://tammy-site-direct.ben-ebsworth.workers.dev";
+    const fetcher = fixture({ redirectHost: direct });
+    const implicit = await inspectLiveSite({ origin: direct, routes: ROUTES, fetcher });
+    assert.equal(implicit.ok, false);
+    const explicit = await inspectLiveSite({ origin: direct, canonicalOrigin: ORIGIN, routes: ROUTES, fetcher });
+    assert.equal(explicit.ok, true, explicit.failures.join("; "));
+    const redirected = await inspectLiveSite({ origin: direct, canonicalOrigin: ORIGIN, routes: ROUTES, fetcher: fixture() });
+    assert.equal(redirected.ok, false);
+    assert(redirected.failures.some((x) => x.includes("redirected off")));
+  });
+  void it("rejects an invalid canonical override before fetching", async () => {
+    let requests = 0;
+    await assert.rejects(inspectLiveSite({ origin: ORIGIN, canonicalOrigin: "http://tammy.tax", fetcher: () => { requests++; } }));
+    assert.equal(requests, 0);
   });
 });

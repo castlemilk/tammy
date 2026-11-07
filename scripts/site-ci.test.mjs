@@ -53,6 +53,16 @@ function named(items, name) {
   return matches[0].text;
 }
 
+test("one website workflow validates PRs and only master pushes enter the release lane", () => {
+  assert.match(workflow, /^name: Tammy website\nrun-name: >-\n/m);
+  assert.match(workflow, /format\('PR #\{0\}', github\.event\.pull_request\.number\)/);
+  const push = /^ {2}push:\n([\s\S]*?)(?=^ {2}pull_request:)/m.exec(workflow)?.[1];
+  assert.ok(push);
+  assert.match(push, /^ {4}branches: \[master\]$/m);
+  assert.match(workflow, /^ {2}pull_request:\n/m);
+  assert.match(workflow, /^ {2}workflow_dispatch:\n/m);
+});
+
 test("Cloudflare publication is restricted to trusted master push or explicit master dispatch", () => {
   const allowed = jobGate(deployJob);
   for (const repository of ["castlemilk/tammy", "someone/tammy"])
@@ -166,12 +176,81 @@ test("actions are immutable pins and deployment evidence excludes raw logs", () 
   for (const action of uses) assert.match(action, /^[\w-]+\/[\w-]+@[a-f0-9]{40}$/);
   const uploads = deploySteps.filter((step) => /uses: actions\/upload-artifact@/.test(step.text));
   assert.equal(uploads.length, 1);
-  assert.match(
-    uploads[0].text,
-    /path: \$\{\{ runner\.temp \}\}\/tammy-cloudflare-deployment\/deployment-record\.json\n/,
+  const paths = /path: \|\n((?: {12}[^\n]+\n)+)/.exec(uploads[0].text)?.[1];
+  assert.ok(paths);
+  assert.deepEqual(
+    paths
+      .trim()
+      .split("\n")
+      .map((line) => line.trim()),
+    [
+      // biome-ignore lint/suspicious/noTemplateCurlyInString: Literal GitHub Actions expression.
+      "${{ runner.temp }}/tammy-cloudflare-deployment/deployment-record.json",
+      // biome-ignore lint/suspicious/noTemplateCurlyInString: Literal GitHub Actions expression.
+      "${{ runner.temp }}/tammy-cloudflare-deployment/live-verification.json",
+    ],
   );
   assert.doesNotMatch(uploads[0].text, /path:.*(?:\*|wrangler-output|logs)/);
   assert.match(uploads[0].text, /always\(\)/);
+});
+
+test("HTTP acceptance follows publication with the exact receipt and without deployment credentials", () => {
+  const publish = deploySteps.findIndex(
+    (step) => step.name === "Deploy the direct Worker with existing Cloudflare access",
+  );
+  const health = deploySteps.findIndex(
+    (step) => step.name === "Check published direct routes and canonical metadata",
+  );
+  assert.ok(health > publish);
+  const text = deploySteps[health].text;
+  assert.match(text, /verify-direct-deployment\.mjs/);
+  assert.match(text, /--revision "\$GITHUB_SHA"/);
+  assert.match(
+    text,
+    /--record "\$RUNNER_TEMP\/tammy-cloudflare-deployment\/deployment-record\.json"/,
+  );
+  assert.match(
+    text,
+    /--output "\$RUNNER_TEMP\/tammy-cloudflare-deployment\/live-verification\.json"/,
+  );
+  assert.doesNotMatch(text, /continue-on-error|secrets\.|always\(\)/);
+});
+
+test("the actual CI summary distinguishes publication from failed or absent HTTP acceptance", () => {
+  const step = named(deploySteps, "Summarise publication and HTTP acceptance separately");
+  const code = /node --input-type=module <<'NODE'\n([\s\S]*?)\n {10}NODE/.exec(step)?.[1];
+  assert.ok(code);
+  const directory = mkdtempSync(path.join(tmpdir(), "tammy-site-summary-"));
+  const output = path.join(directory, "summary.md");
+  const evidence = path.join(directory, "tammy-cloudflare-deployment");
+  mkdirSync(evidence);
+  const run = () =>
+    execFileSync(process.execPath, ["--input-type=module", "-e", code], {
+      env: {
+        ...process.env,
+        RUNNER_TEMP: directory,
+        GITHUB_STEP_SUMMARY: output,
+        GITHUB_SHA: "a".repeat(40),
+      },
+    });
+  try {
+    run();
+    assert.match(readFileSync(output, "utf8"), /No confirmed receipt/);
+    assert.match(readFileSync(output, "utf8"), /Not completed/);
+    writeFileSync(output, "");
+    writeFileSync(
+      path.join(evidence, "deployment-record.json"),
+      JSON.stringify({ status: "published", version_id: "example-version" }),
+    );
+    writeFileSync(path.join(evidence, "live-verification.json"), JSON.stringify({ ok: false }));
+    run();
+    const text = readFileSync(output, "utf8");
+    assert.match(text, /Publication \| published/);
+    assert.match(text, /HTTP acceptance \| Failed/);
+    assert.doesNotMatch(text, /\| Passed \|/);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
 });
 
 test("the actual artifact verification script rejects mismatched or tampered inputs", () => {

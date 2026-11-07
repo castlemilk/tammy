@@ -180,7 +180,13 @@
 .tools-paper-parties { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 18px; padding: 28px 0; }
 .tools-paper-parties strong { display: block; margin-top: 6px; font-size: 13px; }
 .tools-paper-parties p, .tools-paper-parties small { white-space: pre-wrap; color: var(--t-muted); font-size: 11px; margin: 4px 0; }
-.tools-paper-items { border-collapse: collapse; width: 100%; table-layout: fixed; font-size: 10px; }
+.tools-invoice-paper, .tools-quote-paper { container-type: inline-size; }
+.tools-paper-table-scroll { max-width: 100%; overflow-x: auto; }
+.tools-paper-table-scroll:focus-visible { outline: 2px solid var(--tammy-forest); outline-offset: 3px; }
+.tools-paper-scroll-hint { display: none; margin: 0 0 12px; color: var(--t-muted); font-size: 12px; }
+@container (max-width: 440px) { .tools-paper-scroll-hint { display: block; } }
+.tools-paper-items { border-collapse: collapse; width: 100%; min-width: 440px; table-layout: auto; font-size: 12px; font-variant-numeric: tabular-nums; }
+.tools-paper-items td:not(:first-child) { white-space: nowrap; }
 .tools-paper-items th { background: var(--t-forest); color: #fff; font-weight: 650; }
 .tools-paper-items :is(th,td) { text-align: right; padding: 10px 5px; border-bottom: 1px solid var(--t-line); overflow-wrap: anywhere; }
 .tools-paper-items :is(th,td):first-child { width: 32%; text-align: left; }
@@ -219,7 +225,6 @@
   .tools-explain { padding: 55px 0; }
   .tools-invoice-form { padding: 23px 17px; }
   .tools-form-two, .tools-form-three { grid-template-columns: 1fr; }
-  .tools-paper-items { font-size: 9px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .tools-shell :is(a,button) { transition: none !important; transform: none !important; }
