@@ -1,0 +1,177 @@
+{
+  "schema_version": 1,
+  "validation_kind": "Live browser observations and independent PDF review",
+  "source_commit": "56bd4ef4091a7df58e004b7ddb643e6f4c58cd7b",
+  "deployment_url": "https://tammy-site-direct.ben-ebsworth.workers.dev/",
+  "deployment_version": "df005821-f3ae-451d-b728-610623a393ac",
+  "pdf_review_source_sha256": "37352ea4251b70d646a1c9c2be3530b09e0cd4343265f0ffadf2b8fed2c0ac3d",
+  "sanitization": "Absolute local download/render paths removed; no PDF or image binaries retained. All document fixtures use synthetic data.",
+  "download_origin_attestation": "Generated in Chrome on the deployed URL; downloaded files independently validated and visually reviewed.",
+  "pdf_verification_scope": "Independent validation of downloaded PDF contents, totals and rendered layouts.",
+  "pdf_reviewed_at_utc": "2026-11-07T03:48:56.485177+00:00",
+  "pdf_result": "passed",
+  "freshness_check": "Four distinct references, changed quantities/totals, different hashes and increasing download mtimes; all live fixture names differ from earlier local QA",
+  "documents": [
+    {
+      "bytes": 35547,
+      "sha256": "7a5ba879647b6a111c8913a560b8ab0c03e59ffa28af69f8fc67fec7f23fec25",
+      "mtime_utc": "2026-11-07T03:47:24.013698+00:00",
+      "visual_review": "pass: all page content legible; no clipping, overlap or broken glyphs; each rendered page independently inspected",
+      "expected": {
+        "reference": "LIVE-CF-001",
+        "seller": "Cloudflare Live QA Example",
+        "customer": "Sample Customer",
+        "description": "Synthetic deployed Worker service",
+        "qty": 2,
+        "unit_ex_gst": 100,
+        "gst": 20,
+        "total_aud": 220,
+        "issued": "2026-11-07",
+        "due": "2027-02-21"
+      },
+      "content_review": "pass: reference, seller/customer, synthetic service, quantities, dates, GST and total match expected case",
+      "filename": "invoice-LIVE-CF-001.pdf",
+      "page_count": 1,
+      "page_format": "A4"
+    },
+    {
+      "bytes": 35596,
+      "sha256": "5a64d205874577b2ee4a5df63ed22783a8726f5539b8c75c220b26a0d2fcf5c9",
+      "mtime_utc": "2026-11-07T03:47:34.707983+00:00",
+      "visual_review": "pass: all page content legible; no clipping, overlap or broken glyphs; each rendered page independently inspected",
+      "expected": {
+        "reference": "LIVE-CF-002",
+        "seller": "Cloudflare Live QA Example",
+        "customer": "Sample Customer",
+        "description": "Synthetic deployed Worker service",
+        "qty": 3,
+        "unit_ex_gst": 100,
+        "gst": 30,
+        "total_aud": 330,
+        "issued": "2026-11-07",
+        "due": "2027-02-21"
+      },
+      "content_review": "pass: reference, seller/customer, synthetic service, quantities, dates, GST and total match expected case",
+      "filename": "invoice-LIVE-CF-002.pdf",
+      "page_count": 1,
+      "page_format": "A4"
+    },
+    {
+      "bytes": 35790,
+      "sha256": "0887bfe5c49cbba9577fcc6538824a83dd6870feb20c26d77d1eb7a198508d0f",
+      "mtime_utc": "2026-11-07T03:48:04.292826+00:00",
+      "visual_review": "pass: all page content legible; no clipping, overlap or broken glyphs; each rendered page independently inspected",
+      "expected": {
+        "reference": "LIVE-CF-QUOTE-001",
+        "seller": "Cloudflare Live QA Example",
+        "customer": "Sample Customer",
+        "description": "Synthetic deployed Worker consultation",
+        "qty": 3,
+        "unit_ex_gst": 125,
+        "gst": 0,
+        "total_aud": 375,
+        "issued": "2026-11-08",
+        "valid_until": "2027-02-21"
+      },
+      "content_review": "pass: reference, seller/customer, synthetic consultation, quantities, dates, zero GST and total match expected case",
+      "filename": "quote-LIVE-CF-QUOTE-001.pdf",
+      "page_count": 1,
+      "page_format": "A4"
+    },
+    {
+      "bytes": 35573,
+      "sha256": "c60ee54115f87b0fafc3ec2e9fb7880946aa3ec07913d78dc7b4fc8c2b727ee8",
+      "mtime_utc": "2026-11-07T03:48:17.609584+00:00",
+      "visual_review": "pass: all page content legible; no clipping, overlap or broken glyphs; each rendered page independently inspected",
+      "expected": {
+        "reference": "LIVE-CF-QUOTE-002",
+        "seller": "Cloudflare Live QA Example",
+        "customer": "Sample Customer",
+        "description": "Synthetic deployed Worker consultation",
+        "qty": 4,
+        "unit_ex_gst": 125,
+        "gst": 0,
+        "total_aud": 500,
+        "issued": "2026-11-08",
+        "valid_until": "2027-02-21"
+      },
+      "content_review": "pass: reference, seller/customer, synthetic consultation, quantities, dates, zero GST and total match expected case",
+      "filename": "quote-LIVE-CF-QUOTE-002.pdf",
+      "page_count": 1,
+      "page_format": "A4"
+    }
+  ],
+  "browser_observations": {
+    "observer": "Live Chrome browser observations",
+    "desktop_navigation": {
+      "sequence": [
+        "/",
+        "/tools",
+        "/tools/invoice-generator",
+        "/tools/quote-generator",
+        "/blog"
+      ],
+      "result": "passed"
+    },
+    "downloads": {
+      "invoice_download_count": 2,
+      "quote_download_count": 2,
+      "success_messages_observed": true,
+      "result": "passed"
+    },
+    "mobile_viewport": {
+      "width": 320,
+      "height": 740,
+      "mode": "simulated browser viewport",
+      "checks": [
+        {
+          "path": "/tools/quote-generator",
+          "width": 320,
+          "scroll_width": 320,
+          "horizontal_overflow": false
+        },
+        {
+          "path": "/tools/invoice-generator",
+          "width": 320,
+          "scroll_width": 320,
+          "horizontal_overflow": false
+        },
+        {
+          "path": "/blog",
+          "width": 320,
+          "scroll_width": 320,
+          "horizontal_overflow": false
+        }
+      ],
+      "result": "passed"
+    },
+    "keyboard": {
+      "action": "Added a second quote item, then removed it using Enter",
+      "result": "passed"
+    },
+    "final_homepage_readback": {
+      "path": "/",
+      "heading": "Your books. On your Mac.",
+      "viewport_width": 2308,
+      "scroll_width": 2293,
+      "horizontal_overflow": false,
+      "console_warnings": 0,
+      "console_errors": 0
+    }
+  },
+  "sites_readback": {
+    "observer": "Native Sites project readback",
+    "project_id": "appgprj_6a93f33631748191b7c064c033f72b53",
+    "status": "active",
+    "access_mode": "public",
+    "latest_version_number": 12,
+    "current_live_url": "https://tammy.tax",
+    "changes_performed": false
+  },
+  "limitations": [
+    "Physical touch was not tested.",
+    "The operating-system print dialog was not tested.",
+    "Mobile checks used a simulated 320 by 740 browser viewport.",
+    "Canonical migration, tammy.tax routing changes, CI credentials and runner registration were outside this validation."
+  ]
+}

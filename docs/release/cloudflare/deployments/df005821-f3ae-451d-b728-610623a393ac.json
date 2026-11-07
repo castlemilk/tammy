@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "target": "cloudflare",
+  "worker_name": "tammy-site-direct",
+  "github": {
+    "repository": "castlemilk/tammy",
+    "commit_sha": "56bd4ef4091a7df58e004b7ddb643e6f4c58cd7b"
+  },
+  "source_sha256": "62eadbbe654941ef295e65c0dea125e9d95b91efff2795bebc098e89e243f537",
+  "build_sha256": "45be0ac119deaee6b62a68c485135b174095c3426d8e1fa807cc1576959c961a",
+  "account_id": "2132ccf47ceb5fff234c34d85490470a",
+  "wrangler": "4.92.0",
+  "status": "published",
+  "live_verification": "pending",
+  "version_id": "df005821-f3ae-451d-b728-610623a393ac",
+  "url": "https://tammy-site-direct.ben-ebsworth.workers.dev/"
+}

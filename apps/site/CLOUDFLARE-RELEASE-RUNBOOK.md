@@ -6,23 +6,23 @@ The direct target is `tammy-site-direct` on the selected account's existing `wor
 
 ## Current evidence and blockers
 
-Observed 7 November 2026; refresh before claiming readiness:
+Observed 7 November 2026 (Australia/Melbourne, AEDT); refresh before a later release:
 
 | Check | Observation |
 | --- | --- |
-| Verified target | Gamma account `2132ccf47ceb5fff234c34d85490470a`; account subdomain `ben-ebsworth.workers.dev`; no Tammy project found in the reviewed account |
-| Approved local OAuth | User approved `account:read`, `workers_scripts:write` and Wrangler's automatically added `offline_access`; browser consent showed Account Read, Workers Scripts Write and Background Access on the intended account |
-| First sign-in attempt | Consent submitted; CLI timed out after 120 seconds and the localhost callback refused the connection. No usable session confirmed |
-| Same-scope retry | Wrangler rejected mismatched OAuth state and exited 1. No usable session confirmed |
-| Authentication handoff | Chrome focus moved outside this task; further authentication/native input stopped. Fresh normal sign-in remains pending |
-| GitHub deployment configuration | Repository secrets, variables and environments were empty; CI credential setup remains unapproved |
-| Tammy Actions runners | Zero registered runners; site job queued; registration remains unapproved |
-| Validated build candidate | `56bd4ef4091a7df58e004b7ddb643e6f4c58cd7b` |
-| Direct Worker publication | Not attempted; no deployment record, version or live Worker URL exists from these attempts |
+| Verified target | Gamma account `2132ccf47ceb5fff234c34d85490470a`; account subdomain `ben-ebsworth.workers.dev`; pre-deployment lookup returned Cloudflare 10007, Worker does not exist, for the fresh target |
+| Approved local OAuth | User approved `account:read`, `workers_scripts:write` and Wrangler's automatically added `offline_access`; consent showed Account Read, Workers Scripts Write and Background Access on the intended account |
+| Local authentication | Pinned Wrangler `whoami` exited 0 and confirmed the intended account with exactly those scopes; no scope expansion |
+| Earlier authentication attempts | First attempt timed out after 120 seconds with refused localhost callback; same-scope retry rejected mismatched OAuth state (exit 1). Native input stopped when Chrome focus left the task; subsequent normal authorization succeeded |
+| GitHub deployment configuration | Last check found empty repository secrets, variables and environments; CI credential setup remains unapproved |
+| Tammy Actions runners | Last check found zero registered runners and a queued site job; registration remains unapproved |
+| Built and published source | `56bd4ef4091a7df58e004b7ddb643e6f4c58cd7b` |
+| Direct Worker publication | Pinned deployment wrapper exited 0; version `df005821-f3ae-451d-b728-610623a393ac` at [tammy-site-direct.ben-ebsworth.workers.dev](https://tammy-site-direct.ben-ebsworth.workers.dev/) |
+| Live acceptance | HTTP 18/18, four fresh invoice/quote PDF downloads, desktop navigation and simulated 320px mobile checks passed. Physical touch and OS print dialog untested; original receipt retains its issuance-time `live_verification: pending` |
 
-Local OAuth has not completed successfully, so publication remains blocked. Missing CI credentials and the unregistered Tammy Cuttlefish pool independently block CI deployment. The approved local sign-in does not authorize either CI setup step. Do not turn browser consent, a queued job, successful build or successful dry run into an authenticated session or deployment claim.
+Local authentication, direct publication and the recorded live checks succeeded. Missing CI credentials and the unregistered Tammy Cuttlefish pool still independently block CI deployment. The approved local sign-in does not authorize either CI setup step. Publication is distinct from live acceptance and CI qualification.
 
-The deploy wrapper remains noninteractive and does not start login. The normal local Wrangler OAuth flow is explicitly approved for the account/scopes above; its secure completion is the remaining handoff. Do not extract or manually transfer credentials, mint API tokens, create accounts, expand scopes, register runners or enable spending as a workaround. Preserve the validated candidate and its provenance. A later documentation/evidence commit has its own SHA and does not change which source produced the existing build.
+The deploy wrapper remains noninteractive and does not start login. Reuse the authorized local session while valid. Do not extract or manually transfer credentials, mint API tokens, create accounts, expand scopes, register runners or enable spending as a workaround. Preserve the published candidate and its provenance. A later documentation/evidence commit has its own SHA and does not change which source produced the deployed build.
 
 ## Target contract
 
@@ -84,9 +84,9 @@ Before first deployment or enabling CI credentials, verify the intended Cloudfla
 
 Provide the verified `CLOUDFLARE_ACCOUNT_ID` to the deployment process through the approved execution environment. Locally, Wrangler can use an authorized local session or `CLOUDFLARE_API_TOKEN`; GitHub Actions requires the token. Keep normal session handling inside Wrangler. Do not copy credentials into command arguments, hand-managed files, output, provenance or artifacts. The wrapper is noninteractive and does not start login. CI credential configuration and Cuttlefish registration remain separate, unapproved access steps.
 
-### Approved local sign-in handoff
+### Approved local sign-in procedure
 
-Resume through a fresh normal Wrangler sign-in in a task-owned terminal/browser context. From the validated candidate root, using its installed pinned Wrangler:
+The recorded local authorization is now successful. If that session later needs reauthorization within the approved account/scopes, use a fresh normal Wrangler sign-in in a task-owned terminal/browser context. From the validated candidate root, using its installed pinned Wrangler:
 
 ```sh
 pnpm --dir apps/site exec wrangler login --scopes account:read workers_scripts:write
@@ -94,7 +94,7 @@ pnpm --dir apps/site exec wrangler login --scopes account:read workers_scripts:w
 
 Wrangler adds `offline_access`; the approved consent is exactly Account Read, Workers Scripts Write and Background Access on the verified Gamma account. Use the consent page opened by the current live CLI process. Keep the normal localhost callback and PKCE/state checks intact. Do not reuse an expired callback, alter a state value, manually exchange a code, or bypass a mismatch. Authentication URLs, codes, state and credentials do not belong in release documentation or artifacts.
 
-Wait for that CLI process to report success, then use normal `wrangler whoami` to confirm the authenticated account and refresh target ownership checks before publication. A consent click alone is insufficient. If the process times out, rejects state, or browser focus leaves the task, record the failed/pending result and stop native input; hand off a fresh normal sign-in in a controlled context. The two recorded attempts above remain failed, and no deployment has occurred.
+Wait for that CLI process to report success, then use normal `wrangler whoami` to confirm the authenticated account and refresh target ownership checks before publication. A consent click alone is insufficient. If the process times out, rejects state, or browser focus leaves the task, record the failed/pending result and stop native input; hand off a fresh normal sign-in in a controlled context. Earlier failed attempts remain historical failures; the subsequent successful account check and deployment receipt establish the current release status.
 
 With a successful authorized session, account/name ownership verified and the exact candidate unchanged:
 
@@ -142,7 +142,49 @@ The ordinary Workers Custom Domain route requires an active Cloudflare zone in t
 
 Partial/CNAME zone setup is a Business/Enterprise option; do not introduce a paid plan for this release. Pointing a Vercel CNAME directly at the workers.dev hostname is not the supported Custom Domain shortcut. Keep tammy.tax and source canonicals unchanged until the account-owned zone, complete DNS migration, Worker domain attachment, TLS/routing and canonical metadata changes are separately reviewed and authorized. Then use the live acceptance checks in the [Sites canonical migration section](SITE-RELEASE-RUNBOOK.md#separate-reviewed-gate-canonical-migration-to-tammytax), applied to the direct deployment. [Partial-zone setup requirements](https://developers.cloudflare.com/dns/zone-setups/partial-setup/).
 
+## Published release: 7 November 2026 (AEDT)
+
+The [original deployment receipt](../../docs/release/cloudflare/deployments/df005821-f3ae-451d-b728-610623a393ac.json) is retained unchanged. Remote readback confirmed deployment creation on **7 November 2026 at 14:45:33 AEDT** (Cloudflare API timestamp `2026-11-07T03:45:33.521169Z`). The receipt's `live_verification: pending` remains its original issuance state; subsequent live checks are recorded separately below.
+
+| Evidence | Recorded value |
+| --- | --- |
+| Publication | Pinned Wrangler `4.92.0` deployment wrapper exited 0; receipt status `published` |
+| Worker / account | `tammy-site-direct` / `2132ccf47ceb5fff234c34d85490470a` |
+| Prior target | Cloudflare 10007: Worker does not exist; fresh deployment, no prior direct version |
+| Published source commit | `56bd4ef4091a7df58e004b7ddb643e6f4c58cd7b` |
+| Attested source parent | `6601f360b60ee018a4bca65007c982dabe7de912` |
+| Source SHA-256 | `62eadbbe654941ef295e65c0dea125e9d95b91efff2795bebc098e89e243f537` |
+| Build SHA-256 | `45be0ac119deaee6b62a68c485135b174095c3426d8e1fa807cc1576959c961a` |
+| Source archive SHA-256 | `1b368453d964b93ee0c14ff57e9372204ba914e190dcd48ff1e92fadc378fbd8` |
+| Deployment ID | `e608f482-0393-4166-bd41-ec2101135c1f` |
+| Active version / traffic | `df005821-f3ae-451d-b728-610623a393ac` / 100%, confirmed by remote readback |
+| Remote deployment message | `GitHub 56bd4ef4091a7df58e004b7ddb643e6f4c58cd7b` |
+| Published URL | <https://tammy-site-direct.ben-ebsworth.workers.dev/> |
+| HTTP / assets / missing route checks | 18/18 passed at 14:47:02 AEDT: seven pages, genuine 404, seven assets with matching build hashes/MIME types, and sitemap/robots/RSS |
+| HTTP evidence | [Public HTTP acceptance JSON](../../docs/release/cloudflare/verification/df005821-f3ae-451d-b728-610623a393ac-http.json); SHA-256 `8df8903cd8a881f5647fadf0f39cb209fa4ef8ece27401255e4cf274598b0821` |
+| Canonical review | All seven pages and sitemap/robots/RSS retain the prior Sites origin; workers.dev canonical mismatch remains expected and separate from HTTP health |
+| Repeated invoice/quote PDF downloads and browser checks | Four real downloads passed independent text/totals and rendered-layout/glyph review; each is one clean A4 page. Changed references/quantities/totals and distinct hashes establish fresh results. Desktop homepage → tools → invoice → quote → blog navigation and download success messages passed |
+| Browser/PDF evidence | [Sanitized verification metadata](../../docs/release/cloudflare/verification/df005821-f3ae-451d-b728-610623a393ac-browser-pdf.json); SHA-256 `68e41a0f35ae589fef5188c31ff7e621491d43e177405c3ec7d0f00ef7e74cf3`. PDF review recorded at 14:48:56 AEDT; original review JSON SHA-256 `37352ea4251b70d646a1c9c2be3530b09e0cd4343265f0ffadf2b8fed2c0ac3d` |
+| Mobile / keyboard / physical-touch checks | Simulated 320×740 quote, invoice and blog: viewport and scroll width both 320, no horizontal overflow. Added a second quote item, then removed it using Enter. Physical touch and OS print dialog untested |
+| Sites / tammy.tax readback | Native readback confirmed exact project `appgprj_6a93f33631748191b7c064c033f72b53`, active/public, latest version 12, live URL `https://tammy.tax`; no Sites/DNS/canonical changes performed |
+| CI deployment / Cuttlefish qualification | Incomplete; CI credentials and runner registration remain unapproved |
+
+The PDF cases used synthetic data only:
+
+| Document | Quantity × unit price | GST | Total AUD | Bytes |
+| --- | --- | --- | --- | --- |
+| `LIVE-CF-001` | 2 × 100 | 20 | 220 | 35,547 |
+| `LIVE-CF-002` | 3 × 100 | 30 | 330 | 35,596 |
+| `LIVE-CF-QUOTE-001` | 3 × 125 | 0 | 375 | 35,790 |
+| `LIVE-CF-QUOTE-002` | 4 × 125 | 0 | 500 | 35,573 |
+
+Exact PDF hashes and review observations are retained in the sanitized metadata; PDF binaries and local filesystem paths are excluded.
+
+This release records the unchanged `56bd4ef4…` build. The documentation checkout was `f609d469e82c5af1185ae6fb6f2ef2b12a4a7cfa` before this receipt update; that revision and subsequent documentation/evidence commits are not deployed source. Keep preparation manifests and the original receipt unchanged when recording follow-up evidence.
+
 ## Release checklist and record
+
+Reusable template for the next release; the completed publication and verification record is above.
 
 - [ ] Clean final evidence commit selected; descriptor hash and verification retained.
 - [ ] Direct source export, full workspace install, required checks, build, provenance verification and dry run passed.
