@@ -1,0 +1,247 @@
+{
+  "baseline": "f580456f25321c6ed0a73c078fb8ce771cb53078",
+  "scope": "Local production build of the follow-up; final candidate and actual publication recorded separately.",
+  "observed_live_issue": "First business-name input could be lost before hydration; validation then requested the missing name. No malformed PDF was produced.",
+  "readiness": {
+    "checks": [
+      {
+        "type": "Invoice",
+        "blockedBeforeHydration": true,
+        "firstEntryRetained": true
+      },
+      {
+        "type": "Quote",
+        "blockedBeforeHydration": true,
+        "firstEntryRetained": true
+      },
+      {
+        "type": "Quote",
+        "javascriptDisabled": true,
+        "explanationVisible": true,
+        "controlsDisabled": true
+      }
+    ],
+    "scope": "Real production browser with client module held until native disabled state verified, then released. No artificial app state mutation."
+  },
+  "pdfs": {
+    "previews": [
+      {
+        "type": "Invoice",
+        "width": 1440,
+        "font": "12px",
+        "client": 456,
+        "scroll": 456,
+        "page": 1425,
+        "viewport": 1425,
+        "tabindex": 0,
+        "hint": "none",
+        "headers": ["Description", "Qty", "Unit ex GST", "GST", "Total"],
+        "cells": ["Synthetic design review - not for payment", "2", "$125.00", "$25.00", "$275.00"]
+      },
+      {
+        "type": "Invoice",
+        "width": 390,
+        "font": "12px",
+        "client": 263,
+        "scroll": 440,
+        "page": 375,
+        "viewport": 375,
+        "tabindex": 0,
+        "hint": "block",
+        "headers": ["Description", "Qty", "Unit ex GST", "GST", "Total"],
+        "cells": ["Synthetic design review - not for payment", "2", "$125.00", "$25.00", "$275.00"],
+        "keyboardScroll": 6
+      },
+      {
+        "type": "Invoice",
+        "width": 320,
+        "font": "12px",
+        "client": 193,
+        "scroll": 440,
+        "page": 305,
+        "viewport": 305,
+        "tabindex": 0,
+        "hint": "block",
+        "headers": ["Description", "Qty", "Unit ex GST", "GST", "Total"],
+        "cells": ["Synthetic design review - not for payment", "2", "$125.00", "$25.00", "$275.00"],
+        "keyboardScroll": 7
+      },
+      {
+        "type": "Quote",
+        "width": 1440,
+        "font": "12px",
+        "client": 484,
+        "scroll": 484,
+        "page": 1425,
+        "viewport": 1425,
+        "tabindex": 0,
+        "hint": "none",
+        "headers": ["Description", "Qty", "Unit ex GST", "GST", "Total"],
+        "cells": [
+          "Synthetic design review - not for acceptance",
+          "2",
+          "$125.00",
+          "$25.00",
+          "$275.00"
+        ]
+      },
+      {
+        "type": "Quote",
+        "width": 390,
+        "font": "12px",
+        "client": 315,
+        "scroll": 440,
+        "page": 375,
+        "viewport": 375,
+        "tabindex": 0,
+        "hint": "block",
+        "headers": ["Description", "Qty", "Unit ex GST", "GST", "Total"],
+        "cells": [
+          "Synthetic design review - not for acceptance",
+          "2",
+          "$125.00",
+          "$25.00",
+          "$275.00"
+        ],
+        "keyboardScroll": 3
+      },
+      {
+        "type": "Quote",
+        "width": 320,
+        "font": "12px",
+        "client": 245,
+        "scroll": 440,
+        "page": 305,
+        "viewport": 305,
+        "tabindex": 0,
+        "hint": "block",
+        "headers": ["Description", "Qty", "Unit ex GST", "GST", "Total"],
+        "cells": [
+          "Synthetic design review - not for acceptance",
+          "2",
+          "$125.00",
+          "$25.00",
+          "$275.00"
+        ],
+        "keyboardScroll": 6
+      }
+    ],
+    "downloads": [
+      {
+        "type": "invoice",
+        "name": "invoice-REVIEW-INV-001.pdf",
+        "error": null
+      },
+      {
+        "type": "invoice",
+        "name": "invoice-REVIEW-INV-002.pdf",
+        "error": null
+      },
+      {
+        "type": "quote",
+        "name": "quote-REVIEW-QUO-001.pdf",
+        "error": null
+      },
+      {
+        "type": "quote",
+        "name": "quote-REVIEW-QUO-002.pdf",
+        "error": null
+      }
+    ],
+    "errors": [],
+    "pendingGeometry": {
+      "before": {
+        "x": 16,
+        "y": 2153.234375,
+        "width": 172.109375,
+        "height": 44
+      },
+      "after": {
+        "x": 16,
+        "y": 412.234375,
+        "width": 172.109375,
+        "height": 44
+      },
+      "disabled": true,
+      "busy": "true"
+    },
+    "scroll": {
+      "left": 8,
+      "client": 315,
+      "width": 440,
+      "focus": true
+    },
+    "narrow": {
+      "client": 320,
+      "width": 305
+    },
+    "successFeedback": "forest status",
+    "errorFeedback": "alert"
+  },
+  "print": {
+    "result": {
+      "tableFont": "10px",
+      "minimumWidth": "0px",
+      "overflow": "visible",
+      "hint": "none"
+    },
+    "scope": "Emulated print CSS, not an OS print dialog or physical print"
+  },
+  "pdf_verification": [
+    {
+      "name": "invoice-REVIEW-INV-001.pdf",
+      "sha256": "36761a0c9e48ca13268f08a9c830d7af04d036edb936c769e4c4aa2610b0b87e",
+      "bytes": 35350,
+      "pages": 1,
+      "same_as_baseline": true
+    },
+    {
+      "name": "invoice-REVIEW-INV-002.pdf",
+      "sha256": "3f13812d51ffc13ebb4088ec6c70dec92306115ec9c3fffc760cbe2b1c696395",
+      "bytes": 35560,
+      "pages": 1,
+      "same_as_baseline": true
+    },
+    {
+      "name": "quote-REVIEW-QUO-001.pdf",
+      "sha256": "8344cdbe92c39456b5809637333273682fa2058049b62510ad46c728ef4c9ff3",
+      "bytes": 36255,
+      "pages": 1,
+      "same_as_baseline": true
+    },
+    {
+      "name": "quote-REVIEW-QUO-002.pdf",
+      "sha256": "07e6d5cc8b38e860d810138567436ecca15e41a46d8cdb1a202957c1acc8164a",
+      "bytes": 36470,
+      "pages": 1,
+      "same_as_baseline": true
+    }
+  ],
+  "captures": [
+    {
+      "path": "docs/design/assets/evidence/document-readiness/invoice-loading-390.webp",
+      "sha256": "7286bc97a8fd8e6dcbf826d1e2104d0a606570a7c45765ff408074c1287b4b0f",
+      "original_sha256": "a6f4c5c64527b629a1a24a569e8c5c5fe72f37cc3836477647ce1ce262d5a634"
+    },
+    {
+      "path": "docs/design/assets/evidence/document-readiness/quote-loading-390.webp",
+      "sha256": "7cd1c71c7e90da87eac2b902582cb7dbdc227dee1479c893d17b4adbbe776089",
+      "original_sha256": "aa285d8fcd938ca13a89a3450c870d54e68661e26ebdcce4e89064d5728cfa59"
+    },
+    {
+      "path": "docs/design/assets/evidence/document-readiness/invoice-ready-390.webp",
+      "sha256": "287772eac09b138ac1028d2b6330e7af8b303acbf72b9f5ce66eefd3462f806d",
+      "original_sha256": "f02d9a9c1b5a22190363c268601683e1e9e934ad74f0bade002010098a834ba5"
+    },
+    {
+      "path": "docs/design/assets/evidence/document-readiness/quote-ready-390.webp",
+      "sha256": "bf8092f5ccbae5143d3bab22ab056197cb58200a0917375ad7079155d874a2ab",
+      "original_sha256": "c1a9aab0781bba3744066690fe6fa89b7b554ba79503db67b650721ac704aece"
+    },
+    {
+      "path": "docs/design/assets/evidence/document-readiness/quote-no-javascript-390.webp",
+      "sha256": "2b34cbec04b6cc503ec0b18be613aace1b2b28f94f3fbac2f7b53f12a94df654",
+      "original_sha256": "4c2b96c6abdc893d2eb1829f8053a49f3d18ff65f44c15763db1d122f2855701"
+    }
+  ]
+}

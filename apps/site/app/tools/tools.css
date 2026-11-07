@@ -181,6 +181,7 @@
 .tools-paper-parties strong { display: block; margin-top: 6px; font-size: 13px; }
 .tools-paper-parties p, .tools-paper-parties small { white-space: pre-wrap; color: var(--t-muted); font-size: 11px; margin: 4px 0; }
 .tools-invoice-paper, .tools-quote-paper { container-type: inline-size; }
+.tools-document-fields { margin: 0; min-inline-size: 0; }
 .tools-paper-table-scroll { max-width: 100%; overflow-x: auto; }
 .tools-paper-table-scroll:focus-visible { outline: 2px solid var(--tammy-forest); outline-offset: 3px; }
 .tools-paper-scroll-hint { display: none; margin: 0 0 12px; color: var(--t-muted); font-size: 12px; }

@@ -9,11 +9,13 @@ import { serializeQuoteDraft, parseQuoteDraft } from "../lib/tools/local-quote-d
 import type { QuoteInput } from "../lib/tools/quote";
 import { formatAud } from "@tammy/invoices/model";
 import { compileQuote, type QuoteLineInput } from "../lib/tools/quote";
+import { useBrowserReady } from "./use-browser-ready";
 
 const emptyLine = (): QuoteLineInput => ({
   description: "", quantity: "1", unitPrice: "0.00", treatment: "taxable",
 });
 export function QuoteGenerator() {
+  const ready = useBrowserReady();
   const [sellerName, setSellerName] = useState("");
   const [sellerAbn, setSellerAbn] = useState("");
   const [sellerAddress, setSellerAddress] = useState("");
@@ -120,11 +122,12 @@ export function QuoteGenerator() {
   }
 
   return <div className="tools-quote-layout">
-    <section className="tools-quote-form" aria-labelledby="quote-editor-heading">
+    <fieldset className="tools-quote-form tools-document-fields" disabled={!ready} aria-busy={!ready} aria-labelledby="quote-editor-heading">
       <div className="tools-form-heading">
         <div><h2 id="quote-editor-heading">Prepare an estimate.</h2></div>
-        <span className="tools-local-indicator">Browser only</span>
+        <span className="tools-local-indicator">{ready ? "Browser only" : "Preparing form…"}</span>
       </div>
+      <noscript><p className="tools-help">Enable JavaScript to prepare and export a quote in your browser.</p></noscript>
       <fieldset className="tools-form-section"><legend>From</legend>
         <div className="tools-form-two">
           <label className="tools-field" htmlFor="quote-seller-name"><span>Business name *</span><Input id="quote-seller-name" value={sellerName} maxLength={256} onChange={(event) => setSellerName(event.target.value)} /></label>
@@ -171,7 +174,7 @@ export function QuoteGenerator() {
         {message && (messageKind === "error" ? <p className="tools-error" role="alert">{message}</p> : <output className="tools-success">{message}</output>)}
         <p className="tools-help">The PDF and optional JSON draft are created locally. The JSON draft contains the customer details you entered and is not encrypted; keep it in a private location. No account, upload, invoicing or delivery occurs.</p>
       </div>
-    </section>
+    </fieldset>
     <aside className="tools-quote-preview" aria-label="Live quote preview">
       <div className="tools-preview-toolbar"><span>Live estimate preview</span><span>Not an invoice</span></div>
       <article className="tools-quote-paper">

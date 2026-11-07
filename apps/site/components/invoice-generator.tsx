@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import type { InvoiceDraftData, InvoiceTaxTreatment } from "@tammy/invoices/model";
 import { calculateInvoice, formatAud, validateAbn, validateInvoiceDraft, validateInvoiceForIssue } from "@tammy/invoices/model";
 import { parseAudCents, parseQuantityMilli } from "../lib/tools/calculations";
+import { useBrowserReady } from "./use-browser-ready";
 
 type EditableLine = {
   id: number;
@@ -32,6 +33,7 @@ function filename(number: string): string {
 }
 
 export function InvoiceGenerator() {
+  const ready = useBrowserReady();
   const [sellerName, setSellerName] = useState("");
   const [sellerAbn, setSellerAbn] = useState("");
   const [sellerAddress, setSellerAddress] = useState("");
@@ -122,8 +124,9 @@ export function InvoiceGenerator() {
   }
 
   return <div className="tools-invoice-grid">
-    <div className="tools-invoice-form">
-      <div className="tools-form-heading"><div><h2>Invoice details</h2></div><span className="tools-local-indicator">On-device only</span></div>
+    <fieldset className="tools-invoice-form tools-document-fields" disabled={!ready} aria-busy={!ready} aria-labelledby="invoice-editor-heading">
+      <div className="tools-form-heading"><div><h2 id="invoice-editor-heading">Invoice details</h2></div><span className="tools-local-indicator">{ready ? "On-device only" : "Preparing form…"}</span></div>
+      <noscript><p className="tools-help">Enable JavaScript to prepare and download an invoice in your browser.</p></noscript>
       <fieldset className="tools-form-section"><legend>From</legend>
         <div className="tools-form-two">
           <label className="tools-field"><span>Business name *</span><input value={sellerName} maxLength={256} onChange={e => setSellerName(e.target.value)} placeholder="Your business name" /></label>
@@ -173,7 +176,7 @@ export function InvoiceGenerator() {
         {pdfMessage && <output className={pdfStatus === "ready" ? "tools-success" : "tools-error"}>{pdfMessage}</output>}
         <p className="tools-help">No login, no upload, no saved data. A PDF is created only after you supply valid invoice details. You are responsible for sending it to the customer.</p>
       </div>
-    </div>
+    </fieldset>
 
     <aside className="tools-invoice-preview" aria-label="Live invoice preview">
       <div className="tools-preview-toolbar"><span>Live document preview</span><span>Australian dollars</span></div>

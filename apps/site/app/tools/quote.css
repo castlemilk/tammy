@@ -1,6 +1,6 @@
 /* A distinct printed-estimate surface that reuses Tammy's original tools palette. */
 .tools-quote-layout { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,.92fr); align-items:start; gap:clamp(28px,4vw,60px); margin:50px 0 100px; }
-.tools-quote-form { min-width:0; }
+.tools-quote-form { min-width:0; padding:0; border:0; }
 .tools-quote-preview { position:sticky; top:25px; min-width:0; }
 .tools-quote-line { padding:20px 0; border-bottom:1px solid var(--t-line); }
 .tools-quote-line:first-of-type { padding-top:5px; }
