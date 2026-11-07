@@ -58,6 +58,8 @@ The cash-flow planner protects entered work before loading sample figures. An ed
 
 Cash-forecast summary figures stack below the `sm` breakpoint rather than compressing two amounts into narrow columns. The existing three-column summary returns at wider sizes; calculation and weekly-table contracts remain unchanged. Test actual rendered amounts, not only page overflow.
 
+Forecast movement fields also stack below `sm`, giving the native date and Direction controls enough space for the complete selected values, including `Receipt (+)` and `Payment (−)`. At wider sizes those two controls share a row; description and amount retain the full row. Preserve native selection, keyboard order, readable type and 44px targets. Inspect both selected labels and the full date at 320px and 390px; absence of page overflow alone does not establish that their contents fit.
+
 A visitor to `/tools` should see search, task filters and real choices in the first desktop viewport. The directory’s compound selectors deliberately outrank generic guide-card and hero rules independent of stylesheet load order. Search precedes filters in reading and keyboard order. Keep all twelve tools, their summaries and their specific limitations.
 
 The tools shell is at most 1248px with 32px gutters. The directory uses three columns, moves controls into one column and results into two below 1100px, then one result column below 760px. These are public layout rules, not replacements for the desktop's 1120px workspace and navigation breakpoints. Warm material changes and fine rules provide most depth; the shared Card primitive retains its small inherited shadow, while calculator work surfaces explicitly remove it. Invoice-paper shadows and page geometry remain local.
