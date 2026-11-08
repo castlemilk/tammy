@@ -71,7 +71,7 @@ function createRun({
         return { stdout: `${SUBJECT_REVISION}\n` };
       }
       if (args[0] === "cat-file") return { stdout: "" };
-      if (args[0] === "rev-parse" && args[2] === `${SUBJECT_REVISION}^`) {
+      if (args[0] === "show" && args.at(-1) === SUBJECT_REVISION) {
         return { stdout: `${sourceParent}\n` };
       }
       if (args[0] === "diff") {
@@ -425,4 +425,349 @@ test("rejects an internally consistent retained subset of the complete descripto
     await readFile(path.join(root, "compliance/contracts/descriptors.pb")),
     DESCRIPTOR_BYTES,
   );
+});
+
+// Real Git objects exercise ancestry, parent order, tree identity and repository
+// configuration. Only Buf is a fixture executable; existing checks still compare
+// the retained bytes with the output of a separate build process.
+async function mergeHistory(context, { retainedBytes = DESCRIPTOR_BYTES } = {}) {
+  const directory = await mkdtemp(path.join(os.tmpdir(), "tammy-merge-evidence-"));
+  context.after(() => rm(directory, { force: true, recursive: true }));
+  const root = path.join(directory, "repository");
+  await mkdir(root);
+  const git = (args, input) =>
+    execFileSync("git", args, {
+      cwd: root,
+      encoding: "utf8",
+      input,
+      env: {
+        ...process.env,
+        GIT_CONFIG_NOSYSTEM: "1",
+        GIT_CONFIG_GLOBAL: os.devNull,
+        GIT_AUTHOR_NAME: "Synthetic descriptor test",
+        GIT_AUTHOR_EMAIL: "descriptor@example.invalid",
+        GIT_COMMITTER_NAME: "Synthetic descriptor test",
+        GIT_COMMITTER_EMAIL: "descriptor@example.invalid",
+      },
+    }).trim();
+  const commit = (tree, parents, message = "Synthetic commit") =>
+    git(["commit-tree", tree, ...parents.flatMap((parent) => ["-p", parent]), "-m", message]);
+  const tree = (revision) => git(["rev-parse", `${revision}^{tree}`]);
+  const blob = (contents) => git(["hash-object", "-w", "--stdin"], contents);
+  const treeFrom = (revision, entries) => {
+    git(["read-tree", revision]);
+    for (const [file, value] of entries) {
+      if (value === null) git(["update-index", "--force-remove", file]);
+      else
+        git([
+          "update-index",
+          "--add",
+          "--cacheinfo",
+          `${value.mode || "100644"},${value.object},${file}`,
+        ]);
+    }
+    return git(["write-tree"]);
+  };
+  const evidenceTree = (sourceRevision, entries = []) =>
+    treeFrom(sourceRevision, [
+      ["compliance/contracts/descriptors.pb", { object: blob(retainedBytes) }],
+      [
+        "compliance/contracts/descriptor-manifest.json",
+        {
+          object: blob(
+            `${JSON.stringify(manifestFor(retainedBytes, { gitRevision: sourceRevision }), null, 2)}\n`,
+          ),
+        },
+      ],
+      ...entries,
+    ]);
+  const checkout = (revision) => git(["checkout", "--quiet", "--detach", "--force", revision]);
+  git(["init", "--quiet", "--template="]);
+  git(["config", "core.autocrlf", "false"]);
+  git(["config", "core.filemode", "true"]);
+  await writeFile(path.join(root, ".gitignore"), ".tmp/\n");
+  await writeFile(path.join(root, "source.txt"), "base\n");
+  await writeRetainedEvidence(root);
+  git(["add", "."]);
+  const baseRevision = commit(git(["write-tree"]), [], "Synthetic base");
+  const sourceRevision = commit(
+    treeFrom(baseRevision, [["source.txt", { object: blob("reviewed source\n") }]]),
+    [baseRevision],
+    "Synthetic source",
+  );
+  const evidenceRevision = commit(
+    evidenceTree(sourceRevision),
+    [sourceRevision],
+    "Synthetic evidence",
+  );
+  const mergeRevision = commit(
+    tree(evidenceRevision),
+    [baseRevision, evidenceRevision],
+    "Synthetic merge",
+  );
+  checkout(mergeRevision);
+  const bufEntry = path.join(directory, "fixture-buf.mjs");
+  await writeFile(
+    bufEntry,
+    `import { writeFile } from "node:fs/promises";
+if (process.argv[2] === "--version") process.stdout.write("1.72.0\\n");
+else if (process.argv[2] === "build") await writeFile(process.argv.at(-1), Buffer.from("${DESCRIPTOR_BYTES.toString("base64")}", "base64"));
+else process.exitCode = 1;
+`,
+  );
+  const { verifyRetainedDescriptorEvidence } = await import("./verify-descriptor-evidence.mjs");
+  const verify = (options = {}) => verifyRetainedDescriptorEvidence({ root, bufEntry, ...options });
+  return {
+    baseRevision,
+    blob,
+    checkout,
+    commit,
+    evidenceRevision,
+    evidenceTree,
+    git,
+    mergeRevision,
+    root,
+    sourceRevision,
+    tree,
+    treeFrom,
+    verify,
+  };
+}
+
+test("accepts an unchanged-tree ordinary merge, its evidence head override and source precommit", async (context) => {
+  const fixture = await mergeHistory(context);
+  const { checkout, evidenceRevision, mergeRevision, root, sourceRevision, tree, verify } = fixture;
+  assert.equal(tree(mergeRevision), tree(evidenceRevision));
+  const before = await readFile(path.join(root, "compliance/contracts/descriptor-manifest.json"));
+  assert.equal((await verify()).gitRevision, sourceRevision);
+  assert.equal((await verify({ subjectRevision: evidenceRevision })).gitRevision, sourceRevision);
+  assert.deepEqual(
+    await readFile(path.join(root, "compliance/contracts/descriptor-manifest.json")),
+    before,
+  );
+  checkout(evidenceRevision);
+  assert.equal((await verify()).gitRevision, sourceRevision);
+  checkout(sourceRevision);
+  await writeRetainedEvidence(root, DESCRIPTOR_BYTES, { gitRevision: sourceRevision });
+  assert.equal((await verify()).gitRevision, sourceRevision);
+});
+
+test("rejects unrelated and stale merge bases even when the entire merge tree matches", async (context) => {
+  const fixture = await mergeHistory(context);
+  const { baseRevision, checkout, commit, evidenceRevision, tree, verify } = fixture;
+  for (const parents of [[], [baseRevision]]) {
+    const otherBase = commit(tree(baseRevision), parents, "Unreviewed base");
+    const merge = commit(tree(evidenceRevision), [otherBase, evidenceRevision]);
+    checkout(merge);
+    await assert.rejects(verify(), { message: "DESCRIPTOR_SOURCE_REVISION_MISMATCH" });
+  }
+});
+
+test("rejects changed merge trees including mode changes hidden by worktree configuration", async (context) => {
+  const fixture = await mergeHistory(context);
+  const { baseRevision, blob, checkout, commit, evidenceRevision, git, treeFrom, verify } = fixture;
+  const sourceBlob = git(["rev-parse", `${evidenceRevision}:source.txt`]);
+  for (const entry of [
+    { object: blob("unreviewed resolution\n") },
+    { mode: "100755", object: sourceBlob },
+  ]) {
+    const changedTree = treeFrom(evidenceRevision, [["source.txt", entry]]);
+    const merge = commit(changedTree, [baseRevision, evidenceRevision]);
+    checkout(merge);
+    git(["config", "core.filemode", "false"]);
+    assert.equal(git(["status", "--porcelain"]), "");
+    await assert.rejects(verify(), { message: "DESCRIPTOR_SOURCE_REVISION_MISMATCH" });
+  }
+});
+
+test("rejects reversed, octopus and nested merge ancestry", async (context) => {
+  const fixture = await mergeHistory(context);
+  const { baseRevision, checkout, commit, evidenceRevision, mergeRevision, tree, verify } = fixture;
+  const other = commit(tree(baseRevision), [], "Other root");
+  for (const parents of [
+    [evidenceRevision, baseRevision],
+    [baseRevision, evidenceRevision, other],
+    [baseRevision, mergeRevision],
+  ]) {
+    checkout(commit(tree(evidenceRevision), parents));
+    await assert.rejects(verify(), { message: "DESCRIPTOR_SOURCE_REVISION_MISMATCH" });
+  }
+});
+
+test("rejects evidence commits with a wrong source or multiple parents", async (context) => {
+  const fixture = await mergeHistory(context);
+  const { baseRevision, checkout, commit, evidenceRevision, sourceRevision, tree, verify } =
+    fixture;
+  for (const parents of [[baseRevision], [sourceRevision, baseRevision]]) {
+    const invalidEvidence = commit(tree(evidenceRevision), parents);
+    checkout(commit(tree(invalidEvidence), [baseRevision, invalidEvidence]));
+    await assert.rejects(verify(), { message: "DESCRIPTOR_SOURCE_REVISION_MISMATCH" });
+  }
+});
+
+test("rejects source edits in an evidence child and in its unchanged-tree merge", async (context) => {
+  const fixture = await mergeHistory(context);
+  const {
+    baseRevision,
+    blob,
+    checkout,
+    commit,
+    evidenceRevision,
+    sourceRevision,
+    tree,
+    treeFrom,
+    verify,
+  } = fixture;
+  const invalidEvidence = commit(
+    treeFrom(evidenceRevision, [["source.txt", { object: blob("unattested source\n") }]]),
+    [sourceRevision],
+  );
+  for (const revision of [
+    invalidEvidence,
+    commit(tree(invalidEvidence), [baseRevision, invalidEvidence]),
+  ]) {
+    checkout(revision);
+    await assert.rejects(verify(), { message: "DESCRIPTOR_SOURCE_REVISION_MISMATCH" });
+  }
+});
+
+test("rejects a different clean checkout when the subject is an otherwise valid merge", async (context) => {
+  const fixture = await mergeHistory(context);
+  const { blob, checkout, commit, evidenceRevision, git, mergeRevision, treeFrom, verify } =
+    fixture;
+  checkout(
+    commit(treeFrom(evidenceRevision, [["source.txt", { object: blob("different checkout\n") }]]), [
+      evidenceRevision,
+    ]),
+  );
+  assert.equal(git(["status", "--porcelain"]), "");
+  await assert.rejects(verify({ subjectRevision: mergeRevision }), {
+    message: "DESCRIPTOR_SOURCE_REVISION_MISMATCH",
+  });
+});
+
+test("requires clean retained files when verifying a merge", async (context) => {
+  const { root, sourceRevision, verify } = await mergeHistory(context);
+  await writeRetainedEvidence(root, STALE_BYTES, { gitRevision: sourceRevision });
+  await assert.rejects(verify(), { message: "DESCRIPTOR_EVIDENCE_DIRTY_TREE" });
+});
+
+test("still rejects stale descriptors after validating ordinary merge provenance", async (context) => {
+  const { verify } = await mergeHistory(context, { retainedBytes: STALE_BYTES });
+  await assert.rejects(verify(), { message: "DESCRIPTOR_RETAINED_BYTES_STALE" });
+});
+
+test("rejects a hidden gitlink change in the evidence commit", async (context) => {
+  const fixture = await mergeHistory(context);
+  const {
+    baseRevision,
+    checkout,
+    commit,
+    evidenceRevision,
+    evidenceTree,
+    git,
+    sourceRevision,
+    tree,
+    treeFrom,
+    verify,
+  } = fixture;
+  const source = commit(
+    treeFrom(sourceRevision, [["vendor", { mode: "160000", object: baseRevision }]]),
+    [baseRevision],
+  );
+  const evidence = commit(
+    evidenceTree(source, [["vendor", { mode: "160000", object: evidenceRevision }]]),
+    [source],
+  );
+  checkout(commit(tree(evidence), [baseRevision, evidence]));
+  git(["config", "diff.ignoreSubmodules", "all"]);
+  assert.equal(git(["diff", "--name-only", source, evidence, "--"]).includes("vendor"), false);
+  await assert.rejects(verify(), { message: "DESCRIPTOR_SOURCE_REVISION_MISMATCH" });
+});
+
+test("rejects a dirty checked-out submodule even when Git configuration ignores it", async (context) => {
+  const fixture = await mergeHistory(context);
+  const {
+    baseRevision,
+    checkout,
+    commit,
+    evidenceTree,
+    git,
+    root,
+    sourceRevision,
+    tree,
+    treeFrom,
+    verify,
+  } = fixture;
+  git(["clone", "--quiet", "--shared", "--no-checkout", ".", "vendor"]);
+  git(["-C", "vendor", "checkout", "--quiet", "--detach", sourceRevision]);
+  const source = commit(
+    treeFrom(sourceRevision, [["vendor", { mode: "160000", object: sourceRevision }]]),
+    [baseRevision],
+  );
+  const evidence = commit(evidenceTree(source), [source]);
+  checkout(commit(tree(evidence), [baseRevision, evidence]));
+  assert.equal(git(["status", "--porcelain"]), "");
+  await writeFile(path.join(root, "vendor/source.txt"), "dirty submodule source\n");
+  git(["config", "diff.ignoreSubmodules", "all"]);
+  assert.equal(git(["status", "--porcelain"]), "");
+  await assert.rejects(verify(), { message: "DESCRIPTOR_EVIDENCE_DIRTY_TREE" });
+});
+
+test("rejects a source path renamed into the retained descriptor path", async (context) => {
+  const fixture = await mergeHistory(context);
+  const {
+    baseRevision,
+    blob,
+    checkout,
+    commit,
+    evidenceTree,
+    git,
+    sourceRevision,
+    tree,
+    treeFrom,
+    verify,
+  } = fixture;
+  const source = commit(
+    treeFrom(sourceRevision, [
+      ["compliance/contracts/descriptors.pb", null],
+      ["old-descriptors.pb", { object: blob(DESCRIPTOR_BYTES) }],
+    ]),
+    [baseRevision],
+  );
+  const evidence = commit(evidenceTree(source, [["old-descriptors.pb", null]]), [source]);
+  checkout(commit(tree(evidence), [baseRevision, evidence]));
+  git(["config", "diff.renames", "true"]);
+  assert.equal(
+    git(["diff", "--name-only", source, evidence, "--"]).includes("old-descriptors.pb"),
+    false,
+  );
+  await assert.rejects(verify(), { message: "DESCRIPTOR_SOURCE_REVISION_MISMATCH" });
+});
+
+test("rejects an empty evidence-child diff", async (context) => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "tammy-empty-evidence-"));
+  context.after(() => rm(root, { force: true, recursive: true }));
+  await writeRetainedEvidence(root);
+  const { run: baseRun } = createRun();
+  const run = (command, args, options) =>
+    command === "git" && args[0] === "diff" ? { stdout: "" } : baseRun(command, args, options);
+  const { verifyRetainedDescriptorEvidence } = await import("./verify-descriptor-evidence.mjs");
+  await assert.rejects(
+    verifyRetainedDescriptorEvidence({ root, run, subjectRevision: SUBJECT_REVISION }),
+    {
+      message: "DESCRIPTOR_SOURCE_REVISION_MISMATCH",
+    },
+  );
+});
+
+test("preserves operational ancestry errors instead of treating them as non-ancestry", async (context) => {
+  const fixture = await mergeHistory(context);
+  const failure = Object.assign(new Error("synthetic Git failure"), { code: 128 });
+  const run = async (command, args) => {
+    assert.equal(command, "git");
+    if (args[0] === "merge-base") throw failure;
+    return { stdout: fixture.git(args) };
+  };
+  await assert.rejects(fixture.verify({ run }), (error) => error === failure);
 });
