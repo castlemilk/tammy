@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState, useSyncExternalStore, type KeyboardEvent } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore, type KeyboardEvent, type ReactNode } from "react";
 import { addCalendarDays, aud } from "../lib/tools/calculations";
 import {
   computeCashForecast, exampleForecast, forecastToCsv, parseForecastMoney,
@@ -29,6 +29,31 @@ function downloadCsv(content: string, name: string) {
   const link = document.createElement("a");
   link.href=url;link.download=name;document.body.appendChild(link);link.click();link.remove();
   window.setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+
+function ForecastTableViewport({children}:{children:ReactNode}) {
+  const regionRef=useRef<HTMLElement>(null);
+  const [overflow,setOverflow]=useState(false);
+  useEffect(()=>{
+    const region=regionRef.current;
+    if(!region) return;
+    const measure=()=>setOverflow(region.scrollWidth>region.clientWidth+1);
+    measure();
+    const observer=typeof ResizeObserver==="undefined"?null:new ResizeObserver(measure);
+    observer?.observe(region);
+    if(region.firstElementChild) observer?.observe(region.firstElementChild);
+    window.addEventListener("resize",measure);
+    return ()=>{observer?.disconnect();window.removeEventListener("resize",measure);};
+  },[children]);
+  return <div className="tools-forecast-weekly">
+    <p className="tools-forecast-scroll-hint" id="forecast-scroll-hint" hidden={!overflow}>Scroll sideways to see every cash column.</p>
+    {/* oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- The named overflow region needs focus for keyboard scrolling. */}
+    <section tabIndex={0} ref={regionRef} className="tools-forecast-table-scroll" aria-label="Weekly cash forecast"
+      aria-describedby={overflow?"forecast-scroll-hint":undefined}>
+      {children}
+    </section>
+    <p id="forecast-table-note" className="pt-3 text-xs leading-5 text-muted-foreground">Illustrative twelve-week cash forecast. Amounts in AUD, based on the entered expected dates.</p>
+  </div>;
 }
 const subscribeLocalDate = () => () => {};
 const serverLocalDate = () => "";
@@ -195,9 +220,9 @@ export function CashFlowForecast() {
               <div className="rounded-lg bg-secondary p-4"><span className="text-xs text-muted-foreground">Cash out</span><strong className="mt-2 block font-[family-name:var(--t-display)] text-2xl tabular-nums">{aud(result.totalPaymentsCents)}</strong></div>
             </div>
             {result.lowestClosingCents<0 && <output className="block rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950">One or more weeks closes below zero. Check the timing and feasibility of forecast receipts.</output>}
-            <div className="overflow-x-auto overscroll-x-contain">
-              <Table className="min-w-[640px]">
-                <TableCaption>Illustrative twelve-week cash forecast. Amounts in AUD, based on the entered expected dates.</TableCaption>
+            <ForecastTableViewport>
+              <Table className="min-w-[640px]" aria-describedby="forecast-table-note">
+                <TableCaption className="sr-only">Weekly cash forecast, AUD</TableCaption>
                 <TableHeader><TableRow><TableHead scope="col">Week beginning</TableHead><TableHead scope="col" className="text-right">Opening</TableHead><TableHead scope="col" className="text-right">In</TableHead><TableHead scope="col" className="text-right">Out</TableHead><TableHead scope="col" className="text-right">Closing</TableHead></TableRow></TableHeader>
                 <TableBody>{result.weeks.map(week=><TableRow key={week.week} className={week.closingCents<0?"bg-amber-50/75":undefined}>
                   <TableCell>{week.start}</TableCell><TableCell className="text-right">{aud(week.openingCents)}</TableCell>
@@ -205,7 +230,7 @@ export function CashFlowForecast() {
                   <TableCell className={"text-right font-bold "+(week.closingCents<0?"text-red-800":"")}>{aud(week.closingCents)}</TableCell>
                 </TableRow>)}</TableBody>
               </Table>
-            </div>
+            </ForecastTableViewport>
           </>
           : <GammaEmptyState title="Check the forecast inputs" description="A complete weekly calculation appears when the dates, amounts and descriptions are valid."/>
         }
