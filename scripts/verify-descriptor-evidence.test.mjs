@@ -435,6 +435,8 @@ async function mergeHistory(context, { retainedBytes = DESCRIPTOR_BYTES } = {}) 
   context.after(() => rm(directory, { force: true, recursive: true }));
   const root = path.join(directory, "repository");
   await mkdir(root);
+  const globalConfig = path.join(directory, "gitconfig");
+  await writeFile(globalConfig, "");
   const git = (args, input) =>
     execFileSync("git", args, {
       cwd: root,
@@ -443,7 +445,7 @@ async function mergeHistory(context, { retainedBytes = DESCRIPTOR_BYTES } = {}) 
       env: {
         ...process.env,
         GIT_CONFIG_NOSYSTEM: "1",
-        GIT_CONFIG_GLOBAL: os.devNull,
+        GIT_CONFIG_GLOBAL: globalConfig,
         GIT_AUTHOR_NAME: "Synthetic descriptor test",
         GIT_AUTHOR_EMAIL: "descriptor@example.invalid",
         GIT_COMMITTER_NAME: "Synthetic descriptor test",
