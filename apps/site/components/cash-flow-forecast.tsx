@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState, useSyncExternalStore, type KeyboardEvent, type ReactNode } from "react";
+import { Fragment, useEffect, useRef, useState, useSyncExternalStore, type KeyboardEvent, type ReactNode } from "react";
 import { addCalendarDays, aud } from "../lib/tools/calculations";
 import {
   computeCashForecast, exampleForecast, forecastToCsv, parseForecastMoney,
@@ -29,6 +29,13 @@ function downloadCsv(content: string, name: string) {
   const link = document.createElement("a");
   link.href=url;link.download=name;document.body.appendChild(link);link.click();link.remove();
   window.setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+
+function ForecastSummaryAmount({cents}:{cents:number}) {
+  const groups=aud(cents).split(",");
+  return <strong className="tools-forecast-summary-value mt-2 block font-[family-name:var(--t-display)] tabular-nums">
+    {groups.map((group,index)=><Fragment key={index+"-"+group}>{group}{index<groups.length-1&&<>,<wbr/></>}</Fragment>)}
+  </strong>;
 }
 
 function ForecastTableViewport({children}:{children:ReactNode}) {
@@ -214,10 +221,10 @@ export function CashFlowForecast() {
       <CardContent className="space-y-5 pt-5">
         {result
           ? <>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-              <div className="rounded-lg bg-secondary p-4"><span className="text-xs text-muted-foreground">Week 12 cash</span><strong className="mt-2 block font-[family-name:var(--t-display)] text-2xl tabular-nums">{aud(result.endingCents)}</strong></div>
-              <div className="rounded-lg bg-secondary p-4"><span className="text-xs text-muted-foreground">Lowest closing</span><strong className="mt-2 block font-[family-name:var(--t-display)] text-2xl tabular-nums">{aud(result.lowestClosingCents)}</strong></div>
-              <div className="rounded-lg bg-secondary p-4"><span className="text-xs text-muted-foreground">Cash out</span><strong className="mt-2 block font-[family-name:var(--t-display)] text-2xl tabular-nums">{aud(result.totalPaymentsCents)}</strong></div>
+            <div className="tools-forecast-summary">
+              <div className="tools-forecast-summary-item rounded-lg bg-secondary p-4"><span className="text-xs text-muted-foreground">Week 12 cash</span><ForecastSummaryAmount cents={result.endingCents}/></div>
+              <div className="tools-forecast-summary-item rounded-lg bg-secondary p-4"><span className="text-xs text-muted-foreground">Lowest closing</span><ForecastSummaryAmount cents={result.lowestClosingCents}/></div>
+              <div className="tools-forecast-summary-item rounded-lg bg-secondary p-4"><span className="text-xs text-muted-foreground">Cash out</span><ForecastSummaryAmount cents={result.totalPaymentsCents}/></div>
             </div>
             {result.lowestClosingCents<0 && <output className="block rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950">One or more weeks closes below zero. Check the timing and feasibility of forecast receipts.</output>}
             <ForecastTableViewport>
