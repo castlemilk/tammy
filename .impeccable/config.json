@@ -1,0 +1,15 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "side-tab",
+        "value": "*",
+        "files": [".worktrees/issue/sbr-registration-ready/apps/site/app/globals.css"],
+        "createdAt": "2026-10-23T03:21:23.584Z",
+        "reason": "Agent: preserve the existing Aug 30 .warning callout used only by support/page.tsx:48 to warn against emailing accounting records, passwords, recovery codes and machine credentials; verified globals.css:388 history at dd18a3491."
+      }
+    ]
+  }
+}
