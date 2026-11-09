@@ -39,9 +39,12 @@ test "$(task --version)" = "3.52.0"
 # Electron refuses to start as root. Run the existing scenarios as the image's
 # unprivileged node user without weakening Chromium's sandbox settings.
 subject_revision="${CUTTLE_GITHUB_SHA:-$(git rev-parse HEAD)}"
+user_pnpm_store="/home/node/.local/share/pnpm/store"
 chown -R node:node "$PWD"
 runuser -u node -- env HOME=/home/node CI=true \
   TAMMY_EVIDENCE_SUBJECT_REVISION="$subject_revision" \
+  pnpm_config_store_dir="$user_pnpm_store" \
+  npm_config_store_dir="$user_pnpm_store" \
   PATH="$PATH" bash -euo pipefail -c '
     pnpm install --frozen-lockfile
     task ci:contracts

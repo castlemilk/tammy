@@ -60,3 +60,12 @@ test("automatic foundation CI no longer schedules unsupported Windows jobs", asy
   );
   assert.deepEqual(Object.keys(windows11.on), ["workflow_dispatch"]);
 });
+
+test("the unprivileged Linux job overrides Cuttlefish's root-owned pnpm store", async () => {
+  const script = await readFile(new URL("./cuttlefish-linux-ci.sh", import.meta.url), "utf8");
+  assert.match(
+    script,
+    /runuser -u node -- env[\s\S]*pnpm_config_store_dir="\$user_pnpm_store"[\s\S]*npm_config_store_dir="\$user_pnpm_store"[\s\S]*pnpm install --frozen-lockfile/,
+  );
+  assert.match(script, /user_pnpm_store="\/home\/node\//);
+});
