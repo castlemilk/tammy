@@ -23,6 +23,7 @@ This page is the source of truth for what the application exposes today. Design 
 
 ## Architecture now
 
+- The web interface in `apps/web` uses a separate loopback Node gateway and encrypted data directory. Its browser cookie maps to server-held core credentials; allowlisted routes cover setup, accounts, journals, trial balance, document intake/review, bank import/match/reconciliation, and the supported GST workpaper. Read-only stdio MCP and rule-based attention insights use the same service. See the [web application guide](web-application.md) and [API contract](web-api.md).
 - Electron main supervises the bundled Go core and terminates the exact child process on shutdown.
 - The app calls the fixed window.conveyor bridge. Its system, workspace, organisation, accounting, banking, documents, purchases, reporting, and sbr modules expose only committed query/command methods; the preload provides no stream, event, Node, or raw transport primitive.
 - Electron main authorizes the exact live main frame before routing a Conveyor call and forwards typed protobuf requests to the generated Connect handlers over the authenticated local transport.
@@ -34,6 +35,8 @@ This page is the source of truth for what the application exposes today. Design 
 - Income/BAS exports acquire and validate immutable Core snapshots in main, retain the captured session across asynchronous work, and use a bounded mode-0600 atomic native writer shared with invoice export. CSV preserves Unicode; PDF explicitly rejects unsupported text. See [packaged export acceptance](income-bas-exports-acceptance-2026-10-06.md).
 
 electron-vite writes `apps/desktop/out/main/index.js`, `apps/desktop/out/preload/index.cjs`, and `apps/desktop/out/renderer/index.html`. Ordinary Builder outputs are `.tmp/electron-builder/ordinary/mac-arm64/Tammy.app` and `.tmp/electron-builder/ordinary/win-unpacked/Tammy.exe`; deterministic Mac App Store runs use `.tmp/macos-release/<version>/build-<number>/` instead.
+
+The web release accepts PDF/PNG/JPEG files up to 512 KiB to stay within the current core transport limit. Its bounded native PDF text extraction is not general OCR or a full PDF renderer; retained-file preview is not yet exposed in the browser. Web list queries expose a 200-row cap and indicate possible truncation. It is a local single-business application; hosted identity, tenant isolation, public API keys, remote MCP and model-backed intelligence remain future work.
 
 ## Development-only behavior
 

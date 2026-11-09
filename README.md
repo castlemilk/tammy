@@ -1,6 +1,6 @@
 # Tammy
 
-Tammy is a local-first Australian accounting desktop application. The current development vertical slice runs an Electron interface over a supervised Go core and keeps the workspace in a local SQLCipher database.
+Tammy is a local-first Australian accounting application with desktop and web interfaces. Both use a supervised Go accounting core and keep the workspace in a local SQLCipher database.
 
 Today the connected application can create and reopen an encrypted workspace, confirm its recovery code, sign in, create the organisation and AU chart of accounts, post balanced manual journals, show a trial balance, review retained documents, import and reconcile bank-statement rows, create a local BAS draft, and show consolidated local activity.
 
@@ -54,6 +54,18 @@ mise exec -- task dev:sbr:evte
 The first scenario retains a new isolated accounting root; the second is synthetic and network-disabled; the third prints the static external registration handoff checklist without accepting credentials and exits non-zero while blocked. EVTE remains blocked until externally issued signed inputs are installed. See [Local SBR readiness](docs/development/sbr-local-readiness.md) before handling a RAM machine credential.
 
 Inspect the redacted Mac App Store state with `mise exec -- task release:state` and check the repository-owned profile with `mise exec -- task release:check`. Signed packaging uses `mise exec -- task release:development` or `mise exec -- task release:candidate`; `mise exec -- task deploy:mas` produces and locally validates a candidate only. These scenarios use the deterministic `.tmp/macos-release/<version>/build-<number>/` root. Apple certificates, profiles, legal decisions, signing, upload, review, and approval remain operator-owned; follow the [macOS App Store runbook](docs/release/macos-app-store.md).
+
+## Web application
+
+Build the accounting core and browser app, then start the same-origin local web server:
+
+```sh
+mise exec -- pnpm web:start
+```
+
+Open `http://127.0.0.1:4174`. The web app creates a separate encrypted workspace; it does not open the desktop application's data. The current service runs locally on macOS arm64 or Windows x64 and supports one business. Hosted authentication, multiple businesses, and public deployment are separate milestones in the [web application plan](docs/superpowers/plans/2026-10-27-web-application.md).
+
+The browser uses a protected gateway with server-held core credentials. Read-only MCP tools and source-linked, rule-based insights use that same accounting service. See the [web development guide](docs/development/web-application.md) for development, validation, data storage, and MCP setup.
 
 ## Documentation
 
