@@ -3,7 +3,8 @@
 `workflows/tammy-ci.yaml` defines the native Cuttlefish validation workflow for
 `castlemilk/tammy`. It runs the existing Linux contract and desktop scenarios,
 roadmap checks, and both website preparation builds. The website job retains
-separate Sites and direct Cloudflare candidates; it does not publish either.
+separate `sites-candidate.tar.gz` and `cloudflare-candidate.tar.gz` artifacts;
+it does not publish either.
 
 The GitHub App pins the checkout task to the event's commit on pushes and pull
 requests. The preparation step rejects a different checkout and fetches the

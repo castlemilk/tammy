@@ -40,6 +40,6 @@ node scripts/site-release.mjs prepare --target cloudflare --output "$site_tmp/cl
 
 # Retain the two separately built, credential-free candidates on this run.
 test -n "${CUTTLE_ARTIFACT_DIR:-}"
-mkdir -p "$CUTTLE_ARTIFACT_DIR/sites" "$CUTTLE_ARTIFACT_DIR/cloudflare"
-cp -R "$site_tmp/sites-artifact/." "$CUTTLE_ARTIFACT_DIR/sites/"
-cp -R "$site_tmp/cloudflare-artifact/." "$CUTTLE_ARTIFACT_DIR/cloudflare/"
+mkdir -p "$CUTTLE_ARTIFACT_DIR"
+tar -czf "$CUTTLE_ARTIFACT_DIR/sites-candidate.tar.gz" -C "$site_tmp/sites-artifact" .
+tar -czf "$CUTTLE_ARTIFACT_DIR/cloudflare-candidate.tar.gz" -C "$site_tmp/cloudflare-artifact" .
