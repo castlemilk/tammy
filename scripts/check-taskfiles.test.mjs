@@ -184,13 +184,19 @@ function pinnedTaskBinary() {
   taskBinaryPromise ??= (async () => {
     let binary = "task";
     try {
+      const direct = await run(binary, ["--version"]);
+      if (direct.code === 0 && direct.stdout.trim() === "3.52.0") return binary;
+    } catch (error) {
+      if (error.code !== "ENOENT") throw error;
+    }
+    try {
       const lookup = await run("mise", ["which", "task"]);
       assert.equal(lookup.code, 0, lookup.stderr);
       binary = lookup.stdout.trim();
       assert.notEqual(binary, "");
     } catch (error) {
       if (error.code !== "ENOENT") throw error;
-      // Actions provisions the pinned Task directly, without the local mise bootstrap.
+      // Report the direct Task version below when mise is unavailable.
     }
     const version = await run(binary, ["--version"]);
     assert.equal(version.code, 0, version.stderr);
@@ -288,6 +294,34 @@ test("MCP task requires a private connection file and passes its path literally"
   assert.match(`${invalid.stdout}${invalid.stderr}`, /INVALID_CONNECTION_FILE/);
   assert.equal(existsSync(injectedMarker), false, "CONNECTION_FILE must not execute shell syntax");
   assert.equal(`${invalid.stdout}${invalid.stderr}`.includes(connectionPath), false);
+});
+
+test("uses a directly provisioned Task when mise does not manage it", async (context) => {
+  if (process.platform === "win32") return context.skip("the fixture uses a POSIX executable");
+  let direct;
+  try {
+    direct = await run("task", ["--version"]);
+  } catch (error) {
+    if (error.code !== "ENOENT") throw error;
+  }
+  if (direct?.code !== 0 || direct.stdout.trim() !== "3.52.0") {
+    return context.skip("requires the pinned Task on PATH");
+  }
+
+  const directory = await mkdtemp(path.join(await realpath(tmpdir()), "tammy-mise-unmanaged-"));
+  context.after(() => rm(directory, { recursive: true, force: true }));
+  await writeFile(
+    path.join(directory, "mise"),
+    "#!/bin/sh\necho 'mise cannot resolve task' >&2\nexit 1\n",
+    { mode: 0o700 },
+  );
+  const result = await run(
+    process.execPath,
+    ["--test", "--test-name-pattern", "^MCP task requires", fileURLToPath(import.meta.url)],
+    { PATH: `${directory}:${process.env.PATH}`, NODE_TEST_CONTEXT: undefined },
+  );
+  assert.match(result.stdout, /MCP task requires a private connection file/);
+  assert.equal(result.code, 0, `${result.stdout}${result.stderr}`);
 });
 
 test("documentation presents Task scenarios as the local command front door", async () => {
