@@ -106,6 +106,22 @@ async function forEachGitOutputLine(run, root, args, consume) {
   if (stdout) for (const line of String(stdout).split(/\r?\n/)) consume(line);
 }
 
+async function commitParents(run, root, revision) {
+  const { stdout } = await run("git", ["show", "-s", "--format=%P", revision], {
+    cwd: root,
+    shell: false,
+  });
+  return String(stdout).trim().split(/\s+/).filter(Boolean);
+}
+
+async function commitTree(run, root, revision) {
+  const { stdout } = await run("git", ["rev-parse", "--verify", `${revision}^{tree}`], {
+    cwd: root,
+    shell: false,
+  });
+  return String(stdout).trim();
+}
+
 export async function verifyRetainedDescriptorEvidence({
   bufEntry = DEFAULT_BUF_ENTRY,
   nodeExecutable = process.execPath,
@@ -153,29 +169,58 @@ export async function verifyRetainedDescriptorEvidence({
   } catch (cause) {
     throw new Error("DESCRIPTOR_SOURCE_REVISION_INVALID", { cause });
   }
+  let mergedSubject = false;
   if (manifest.gitRevision !== resolvedSubjectRevision) {
-    const { stdout: parentStdout } = await run(
-      "git",
-      ["rev-parse", "--verify", `${resolvedSubjectRevision}^`],
-      { cwd: root, shell: false },
-    );
+    const parents = await commitParents(run, root, resolvedSubjectRevision);
+    let evidenceRevision = resolvedSubjectRevision;
+    if (parents.length === 2) {
+      // A normal, up-to-date PR merge may preserve the entire attested tree.
+      // This is not recursive: its second parent must be the evidence-only child.
+      evidenceRevision = parents[1];
+      const evidenceParents = await commitParents(run, root, evidenceRevision);
+      if (evidenceParents.length !== 1 || evidenceParents[0] !== manifest.gitRevision) {
+        throw new Error("DESCRIPTOR_SOURCE_REVISION_MISMATCH");
+      }
+      const mergedTree = await commitTree(run, root, resolvedSubjectRevision);
+      const evidenceTree = await commitTree(run, root, evidenceRevision);
+      const checkoutTree = await commitTree(run, root, "HEAD");
+      if (mergedTree !== evidenceTree || checkoutTree !== mergedTree) {
+        throw new Error("DESCRIPTOR_SOURCE_REVISION_MISMATCH");
+      }
+      try {
+        await run("git", ["merge-base", "--is-ancestor", parents[0], manifest.gitRevision], {
+          cwd: root,
+          shell: false,
+        });
+      } catch (cause) {
+        if (cause.code === 1) throw new Error("DESCRIPTOR_SOURCE_REVISION_MISMATCH");
+        throw cause;
+      }
+      mergedSubject = true;
+    } else if (parents.length !== 1 || parents[0] !== manifest.gitRevision) {
+      throw new Error("DESCRIPTOR_SOURCE_REVISION_MISMATCH");
+    }
     let changedPathCount = 0;
     let invalidChangedPath = false;
     await forEachGitOutputLine(
       run,
       root,
-      ["diff", "--name-only", manifest.gitRevision, resolvedSubjectRevision, "--"],
+      [
+        "diff",
+        "--name-only",
+        "--no-renames",
+        "--ignore-submodules=none",
+        manifest.gitRevision,
+        evidenceRevision,
+        "--",
+      ],
       (line) => {
         if (!line) return;
         changedPathCount += 1;
         if (!RETAINED_PATHS.has(line)) invalidChangedPath = true;
       },
     );
-    if (
-      String(parentStdout).trim() !== manifest.gitRevision ||
-      changedPathCount === 0 ||
-      invalidChangedPath
-    ) {
+    if (changedPathCount === 0 || invalidChangedPath) {
       throw new Error("DESCRIPTOR_SOURCE_REVISION_MISMATCH");
     }
   }
@@ -183,11 +228,11 @@ export async function verifyRetainedDescriptorEvidence({
   await forEachGitOutputLine(
     run,
     root,
-    ["status", "--porcelain=v1", "--untracked-files=all"],
+    ["status", "--porcelain=v1", "--untracked-files=all", "--ignore-submodules=none"],
     (line) => {
       if (!line) return;
       const dirtyPath = line.slice(3).split(" -> ").at(-1);
-      if (!RETAINED_PATHS.has(dirtyPath)) invalidDirtyPath = true;
+      if (mergedSubject || !RETAINED_PATHS.has(dirtyPath)) invalidDirtyPath = true;
     },
   );
   if (invalidDirtyPath) {
