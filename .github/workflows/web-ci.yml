@@ -1,0 +1,64 @@
+name: Web accounting application
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: web-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  web:
+    name: Browser, gateway and real accounting core
+    runs-on: macos-14
+    timeout-minutes: 30
+    env:
+      # The core deliberately rejects symlinked path components.
+      TMPDIR: /private/tmp
+    steps:
+      - name: Check out source
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
+        with:
+          persist-credentials: false
+      - name: Set up pinned Node.js
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
+        with:
+          node-version: 24.18.0
+          package-manager-cache: false
+      - name: Set up pinned Go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16
+        with:
+          go-version: 1.26.4
+      - name: Install pinned dependencies
+        run: |
+          corepack enable pnpm
+          corepack prepare pnpm@11.15.0 --activate
+          pnpm install --frozen-lockfile
+      - name: Build real SQLCipher accounting core
+        run: pnpm core:build
+      - name: Check and build the web app
+        run: |
+          pnpm web:typecheck
+          pnpm web:build
+          pnpm web:test
+      - name: Check native lifecycle regressions
+        run: go test -tags=tammy_sqlcipher ./services/core/internal/app
+      - name: Install browser
+        run: pnpm --dir apps/web exec playwright install chromium
+      - name: Exercise accounting through the browser
+        run: pnpm --dir apps/web e2e
+      - name: Retain failure evidence
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: web-accounting-failure-evidence
+          path: |
+            apps/web/test-results/**
+            apps/web/playwright-report/**
+          if-no-files-found: warn
+          retention-days: 14

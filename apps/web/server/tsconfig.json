@@ -1,0 +1,11 @@
+{
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    "types": ["node"],
+    "allowJs": true,
+    "checkJs": false,
+    "noEmit": true,
+    "allowImportingTsExtensions": true
+  },
+  "include": ["main.ts", "mcp.ts", "integration.test.ts"]
+}
