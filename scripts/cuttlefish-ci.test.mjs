@@ -69,3 +69,10 @@ test("the unprivileged Linux job overrides Cuttlefish's root-owned pnpm store", 
   );
   assert.match(script, /user_pnpm_store="\/home\/node\//);
 });
+
+test("website candidates are retained as two archives within Cuttlefish's artifact limit", async () => {
+  const script = await readFile(new URL("./cuttlefish-site-ci.sh", import.meta.url), "utf8");
+  assert.match(script, /tar -czf "\$CUTTLE_ARTIFACT_DIR\/sites-candidate\.tar\.gz"/);
+  assert.match(script, /tar -czf "\$CUTTLE_ARTIFACT_DIR\/cloudflare-candidate\.tar\.gz"/);
+  assert.doesNotMatch(script, /cp -R "\$site_tmp\/(?:sites|cloudflare)-artifact/);
+});
