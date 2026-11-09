@@ -262,7 +262,7 @@ test("rejects checkout source changes not represented by the retained revision",
   );
 });
 
-test("delegates non-mutating evidence verification to ordered Linux and Windows CI tasks", async () => {
+test("delegates non-mutating evidence verification to the ordered Linux CI tasks", async () => {
   const packageJson = JSON.parse(
     await readFile(new URL("../package.json", import.meta.url), "utf8"),
   );
@@ -288,18 +288,14 @@ test("delegates non-mutating evidence verification to ordered Linux and Windows 
         /TAMMY_EVIDENCE_SUBJECT_REVISION: \$\{\{ github\.event\.pull_request\.head\.sha \|\| github\.sha \}\}/g,
       ) ?? []
     ).length,
-    2,
+    1,
   );
   assert.doesNotMatch(workflow, /run: pnpm proto:descriptors:evidence/);
   assert.match(
     workflow,
     /name: Run canonical Ubuntu CI scenarios[\s\S]*task ci:contracts[\s\S]*task ci:linux/,
   );
-  const windowsJob = workflow.split("windows-server-x64-package-smoke:")[1];
-  assert.match(
-    windowsJob,
-    /TAMMY_EVIDENCE_SUBJECT_REVISION: \$\{\{ github\.event\.pull_request\.head\.sha \|\| github\.sha \}\}[\s\S]*task ci:windows-smoke/,
-  );
+  assert.doesNotMatch(workflow, /windows-server-x64-package-smoke:/);
 });
 
 async function largePathHistory(context) {
