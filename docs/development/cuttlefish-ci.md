@@ -19,6 +19,12 @@ published version. The project must remain mapped to `castlemilk/tammy`, and a
 rig must be online with sufficient free capacity. A successful local test or a
 queued run is not evidence that the Cuttlefish job passed.
 
+The Linux foundation and roadmap jobs are no longer scheduled by GitHub
+Actions. At cutover, publish the reviewed Cuttlefish draft when the matching
+scripts are available on `master`, then verify both a push and a pull request
+create Cuttlefish checks. Do not publish the broader triggers early while
+`master` still lacks the scripts.
+
 The automatic Windows Server smoke job has been removed. The separately
 dispatched Windows 11 release gate is retained; it is not satisfied by Linux
 or macOS checks. Cuttlefish's current native workflow executor cannot run the

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { access, readFile } from "node:fs/promises";
 import test from "node:test";
 import YAML from "yaml";
 
@@ -59,6 +59,19 @@ test("automatic foundation CI no longer schedules unsupported Windows jobs", asy
     ),
   );
   assert.deepEqual(Object.keys(windows11.on), ["workflow_dispatch"]);
+});
+
+test("Linux foundation and roadmap checks are no longer scheduled by GitHub Actions", async () => {
+  const foundation = YAML.parse(
+    await readFile(new URL("../.github/workflows/foundation-ci.yml", import.meta.url), "utf8"),
+  );
+  assert.equal(foundation.jobs.contracts, undefined);
+  await assert.rejects(
+    access(new URL("../.github/workflows/xero-roadmap-ci.yml", import.meta.url)),
+    {
+      code: "ENOENT",
+    },
+  );
 });
 
 test("the unprivileged Linux job overrides Cuttlefish's root-owned pnpm store", async () => {
