@@ -3,6 +3,8 @@ import type { MinorUnits } from "./money";
 export interface Session {
   state: "setup" | "recovery" | "locked" | "authenticated";
   setupId?: string;
+  /** A pending setup's recovery confirmation deadline (ISO 8601, UTC), when known. */
+  expiresAt?: string;
   organisation?: { id: string; name: string };
 }
 
@@ -18,6 +20,7 @@ export interface Overview {
   documentsReviewedInPeriod: number;
   bankingLinesNeedingReconciliation: number;
   bankingLinesUnreconciledInPeriod: number;
+  /** The core's BAS preparation attention status for the current calendar year. */
   basStatus: string;
   currentDraftBasWorkpapers: number;
   attentionItems: { kind: string; label: string; resourceId?: string }[];
@@ -96,8 +99,14 @@ export interface BasWorkpaper {
   gstOnSales1aMinor: MinorUnits | null;
   gstCredits1bMinor: MinorUnits;
   netGstPayableMinor: MinorUnits | null;
-  /** Provisional GST of reviewed documents that are not posted purchases; never part of 1B. */
+  /**
+   * The core's provisional GST of reviewed documents not posted as purchases, whatever their date;
+   * never part of 1B.
+   */
   candidateGstMinor: MinorUnits | null;
+  /** Source records changed after the draft was created. */
+  sourcesChanged: boolean;
+  reviewWarnings: string[];
   limitations: string[];
   sources: {
     id: string;

@@ -1,8 +1,8 @@
 import { LockKeyhole } from "lucide-react";
 import { type FormEvent, type ReactNode, useState } from "react";
-import { api } from "./api";
+import { ApiError, api } from "./api";
 import type { Session } from "./types";
-import { errorMessage } from "./utils";
+import { deadlineLabel, errorMessage } from "./utils";
 
 type SetupFields = {
   displayName: string;
@@ -23,16 +23,23 @@ const emptyFields: SetupFields = {
   administratorPassword: "",
 };
 
+type PendingSetup = { setupId: string; recoveryCode?: string; expiresAt?: string };
+
 export function WorkspaceAccess({
   session,
-  onAuthenticated,
+  onSession,
 }: {
   session: Session;
-  onAuthenticated: (value: Session) => void;
+  onSession: (value: Session) => void;
 }) {
   const [fields, setFields] = useState<SetupFields>(emptyFields);
-  const [pending, setPending] = useState<{ setupId: string; recoveryCode?: string } | undefined>(
-    session.state === "recovery" && session.setupId ? { setupId: session.setupId } : undefined,
+  const [pending, setPending] = useState<PendingSetup | undefined>(
+    session.state === "recovery" && session.setupId
+      ? {
+          setupId: session.setupId,
+          ...(session.expiresAt ? { expiresAt: session.expiresAt } : {}),
+        }
+      : undefined,
   );
   const [savedCode, setSavedCode] = useState("");
   const [busy, setBusy] = useState(false);
@@ -75,9 +82,21 @@ export function WorkspaceAccess({
         abn: fields.abn,
         ...(fields.workspacePassphrase ? { workspacePassphrase: fields.workspacePassphrase } : {}),
       });
-      onAuthenticated(result);
+      onSession(result);
     } catch (cause) {
       setError(errorMessage(cause));
+      // A conflict can mean the setup expired or was discarded after too many incorrect codes.
+      // Read the current state so the setup form returns, keeping the message.
+      if (cause instanceof ApiError && cause.status === 409) {
+        const next = await api.session().catch(() => undefined);
+        if (next) {
+          if (next.state !== "recovery") {
+            setPending(undefined);
+            setSavedCode("");
+          }
+          onSession(next);
+        }
+      }
     } finally {
       setBusy(false);
     }
@@ -88,7 +107,7 @@ export function WorkspaceAccess({
     setBusy(true);
     setError(undefined);
     try {
-      onAuthenticated(
+      onSession(
         await api.unlock({
           username: fields.username,
           workspacePassphrase: fields.workspacePassphrase,
@@ -104,6 +123,10 @@ export function WorkspaceAccess({
 
   const recovery = Boolean(pending) || session.state === "recovery";
   const locked = session.state === "locked";
+  const deadline = pending?.expiresAt ? deadlineLabel(pending.expiresAt) : "";
+  const deadlineNotice = deadline
+    ? `Confirm by ${deadline}. After that, or after 5 incorrect codes, this setup is discarded and you need to start again.`
+    : "";
   return (
     <main className="auth-page">
       <section className="auth-card">
@@ -132,13 +155,16 @@ export function WorkspaceAccess({
         {recovery ? (
           <form className="form-stack grouped" onSubmit={confirm}>
             {pending?.recoveryCode ? (
-              <div className="recovery-code">
-                <span>One-time recovery code</span>
-                <strong>{pending.recoveryCode}</strong>
-              </div>
+              <>
+                <div className="recovery-code">
+                  <span>One-time recovery code</span>
+                  <strong>{pending.recoveryCode}</strong>
+                </div>
+                {deadlineNotice ? <p className="notice">{deadlineNotice}</p> : null}
+              </>
             ) : (
               <p className="notice">
-                Enter the recovery code you saved when you created this workspace.
+                Enter the recovery code you saved when you created this workspace. {deadlineNotice}
               </p>
             )}
             <FieldGroup title="Recovery">
@@ -258,26 +284,28 @@ export function WorkspaceAccess({
                 <input
                   aria-label="Workspace passphrase"
                   autoComplete="new-password"
+                  maxLength={128}
                   minLength={16}
                   onChange={(event) => update("workspacePassphrase", event.target.value)}
                   required
                   type="password"
                   value={fields.workspacePassphrase}
                 />
-                <small>At least 16 characters</small>
+                <small>16 to 128 characters</small>
               </label>
               <label>
                 Administrator password
                 <input
                   aria-label="Administrator password"
                   autoComplete="new-password"
+                  maxLength={128}
                   minLength={16}
                   onChange={(event) => update("administratorPassword", event.target.value)}
                   required
                   type="password"
                   value={fields.administratorPassword}
                 />
-                <small>At least 16 characters</small>
+                <small>16 to 128 characters</small>
               </label>
             </FieldGroup>
             <button className="button primary block" disabled={busy} type="submit">

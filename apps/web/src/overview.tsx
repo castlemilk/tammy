@@ -26,12 +26,9 @@ export function OverviewScreen({ navigate }: { navigate: (path: string) => void 
     {
       title: "GST & BAS",
       value: summary ? (summary.currentDraftBasWorkpapers > 0 ? "Draft" : "No draft") : "—",
-      detail:
-        summary?.basStatus === "outdated"
-          ? "source changes detected"
-          : summary?.currentDraftBasWorkpapers
-            ? "retained, not lodged"
-            : "local workpaper not started",
+      detail: summary?.currentDraftBasWorkpapers
+        ? "retained, not lodged"
+        : "local workpaper not started",
       path: "/gst-bas",
     },
   ];

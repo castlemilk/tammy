@@ -112,7 +112,7 @@ export function App() {
       </main>
     );
   if (session.state !== "authenticated")
-    return <WorkspaceAccess onAuthenticated={setSession} session={session} />;
+    return <WorkspaceAccess onSession={setSession} session={session} />;
   async function lock() {
     try {
       await api.logout();

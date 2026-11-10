@@ -1,7 +1,8 @@
 import { createHash, randomBytes } from "node:crypto";
-import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
+import { lstat, mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { create } from "@bufbuild/protobuf";
+import { timestampDate } from "@bufbuild/protobuf/wkt";
 import { Code, ConnectError } from "@connectrpc/connect";
 import {
   AccountDesignation,
@@ -42,7 +43,10 @@ import {
   GstBasis,
   GstReportingFrequency,
 } from "@tammy/connect-client/tammy/v1/organisation_pb.js";
-import { GetAttentionSummaryRequestSchema } from "@tammy/connect-client/tammy/v1/overview_pb.js";
+import {
+  BasAttentionStatus,
+  GetAttentionSummaryRequestSchema,
+} from "@tammy/connect-client/tammy/v1/overview_pb.js";
 import {
   CreateBasDraftRequestSchema,
   GetCurrentBasDraftRequestSchema,
@@ -50,12 +54,59 @@ import {
 import {
   ConfirmRecoveryRequestSchema,
   CreateWorkspaceRequestSchema,
+  GetWorkspaceStateRequestSchema,
   LockWorkspaceRequestSchema,
   UnlockWorkspaceRequestSchema,
+  WorkspaceState,
 } from "@tammy/connect-client/tammy/v1/workspace_pb.js";
+import { createBundledTaxRuleSourceRef } from "../../desktop/src/shared/bundled-tax-rule.ts";
 import { httpError } from "./errors.mjs";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+const ISO_INSTANT = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,9})?Z$/;
+// The core discards a pending setup on the fifth failed recovery confirmation.
+const SETUP_ATTEMPTS = 5;
+// As in the desktop core client: creating a workspace derives keys and needs more than 5 seconds.
+const WORKSPACE_CREATE_TIMEOUT_MS = 30_000;
+// The core rate-limits unlock and sign-in at 5 failures, then refuses every attempt for 15 minutes.
+const CREDENTIALS_REJECTED =
+  "The workspace passphrase, username or administrator password is incorrect. After 5 failed attempts, wait 15 minutes before trying again.";
+const PASSPHRASE_REJECTED =
+  "The workspace passphrase is incorrect. After 5 failed attempts, wait 15 minutes before trying again.";
+const SIGN_IN_REJECTED =
+  "The username or administrator password is incorrect. After 5 failed attempts, wait 15 minutes before trying again.";
+const PASSPHRASE_RULE =
+  "The workspace passphrase must have 15 to 128 characters: letters, numbers, punctuation, symbols or spaces.";
+const PASSWORD_RULE =
+  "The administrator password must have 15 to 128 characters: letters, numbers, punctuation, symbols or spaces.";
+// The gateway checks the secrets and the data folder first, so a remaining validation fault is a
+// core state the request cannot fix.
+const SETUP_REFUSED = "The core refused to create the workspace. Restart Tammy and try again.";
+const DATA_FOLDER_IN_USE =
+  "This data folder already holds a workspace that this web server has no record of. Stop the server, move the folder aside or set TAMMY_WEB_DATA_ROOT to a new folder, then start again.";
+// A failed SignIn counts toward the core's limit of 5 in 15 minutes, which locks the administrator
+// account and stops its live sessions working too. A takeover may use only part of that budget, so
+// guessing cannot end the signed-in browser's session.
+const TAKEOVER_ATTEMPTS = 3;
+const SIGN_IN_WINDOW_MS = 15 * 60 * 1000;
+const TAKEOVER_LIMITED = "Too many failed attempts. Wait 15 minutes before trying again.";
+// The core's v1 secret rule (services/core/internal/workspace/keys.go): at most 1024 bytes of UTF-8,
+// then 15 to 128 characters after NFC normalisation, each printable as Go defines it (letters,
+// marks, numbers, punctuation, symbols and the ASCII space). The core checks the administrator
+// password only after it has reserved the setup's files, so checking it here first keeps a rejected
+// password from leaving a workspace file behind.
+const PRINTABLE = /^[\p{L}\p{M}\p{N}\p{P}\p{S} ]*$/u;
+function acceptedSecret(value) {
+  if (typeof value !== "string" || Buffer.byteLength(value) > 1024) return false;
+  const normalized = value.normalize("NFC");
+  const count = [...normalized].length;
+  return (
+    count >= 15 &&
+    count <= 128 &&
+    Buffer.byteLength(normalized) <= 1024 &&
+    PRINTABLE.test(normalized)
+  );
+}
 // The code defaults to the documented code for the status, so a 409 always carries `conflict`.
 const bad = (
   message = "Check the supplied details and try again.",
@@ -157,13 +208,29 @@ function command(session, key) {
 function secret(value) {
   return { utf8: new TextEncoder().encode(required(value, 1024)) };
 }
-async function core(fn) {
+/**
+ * The workspace and identity services return bare core faults, which reach Connect clients as
+ * Code.Unknown with the fault name, such as AUTHENTICATION_REQUIRED, as the message.
+ */
+function coreFault(error) {
+  return error?.status ? undefined : ConnectError.from(error).rawMessage;
+}
+/**
+ * Map a core failure to a client-safe HTTP error. Calls that carry credentials or new secrets pass
+ * `credentials` and `validation` messages, so a typing mistake is not reported as an expired session
+ * or an internal failure.
+ */
+async function core(fn, { credentials, validation } = {}) {
   try {
     return await fn();
   } catch (error) {
     if (error?.status) throw error;
     const failure = ConnectError.from(error);
     const code = failure.code;
+    if (credentials && failure.rawMessage === "AUTHENTICATION_REQUIRED")
+      throw bad(credentials, 401, "unauthenticated");
+    if (validation && failure.rawMessage === "VALIDATION")
+      throw bad(validation, 400, "invalid_argument");
     if (
       code === Code.PermissionDenied ||
       code === Code.Unauthenticated ||
@@ -205,13 +272,40 @@ const typeNames = {
   7: "other_expense",
   8: "contra",
 };
-const typeValues = {
-  asset: AccountType.ASSET,
-  liability: AccountType.LIABILITY,
-  equity: AccountType.EQUITY,
-  income: AccountType.REVENUE,
-  expense: AccountType.EXPENSE,
-};
+// Request input selects the type, so a Map keeps inherited names such as `constructor` out.
+const typeValues = new Map([
+  ["asset", AccountType.ASSET],
+  ["liability", AccountType.LIABILITY],
+  ["equity", AccountType.EQUITY],
+  ["income", AccountType.REVENUE],
+  ["expense", AccountType.EXPENSE],
+]);
+// Every BasAttentionStatus, named as in the proto. The current core's overview reports BAS
+// preparation for the requested period: not_created, or action_needed through disputed. It no
+// longer emits draft_not_lodged or outdated, which describe legacy GST drafts.
+const basStatuses = new Map([
+  [BasAttentionStatus.NOT_CREATED, "not_created"],
+  [BasAttentionStatus.DRAFT_NOT_LODGED, "draft_not_lodged"],
+  [BasAttentionStatus.OUTDATED, "outdated"],
+  [BasAttentionStatus.ACTION_NEEDED, "action_needed"],
+  [BasAttentionStatus.REVIEW_READY, "review_ready"],
+  [BasAttentionStatus.FROZEN_FOR_MANUAL_HANDOFF, "frozen_for_manual_handoff"],
+  [BasAttentionStatus.EXTERNAL_CONFIRMATION_RECORDED, "external_confirmation_recorded"],
+  [BasAttentionStatus.DISPUTED, "disputed"],
+]);
+// Setups recorded before expiresAt and failedAttempts were kept have neither, and still load.
+function validPendingFields(value) {
+  return (
+    (value.expiresAt === undefined ||
+      (typeof value.expiresAt === "string" &&
+        ISO_INSTANT.test(value.expiresAt) &&
+        Number.isFinite(Date.parse(value.expiresAt)))) &&
+    (value.failedAttempts === undefined ||
+      (Number.isSafeInteger(value.failedAttempts) && value.failedAttempts >= 0))
+  );
+}
+const isOpen = (state) =>
+  state === WorkspaceState.UNAUTHENTICATED || state === WorkspaceState.AUTHENTICATED;
 function accountOut(a) {
   return {
     id: a.id,
@@ -278,6 +372,8 @@ function legacyDocument(review) {
 }
 // The core's reconciled purchase format counts only posted purchases in GST credits (1B). A reviewed
 // document that was never posted as a purchase is a separate provisional candidate, never a credit.
+// The core lists every such document whatever its date, including undated ones, and
+// legacyCandidateGst totals them. The web keeps those semantics, as the desktop does.
 function basOut(w, documents = new Map()) {
   const reconciled = w.purchaseSourceFormat !== undefined;
   return {
@@ -290,11 +386,14 @@ function basOut(w, documents = new Map()) {
     gstCredits1bMinor: outputMoney(w.gstCredits1b),
     netGstPayableMinor: null,
     candidateGstMinor: reconciled ? outputMoney(w.legacyCandidateGst) : null,
+    // The core recomputes these on every read of the current draft.
+    sourcesChanged: w.sourcesChanged,
+    reviewWarnings: [...w.reviewWarnings],
     limitations: [
-      "Sales GST and net GST payable are not calculated by this reviewed-document workpaper.",
+      "Sales (G1), GST on sales (1A) and net GST are calculated by the core but not shown in this web release.",
       ...(reconciled
         ? [
-            "Reviewed documents are provisional GST credit candidates, not claimed credits. GST credits (1B) include only posted purchases, which this web release cannot create.",
+            "Provisional GST candidates are reviewed documents not yet posted as purchases, whatever their date. Their GST is not a claimed credit and entitlement remains subject to review. GST credits (1B) include only posted purchases, which this web release cannot create.",
           ]
         : []),
     ],
@@ -353,6 +452,7 @@ export async function createFacade({
   organisation,
   dataRoot,
   mcpEnabled = false,
+  now: clock = Date.now,
 }) {
   await mkdir(dataRoot, { recursive: true, mode: 0o700 });
   const metadataPath = path.join(dataRoot, "web-workspace.json");
@@ -364,7 +464,8 @@ export async function createFacade({
       !UUID.test(metadata.workspaceId) ||
       !UUID.test(metadata.setupId) ||
       !["pending", "confirmed", "ready"].includes(metadata.stage) ||
-      (metadata.stage === "ready" && !UUID.test(metadata.organisationId))
+      (metadata.stage === "ready" && !UUID.test(metadata.organisationId)) ||
+      !validPendingFields(metadata)
     )
       throw new Error("invalid metadata");
   } catch (error) {
@@ -378,23 +479,50 @@ export async function createFacade({
   }
   let busy = false;
   let openedHere = false;
-  async function exclusive(fn) {
-    if (busy) throw bad("A workspace operation is already in progress.", 409);
-    busy = true;
-    try {
-      return await fn();
-    } finally {
-      busy = false;
-    }
+  // The core session that the open workspace belongs to. Only its logout locks the workspace.
+  let owner;
+  let takeoverFailures = [];
+  // Setup, unlock and logout run one at a time. A second setup or unlock request is refused while
+  // another runs; a logout waits its turn, so it cannot lock a workspace that is being unlocked.
+  let tail = Promise.resolve();
+  function queued(fn) {
+    const run = tail.then(() => fn());
+    tail = run.catch(() => {});
+    return run;
   }
-  async function signIn(username, password) {
-    const result = await core(() =>
-      identity.signIn(
-        create(SignInRequestSchema, {
-          username: required(username, 128),
-          password: secret(password),
-        }),
-      ),
+  function exclusive(fn) {
+    if (busy) return Promise.reject(bad("A workspace operation is already in progress.", 409));
+    busy = true;
+    return queued(fn).finally(() => {
+      busy = false;
+    });
+  }
+  async function lock() {
+    owner = undefined;
+    openedHere = false;
+    await workspace.lockWorkspace(create(LockWorkspaceRequestSchema, {})).catch(() => {});
+  }
+  // The core keeps one workspace file in its data root and refuses to create over it.
+  const workspaceFile = path.join(dataRoot, "core", "workspace", "tammy-workspace.db");
+  function workspaceFileExists() {
+    return lstat(workspaceFile).then(
+      () => true,
+      (error) => {
+        if (error.code === "ENOENT") return false;
+        throw error;
+      },
+    );
+  }
+  async function signIn(username, password, credentials = CREDENTIALS_REJECTED) {
+    const result = await core(
+      () =>
+        identity.signIn(
+          create(SignInRequestSchema, {
+            username: required(username, 128),
+            password: secret(password),
+          }),
+        ),
+      { credentials },
     );
     if (!result.user || !result.session) throw new Error("invalid sign in");
     return create(AuthenticationContextSchema, {
@@ -402,16 +530,156 @@ export async function createFacade({
       sessionId: result.session.id,
     });
   }
-  async function unlockWorkspace(passphrase) {
-    await core(() =>
-      workspace.unlockWorkspace(
-        create(UnlockWorkspaceRequestSchema, {
-          workspaceFile: { capabilityId: "local-workspace-file" },
-          proof: { proof: { case: "passphrase", value: secret(passphrase) } },
-        }),
-      ),
+  async function unlockWorkspace(passphrase, credentials = CREDENTIALS_REJECTED) {
+    if (typeof passphrase !== "string" || !passphrase) throw bad("Enter the workspace passphrase.");
+    await core(
+      () =>
+        workspace.unlockWorkspace(
+          create(UnlockWorkspaceRequestSchema, {
+            workspaceFile: { capabilityId: "local-workspace-file" },
+            proof: { proof: { case: "passphrase", value: secret(passphrase) } },
+          }),
+        ),
+      { credentials },
     );
     openedHere = true;
+  }
+  // The catalogue state of the setup's workspace, or undefined when the core cannot report it.
+  async function coreWorkspaceState() {
+    try {
+      const result = await workspace.getWorkspaceState(
+        create(GetWorkspaceStateRequestSchema, { workspaceId: metadata.workspaceId }),
+      );
+      return result.workspace?.state;
+    } catch {
+      return undefined;
+    }
+  }
+  /**
+   * Forget a pending setup the web gives up on, after making sure the core has discarded it too.
+   * The core has no cancel RPC. It discards a pending setup, closing it and deleting its files, when
+   * a correct code arrives after the deadline or on the fifth failed confirmation inside its
+   * 15-minute attempt window. But an incorrect code after the deadline is only counted, and the
+   * core's attempt journal restarts empty with the web server (--development-memory-anchors) while
+   * the web's count persists. Left behind, the old files would make the next setup fail, so the web
+   * sends deliberately invalid confirmations until the core has discarded the setup. "0000" is
+   * outside the Base32 recovery alphabet, so it can never match a recovery group.
+   */
+  async function discardPendingSetup() {
+    const invalid = create(ConfirmRecoveryRequestSchema, {
+      setupId: metadata.setupId,
+      confirmations: [0, 1].map((groupIndex) => ({
+        groupIndex,
+        value: new TextEncoder().encode("0000"),
+      })),
+    });
+    for (let attempt = 0; attempt < SETUP_ATTEMPTS; attempt++) {
+      const rejected = await workspace.confirmRecovery(invalid).then(
+        () => false,
+        (error) => {
+          if (coreFault(error) === "AUTHENTICATION_REQUIRED") return true;
+          throw error;
+        },
+      );
+      if (!rejected) throw new Error("an abandoned setup was confirmed");
+    }
+    // The core deletes a discarded setup's files before it answers. Some rejections do not count
+    // toward that discard, so keep the setup record until the file is really gone.
+    if (await workspaceFileExists())
+      throw bad("The core has not discarded this setup yet. Restart Tammy, then try again.", 409);
+    await rm(metadataPath, { force: true });
+    metadata = undefined;
+    openedHere = false;
+  }
+  /**
+   * Another browser has the workspace open. SignIn checks the administrator credentials without
+   * disturbing that browser unless they are correct, and a successful SignIn ends every other core
+   * session itself. Locking afterwards keeps the workspace passphrase a requirement for the new
+   * browser.
+   */
+  async function takeOver(username, password) {
+    const now = clock();
+    takeoverFailures = takeoverFailures.filter((at) => now - at < SIGN_IN_WINDOW_MS);
+    if (takeoverFailures.length >= TAKEOVER_ATTEMPTS) throw bad(TAKEOVER_LIMITED, 429);
+    try {
+      await signIn(username, password);
+    } catch (error) {
+      if (error?.status === 401) takeoverFailures.push(now);
+      throw error;
+    }
+    // As in the core, a successful sign-in clears the failures.
+    takeoverFailures = [];
+    await lock();
+  }
+  /**
+   * The core rejects a pending confirmation with AUTHENTICATION_REQUIRED when the code is wrong, when
+   * the deadline has passed, and when it already confirmed the setup before the web recorded that
+   * (a terminal replay, which needs the workspace passphrase). Throws unless the setup was already
+   * confirmed and is now open.
+   */
+  async function rejectedConfirmation(body) {
+    const state = await coreWorkspaceState();
+    if (state === WorkspaceState.LOCKED || isOpen(state)) {
+      await save({
+        workspaceId: metadata.workspaceId,
+        setupId: metadata.setupId,
+        stage: "confirmed",
+      });
+      openedHere = isOpen(state);
+      if (!openedHere) await unlockWorkspace(body.workspacePassphrase, PASSPHRASE_REJECTED);
+      return;
+    }
+    if (metadata.expiresAt !== undefined && clock() >= Date.parse(metadata.expiresAt)) {
+      await discardPendingSetup();
+      throw bad("This setup expired before it was confirmed. Start setup again.", 409);
+    }
+    const failedAttempts = (metadata.failedAttempts ?? 0) + 1;
+    if (failedAttempts >= SETUP_ATTEMPTS) {
+      await discardPendingSetup();
+      throw bad(
+        `This setup was discarded after ${SETUP_ATTEMPTS} incorrect recovery codes. Start setup again.`,
+        409,
+      );
+    }
+    await save({ ...metadata, failedAttempts });
+    const remaining = SETUP_ATTEMPTS - failedAttempts;
+    throw bad(
+      `The recovery code does not match. ${remaining} ${remaining === 1 ? "attempt remains" : "attempts remain"} before this setup is discarded.`,
+      400,
+      "invalid_argument",
+    );
+  }
+  async function confirmPendingSetup(body, groups) {
+    let confirmed;
+    try {
+      confirmed = await workspace.confirmRecovery(
+        create(ConfirmRecoveryRequestSchema, {
+          setupId: metadata.setupId,
+          confirmations: groups.slice(0, 2).map((value, groupIndex) => ({
+            groupIndex,
+            value: new TextEncoder().encode(value),
+          })),
+          ...(body.workspacePassphrase
+            ? {
+                terminalReplayProof: {
+                  proof: { case: "passphrase", value: secret(body.workspacePassphrase) },
+                },
+              }
+            : {}),
+        }),
+      );
+    } catch (error) {
+      if (coreFault(error) !== "AUTHENTICATION_REQUIRED") return core(() => Promise.reject(error));
+      return rejectedConfirmation(body);
+    }
+    await save({
+      workspaceId: metadata.workspaceId,
+      setupId: metadata.setupId,
+      stage: "confirmed",
+    });
+    // A terminal replay after a restart confirms without opening anything and reports LOCKED.
+    openedHere = isOpen(confirmed.workspace?.state);
+    if (!openedHere) await unlockWorkspace(body.workspacePassphrase, PASSPHRASE_REJECTED);
   }
   // Candidate rows carry document identity only; supplier details come from the bounded document
   // list. They are descriptive, so a failed lookup still returns the core's workpaper figures.
@@ -442,34 +710,84 @@ export async function createFacade({
       organisation: { id: result.organisation.id, name: result.organisation.displayName },
     };
   }
+  // The organisation's active tax-rule bundle reference, as the core stored it.
+  async function taxRuleBundle(session) {
+    const result = await core(() =>
+      organisation.getOrganisation(
+        create(GetOrganisationRequestSchema, {
+          authentication: session.authentication,
+          organisationId: session.organisation.id,
+        }),
+      ),
+    );
+    const bundle = result.organisation?.activeTaxRuleBundle;
+    return bundle
+      ? {
+          id: bundle.id,
+          revision: bundle.revision.toString(),
+          contentHash: Buffer.from(bundle.contentHash).toString("hex"),
+        }
+      : null;
+  }
   const facade = {
     state: () =>
       !metadata
         ? { state: "setup" }
         : metadata.stage === "ready"
           ? { state: "locked" }
-          : { state: "recovery", setupId: metadata.setupId },
+          : {
+              state: "recovery",
+              setupId: metadata.setupId,
+              ...(metadata.stage === "pending" && metadata.expiresAt
+                ? { expiresAt: metadata.expiresAt }
+                : {}),
+            },
     create: (body) =>
       exclusive(async () => {
         if (metadata) throw bad("A workspace already exists.", 409);
+        const username = required(body.username, 128);
+        if (username.trim() !== username)
+          throw bad("Remove the spaces at the start or end of the username.");
+        const displayName = required(body.displayName, 128);
+        if (!acceptedSecret(body.workspacePassphrase)) throw bad(PASSPHRASE_RULE);
+        if (!acceptedSecret(body.administratorPassword)) throw bad(PASSWORD_RULE);
+        // Without a setup record, a workspace file is one this server lost track of, such as a
+        // setup that finished in the core after the request timed out.
+        if (await workspaceFileExists()) throw bad(DATA_FOLDER_IN_USE, 409);
         const setupId = uuid();
-        const result = await core(() =>
-          client.createWorkspace(
-            create(CreateWorkspaceRequestSchema, {
-              setupId,
-              destination: { capabilityId: "local-workspace-directory" },
-              workspacePassphrase: secret(body.workspacePassphrase),
-              administratorUsername: required(body.username, 128),
-              administratorDisplayName: required(body.displayName, 128),
-              administratorPassword: secret(body.administratorPassword),
-            }),
-          ),
+        // The raw workspace client keeps the core's VALIDATION fault, which the desktop client
+        // wrapper replaces with a generic message.
+        const result = await core(
+          () =>
+            workspace.createWorkspace(
+              create(CreateWorkspaceRequestSchema, {
+                setupId,
+                destination: { capabilityId: "local-workspace-directory" },
+                workspacePassphrase: secret(body.workspacePassphrase),
+                administratorUsername: username,
+                administratorDisplayName: displayName,
+                administratorPassword: secret(body.administratorPassword),
+              }),
+              { timeoutMs: WORKSPACE_CREATE_TIMEOUT_MS },
+            ),
+          { validation: SETUP_REFUSED },
         );
-        if (!result.workspace?.id || !result.recoverySecret?.utf8?.length)
+        if (!result.workspace?.id || !result.recoverySecret?.utf8?.length || !result.expiresAt)
           throw new Error("workspace setup failed");
-        await save({ workspaceId: result.workspace.id, setupId, stage: "pending" });
+        const expiresAt = timestampDate(result.expiresAt).toISOString();
+        await save({
+          workspaceId: result.workspace.id,
+          setupId,
+          stage: "pending",
+          expiresAt,
+          failedAttempts: 0,
+        });
         openedHere = true;
-        return { setupId, recoveryCode: new TextDecoder().decode(result.recoverySecret.utf8) };
+        return {
+          setupId,
+          recoveryCode: new TextDecoder().decode(result.recoverySecret.utf8),
+          expiresAt,
+        };
       }),
     confirm: (body) =>
       exclusive(async () => {
@@ -481,31 +799,13 @@ export async function createFacade({
           .toUpperCase();
         const groups = code.match(/.{1,4}/g);
         if (!groups || groups.length < 2) throw bad("Enter the saved recovery code.");
-        if (metadata.stage === "confirmed" && !openedHere)
-          await unlockWorkspace(body.workspacePassphrase);
-        if (metadata.stage === "pending") {
-          await core(() =>
-            workspace.confirmRecovery(
-              create(ConfirmRecoveryRequestSchema, {
-                setupId: metadata.setupId,
-                confirmations: groups.slice(0, 2).map((value, groupIndex) => ({
-                  groupIndex,
-                  value: new TextEncoder().encode(value),
-                })),
-                ...(body.workspacePassphrase
-                  ? {
-                      terminalReplayProof: {
-                        proof: { case: "passphrase", value: secret(body.workspacePassphrase) },
-                      },
-                    }
-                  : {}),
-              }),
-            ),
-          );
-          await save({ ...metadata, stage: "confirmed" });
-          openedHere = true;
-        }
-        const authentication = await signIn(body.username, body.administratorPassword);
+        if (metadata.stage === "pending") await confirmPendingSetup(body, groups);
+        else if (!openedHere) await unlockWorkspace(body.workspacePassphrase, PASSPHRASE_REJECTED);
+        const authentication = await signIn(
+          body.username,
+          body.administratorPassword,
+          SIGN_IN_REJECTED,
+        );
         const result = await core(() =>
           client.createOrganisation(
             create(CreateOrganisationRequestSchema, {
@@ -520,20 +820,14 @@ export async function createFacade({
               gstBasis: GstBasis.NON_CASH,
               gstReportingFrequency: GstReportingFrequency.QUARTERLY,
               financialYearEndMonth: 6,
-              activeTaxRuleBundle: {
-                type: "tax_rule_bundle",
-                id: "018f0000-0000-7000-8000-000000000022",
-                revision: 1n,
-                contentHash: Buffer.from(
-                  "e2f9cde094db43c30260dc54f089a1ab835912e75e8c29add5c7a240e90497e4",
-                  "hex",
-                ),
-              },
+              // The desktop's shared reference to the tax rules bundled with the core.
+              activeTaxRuleBundle: createBundledTaxRuleSourceRef(),
             }),
           ),
         );
         if (!result.organisation?.id) throw new Error("organisation missing");
         await save({ ...metadata, stage: "ready", organisationId: result.organisation.id });
+        owner = authentication.sessionId;
         return {
           authentication,
           organisation: { id: result.organisation.id, name: result.organisation.displayName },
@@ -542,26 +836,35 @@ export async function createFacade({
     unlock: (body) =>
       exclusive(async () => {
         if (metadata?.stage !== "ready") throw bad("No completed workspace is available.", 409);
+        if (typeof body.workspacePassphrase !== "string" || !body.workspacePassphrase)
+          throw bad("Enter the workspace passphrase.");
+        const username = required(body.username, 128);
+        const password = required(body.administratorPassword, 1024);
+        // The core unlocks only a locked workspace, so an open one means another browser is in.
+        if (isOpen(await coreWorkspaceState())) await takeOver(username, password);
         await unlockWorkspace(body.workspacePassphrase);
         try {
-          const authentication = await signIn(body.username, body.administratorPassword);
-          return await authenticated(authentication);
+          const authentication = await signIn(username, password);
+          const result = await authenticated(authentication);
+          owner = authentication.sessionId;
+          return result;
         } catch (error) {
-          await workspace.lockWorkspace(create(LockWorkspaceRequestSchema, {})).catch(() => {});
-          openedHere = false;
+          await lock();
           throw error;
         }
       }),
-    logout: async (session) => {
-      try {
-        await identity.signOut(
-          create(SignOutRequestSchema, { authentication: session.authentication }),
-        );
-      } finally {
-        await workspace.lockWorkspace(create(LockWorkspaceRequestSchema, {})).catch(() => {});
-        openedHere = false;
-      }
-    },
+    logout: (session) =>
+      queued(async () => {
+        // After a takeover the workspace belongs to a newer session, which a lock would end.
+        if (!owner || session?.authentication?.sessionId !== owner) return;
+        try {
+          await identity.signOut(
+            create(SignOutRequestSchema, { authentication: session.authentication }),
+          );
+        } finally {
+          await lock();
+        }
+      }),
     accounts: async (session) => {
       const result = await core(() =>
         client.listAccounts(
@@ -575,8 +878,8 @@ export async function createFacade({
       return { accounts: result.accounts.map(accountOut), page: pageInfo(result.accounts.length) };
     },
     createAccount: async (session, body) => {
-      const type = typeValues[body.type];
-      if (!type) throw bad("Choose an account type.");
+      const type = typeValues.get(body.type);
+      if (type === undefined) throw bad("Choose an account type.");
       const result = await core(() =>
         client.createAccount(
           create(CreateAccountRequestSchema, {
@@ -819,7 +1122,9 @@ export async function createFacade({
       const start = date(body.periodStart),
         end = date(body.periodEnd);
       if (start.year !== 2024 || end.year !== 2024 || body.periodStart > body.periodEnd)
-        throw bad("Only the 2024 reviewed-document GST workpaper is supported.");
+        throw bad(
+          "The period must start and end within calendar 2024, with the start on or before the end.",
+        );
       const result = await core(() =>
         client.createBasDraft(
           create(CreateBasDraftRequestSchema, {
@@ -851,12 +1156,7 @@ export async function createFacade({
         bankingLinesNeedingReconciliation: result.bankingLinesNeedingReconciliation,
         bankingLinesUnreconciledInPeriod: result.bankingLinesUnreconciledInPeriod,
         currentDraftBasWorkpapers: result.currentDraftBasWorkpapers,
-        basStatus:
-          result.basStatus === 2
-            ? "draft_not_lodged"
-            : result.basStatus === 3
-              ? "outdated"
-              : "not_created",
+        basStatus: basStatuses.get(result.basStatus) ?? "unspecified",
         attentionItems: result.attentionItems.map((item) => ({
           kind: item.kind === 1 ? "documents" : item.kind === 2 ? "banking" : "bas",
           label: item.label,
@@ -893,7 +1193,7 @@ export async function createFacade({
         });
       return { insights };
     },
-    capabilities: async () => ({
+    capabilities: async (session) => ({
       api: {
         available: true,
         scope: "local",
@@ -915,7 +1215,8 @@ export async function createFacade({
       reporting: {
         year: 2024,
         description:
-          "Reviewed-document GST workpaper only. Full BAS and lodgement are unavailable.",
+          "Local GST drafts for periods within calendar 2024, showing GST credits (1B) and provisional candidates. The core calculates sales (G1), GST on sales (1A) and net GST, but the web app does not show them, and BAS preparation and lodgement are unavailable.",
+        taxRuleBundle: await taxRuleBundle(session),
       },
     }),
   };

@@ -2,12 +2,17 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { App } from "./app";
+import { deadlineLabel } from "./utils";
 
-const json = (value: unknown) =>
+const json = (value: unknown, status = 200) =>
   new Response(JSON.stringify(value), {
-    status: 200,
+    status,
     headers: { "Content-Type": "application/json" },
   });
+const expiresAt = new Date(Date.now() + 15 * 60_000).toISOString();
+// Testing Library collapses whitespace, and some ICU versions put U+202F before AM or PM.
+const deadline = deadlineLabel(expiresAt).replace(/\s+/g, " ");
+const discarded = "This setup expired before it was confirmed. Start setup again.";
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -20,7 +25,7 @@ it("shows the recovery code and waits for confirmation before entering the works
       calls.push(url);
       if (url === "/api/session") return json({ state: "setup" });
       if (url === "/api/workspace/create")
-        return json({ setupId: "setup-1", recoveryCode: "ABCD-EFGH-IJKL-MNOP" });
+        return json({ setupId: "setup-1", recoveryCode: "ABCD-EFGH-IJKL-MNOP", expiresAt });
       if (url === "/api/workspace/confirm") {
         confirmations += 1;
         if (confirmations === 1)
@@ -59,6 +64,11 @@ it("shows the recovery code and waits for confirmation before entering the works
   await user.click(screen.getByRole("button", { name: "Create local workspace" }));
 
   expect(await screen.findByText("ABCD-EFGH-IJKL-MNOP")).toBeTruthy();
+  expect(
+    screen.getByText(
+      `Confirm by ${deadline}. After that, or after 5 incorrect codes, this setup is discarded and you need to start again.`,
+    ),
+  ).toBeTruthy();
   expect(calls).not.toContain("/api/workspace/confirm");
   await user.type(screen.getByLabelText("Enter your saved recovery code"), "ABCD-EFGH-IJKL-MNOP");
   await user.click(screen.getByRole("button", { name: "Confirm recovery code" }));
@@ -68,6 +78,42 @@ it("shows the recovery code and waits for confirmation before entering the works
   await user.click(screen.getByRole("button", { name: "Confirm recovery code" }));
   await waitFor(() => expect(confirmations).toBe(2));
   expect(await screen.findByRole("heading", { name: "Overview" })).toBeTruthy();
+});
+
+it("returns to setup with the reason when a pending setup is discarded", async () => {
+  let sessions = 0;
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (url: string) => {
+      if (url === "/api/session") {
+        sessions += 1;
+        return json(
+          sessions === 1
+            ? { state: "recovery", setupId: "setup-1", expiresAt }
+            : { state: "setup" },
+        );
+      }
+      if (url === "/api/workspace/confirm")
+        return json({ error: { code: "conflict", message: discarded } }, 409);
+      throw new Error(`Unexpected request ${url}`);
+    }),
+  );
+  const user = userEvent.setup();
+  render(<App />);
+
+  await screen.findByRole("heading", { name: "Save your recovery code" });
+  expect(screen.getByText(new RegExp(`Confirm by ${deadline}\\.`))).toBeTruthy();
+  await user.type(screen.getByLabelText("Enter your saved recovery code"), "ABCD-EFGH-IJKL-MNOP");
+  await user.type(screen.getByLabelText("Email or username"), "alex@example.com");
+  await user.type(screen.getByLabelText("Administrator password"), "administrator-password-long");
+  await user.type(screen.getByLabelText("Business legal name"), "Example Books Pty Ltd");
+  await user.type(screen.getByLabelText("Business display name"), "Example Books");
+  await user.type(screen.getByLabelText("ABN"), "51824753556");
+  await user.click(screen.getByRole("button", { name: "Confirm recovery code" }));
+
+  expect(await screen.findByRole("heading", { name: "Create your local workspace" })).toBeTruthy();
+  expect(screen.getByRole("alert").textContent).toBe(discarded);
+  expect(sessions).toBe(2);
 });
 
 it("returns to unlock when an authenticated session expires", async () => {

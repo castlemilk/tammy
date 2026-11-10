@@ -8,25 +8,44 @@ import { isTrustedRequest } from "./security.mjs";
 const COOKIE = "tammy_session";
 const MAX_BODY = 768 * 1024;
 const IDLE_MS = 30 * 60 * 1000;
-const routes = {
-  "/api/overview": "overview",
-  "/api/accounts": "accounts",
-  "/api/journals": "journals",
-  "/api/trial-balance": "trialBalance",
-  "/api/documents": "documents",
-  "/api/banking": "banking",
-  "/api/bas": "bas",
-  "/api/insights": "insights",
-  "/api/capabilities": "capabilities",
-};
-const writes = {
-  "/api/accounts": "createAccount",
-  "/api/journals": "postJournal",
-  "/api/banking/import": "importBank",
-  "/api/banking/reconcile": "reconcile",
-  "/api/bas": "createBas",
-  "/api/documents/upload": "uploadDocument",
-};
+// Request input selects these entries, so Maps keep inherited names such as `constructor` out.
+const routes = new Map([
+  ["/api/overview", "overview"],
+  ["/api/accounts", "accounts"],
+  ["/api/journals", "journals"],
+  ["/api/trial-balance", "trialBalance"],
+  ["/api/documents", "documents"],
+  ["/api/banking", "banking"],
+  ["/api/bas", "bas"],
+  ["/api/insights", "insights"],
+  ["/api/capabilities", "capabilities"],
+]);
+const writes = new Map([
+  ["/api/accounts", "createAccount"],
+  ["/api/journals", "postJournal"],
+  ["/api/banking/import", "importBank"],
+  ["/api/banking/reconcile", "reconcile"],
+  ["/api/bas", "createBas"],
+  ["/api/documents/upload", "uploadDocument"],
+]);
+const mcpReads = new Map([
+  ["overview", "overview"],
+  ["accounts", "accounts"],
+  ["journals", "journals"],
+  ["trial-balance", "trialBalance"],
+  ["documents", "documents"],
+  ["banking", "banking"],
+  ["bas", "bas"],
+  ["insights", "insights"],
+]);
+const contentTypes = new Map([
+  [".html", "text/html; charset=utf-8"],
+  [".js", "text/javascript; charset=utf-8"],
+  [".css", "text/css; charset=utf-8"],
+  [".svg", "image/svg+xml"],
+  [".png", "image/png"],
+  [".woff2", "font/woff2"],
+]);
 
 function uniqueHeader(req, name) {
   const values = [];
@@ -96,6 +115,9 @@ export function createGateway({
   let pendingOwner;
   let cleanup = Promise.resolve();
   function closeSession(token, session) {
+    // A takeover or another close may already have replaced this session. Logging it out again
+    // would lock the workspace under the newer session.
+    if (sessions.get(token) !== session) return cleanup;
     sessions.delete(token);
     if (active === token) active = undefined;
     cleanup = cleanup.then(() => facade.logout(session)).catch(() => {});
@@ -137,15 +159,7 @@ export function createGateway({
         const info = await stat(target);
         if (!info.isFile() || info.size > 16 * 1024 * 1024)
           return reply(res, 404, { error: { message: "Not found." } });
-        const types = {
-          ".html": "text/html; charset=utf-8",
-          ".js": "text/javascript; charset=utf-8",
-          ".css": "text/css; charset=utf-8",
-          ".svg": "image/svg+xml",
-          ".png": "image/png",
-          ".woff2": "font/woff2",
-        };
-        const type = types[pathModule.extname(target)];
+        const type = contentTypes.get(pathModule.extname(target));
         if (!type) return reply(res, 404, { error: { message: "Not found." } });
         const content = await readFile(target);
         res.writeHead(200, {
@@ -169,17 +183,7 @@ export function createGateway({
       if (path.startsWith("/api/mcp/")) {
         const authorization = uniqueHeader(req, "authorization");
         const supplied = authorization?.startsWith("Bearer ") ? authorization.slice(7) : "";
-        const names = {
-          overview: "overview",
-          accounts: "accounts",
-          journals: "journals",
-          "trial-balance": "trialBalance",
-          documents: "documents",
-          banking: "banking",
-          bas: "bas",
-          insights: "insights",
-        };
-        const operation = names[path.slice("/api/mcp/".length)];
+        const operation = mcpReads.get(path.slice("/api/mcp/".length));
         const session = active && sessions.get(active);
         if (
           method !== "GET" ||
@@ -240,11 +244,17 @@ export function createGateway({
         if (operation === "create" && pendingOwner)
           return reply(res, 409, { error: { message: "Workspace setup is already in progress." } });
         if (operation === "create") pendingOwner = token;
+        // An unlock while another browser is signed in is a takeover. The facade checks the
+        // credentials before it disturbs that browser, so a failed attempt leaves it signed in.
         let result;
         try {
           result = await facade[operation](body);
         } catch (error) {
           if (operation === "create" && pendingOwner === token) pendingOwner = undefined;
+          // A rejected confirmation can discard an expired or exhausted setup. Release its owner so
+          // setup can start again from any browser.
+          if (operation === "confirm" && (await facade.state()).state !== "recovery")
+            pendingOwner = undefined;
           throw error;
         }
         if (!result.authentication) return reply(res, 200, result);
@@ -277,11 +287,12 @@ export function createGateway({
           { "Set-Cookie": `${COOKIE}=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0` },
         );
       }
-      if (method === "GET" && routes[path])
-        return reply(res, 200, await facade[routes[path]](session, url.searchParams));
+      const read = method === "GET" ? routes.get(path) : undefined;
+      if (read) return reply(res, 200, await facade[read](session, url.searchParams));
       if (method === "POST") {
         const body = await jsonBody(req);
-        if (writes[path]) return reply(res, 200, await facade[writes[path]](session, body));
+        const write = writes.get(path);
+        if (write) return reply(res, 200, await facade[write](session, body));
         const document = path.match(/^\/api\/documents\/([0-9a-f-]+)\/review$/);
         if (document)
           return reply(res, 200, await facade.reviewDocument(session, document[1], body));
@@ -294,11 +305,7 @@ export function createGateway({
         Number.isInteger(error?.status) && error.status >= 400 && error.status < 600
           ? error.status
           : 500;
-      if (
-        status === 401 &&
-        currentSession?.authentication &&
-        sessions.get(currentToken) === currentSession
-      )
+      if (status === 401 && currentSession?.authentication)
         await closeSession(currentToken, currentSession);
       return reply(res, status, {
         error: {

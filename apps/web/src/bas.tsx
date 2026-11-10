@@ -17,7 +17,9 @@ export function BasScreen() {
   async function createDraft(event: FormEvent) {
     event.preventDefault();
     if (!start.startsWith("2024-") || !end.startsWith("2024-") || start > end) {
-      setError("Choose a reporting period within 2024, with the start before the end.");
+      setError(
+        "Choose a period that starts and ends within calendar 2024, with the start on or before the end.",
+      );
       return;
     }
     const payload = { periodStart: start, periodEnd: end };
@@ -48,8 +50,8 @@ export function BasScreen() {
         ) : null}
       </div>
       <p className="notice">
-        Only the 2024 reviewed-document GST workpaper is supported. Complete BAS preparation,
-        declaration and lodgement are not available.
+        Drafts cover periods within calendar 2024. Full BAS preparation, declaration and lodgement
+        are not available in the web app.
       </p>
       {error ? (
         <p className="notice error" role="alert">
@@ -75,8 +77,8 @@ export function BasScreen() {
                 <div>
                   <h2>Create a local draft</h2>
                   <p>
-                    Reviewed purchase documents in the period are listed as provisional GST
-                    candidates
+                    Reviewed documents not yet posted as purchases are listed as provisional GST
+                    candidates, whatever their date
                   </p>
                 </div>
               </div>
@@ -116,16 +118,32 @@ export function BasScreen() {
                 </div>
                 <span className="status pending">Draft — not lodged</span>
               </div>
-              <div className="notice">
-                <p>Retained draft. Review source changes and regenerate if needed.</p>
-                {workpaper.limitations.length ? (
+              {workpaper.sourcesChanged ? (
+                <p className="notice" role="status">
+                  Records changed after this draft was created. Create another draft to include the
+                  changes.
+                </p>
+              ) : null}
+              {workpaper.reviewWarnings.length ? (
+                <div className="notice">
+                  <p>Review before relying on this draft</p>
+                  <ul>
+                    {workpaper.reviewWarnings.map((warning) => (
+                      <li key={warning}>{warning}</li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+              {workpaper.limitations.length ? (
+                <div className="notice">
+                  <p>About this draft</p>
                   <ul>
                     {workpaper.limitations.map((limitation) => (
                       <li key={limitation}>{limitation}</li>
                     ))}
                   </ul>
-                ) : null}
-              </div>
+                </div>
+              ) : null}
               <section className="panel">
                 <h2>GST summary</h2>
                 <dl className="summary-list">
@@ -189,7 +207,10 @@ export function BasScreen() {
                   <div className="panel-heading">
                     <div>
                       <h2>Provisional GST candidates</h2>
-                      <p>Reviewed purchase documents, not included in GST credits (1B)</p>
+                      <p>
+                        Reviewed documents not yet posted as purchases, of any date, kept out of GST
+                        credits (1B)
+                      </p>
                     </div>
                   </div>
                   <div className="table-wrap">
@@ -213,7 +234,7 @@ export function BasScreen() {
                         ))}
                         {workpaper.candidates.length ? (
                           <tr className="total-row">
-                            <td colSpan={3}>Total provisional candidates</td>
+                            <td colSpan={3}>Total provisional candidates, all dates</td>
                             <td className="numeric">{formatAmount(workpaper.candidateGstMinor)}</td>
                           </tr>
                         ) : null}
@@ -221,7 +242,7 @@ export function BasScreen() {
                     </table>
                   </div>
                   {workpaper.candidates.length === 0 ? (
-                    <p className="table-empty">No reviewed purchase documents in this period</p>
+                    <p className="table-empty">No provisional GST candidates</p>
                   ) : null}
                 </section>
               )}

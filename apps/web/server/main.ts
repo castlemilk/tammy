@@ -14,6 +14,8 @@ import { createFacade } from "./facade.mjs";
 import { createGateway } from "./gateway.mjs";
 
 const directory = path.dirname(fileURLToPath(import.meta.url));
+// CoreProcess reports an unexpected exit only through its diagnostic, so the gateway polls it.
+const CORE_WATCH_INTERVAL_MS = 250;
 const defaultBinary = path.resolve(
   directory,
   `../../desktop/resources/core/${process.platform}-${process.arch}/${process.platform === "win32" ? "tammy-core.exe" : "tammy-core"}`,
@@ -37,6 +39,11 @@ export async function startApp(
     port?: number;
     origin?: string;
     mcpToken?: string;
+    /**
+     * Runs after the gateway has stopped because the supervised core exited or failed. The default
+     * exits the process with status 1.
+     */
+    onCoreExit?: (errorCode: string) => void;
   } = {},
 ) {
   const requestedDataRoot = path.resolve(
@@ -99,17 +106,32 @@ export async function startApp(
       });
     });
     let closed = false;
-    return {
-      server,
-      close: async () => {
-        if (closed) return;
-        closed = true;
-        await new Promise<void>((resolve, reject) =>
-          server.close((error?: Error) => (error ? reject(error) : resolve())),
-        );
-        await supervisor.stop();
-      },
+    const close = async () => {
+      if (closed) return;
+      closed = true;
+      clearInterval(watch);
+      await new Promise<void>((resolve, reject) =>
+        server.close((error?: Error) => (error ? reject(error) : resolve())),
+      );
+      await supervisor.stop();
     };
+    // Without the core every request would fail, so stop serving instead of answering with 500s.
+    const watch = setInterval(() => {
+      const diagnostic = supervisor.getDiagnostic();
+      if (diagnostic.state !== "FAILED") return;
+      clearInterval(watch);
+      const code = diagnostic.errorCode ?? "CORE_FAILED";
+      process.stderr.write(
+        `Tammy web stopped: the accounting core stopped unexpectedly (${code}). Start the web server again.\n`,
+      );
+      const stopping = close();
+      server.closeAllConnections();
+      void stopping
+        .catch(() => undefined)
+        .then(() => (options.onCoreExit ?? (() => process.exit(1)))(code));
+    }, CORE_WATCH_INTERVAL_MS);
+    watch.unref();
+    return { server, close };
   } catch (error) {
     await supervisor.stop();
     throw error;

@@ -12,30 +12,37 @@ if (!token || token.length < 32 || !Number.isInteger(port) || port < 1 || port >
 }
 const server = new McpServer({ name: "tammy-local", version: "0.1.0" });
 const annotations = { readOnlyHint: true, destructiveHint: false, openWorldHint: false };
+function failure(text: string) {
+  return { isError: true, content: [{ type: "text" as const, text }] };
+}
+/** The gateway's client-safe `{ error: { code, message } }` body, when it sent one. */
+function gatewayError(body: unknown) {
+  if (typeof body !== "object" || body === null || !("error" in body)) return undefined;
+  const error = body.error;
+  if (typeof error !== "object" || error === null) return undefined;
+  const code = "code" in error ? error.code : undefined;
+  const message = "message" in error ? error.message : undefined;
+  return typeof code === "string" && typeof message === "string" ? { code, message } : undefined;
+}
 async function read(route: string, query = "") {
+  let response: Response;
+  let body: unknown;
   try {
-    const response = await fetch(`http://127.0.0.1:${port}/api/mcp/${route}${query}`, {
+    response = await fetch(`http://127.0.0.1:${port}/api/mcp/${route}${query}`, {
       headers: { Authorization: `Bearer ${token}` },
       signal: AbortSignal.timeout(5000),
     });
-    const body = await response.json();
-    if (!response.ok)
-      return {
-        isError: true,
-        content: [
-          {
-            type: "text" as const,
-            text: "Tammy is unavailable or the local workspace is not authenticated.",
-          },
-        ],
-      };
-    return { content: [{ type: "text" as const, text: JSON.stringify(body) }] };
+    body = await response.json();
   } catch {
-    return {
-      isError: true,
-      content: [{ type: "text" as const, text: "Could not reach the local Tammy gateway." }],
-    };
+    return failure("Could not reach the local Tammy gateway.");
   }
+  if (response.ok) return { content: [{ type: "text" as const, text: JSON.stringify(body) }] };
+  // Other 4xx responses say what to change, such as an invalid date. A 401 (no unlocked browser
+  // session or a wrong token) and 5xx failures keep the generic text.
+  const error = gatewayError(body);
+  if (response.status !== 401 && response.status < 500 && error)
+    return failure(`${error.code}: ${error.message}`);
+  return failure("Tammy is unavailable or the local workspace is not authenticated.");
 }
 const tools = [
   ["get_overview", "overview", "Read current attention counts from the active local workspace."],

@@ -47,4 +47,51 @@ describe("the local gateway client", () => {
       }),
     ).rejects.toEqual(new ApiError("The journal is not balanced.", 422));
   });
+
+  it("starts a new browser session once when the gateway lost it during unlock", async () => {
+    const reply = (status: number, value: unknown) =>
+      new Response(JSON.stringify(value), {
+        status,
+        headers: { "Content-Type": "application/json" },
+      });
+    const unlocked = { state: "authenticated", organisation: { id: "1", name: "Example" } };
+    const fetch = vi
+      .fn()
+      .mockResolvedValueOnce(
+        reply(401, {
+          error: { code: "unauthenticated", message: "Start a browser session first." },
+        }),
+      )
+      .mockResolvedValueOnce(reply(200, { state: "locked" }))
+      .mockResolvedValueOnce(reply(200, unlocked));
+    vi.stubGlobal("fetch", fetch);
+    const credentials = {
+      username: "alex@example.com",
+      workspacePassphrase: "workspace-passphrase-long",
+      administratorPassword: "administrator-password-long",
+    };
+
+    await expect(api.unlock(credentials)).resolves.toEqual(unlocked);
+    expect(fetch.mock.calls.map(([url]) => url)).toEqual([
+      "/api/workspace/unlock",
+      "/api/session",
+      "/api/workspace/unlock",
+    ]);
+  });
+
+  it("reports wrong credentials without renewing the session or retrying", async () => {
+    const message = "The workspace passphrase, username or administrator password is incorrect.";
+    const fetch = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ error: { code: "unauthenticated", message } }), {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+    vi.stubGlobal("fetch", fetch);
+
+    await expect(
+      api.unlock({ username: "a", workspacePassphrase: "b", administratorPassword: "c" }),
+    ).rejects.toEqual(new ApiError(message, 401));
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
 });

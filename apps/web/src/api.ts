@@ -22,7 +22,11 @@ export class ApiError extends Error {
   }
 }
 
-async function request<T>(path: string, body?: unknown): Promise<T> {
+// The gateway's answer when it no longer holds this browser's session, for example after the
+// session idled out or the server restarted.
+const BROWSER_SESSION_REQUIRED = "Start a browser session first.";
+
+async function request<T>(path: string, body?: unknown, renewed = false): Promise<T> {
   const response = await fetch(`/api${path}`, {
     credentials: "same-origin",
     ...(body === undefined
@@ -45,6 +49,17 @@ async function request<T>(path: string, body?: unknown): Promise<T> {
       typeof value.error.message === "string"
         ? value.error.message
         : "The local service could not complete that request.";
+    // The setup and unlock forms can outlive their browser session. Start a new one and send the
+    // request once more.
+    if (
+      response.status === 401 &&
+      path.startsWith("/workspace/") &&
+      message === BROWSER_SESSION_REQUIRED &&
+      !renewed
+    ) {
+      await request<Session>("/session");
+      return request<T>(path, body, true);
+    }
     if (response.status === 401 && path !== "/session" && !path.startsWith("/workspace/")) {
       window.dispatchEvent(new Event("tammy:session-expired"));
     }
@@ -83,7 +98,10 @@ export interface JournalInput {
 export const api = {
   session: () => request<Session>("/session"),
   createWorkspace: (input: CreateWorkspaceInput) =>
-    request<{ recoveryCode: string; setupId: string }>("/workspace/create", input),
+    request<{ recoveryCode: string; setupId: string; expiresAt: string }>(
+      "/workspace/create",
+      input,
+    ),
   confirmWorkspace: (input: ConfirmWorkspaceInput) => request<Session>("/workspace/confirm", input),
   unlock: (
     input: Pick<CreateWorkspaceInput, "username" | "workspacePassphrase" | "administratorPassword">,

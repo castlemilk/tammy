@@ -22,6 +22,16 @@ export function displayDate(value: string | null | undefined): string {
   return `${day}/${month}/${year}`;
 }
 
+/** A deadline in local time, with the day when it is not today. */
+export function deadlineLabel(value: string, now = new Date()): string {
+  const deadline = new Date(value);
+  if (Number.isNaN(deadline.getTime())) return "";
+  const time = deadline.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+  return deadline.toDateString() === now.toDateString()
+    ? time
+    : `${deadline.toLocaleDateString(undefined, { day: "numeric", month: "short" })}, ${time}`;
+}
+
 export function errorMessage(error: unknown): string {
   return error instanceof Error && error.message
     ? error.message

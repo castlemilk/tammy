@@ -22,6 +22,11 @@ test("sets up a workspace, posts a balanced journal and reads the trial balance"
   await page.getByLabel("Administrator password").fill("administrator-password-long-enough");
   await page.getByRole("button", { name: "Create local workspace" }).click();
   const recoveryCode = await page.locator(".recovery-code strong").innerText();
+  await expect(
+    page.getByText(
+      /^Confirm by .+\. After that, or after 5 incorrect codes, this setup is discarded/,
+    ),
+  ).toBeVisible();
   await page.getByLabel("Enter your saved recovery code").fill(recoveryCode);
   await page.getByRole("button", { name: "Confirm recovery code" }).click();
   await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible();
@@ -154,11 +159,9 @@ test("sets up a workspace, posts a balanced journal and reads the trial balance"
   await page.getByLabel("Period end").fill("2024-06-30");
   await page.getByRole("button", { name: "Create local draft" }).click();
   await expect(page.getByText("Draft — not lodged")).toBeVisible();
-  await expect(page.getByText(/Sales GST and net GST payable are not calculated/)).toBeVisible();
+  await expect(page.getByText(/calculated by the core but not shown/)).toBeVisible();
   // The reviewed receipt is a provisional candidate; only posted purchases count in 1B.
-  await expect(
-    page.getByText(/provisional GST credit candidates, not claimed credits/),
-  ).toBeVisible();
+  await expect(page.getByText(/Their GST is not a claimed credit/)).toBeVisible();
   await expect(
     page.locator(".summary-list > div").filter({ hasText: "GST credits (1B)" }),
   ).toContainText("$0.00");

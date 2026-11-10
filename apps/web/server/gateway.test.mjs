@@ -386,23 +386,70 @@ test("a duplicate create cannot release the first pending setup reservation", as
   }
 });
 
-test("idle expiry locks the core before a new browser can unlock it", async () => {
-  let now = 0,
-    locked = true;
-  const facade = {
+/**
+ * A facade that behaves like the real one over the real core. Unlock checks the credentials before
+ * it disturbs a signed-in browser: wrong ones fail with 401 and change nothing, and right ones end
+ * the earlier core session. Logout locks only while its session still owns the open workspace.
+ */
+function coreLikeFacade(calls = [], { passphrase = "right" } = {}) {
+  let owner;
+  let signIns = 0;
+  return {
     state: () => ({ state: "locked" }),
-    unlock: async () => {
-      if (!locked) throw Object.assign(new Error("already open"), { status: 409 });
-      locked = false;
-      return { authentication: { id: "core" }, organisation: { id: "org", name: "Example" } };
+    unlock: async (body) => {
+      calls.push("unlock");
+      if (body.workspacePassphrase !== passphrase)
+        throw Object.assign(new Error("The workspace passphrase is incorrect."), {
+          status: 401,
+          code: "unauthenticated",
+        });
+      signIns += 1;
+      owner = `core-${signIns}`;
+      return {
+        authentication: { id: owner },
+        organisation: { id: "org", name: "Example" },
+      };
     },
-    logout: async () => {
-      locked = true;
+    logout: async (session) => {
+      calls.push("logout");
+      if (session.authentication.id === owner) owner = undefined;
+    },
+    accounts: async (session) => {
+      if (session.authentication.id !== owner)
+        throw Object.assign(new Error("Your session is no longer valid."), {
+          status: 401,
+          code: "unauthenticated",
+        });
+      return { accounts: [{ code: session.authentication.id }] };
     },
   };
+}
+
+async function browser(port, origin) {
+  let cookie = (await call(port, "/api/session")).headers["set-cookie"][0].split(";")[0];
+  return {
+    cookie: () => cookie,
+    get: (path) => call(port, path, { cookie }),
+    unlock: async (workspacePassphrase = "right") => {
+      const result = await call(port, "/api/workspace/unlock", {
+        method: "POST",
+        cookie,
+        origin,
+        body: { workspacePassphrase },
+      });
+      if (result.headers["set-cookie"]) cookie = result.headers["set-cookie"][0].split(";")[0];
+      return result;
+    },
+  };
+}
+
+test("idle expiry locks the core before a new browser can unlock it", async () => {
+  let now = 0;
+  const calls = [];
+  const origin = "http://127.0.0.1:5173";
   const server = createGateway({
-    facade,
-    origin: "http://127.0.0.1:5173",
+    facade: coreLikeFacade(calls),
+    origin,
     now: () => now,
     idleMs: 100,
   });
@@ -410,49 +457,129 @@ test("idle expiry locks the core before a new browser can unlock it", async () =
   await once(server, "listening");
   const port = server.address().port;
   try {
-    let cookie = (await call(port, "/api/session")).headers["set-cookie"][0].split(";")[0];
-    await call(port, "/api/workspace/unlock", {
-      method: "POST",
-      cookie,
-      origin: "http://127.0.0.1:5173",
-      body: {},
-    });
+    assert.equal((await (await browser(port, origin)).unlock()).status, 200);
     now = 101;
-    const next = await call(port, "/api/session");
-    cookie = next.headers["set-cookie"][0].split(";")[0];
-    assert.equal(
-      (
-        await call(port, "/api/workspace/unlock", {
+    // Any request runs the idle check, which signs the idle session out and locks the workspace.
+    const next = await browser(port, origin);
+    assert.deepEqual(calls, ["unlock", "logout"]);
+    assert.equal((await next.unlock()).status, 200);
+    assert.deepEqual(calls, ["unlock", "logout", "unlock"]);
+  } finally {
+    server.close();
+  }
+});
+
+test("a newer browser takes over only after the facade accepts its credentials", async () => {
+  const calls = [];
+  const origin = "http://127.0.0.1:5173";
+  const secret = "a-secret-that-is-at-least-32-characters-long";
+  const server = createGateway({ facade: coreLikeFacade(calls), origin, mcpToken: secret });
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  const port = server.address().port;
+  const mcp = () => call(port, "/api/mcp/accounts", { authorization: `Bearer ${secret}` });
+  try {
+    const a = await browser(port, origin);
+    assert.equal((await a.unlock()).status, 200);
+    assert.deepEqual((await mcp()).body, { accounts: [{ code: "core-1" }] });
+    const b = await browser(port, origin);
+    // A rejected takeover leaves the signed-in browser and MCP as they were.
+    const wrong = await b.unlock("wrong");
+    assert.equal(wrong.status, 401);
+    assert.equal(wrong.body.error.message, "The workspace passphrase is incorrect.");
+    assert.deepEqual((await a.get("/api/accounts")).body, { accounts: [{ code: "core-1" }] });
+    assert.deepEqual((await mcp()).body, { accounts: [{ code: "core-1" }] });
+    assert.equal((await b.unlock()).status, 200);
+    // The gateway never logs the earlier browser out itself: the facade's sign-in has already
+    // ended that core session, and a lock now would end the new one.
+    assert.deepEqual(calls, ["unlock", "unlock", "unlock"]);
+    const replaced = await a.get("/api/accounts");
+    assert.equal(replaced.status, 401);
+    assert.equal(replaced.body.error.message, "Start a browser session first.");
+    assert.deepEqual((await b.get("/api/accounts")).body, { accounts: [{ code: "core-2" }] });
+    // MCP follows the active browser session.
+    assert.deepEqual((await mcp()).body, { accounts: [{ code: "core-2" }] });
+  } finally {
+    server.close();
+  }
+});
+
+test("a logout that finishes after a takeover leaves the newer session signed in", async () => {
+  const calls = [];
+  const origin = "http://127.0.0.1:5173";
+  let watching = false;
+  let lookedUp = () => {};
+  const server = createGateway({
+    facade: coreLikeFacade(calls),
+    origin,
+    // The gateway reads the clock just before it looks up the request's session.
+    now: () => {
+      if (watching) lookedUp();
+      return Date.now();
+    },
+  });
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  const port = server.address().port;
+  try {
+    const a = await browser(port, origin);
+    assert.equal((await a.unlock()).status, 200);
+    // A's logout looks up A's session, then waits for its body.
+    const reached = new Promise((resolve) => {
+      lookedUp = resolve;
+    });
+    watching = true;
+    let sendBody = () => {};
+    const logout = new Promise((resolve, reject) => {
+      const req = request(
+        {
+          host: "127.0.0.1",
+          port,
+          path: "/api/session/logout",
           method: "POST",
-          cookie,
-          origin: "http://127.0.0.1:5173",
-          body: {},
-        })
-      ).status,
-      200,
-    );
+          headers: {
+            Host: `127.0.0.1:${port}`,
+            Origin: origin,
+            Cookie: a.cookie(),
+            "Content-Type": "application/json",
+            "Content-Length": "2",
+          },
+        },
+        (res) => {
+          const chunks = [];
+          res.on("data", (chunk) => chunks.push(chunk));
+          res.on("end", () =>
+            resolve({ status: res.statusCode, body: JSON.parse(Buffer.concat(chunks).toString()) }),
+          );
+        },
+      );
+      req.on("error", reject);
+      req.flushHeaders();
+      sendBody = () => req.end("{}");
+    });
+    await reached;
+    watching = false;
+    const b = await browser(port, origin);
+    assert.equal((await b.unlock()).status, 200);
+    sendBody();
+    assert.deepEqual(await logout, { status: 200, body: { state: "locked" } });
+    // The replaced session is not logged out again, so nothing locks B's workspace.
+    assert.deepEqual(calls, ["unlock", "unlock"]);
+    assert.deepEqual((await b.get("/api/accounts")).body, { accounts: [{ code: "core-2" }] });
   } finally {
     server.close();
   }
 });
 
 test("core session expiration clears the browser session and permits unlock again", async () => {
-  let locked = true;
   const facade = {
-    state: () => ({ state: "locked" }),
-    unlock: async () => {
-      if (!locked) throw Object.assign(new Error("already open"), { status: 409 });
-      locked = false;
-      return { authentication: { id: "core" }, organisation: { id: "org", name: "Example" } };
-    },
-    logout: async () => {
-      locked = true;
-    },
+    ...coreLikeFacade(),
     accounts: async () => {
       throw Object.assign(new Error("expired"), { status: 401, code: "unauthenticated" });
     },
   };
-  const server = createGateway({ facade, origin: "http://127.0.0.1:5173" });
+  const origin = "http://127.0.0.1:5173";
+  const server = createGateway({ facade, origin });
   server.listen(0, "127.0.0.1");
   await once(server, "listening");
   const port = server.address().port;
@@ -461,8 +588,8 @@ test("core session expiration clears the browser session and permits unlock agai
     const first = await call(port, "/api/workspace/unlock", {
       method: "POST",
       cookie,
-      origin: "http://127.0.0.1:5173",
-      body: {},
+      origin,
+      body: { workspacePassphrase: "right" },
     });
     cookie = first.headers["set-cookie"][0].split(";")[0];
     assert.equal((await call(port, "/api/accounts", { cookie })).status, 401);
@@ -474,12 +601,75 @@ test("core session expiration clears the browser session and permits unlock agai
         await call(port, "/api/workspace/unlock", {
           method: "POST",
           cookie,
-          origin: "http://127.0.0.1:5173",
-          body: {},
+          origin,
+          body: { workspacePassphrase: "right" },
         })
       ).status,
       200,
     );
+  } finally {
+    server.close();
+  }
+});
+
+test("a confirmation that discards the pending setup releases its browser", async () => {
+  let pending = false;
+  const facade = {
+    state: () => (pending ? { state: "recovery", setupId: "pending" } : { state: "setup" }),
+    create: async () => {
+      pending = true;
+      return { setupId: "pending", recoveryCode: "once" };
+    },
+    confirm: async (body) => {
+      if (body.recoveryCode === "wrong")
+        throw Object.assign(new Error("The recovery code does not match."), { status: 400 });
+      pending = false;
+      throw Object.assign(new Error("This setup expired before it was confirmed."), {
+        status: 409,
+      });
+    },
+  };
+  const origin = "http://127.0.0.1:5173";
+  const server = createGateway({ facade, origin });
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  const port = server.address().port;
+  const post = (path, cookie, body = {}) =>
+    call(port, path, { method: "POST", cookie, origin, body });
+  try {
+    const a = (await call(port, "/api/session")).headers["set-cookie"][0].split(";")[0];
+    const b = (await call(port, "/api/session")).headers["set-cookie"][0].split(";")[0];
+    assert.equal((await post("/api/workspace/create", a)).status, 200);
+    assert.equal((await post("/api/workspace/create", b)).status, 409);
+    // A wrong code keeps the setup, and its owner.
+    assert.equal((await post("/api/workspace/confirm", a, { recoveryCode: "wrong" })).status, 400);
+    assert.equal((await post("/api/workspace/confirm", b)).status, 403);
+    const expired = await post("/api/workspace/confirm", a);
+    assert.equal(expired.status, 409);
+    assert.equal(expired.body.error.code, "conflict");
+    assert.deepEqual((await call(port, "/api/session", { cookie: b })).body, { state: "setup" });
+    assert.equal((await post("/api/workspace/create", b)).status, 200);
+  } finally {
+    server.close();
+  }
+});
+
+test("inherited object keys never select a route or an MCP read", async () => {
+  const secret = "a-secret-that-is-at-least-32-characters-long";
+  const origin = "http://127.0.0.1:5173";
+  const server = createGateway({ facade: coreLikeFacade(), origin, mcpToken: secret });
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  const port = server.address().port;
+  try {
+    const a = await browser(port, origin);
+    assert.equal((await a.unlock()).status, 200);
+    for (const name of ["constructor", "__proto__", "toString", "hasOwnProperty"]) {
+      const mcp = await call(port, `/api/mcp/${name}`, { authorization: `Bearer ${secret}` });
+      assert.equal(mcp.status, 401, name);
+      assert.equal(mcp.body.error.code, "unauthenticated");
+      assert.equal((await a.get(`/api/${name}`)).status, 404, name);
+    }
   } finally {
     server.close();
   }
