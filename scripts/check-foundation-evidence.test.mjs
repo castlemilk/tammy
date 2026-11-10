@@ -125,7 +125,7 @@ function assertSharedCiProvisioning(job, shell) {
   const taskInstall = requiredStep(job, "Install exact Task");
   const taskVersion = requiredStep(job, "Verify exact Task version");
   assert.equal(taskVersion.shell, shell, `${job.name}: Task version shell`);
-  if (job["runs-on"] === "macos-14") {
+  if (job["runs-on"] === "macos-15") {
     assert.equal(taskInstall.shell, "bash");
     assert.match(taskInstall.run, /task_darwin_arm64\.tar\.gz/);
     assert.equal(taskInstall["timeout-minutes"], 5);
@@ -177,10 +177,10 @@ test("retains runner provisioning, evidence classification, and artifacts around
     assert.match(workflow, /pnpm install --frozen-lockfile/);
   }
   assert.match(foundationWorkflow, /runs-on: ubuntu-24\.04[\s\S]*timeout-minutes: 30/);
-  assert.match(foundationWorkflow, /runs-on: macos-14\n\s*timeout-minutes: 40/);
+  assert.match(foundationWorkflow, /runs-on: macos-15\n\s*timeout-minutes: 40/);
   assert.match(foundationWorkflow, /runs-on: windows-2025[\s\S]*timeout-minutes: 30/);
   assert.match(foundationWorkflow, /name: Contracts and local foundation/);
-  assert.match(foundationWorkflow, /name: macOS 14 arm64 packaged E2E/);
+  assert.match(foundationWorkflow, /name: macOS 15 arm64 packaged E2E/);
   assert.match(
     foundationWorkflow,
     /name: WINDOWS_SERVER_SMOKE_ONLY \/ Windows Server 2025 desktop checks/,
@@ -455,8 +455,8 @@ test("pins provisioning and evidence ownership independently for every CI job", 
   assert.equal(ubuntuTask.run, "task ci:contracts\ntask ci:linux\n");
 
   const macos = foundation.jobs["macos14-arm64-packaged"];
-  assert.equal(macos.name, "macOS 14 arm64 packaged E2E");
-  assert.equal(macos["runs-on"], "macos-14");
+  assert.equal(macos.name, "macOS 15 arm64 packaged E2E");
+  assert.equal(macos["runs-on"], "macos-15");
   assert.equal(macos["timeout-minutes"], 40);
   assertSharedCiProvisioning(macos, "bash");
   assert.equal(
