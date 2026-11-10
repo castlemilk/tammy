@@ -65,10 +65,10 @@ jobs:
           task ci:linux
 
   macos14-arm64-packaged:
-    name: macOS 14 arm64 packaged E2E
+    name: macOS 15 arm64 packaged E2E
     # Measured slow comparison needs ~36m for setup, 19 cases, the unchanged
     # 8m SBR test deadline and 2m artifact reserve. See docs/development/ci-evidence.
-    runs-on: macos-14
+    runs-on: macos-15
     timeout-minutes: 40
     steps:
       - name: Assert native Apple silicon
@@ -126,6 +126,28 @@ jobs:
       - name: Verify exact Task version
         shell: bash
         run: test "$(task --version)" = "3.52.0"
+
+      - name: Give packaged windows the tested display height
+        shell: bash
+        run: |
+          set -euo pipefail
+          display() {
+            osascript -l JavaScript -e 'ObjC.import("AppKit"); var s = $.NSScreen.mainScreen; var f = s.frame.size; var v = s.visibleFrame.size; f.width + "x" + f.height + ", visible " + v.width + "x" + v.height' 2>/dev/null || echo unavailable
+          }
+          before="$(display)"
+          echo "Display before: $before; Dock autohide: $(defaults read com.apple.dock autohide 2>/dev/null || echo unset)"
+          system_profiler SPDisplaysDataType 2>/dev/null | grep -E 'Resolution|UI Looks like' || true
+          # Packaged acceptance sizes window content to 1024x700. macOS keeps windows inside the
+          # screen's visible frame, and on the macos-15 image the visible Dock leaves 656 px.
+          defaults write com.apple.dock autohide -bool true
+          killall Dock || true
+          after="$before"
+          for _ in $(seq 1 30); do
+            after="$(display)"
+            [ "$after" != "$before" ] && break
+            sleep 0.5
+          done
+          echo "Display after: $after"
 
       - name: Run canonical macOS CI scenario
         env:

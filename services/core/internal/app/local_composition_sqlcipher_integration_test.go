@@ -7,9 +7,13 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
+	"path/filepath"
+	"slices"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -26,7 +30,9 @@ import (
 )
 
 type localMigrationCaptureModule struct {
-	database *sqlcipher.Database
+	database    *sqlcipher.Database
+	activations int
+	failNext    int
 }
 
 func (module *localMigrationCaptureModule) HandlerFactories() []transport.GeneratedHandlerFactory {
@@ -36,7 +42,12 @@ func (module *localMigrationCaptureModule) HandlerFactories() []transport.Genera
 }
 
 func (module *localMigrationCaptureModule) Activate(activation LocalWorkspaceActivation) error {
+	if module.failNext > 0 {
+		module.failNext--
+		return errors.New("test: injected module activation failure")
+	}
 	module.database = activation.Database
+	module.activations++
 	return nil
 }
 
@@ -331,8 +342,140 @@ func TestLocalCompositionReopensAndAuthenticatesExistingWorkspaceAfterRestart(t 
 type localCompositionTestClients struct {
 	capability string
 	identity   tammyv1connect.IdentityServiceClient
+	overview   tammyv1connect.OverviewServiceClient
 	workspace  tammyv1connect.WorkspaceServiceClient
 	capture    *localMigrationCaptureModule
+}
+
+func localTestRequest[T any](capability string, message *T) *connect.Request[T] {
+	request := connect.NewRequest(message)
+	request.Header().Set(transport.CapabilityHeader, capability)
+	return request
+}
+
+func localTestCreateRequest(setupID string) *tammyv1.CreateWorkspaceRequest {
+	return &tammyv1.CreateWorkspaceRequest{
+		SetupId:               setupID,
+		Destination:           &tammyv1.ApprovedFileRef{CapabilityId: LocalWorkspaceDirectoryCapability},
+		WorkspacePassphrase:   &tammyv1.SecretInput{Utf8: []byte("workspace-passphrase-long-enough")},
+		AdministratorUsername: "admin@tammy.local", AdministratorDisplayName: "Tammy Admin",
+		AdministratorPassword: &tammyv1.SecretInput{Utf8: []byte("administrator-password-long-enough")},
+	}
+}
+
+func (clients localCompositionTestClients) createWorkspace(t *testing.T, setupID string) (*tammyv1.CreateWorkspaceResponse, [][]byte) {
+	t.Helper()
+	created, err := clients.workspace.CreateWorkspace(context.Background(), localTestRequest(clients.capability, localTestCreateRequest(setupID)))
+	if err != nil || created.Msg.Workspace == nil || created.Msg.RecoverySecret == nil {
+		t.Fatalf("CreateWorkspace() = %#v, %v", created, err)
+	}
+	groups, err := workspace.ParseRecoveryGroups(created.Msg.RecoverySecret.Utf8)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return created.Msg, groups
+}
+
+func (clients localCompositionTestClients) confirmRecovery(setupID string, groups [][]byte) error {
+	_, err := clients.workspace.ConfirmRecovery(context.Background(), localTestRequest(clients.capability, &tammyv1.ConfirmRecoveryRequest{
+		SetupId:       setupID,
+		Confirmations: []*tammyv1.RecoveryGroupConfirmation{{GroupIndex: 0, Value: groups[0]}, {GroupIndex: 1, Value: groups[1]}},
+	}))
+	return err
+}
+
+func (clients localCompositionTestClients) unlock() (*connect.Response[tammyv1.UnlockWorkspaceResponse], error) {
+	return clients.workspace.UnlockWorkspace(context.Background(), localTestRequest(clients.capability, &tammyv1.UnlockWorkspaceRequest{
+		WorkspaceFile: &tammyv1.ApprovedFileRef{CapabilityId: LocalWorkspaceFileCapability},
+		Proof: &tammyv1.WorkspaceUnlockProof{Proof: &tammyv1.WorkspaceUnlockProof_Passphrase{
+			Passphrase: &tammyv1.SecretInput{Utf8: []byte("workspace-passphrase-long-enough")},
+		}},
+	}))
+}
+
+func (clients localCompositionTestClients) signIn() (*tammyv1.SignInResponse, error) {
+	signedIn, err := clients.identity.SignIn(context.Background(), localTestRequest(clients.capability, &tammyv1.SignInRequest{
+		Username: "admin@tammy.local", Password: &tammyv1.SecretInput{Utf8: []byte("administrator-password-long-enough")},
+	}))
+	if err != nil {
+		return nil, err
+	}
+	if signedIn.Msg.User == nil || signedIn.Msg.Session == nil {
+		return nil, fmt.Errorf("SignIn() = %#v", signedIn.Msg)
+	}
+	return signedIn.Msg, nil
+}
+
+func (clients localCompositionTestClients) workspaceState(t *testing.T, workspaceID string) tammyv1.WorkspaceState {
+	t.Helper()
+	got, err := clients.workspace.GetWorkspaceState(context.Background(),
+		localTestRequest(clients.capability, &tammyv1.GetWorkspaceStateRequest{WorkspaceId: &workspaceID}))
+	if err != nil || got.Msg.Workspace == nil {
+		t.Fatalf("GetWorkspaceState() = %#v, %v", got, err)
+	}
+	return got.Msg.Workspace.State
+}
+
+// readWithSession proves the session still authorises a read through the
+// identity bridge (overview) and through the identity route (current user).
+func (clients localCompositionTestClients) readWithSession(workspaceID string, signedIn *tammyv1.SignInResponse) error {
+	authentication := &tammyv1.AuthenticationContext{ActorUserId: signedIn.User.Id, SessionId: signedIn.Session.Id}
+	if _, err := clients.overview.GetAttentionSummary(context.Background(), localTestRequest(clients.capability, &tammyv1.GetAttentionSummaryRequest{
+		Authentication: authentication,
+		OrganisationId: workspaceID,
+		AsOfDate:       &tammyv1.CivilDate{Year: 2026, Month: 8, Day: 10},
+		ReportingPeriod: &tammyv1.ReportingPeriod{
+			StartDate: &tammyv1.CivilDate{Year: 2026, Month: 7, Day: 1},
+			EndDate:   &tammyv1.CivilDate{Year: 2026, Month: 9, Day: 30},
+		},
+	})); err != nil {
+		return fmt.Errorf("GetAttentionSummary(): %w", err)
+	}
+	current, err := clients.identity.GetCurrentUser(context.Background(),
+		localTestRequest(clients.capability, &tammyv1.GetCurrentUserRequest{Authentication: authentication}))
+	if err != nil {
+		return fmt.Errorf("GetCurrentUser(): %w", err)
+	}
+	if current.Msg.User.GetId() != signedIn.User.Id {
+		return fmt.Errorf("GetCurrentUser() = %#v, want user %s", current.Msg.User, signedIn.User.Id)
+	}
+	return nil
+}
+
+// assertLocalAuditTrail compares the stored audit chain, in sequence order,
+// with "REASON FROM->TO" workspace transitions and "USER REASON" user changes.
+func assertLocalAuditTrail(t *testing.T, database *sqlcipher.Database, workspaceID string, want ...string) {
+	t.Helper()
+	header, err := audit.LoadChainHeader(context.Background(), database, workspaceID, 0)
+	if err != nil {
+		t.Fatalf("LoadChainHeader() error = %v", err)
+	}
+	stored, err := audit.LoadStoredEvents(context.Background(), database, workspaceID, header.Generation, 1, header.CurrentSequence)
+	if err != nil {
+		t.Fatalf("LoadStoredEvents() error = %v", err)
+	}
+	state := func(value tammyv1.WorkspaceState) string {
+		return strings.TrimPrefix(value.String(), "WORKSPACE_STATE_")
+	}
+	got := make([]string, 0, len(stored))
+	for index, event := range stored {
+		if event.Event.GetSequence() != uint64(index+1) {
+			t.Fatalf("audit event %d has sequence %d", index+1, event.Event.GetSequence())
+		}
+		payload := event.Event.GetPayload()
+		switch {
+		case payload.GetWorkspaceStateChanged() != nil:
+			transition := payload.GetWorkspaceStateChanged()
+			got = append(got, fmt.Sprintf("%s %s->%s", transition.ReasonCode, state(transition.FromState), state(transition.ToState)))
+		case payload.GetUserStateChanged() != nil:
+			got = append(got, "USER "+payload.GetUserStateChanged().ReasonCode)
+		default:
+			got = append(got, event.Event.GetType().String())
+		}
+	}
+	if !slices.Equal(got, want) {
+		t.Fatalf("audit trail = %q, want %q", got, want)
+	}
 }
 
 func startLocalCompositionTestServer(t *testing.T, root string, anchors workspace.AnchorStore, mirror audit.MirrorStore) (localCompositionTestClients, func()) {
@@ -369,6 +512,7 @@ func startLocalCompositionTestServer(t *testing.T, root string, anchors workspac
 	clients := localCompositionTestClients{
 		capability: ready.Capability,
 		identity:   tammyv1connect.NewIdentityServiceClient(httpClient, baseURL),
+		overview:   tammyv1connect.NewOverviewServiceClient(httpClient, baseURL),
 		workspace:  tammyv1connect.NewWorkspaceServiceClient(httpClient, baseURL),
 		capture:    capture,
 	}
@@ -380,5 +524,155 @@ func startLocalCompositionTestServer(t *testing.T, root string, anchors workspac
 			_ = server.Shutdown(ctx)
 			_ = composition.Close()
 		})
+	}
+}
+
+func TestLocalCompositionRestartDuringRecoveryPreservesPendingSetup(t *testing.T) {
+	root, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	anchors := workspace.NewMemoryAnchorStore()
+	mirror := newLocalTestAuditMirror()
+	first, stopFirst := startLocalCompositionTestServer(t, root, anchors, mirror)
+	t.Cleanup(stopFirst)
+	const setupID = "01900f3c-7b2e-7cc4-98c4-dc0c0c0739b1"
+	created, groups := first.createWorkspace(t, setupID)
+	workspaceID := created.Workspace.Id
+	stopFirst()
+
+	second, stopSecond := startLocalCompositionTestServer(t, root, anchors, mirror)
+	t.Cleanup(stopSecond)
+	// The first core's shutdown must leave the unfinished setup pending, not locked.
+	if state := second.workspaceState(t, workspaceID); state != tammyv1.WorkspaceState_WORKSPACE_STATE_PENDING_RECOVERY {
+		t.Fatalf("GetWorkspaceState() after restart = %s, want PENDING_RECOVERY", state)
+	}
+	if second.capture.database != nil {
+		t.Fatal("workspace modules were bound before recovery confirmation")
+	}
+	if err := second.confirmRecovery(setupID, groups); err != nil {
+		t.Fatalf("ConfirmRecovery() after restart: %v", err)
+	}
+	if second.capture.database == nil {
+		t.Fatal("ConfirmRecovery() after restart did not bind the workspace modules")
+	}
+	// No LOCK may sit between creation and confirmation.
+	assertLocalAuditTrail(t, second.capture.database, workspaceID,
+		"CREATE UNSPECIFIED->PENDING_RECOVERY",
+		"RECOVERY_CONFIRMATION PENDING_RECOVERY->UNAUTHENTICATED")
+	signedIn, err := second.signIn()
+	if err != nil {
+		t.Fatalf("SignIn() after pending recovery: %v", err)
+	}
+	if err := second.readWithSession(workspaceID, signedIn); err != nil {
+		t.Fatalf("session after restarted confirmation: %v", err)
+	}
+	if _, err := mirror.Load(context.Background(), workspaceID); err != nil {
+		t.Fatalf("first sign-in did not establish the audit mirror: %v", err)
+	}
+	stopSecond()
+
+	// Startup normalisation reports any closed workspace as LOCKED, so only an
+	// unlock and sign-in prove the third core accepts the restarted audit chain.
+	third, stopThird := startLocalCompositionTestServer(t, root, anchors, mirror)
+	t.Cleanup(stopThird)
+	unlocked, err := third.unlock()
+	if err != nil || unlocked.Msg.Workspace == nil || unlocked.Msg.Workspace.Id != workspaceID {
+		t.Fatalf("UnlockWorkspace() after normal close = %#v, %v", unlocked, err)
+	}
+	if _, err := third.signIn(); err != nil {
+		t.Fatalf("SignIn() after unlock: %v", err)
+	}
+	// Once the mirror is established, LOCK records no prior state.
+	assertLocalAuditTrail(t, third.capture.database, workspaceID,
+		"CREATE UNSPECIFIED->PENDING_RECOVERY",
+		"RECOVERY_CONFIRMATION PENDING_RECOVERY->UNAUTHENTICATED",
+		"SESSION_STARTED UNAUTHENTICATED->AUTHENTICATED", "USER SIGN_IN",
+		"LOCK UNSPECIFIED->LOCKED",
+		"UNLOCK LOCKED->UNAUTHENTICATED",
+		"SESSION_STARTED UNAUTHENTICATED->AUTHENTICATED", "USER SIGN_IN")
+}
+
+// Replaying CreateWorkspace while setup is pending, or ConfirmRecovery after
+// sign-in, activates the database that is already bound. Such a replay must
+// not bind the modules again or rebuild identity, which would end the session.
+func TestLocalCompositionSetupReplaysKeepBindingAndSession(t *testing.T) {
+	root, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	server, stop := startLocalCompositionTestServer(t, root, workspace.NewMemoryAnchorStore(), newLocalTestAuditMirror())
+	t.Cleanup(stop)
+	const setupID = "01900f3c-7b2e-7cc4-98c4-dc0c0c0739c1"
+	created, groups := server.createWorkspace(t, setupID)
+	database := server.capture.database
+	if database == nil || server.capture.activations != 1 {
+		t.Fatalf("CreateWorkspace() activations = %d, database bound = %t", server.capture.activations, database != nil)
+	}
+	assertBoundOnce := func(step string) {
+		t.Helper()
+		if server.capture.activations != 1 || server.capture.database != database {
+			t.Fatalf("%s bound the workspace modules again (activations = %d)", step, server.capture.activations)
+		}
+	}
+	replayed, err := server.workspace.CreateWorkspace(context.Background(), localTestRequest(server.capability, localTestCreateRequest(setupID)))
+	if err != nil || replayed.Msg.Workspace == nil || replayed.Msg.Workspace.Id != created.Workspace.Id {
+		t.Fatalf("CreateWorkspace() replay while pending = %#v, %v", replayed, err)
+	}
+	assertBoundOnce("CreateWorkspace() replay")
+	if err := server.confirmRecovery(setupID, groups); err != nil {
+		t.Fatalf("ConfirmRecovery() error = %v", err)
+	}
+	assertBoundOnce("ConfirmRecovery()")
+	signedIn, err := server.signIn()
+	if err != nil {
+		t.Fatalf("SignIn() error = %v", err)
+	}
+	if err := server.confirmRecovery(setupID, groups); err != nil {
+		t.Fatalf("ConfirmRecovery() replay error = %v", err)
+	}
+	assertBoundOnce("ConfirmRecovery() replay")
+	if err := server.readWithSession(created.Workspace.Id, signedIn); err != nil {
+		t.Fatalf("session after setup replays: %v", err)
+	}
+}
+
+// A restarted confirmation can commit and still fail to bind a module. Its
+// replay binds the same database again and must keep the identity service, so a
+// session started in between survives.
+func TestLocalCompositionActivationRetryKeepsIdentitySessions(t *testing.T) {
+	root, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	anchors := workspace.NewMemoryAnchorStore()
+	mirror := newLocalTestAuditMirror()
+	first, stopFirst := startLocalCompositionTestServer(t, root, anchors, mirror)
+	t.Cleanup(stopFirst)
+	const setupID = "01900f3c-7b2e-7cc4-98c4-dc0c0c0739d1"
+	created, groups := first.createWorkspace(t, setupID)
+	stopFirst()
+
+	second, stopSecond := startLocalCompositionTestServer(t, root, anchors, mirror)
+	t.Cleanup(stopSecond)
+	second.capture.failNext = 1
+	if err := second.confirmRecovery(setupID, groups); err == nil {
+		t.Fatal("ConfirmRecovery() succeeded although module activation failed")
+	}
+	if second.capture.database != nil {
+		t.Fatal("failed activation bound the workspace modules")
+	}
+	signedIn, err := second.signIn()
+	if err != nil {
+		t.Fatalf("SignIn() after failed activation: %v", err)
+	}
+	if err := second.confirmRecovery(setupID, groups); err != nil {
+		t.Fatalf("ConfirmRecovery() replay after failed activation: %v", err)
+	}
+	if second.capture.database == nil || second.capture.activations != 1 {
+		t.Fatalf("replay did not finish binding the workspace modules (activations = %d)", second.capture.activations)
+	}
+	if err := second.readWithSession(created.Workspace.Id, signedIn); err != nil {
+		t.Fatalf("session after activation retry: %v", err)
 	}
 }

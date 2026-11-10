@@ -112,16 +112,17 @@ Do not manually delete individual files. For a deliberate blank-workspace reset,
 | Path | Ownership |
 | --- | --- |
 | `apps/desktop/src/main` | Electron lifecycle, core supervision, CSP, file intake, and packaged-path checks. |
-| `apps/desktop/src/conveyor` | Fixed eight-module router, sender authorization, schemas, and Core adapters. |
+| `apps/desktop/src/conveyor` | Fixed ten-module router, sender authorization, schemas, and Core adapters. |
 | `apps/desktop/src/preload` | Restricted Conveyor bridge; no raw transport, stream, event, or filesystem surface. |
 | `apps/desktop/src/app` | Setup, workspace shell, accounting, documents, banking, BAS, SBR readiness, and activity UI. |
+| `apps/web` | Local web application: React browser client in `src`; loopback Node gateway, Connect facade, and read-only stdio MCP adapter in `server`. |
 | `proto/tammy/v1` | Versioned protobuf contracts and validation annotations. |
 | `services/core/cmd/tammy-core` | Core process entry point and development/process configuration. |
 | `services/core/internal/app` | Production/local composition and ordinary-command coordination. |
 | `services/core/internal/storage` | SQLCipher adapter, migrations, locks, and recovery-safe storage. |
 | `services/core/internal/{accounting,documents,banking,reporting}` | Module-owned domain rules, repositories, and services. |
 | `services/core/internal/{workspace,identity,audit,backup,restore}` | Workspace security, identity, audit evidence, and recovery services. |
-| `packages/connect-client` | Generated Connect-ES client contracts consumed by desktop. |
+| `packages/connect-client` | Generated Connect-ES client contracts consumed by desktop, `packages/reporting`, and the web gateway. |
 | `test/e2e` | Contract coverage declarations and end-to-end evidence fixtures. |
 | `docs/superpowers` | Historical designs and implementation plans; not current-state claims. |
 
@@ -176,6 +177,8 @@ The SQLCipher-tagged suite requires the supported cgo/platform toolchain and can
 - [Current technical state](tech-state.md)
 - [Local SBR readiness](sbr-local-readiness.md)
 - [Local accounting walkthrough](local-accounting-walkthrough.md)
+- [Web application](web-application.md)
+- [Local web API](web-api.md)
 - [Application documentation and macOS release design](../superpowers/specs/2026-08-10-application-documentation-macos-release-design.md)
 - [Accounting walkthrough UI design](../superpowers/specs/2026-08-09-accounting-tax-walkthrough-ui-design.md)
 - [Current documentation/release plan](../superpowers/plans/2026-08-10-application-documentation-macos-release.md)

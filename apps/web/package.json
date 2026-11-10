@@ -1,0 +1,44 @@
+{
+  "name": "@tammy/web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "vite build",
+    "typecheck": "tsc --noEmit && pnpm server:typecheck",
+    "test": "vitest run",
+    "e2e": "playwright test",
+    "server:dev": "tsx server/main.ts",
+    "server:typecheck": "tsc -p server/tsconfig.json",
+    "server:test": "node --import tsx --test server/*.test.mjs server/*.test.ts",
+    "mcp": "tsx server/mcp.ts"
+  },
+  "dependencies": {
+    "@bufbuild/protobuf": "2.12.1",
+    "@connectrpc/connect": "2.1.2",
+    "@connectrpc/connect-node": "2.1.2",
+    "@fontsource-variable/ibm-plex-sans": "5.3.0",
+    "@modelcontextprotocol/sdk": "1.29.0",
+    "@tammy/connect-client": "workspace:*",
+    "lucide-react": "1.25.0",
+    "react": "19.2.7",
+    "react-dom": "19.2.7",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.61.1",
+    "@testing-library/dom": "10.4.1",
+    "@testing-library/react": "16.3.2",
+    "@testing-library/user-event": "14.6.1",
+    "@types/node": "26.1.1",
+    "@types/react": "19.2.17",
+    "@types/react-dom": "19.2.3",
+    "@vitejs/plugin-react": "6.0.3",
+    "jsdom": "29.1.1",
+    "tsx": "4.21.0",
+    "typescript": "7.0.2",
+    "vite": "8.1.5",
+    "vitest": "4.1.10"
+  }
+}

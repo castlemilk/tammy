@@ -240,7 +240,10 @@ func (port localWorkspaceAudit) AppendWorkspaceMutation(ctx context.Context, exe
 	}
 	port.runtime.openMu.Lock()
 	defer port.runtime.openMu.Unlock()
-	if mutation.Kind == "UNLOCK" {
+	// Either mutation can be the first audited write after a core restart. Both
+	// classify the workspace again inside this transaction rather than trusting
+	// runtime-wide state that other paths can change.
+	if mutation.Kind == "UNLOCK" || mutation.Kind == "RECOVERY_CONFIRMATION" {
 		if err := port.runtime.openWithinLocked(ctx, executor, mutation.WorkspaceID); err != nil {
 			return err
 		}
