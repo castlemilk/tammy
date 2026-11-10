@@ -307,6 +307,8 @@ type localRuntime struct {
 	overviewRoute      *localOverviewRoute
 	bootstrapIdentity  *identity.Service
 	activeIdentity     *identity.Service
+	identityDatabase   *sqlcipher.Database
+	activeDatabase     *sqlcipher.Database
 	passwords          *workspace.PasswordPolicy
 	clock              clock.Clock
 	ids                *ids.Generator
@@ -347,7 +349,18 @@ func (handler *localWorkspaceHandler) UnlockWorkspace(ctx context.Context, reque
 }
 
 func (handler *localWorkspaceHandler) ConfirmRecovery(ctx context.Context, request *connect.Request[tammyv1.ConfirmRecoveryRequest]) (*connect.Response[tammyv1.ConfirmRecoveryResponse], error) {
-	return handler.service.ConfirmRecovery(ctx, request)
+	response, err := handler.service.ConfirmRecovery(ctx, request)
+	if err != nil || response == nil || response.Msg == nil || response.Msg.Workspace == nil {
+		return response, err
+	}
+	// A restarted pending setup opens its database during confirmation. Bind the
+	// business and identity routes to that database before the user signs in.
+	if _, err := handler.service.ActiveDatabase(response.Msg.Workspace.Id); err == nil {
+		if err := handler.runtime.activate(response.Msg.Workspace.Id); err != nil {
+			return nil, err
+		}
+	}
+	return response, nil
 }
 
 func (handler *localWorkspaceHandler) LockWorkspace(ctx context.Context, request *connect.Request[tammyv1.LockWorkspaceRequest]) (*connect.Response[tammyv1.LockWorkspaceResponse], error) {
@@ -381,24 +394,16 @@ func (runtime *localRuntime) activate(workspaceID string) error {
 	if err != nil {
 		return err
 	}
+	if runtime.activeIdentity != nil && runtime.activeDatabase == database {
+		return nil
+	}
+	// Forget the previous binding until every route below is bound again, so a
+	// failed activation is retried in full instead of being skipped above.
+	runtime.activeDatabase = nil
 	if err := runtime.audit.activate(context.Background(), database, workspaceID, runtime.clock.Now().UTC()); err != nil {
 		return err
 	}
-	repository, err := identity.NewDatabaseRepository(database)
-	if err != nil {
-		return err
-	}
-	service, err := identity.NewService(identity.Config{
-		Repository: repository, Passwords: runtime.passwords, Clock: runtime.clock, Random: rand.Reader,
-		IDs: runtime.ids, Attempts: runtime.identityAttempts, FactorEncryptionKey: append([]byte(nil), runtime.identityFactorKey...),
-		Audit: localIdentityAudit{runtime.audit}, SessionLifecycle: localSessionLifecycle{service: &runtime.workspace},
-	})
-	if err != nil {
-		return err
-	}
-	runtime.activeIdentity = service
-	runtime.bridge.store(service)
-	if err := runtime.identityRoute.set(service); err != nil {
+	if err := runtime.bindIdentity(database); err != nil {
 		return err
 	}
 	snapshots, err := overview.NewSQLCipherSnapshotPort(database, workspaceID)
@@ -429,6 +434,44 @@ func (runtime *localRuntime) activate(workspaceID string) error {
 		if module == nil || module.Activate(activation) != nil {
 			return ErrComposition
 		}
+	}
+	runtime.activeDatabase = database
+	return nil
+}
+
+// bindIdentity routes identity calls to a service backed by database. A retried
+// activation of the same database keeps the bound service: a new one would
+// invalidate live sessions, and closing the old one would write to that
+// database. A replaced service is closed only after the route and bridge point
+// at its successor, so later requests never reach a closed service.
+func (runtime *localRuntime) bindIdentity(database *sqlcipher.Database) error {
+	previous := runtime.activeIdentity
+	service := previous
+	if previous == nil || runtime.identityDatabase != database {
+		repository, err := identity.NewDatabaseRepository(database)
+		if err != nil {
+			return err
+		}
+		service, err = identity.NewService(identity.Config{
+			Repository: repository, Passwords: runtime.passwords, Clock: runtime.clock, Random: rand.Reader,
+			IDs: runtime.ids, Attempts: runtime.identityAttempts, FactorEncryptionKey: append([]byte(nil), runtime.identityFactorKey...),
+			Audit: localIdentityAudit{runtime.audit}, SessionLifecycle: localSessionLifecycle{service: &runtime.workspace},
+		})
+		if err != nil {
+			return err
+		}
+	}
+	if err := runtime.identityRoute.set(service); err != nil {
+		if service != previous {
+			_ = service.Close()
+		}
+		return err
+	}
+	runtime.bridge.store(service)
+	runtime.activeIdentity = service
+	runtime.identityDatabase = database
+	if previous != nil && previous != service {
+		_ = previous.Close()
 	}
 	return nil
 }

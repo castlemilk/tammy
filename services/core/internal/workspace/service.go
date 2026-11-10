@@ -994,6 +994,13 @@ func (service *Service) LockWorkspace(ctx context.Context, _ *connect.Request[ta
 		return nil, ErrWorkspaceNotFound
 	}
 	record = authoritative
+	// Pending recovery has no authenticated session to invalidate. Closing its
+	// runtime must not turn the unfinished setup into a locked, terminal record:
+	// the user still needs to confirm the one-time recovery material after restart.
+	if record.State == tammyv1.WorkspaceState_WORKSPACE_STATE_PENDING_RECOVERY {
+		service.closeRuntime(record.ID)
+		return connect.NewResponse(&tammyv1.LockWorkspaceResponse{Workspace: service.projection(record)}), nil
+	}
 	record.State = tammyv1.WorkspaceState_WORKSPACE_STATE_LOCKED
 	operationID, err := service.ids.New()
 	if err != nil {
