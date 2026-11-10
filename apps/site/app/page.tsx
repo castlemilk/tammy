@@ -6,6 +6,7 @@ import "./landing.css";
 import { SITE_ORIGIN } from "../lib/site-config";
 import { SiteBrand, TammyMark } from "../components/site-brand";
 import { AccountingStatus } from "../components/accounting-status";
+import { LinkArrow } from "../components/link-arrow";
 
 const { identity, marketingVersion } = publicContent;
 const minimumMacOSLabel = identity.minimumMacOSVersion.replace(/\.0$/, "");
@@ -267,10 +268,10 @@ export default function Home() {
             <a href="/blog">Journal</a>
             <a href="#questions">Questions</a>
           </nav>
-          <a className="landing-header-action" href="#availability">Development access <span aria-hidden="true">↗</span></a>
+          <a className="landing-header-action" href="#availability">Development access <LinkArrow /></a>
         </header>
 
-        <main id="main-content">
+        <main id="main-content" tabIndex={-1}>
           <section className="landing-hero" aria-labelledby="landing-heading">
             <div className="landing-hero-copy">
               <h1 id="landing-heading">Your books.{" "}<br /><span>On your Mac.</span></h1>
@@ -280,7 +281,7 @@ export default function Home() {
                 one encrypted macOS workspace.
               </p>
               <div className="landing-hero-actions">
-                <a className="landing-button landing-button-primary" href="#workflow">See how it works <span aria-hidden="true">↗</span></a>
+                <a className="landing-button landing-button-primary" href="#workflow">See how it works <LinkArrow /></a>
                 <a className="landing-button landing-button-outline" href="#free-tools">Try free tools</a>
               </div>
               <p className="landing-platform"><Glyph name="desktop" /> {platformLabel}</p>
@@ -341,7 +342,7 @@ export default function Home() {
                   <span className="landing-feature-detail">{capability.detail}</span>
                   {capability.example === "invoice" && (
                     <>
-                      <a className="landing-feature-tool-link" href="/tools/invoice-generator">Browser invoice generator <span aria-hidden="true">↗</span></a>
+                      <a className="landing-feature-tool-link" href="/tools/invoice-generator">Browser invoice generator <LinkArrow /></a>
                       <p className="landing-browser-tool-note">Creates a PDF independently of your Mac workspace.</p>
                     </>
                   )}
@@ -358,7 +359,7 @@ export default function Home() {
             <div className="landing-bas-boundary">
               <h3>Prepared is not lodged.</h3>
               <p>Tammy helps you prepare local GST/BAS workpapers with reviewable calculations and retained sources. The current release does not submit tax reports to the ATO.</p>
-              <a className="landing-text-link" href="/privacy">Understand the reporting boundary <span aria-hidden="true">↗</span></a>
+              <a className="landing-text-link" href="/privacy">Understand the reporting boundary <LinkArrow /></a>
             </div>
           </section>
 
@@ -366,7 +367,7 @@ export default function Home() {
             <div className="landing-privacy-copy">
               <h2 id="privacy-heading">An encrypted workspace on your Mac.</h2>
               <p>Tammy stores accounting records in an encrypted workspace on your Mac. Some credentials live in macOS Keychain. There is no hosted Tammy business account or cloud sync in this release.</p>
-              <a className="landing-text-link landing-text-link-light" href="/privacy">Read our privacy policy <span aria-hidden="true">↗</span></a>
+              <a className="landing-text-link landing-text-link-light" href="/privacy">Read our privacy policy <LinkArrow /></a>
             </div>
             <ul className="landing-privacy-facts">
               <li>SQLCipher-encrypted local workspace</li>
@@ -379,35 +380,35 @@ export default function Home() {
             <div className="landing-tools-intro">
               <h2 id="landing-tools-heading">Free business tools</h2>
               <p>Create invoices, calculate GST, check an ABN, or understand pricing margins. Free utilities that keep your information in this browser tab.</p>
-              <a className="landing-text-link" href="/tools">Explore all free tools <span aria-hidden="true">↗</span></a>
-              <a className="landing-text-link landing-guides-link" href="/guides">Read the Australian accounting guides <span aria-hidden="true">↗</span></a>
+              <a className="landing-text-link" href="/tools">Explore all free tools <LinkArrow /></a>
+              <a className="landing-text-link landing-guides-link" href="/guides">Read the Australian accounting guides <LinkArrow /></a>
             </div>
             <div className="landing-tools-groups">
               <section className="landing-tools-group" aria-labelledby="landing-tools-invoices-records">
                 <h3 id="landing-tools-invoices-records">Invoices &amp; records</h3>
                 <div className="landing-tools-list">
-                  <a href="/tools/invoice-generator"><strong>Australian invoice generator</strong><span>Make and download an invoice PDF</span><span aria-hidden="true">↗</span></a>
-                  <a href="/tools/quote-generator"><strong>Quote and estimate generator</strong><span>Build and download a quote PDF</span><span aria-hidden="true">↗</span></a>
-                  <a href="/tools/expense-organiser"><strong>Receipt and expense organiser</strong><span>Keep a private source record worksheet</span><span aria-hidden="true">↗</span></a>
-                  <a href="/tools/invoice-due-date-calculator"><strong>Invoice due-date calculator</strong><span>Work out payment terms</span><span aria-hidden="true">↗</span></a>
+                  <a href="/tools/invoice-generator"><strong>Australian invoice generator</strong><span>Make and download an invoice PDF</span><LinkArrow /></a>
+                  <a href="/tools/quote-generator"><strong>Quote and estimate generator</strong><span>Build and download a quote PDF</span><LinkArrow /></a>
+                  <a href="/tools/expense-organiser"><strong>Receipt and expense organiser</strong><span>Keep a private source record worksheet</span><LinkArrow /></a>
+                  <a href="/tools/invoice-due-date-calculator"><strong>Invoice due-date calculator</strong><span>Work out payment terms</span><LinkArrow /></a>
                 </div>
               </section>
               <section className="landing-tools-group" aria-labelledby="landing-tools-tax-gst">
                 <h3 id="landing-tools-tax-gst">Tax &amp; GST</h3>
                 <div className="landing-tools-list">
-                  <a href="/tools/bas-workpaper"><strong>Simpler BAS workpaper</strong><span>Review GST figures before lodging</span><span aria-hidden="true">↗</span></a>
-                  <a href="/tools/sole-trader-tax-checklist"><strong>Sole trader tax checklist</strong><span>Prepare your myTax records</span><span aria-hidden="true">↗</span></a>
-                  <a href="/tools/gst-calculator"><strong>GST calculator</strong><span>Add or remove 10% GST</span><span aria-hidden="true">↗</span></a>
-                  <a href="/tools/abn-checker"><strong>ABN format checker</strong><span>Check the number before the register</span><span aria-hidden="true">↗</span></a>
+                  <a href="/tools/bas-workpaper"><strong>Simpler BAS workpaper</strong><span>Review GST figures before lodging</span><LinkArrow /></a>
+                  <a href="/tools/sole-trader-tax-checklist"><strong>Sole trader tax checklist</strong><span>Prepare your myTax records</span><LinkArrow /></a>
+                  <a href="/tools/gst-calculator"><strong>GST calculator</strong><span>Add or remove 10% GST</span><LinkArrow /></a>
+                  <a href="/tools/abn-checker"><strong>ABN format checker</strong><span>Check the number before the register</span><LinkArrow /></a>
                 </div>
               </section>
               <section className="landing-tools-group" aria-labelledby="landing-tools-planning-pricing">
                 <h3 id="landing-tools-planning-pricing">Planning &amp; pricing</h3>
                 <div className="landing-tools-list">
-                  <a href="/tools/profit-margin-calculator"><strong>Profit margin calculator</strong><span>Understand markup and gross margin</span><span aria-hidden="true">↗</span></a>
-                  <a href="/tools/break-even-calculator"><strong>Break-even calculator</strong><span>Know the unit sales target</span><span aria-hidden="true">↗</span></a>
-                  <a href="/tools/cash-runway-calculator"><strong>Cash runway calculator</strong><span>Estimate monthly cash coverage</span><span aria-hidden="true">↗</span></a>
-                  <a href="/tools/cash-flow-forecast"><strong>12-week cash flow forecast</strong><span>Plan dated receipts and payments</span><span aria-hidden="true">↗</span></a>
+                  <a href="/tools/profit-margin-calculator"><strong>Profit margin calculator</strong><span>Understand markup and gross margin</span><LinkArrow /></a>
+                  <a href="/tools/break-even-calculator"><strong>Break-even calculator</strong><span>Know the unit sales target</span><LinkArrow /></a>
+                  <a href="/tools/cash-runway-calculator"><strong>Cash runway calculator</strong><span>Estimate monthly cash coverage</span><LinkArrow /></a>
+                  <a href="/tools/cash-flow-forecast"><strong>12-week cash flow forecast</strong><span>Plan dated receipts and payments</span><LinkArrow /></a>
                 </div>
               </section>
             </div>
@@ -417,13 +418,13 @@ export default function Home() {
             <div className="landing-journal-intro">
               <h2 id="landing-journal-heading">The Tammy Journal</h2>
               <p>Carefully worked notes on GST timing, bank receipts, month-end reviews and business decisions.</p>
-              <a className="landing-text-link" href="/blog">Explore the journal <span aria-hidden="true">↗</span></a>
+              <a className="landing-text-link" href="/blog">Explore the journal <LinkArrow /></a>
             </div>
             <div className="landing-journal-stories">
-              <a href="/blog/which-quarter-gets-the-gst"><span>GST</span><strong>The BAS quarter has two clocks.</strong><span aria-hidden="true">↗</span></a>
-              <a href="/blog/not-every-bank-deposit-is-sales"><span>Bookkeeping</span><strong>Not every bank deposit is sales.</strong><span aria-hidden="true">↗</span></a>
-              <a href="/blog/the-month-end-review-that-found-220"><span>Bookkeeping</span><strong>The month-end close that found $220.</strong><span aria-hidden="true">↗</span></a>
-              <a href="/blog/the-price-rise-that-didnt-fix-margin"><span>Pricing</span><strong>The price rise that didn&apos;t fix the margin.</strong><span aria-hidden="true">↗</span></a>
+              <a href="/blog/which-quarter-gets-the-gst"><span>GST</span><strong>The BAS quarter has two clocks.</strong><LinkArrow /></a>
+              <a href="/blog/not-every-bank-deposit-is-sales"><span>Bookkeeping</span><strong>Not every bank deposit is sales.</strong><LinkArrow /></a>
+              <a href="/blog/the-month-end-review-that-found-220"><span>Bookkeeping</span><strong>The month-end close that found $220.</strong><LinkArrow /></a>
+              <a href="/blog/the-price-rise-that-didnt-fix-margin"><span>Pricing</span><strong>The price rise that didn&apos;t fix the margin.</strong><LinkArrow /></a>
             </div>
           </section>
 
@@ -431,7 +432,7 @@ export default function Home() {
             <div className="landing-faq-intro">
               <h2 id="questions-heading">Questions about Tammy</h2>
               <p>What Tammy does today, and what it does not.</p>
-              <a className="landing-text-link" href="/support">See support and technical details <span aria-hidden="true">↗</span></a>
+              <a className="landing-text-link" href="/support">See support and technical details <LinkArrow /></a>
             </div>
             <div className="landing-faq-items">
               {questions.map(({ question, answer }) => (
@@ -448,7 +449,7 @@ export default function Home() {
               <h2 id="closing-heading">Tammy is in development</h2>
               <p>Explore the local-first approach and contact the publisher about development access. A public Mac download is not available from this site yet.</p>
               <div className="landing-closing-actions">
-                <a className="landing-button landing-button-light" href={"mailto:" + identity.supportEmail + "?subject=Tammy%20development%20access"}>Enquire about Tammy <span aria-hidden="true">↗</span></a>
+                <a className="landing-button landing-button-light" href={"mailto:" + identity.supportEmail + "?subject=Tammy%20development%20access"}>Enquire about Tammy <LinkArrow /></a>
                 <a className="landing-button landing-button-ghost" href="/support">Get support</a>
               </div>
               <span className="landing-closing-version">Version {marketingVersion} · Development software · {platformLabel}</span>
