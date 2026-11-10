@@ -53,13 +53,15 @@ import {
   LockWorkspaceRequestSchema,
   UnlockWorkspaceRequestSchema,
 } from "@tammy/connect-client/tammy/v1/workspace_pb.js";
+import { httpError } from "./errors.mjs";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+// The code defaults to the documented code for the status, so a 409 always carries `conflict`.
 const bad = (
   message = "Check the supplied details and try again.",
   status = 400,
-  code = "invalid_argument",
-) => Object.assign(new Error(message), { status, code });
+  code = undefined,
+) => httpError(message, status, code);
 function required(value, max = 512) {
   if (typeof value !== "string" || !value.trim() || value.length > max) throw bad();
   return value;
@@ -270,7 +272,14 @@ function bankOut(l) {
     status: l.status === 3 ? "reconciled" : l.status === 2 ? "matched" : "unmatched",
   };
 }
-function basOut(w) {
+function legacyDocument(review) {
+  const source = review.legacySource?.source;
+  return source?.case === "document" ? source.value : undefined;
+}
+// The core's reconciled purchase format counts only posted purchases in GST credits (1B). A reviewed
+// document that was never posted as a purchase is a separate provisional candidate, never a credit.
+function basOut(w, documents = new Map()) {
+  const reconciled = w.purchaseSourceFormat !== undefined;
   return {
     id: w.id,
     status: "draft_not_lodged",
@@ -280,17 +289,50 @@ function basOut(w) {
     gstOnSales1aMinor: null,
     gstCredits1bMinor: outputMoney(w.gstCredits1b),
     netGstPayableMinor: null,
+    candidateGstMinor: reconciled ? outputMoney(w.legacyCandidateGst) : null,
     limitations: [
       "Sales GST and net GST payable are not calculated by this reviewed-document workpaper.",
+      ...(reconciled
+        ? [
+            "Reviewed documents are provisional GST credit candidates, not claimed credits. GST credits (1B) include only posted purchases, which this web release cannot create.",
+          ]
+        : []),
     ],
-    sources: w.sources.map((s) => ({
-      id: s.documentId,
-      date: dateOut(s.documentDate),
-      supplierName: s.supplierName,
-      invoiceNumber: s.invoiceNumber,
-      grossMinor: outputMoney(s.gross),
-      gstCreditMinor: outputMoney(s.gstCredit),
-    })),
+    sources: [
+      ...w.sources.map((s) => ({
+        id: s.documentId,
+        date: dateOut(s.documentDate),
+        supplierName: s.supplierName,
+        invoiceNumber: s.invoiceNumber,
+        grossMinor: outputMoney(s.gross),
+        gstCreditMinor: outputMoney(s.gstCredit),
+      })),
+      ...w.purchaseSources.map((s) => ({
+        id: s.documentId,
+        date: dateOut(s.invoiceDate),
+        supplierName: s.supplierName ?? "",
+        invoiceNumber: s.invoiceNumber ?? "",
+        grossMinor: outputMoney(s.allocatedGross),
+        gstCreditMinor: outputMoney(s.claimedGst),
+      })),
+    ],
+    candidates: w.purchaseReviews.flatMap((review) => {
+      const reference = legacyDocument(review);
+      if (!reference) return [];
+      // Describe a candidate only from the reviewed document version that the workpaper retained.
+      const document = documents.get(reference.documentId);
+      const retained =
+        document?.version === reference.reviewedVersion.toString() ? document : undefined;
+      return [
+        {
+          id: reference.documentId,
+          date: dateOut(review.invoiceDate),
+          supplierName: retained?.supplierName ?? "",
+          invoiceNumber: retained?.invoiceNumber ?? "",
+          candidateGstMinor: outputMoney(review.unclaimedGst),
+        },
+      ];
+    }),
   };
 }
 function docCandidate(body) {
@@ -370,6 +412,20 @@ export async function createFacade({
       ),
     );
     openedHere = true;
+  }
+  // Candidate rows carry document identity only; supplier details come from the bounded document
+  // list. They are descriptive, so a failed lookup still returns the core's workpaper figures.
+  async function basView(session, workpaper) {
+    let documents = new Map();
+    if (workpaper.purchaseReviews.some(legacyDocument)) {
+      try {
+        const list = await facade.documents(session);
+        documents = new Map(list.documents.map((document) => [document.id, document]));
+      } catch {
+        // Keep the core figures without supplier details.
+      }
+    }
+    return basOut(workpaper, documents);
   }
   async function authenticated(authentication) {
     const result = await core(() =>
@@ -745,18 +801,19 @@ export async function createFacade({
       };
     },
     bas: async (session) => {
+      let result;
       try {
-        const result = await client.getCurrentBasDraft(
+        result = await client.getCurrentBasDraft(
           create(GetCurrentBasDraftRequestSchema, {
             authentication: session.authentication,
             organisationId: session.organisation.id,
           }),
         );
-        return { workpaper: result.workpaper ? basOut(result.workpaper) : null };
       } catch (error) {
         if (ConnectError.from(error).code === Code.NotFound) return { workpaper: null };
         return core(() => Promise.reject(error));
       }
+      return { workpaper: result.workpaper ? await basView(session, result.workpaper) : null };
     },
     createBas: async (session, body) => {
       const start = date(body.periodStart),
@@ -773,7 +830,7 @@ export async function createFacade({
           }),
         ),
       );
-      return { workpaper: basOut(result.workpaper) };
+      return { workpaper: await basView(session, result.workpaper) };
     },
     overview: async (session) => {
       const day = today();

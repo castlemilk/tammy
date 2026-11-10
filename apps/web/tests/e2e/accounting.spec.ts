@@ -155,7 +155,17 @@ test("sets up a workspace, posts a balanced journal and reads the trial balance"
   await page.getByRole("button", { name: "Create local draft" }).click();
   await expect(page.getByText("Draft — not lodged")).toBeVisible();
   await expect(page.getByText(/Sales GST and net GST payable are not calculated/)).toBeVisible();
+  // The reviewed receipt is a provisional candidate; only posted purchases count in 1B.
+  await expect(
+    page.getByText(/provisional GST credit candidates, not claimed credits/),
+  ).toBeVisible();
+  await expect(
+    page.locator(".summary-list > div").filter({ hasText: "GST credits (1B)" }),
+  ).toContainText("$0.00");
   await expect(page.getByRole("row", { name: /Officeworks/ })).toContainText("$29.00");
+  await expect(page.getByRole("row", { name: /Total provisional candidates/ })).toContainText(
+    "$29.00",
+  );
   await page
     .getByRole("navigation", { name: "Primary navigation" })
     .getByRole("link", { name: "Intelligence" })

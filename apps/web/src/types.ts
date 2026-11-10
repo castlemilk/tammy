@@ -96,6 +96,8 @@ export interface BasWorkpaper {
   gstOnSales1aMinor: MinorUnits | null;
   gstCredits1bMinor: MinorUnits;
   netGstPayableMinor: MinorUnits | null;
+  /** Provisional GST of reviewed documents that are not posted purchases; never part of 1B. */
+  candidateGstMinor: MinorUnits | null;
   limitations: string[];
   sources: {
     id: string;
@@ -104,6 +106,13 @@ export interface BasWorkpaper {
     invoiceNumber: string;
     grossMinor: MinorUnits;
     gstCreditMinor: MinorUnits;
+  }[];
+  candidates: {
+    id: string;
+    date: string | null;
+    supplierName: string;
+    invoiceNumber: string;
+    candidateGstMinor: MinorUnits;
   }[];
 }
 

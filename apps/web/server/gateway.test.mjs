@@ -4,7 +4,7 @@ import { request } from "node:http";
 import { test } from "node:test";
 import { createGateway } from "./gateway.mjs";
 
-function call(port, path, { method = "GET", origin, cookie, body, host, authorization } = {}) {
+function call(port, path, { method = "GET", origin, cookie, body, raw, host, authorization } = {}) {
   return new Promise((resolve, reject) => {
     const req = request(
       {
@@ -17,7 +17,7 @@ function call(port, path, { method = "GET", origin, cookie, body, host, authoriz
           ...(origin ? { Origin: origin } : {}),
           ...(cookie ? { Cookie: cookie } : {}),
           ...(authorization ? { Authorization: authorization } : {}),
-          ...(body ? { "Content-Type": "application/json" } : {}),
+          ...(body || raw !== undefined ? { "Content-Type": "application/json" } : {}),
         },
       },
       (res) => {
@@ -33,7 +33,7 @@ function call(port, path, { method = "GET", origin, cookie, body, host, authoriz
       },
     );
     req.on("error", reject);
-    req.end(body ? JSON.stringify(body) : undefined);
+    req.end(raw ?? (body ? JSON.stringify(body) : undefined));
   });
 }
 
@@ -360,17 +360,14 @@ test("a duplicate create cannot release the first pending setup reservation", as
       body: {},
     });
     await began;
-    assert.equal(
-      (
-        await call(port, "/api/workspace/create", {
-          method: "POST",
-          cookie: a,
-          origin: "http://127.0.0.1:5173",
-          body: {},
-        })
-      ).status,
-      409,
-    );
+    const duplicate = await call(port, "/api/workspace/create", {
+      method: "POST",
+      cookie: a,
+      origin: "http://127.0.0.1:5173",
+      body: {},
+    });
+    assert.equal(duplicate.status, 409);
+    assert.equal(duplicate.body.error.code, "conflict");
     release();
     await first;
     assert.equal(
@@ -483,6 +480,62 @@ test("core session expiration clears the browser session and permits unlock agai
       ).status,
       200,
     );
+  } finally {
+    server.close();
+  }
+});
+
+test("error codes follow the documented HTTP status contract", async () => {
+  const failures = [
+    Object.assign(new Error("Refresh and try again."), { status: 409 }),
+    Object.assign(new Error("Already open."), { status: 409, code: "invalid_argument" }),
+    Object.assign(new Error("Check the amount."), { status: 400, code: "invalid_argument" }),
+  ];
+  const facade = {
+    state: () => ({ state: "locked" }),
+    unlock: async () => ({
+      authentication: { id: "core" },
+      organisation: { id: "org", name: "Example" },
+    }),
+    postJournal: async () => {
+      throw failures.shift();
+    },
+  };
+  const origin = "http://127.0.0.1:5173";
+  const server = createGateway({ facade, origin });
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  const port = server.address().port;
+  try {
+    const cookie = (await call(port, "/api/session")).headers["set-cookie"][0].split(";")[0];
+    const login = await call(port, "/api/workspace/unlock", {
+      method: "POST",
+      cookie,
+      origin,
+      body: {},
+    });
+    const auth = login.headers["set-cookie"][0].split(";")[0];
+    const post = (options) =>
+      call(port, "/api/journals", { method: "POST", cookie: auth, origin, ...options });
+
+    // The body cap is 768 KiB; a body just over it is fully sent before the gateway answers.
+    const oversized = await post({ raw: `{"memo":"${"x".repeat(768 * 1024)}"}` });
+    assert.equal(oversized.status, 413);
+    assert.deepEqual(oversized.body, {
+      error: { code: "request_too_large", message: "Request is too large." },
+    });
+    const malformed = await post({ raw: "{" });
+    assert.equal(malformed.status, 400);
+    assert.equal(malformed.body.error.code, "invalid_request");
+    for (const message of ["Refresh and try again.", "Already open."]) {
+      const conflict = await post({ body: {} });
+      assert.equal(conflict.status, 409);
+      assert.deepEqual(conflict.body, { error: { code: "conflict", message } });
+    }
+    const invalid = await post({ body: {} });
+    assert.equal(invalid.status, 400);
+    assert.equal(invalid.body.error.code, "invalid_argument");
+    assert.equal((await call(port, "/api/accounts", { cookie: auth })).body.error.code, "internal");
   } finally {
     server.close();
   }

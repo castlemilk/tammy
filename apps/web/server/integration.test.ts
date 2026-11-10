@@ -22,9 +22,13 @@ type TestResponse = {
   workpaper: {
     status: string;
     gstCredits1bMinor: number;
+    candidateGstMinor: number | null;
     salesG1Minor: null;
     gstOnSales1aMinor: null;
     netGstPayableMinor: null;
+    limitations: string[];
+    sources: unknown[];
+    candidates: Array<{ id: string; supplierName: string; candidateGstMinor: number }>;
   };
   lines: Array<{ id: string; status: string; version: string }>;
 };
@@ -88,6 +92,20 @@ test("real core: recovery, balanced journal, replay and restart preserve the led
       abn: "51824753556",
     });
     assert.equal((await call("/api/session")).organisation.name, "Tammy Business");
+    const setupAddress = app.server.address();
+    assert(setupAddress && typeof setupAddress === "object");
+    const secondWorkspace = await fetch(
+      `http://127.0.0.1:${setupAddress.port}/api/workspace/create`,
+      {
+        method: "POST",
+        headers: { cookie, "content-type": "application/json", origin },
+        body: JSON.stringify({}),
+      },
+    );
+    assert.equal(secondWorkspace.status, 409);
+    assert.deepEqual(await secondWorkspace.json(), {
+      error: { code: "conflict", message: "A workspace already exists." },
+    });
     const expense = (
       await call("/api/accounts", {
         idempotencyKey: uuid(),
@@ -132,6 +150,16 @@ test("real core: recovery, balanced journal, replay and restart preserve the led
     assert.equal(
       ((await oversizedMemo.json()) as { error: { code: string } }).error.code,
       "invalid_argument",
+    );
+    const oversizedBody = await fetch(`http://127.0.0.1:${currentAddress.port}/api/journals`, {
+      method: "POST",
+      headers: { cookie, "content-type": "application/json", origin },
+      body: JSON.stringify({ ...journal, description: "x".repeat(768 * 1024) }),
+    });
+    assert.equal(oversizedBody.status, 413);
+    assert.equal(
+      ((await oversizedBody.json()) as { error: { code: string } }).error.code,
+      "request_too_large",
     );
     const trial = await call("/api/trial-balance?asOfDate=2026-08-10");
     assert.equal(trial.totalDebitsMinor, 31900);
@@ -217,6 +245,28 @@ test("real core: recovery, balanced journal, replay and restart preserve the led
       })
     ).document;
     assert.equal(reviewed.status, "reviewed");
+    const staleReview = await fetch(
+      `http://127.0.0.1:${currentAddress.port}/api/documents/${document.id}/review`,
+      {
+        method: "POST",
+        headers: { cookie, "content-type": "application/json", origin },
+        body: JSON.stringify({
+          idempotencyKey: uuid(),
+          version: document.version,
+          supplierName: "Officeworks",
+          invoiceNumber: "INV-1",
+          date: "2024-05-12",
+          subtotalMinor: 29000,
+          gstMinor: 2900,
+          totalMinor: 31900,
+        }),
+      },
+    );
+    assert.equal(staleReview.status, 409);
+    assert.equal(
+      ((await staleReview.json()) as { error: { code: string } }).error.code,
+      "conflict",
+    );
     const workpaper = (
       await call("/api/bas", {
         idempotencyKey: uuid(),
@@ -225,7 +275,19 @@ test("real core: recovery, balanced journal, replay and restart preserve the led
       })
     ).workpaper;
     assert.equal(workpaper.status, "draft_not_lodged");
-    assert.equal(workpaper.gstCredits1bMinor, 2900);
+    // The core counts only posted purchases in 1B; a reviewed document is a provisional candidate.
+    assert.equal(workpaper.gstCredits1bMinor, 0);
+    assert.equal(workpaper.candidateGstMinor, 2900);
+    assert.deepEqual(workpaper.sources, []);
+    assert.deepEqual(
+      workpaper.candidates.map(({ id, supplierName, candidateGstMinor }) => ({
+        id,
+        supplierName,
+        candidateGstMinor,
+      })),
+      [{ id: document.id, supplierName: "Officeworks", candidateGstMinor: 2900 }],
+    );
+    assert.match(workpaper.limitations.join(" "), /provisional GST credit candidates/);
     assert.equal(workpaper.salesG1Minor, null);
     assert.equal(workpaper.gstOnSales1aMinor, null);
     assert.equal(workpaper.netGstPayableMinor, null);

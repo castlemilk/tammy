@@ -74,7 +74,10 @@ export function BasScreen() {
               <div className="panel-heading">
                 <div>
                   <h2>Create a local draft</h2>
-                  <p>Reviewed purchase documents in the period contribute to GST credits</p>
+                  <p>
+                    Reviewed purchase documents in the period are listed as provisional GST
+                    candidates
+                  </p>
                 </div>
               </div>
               <form className="inline-form" onSubmit={createDraft}>
@@ -144,41 +147,84 @@ export function BasScreen() {
                   </div>
                 </dl>
               </section>
-              <section className="panel table-panel">
-                <div className="panel-heading">
-                  <div>
-                    <h2>Reviewed source documents</h2>
-                    <p>Purchase documents contributing to this workpaper</p>
+              {workpaper.sources.length || workpaper.candidateGstMinor === null ? (
+                <section className="panel table-panel">
+                  <div className="panel-heading">
+                    <div>
+                      <h2>Reviewed source documents</h2>
+                      <p>Purchase documents contributing to GST credits (1B)</p>
+                    </div>
                   </div>
-                </div>
-                <div className="table-wrap">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>Date</th>
-                        <th>Supplier</th>
-                        <th>Invoice</th>
-                        <th className="numeric">Gross (AUD)</th>
-                        <th className="numeric">GST credit (AUD)</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {workpaper.sources.map((source) => (
-                        <tr key={source.id}>
-                          <td>{displayDate(source.date)}</td>
-                          <td>{source.supplierName || "—"}</td>
-                          <td>{source.invoiceNumber || "—"}</td>
-                          <td className="numeric">{formatAmount(source.grossMinor)}</td>
-                          <td className="numeric">{formatAmount(source.gstCreditMinor)}</td>
+                  <div className="table-wrap">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>Date</th>
+                          <th>Supplier</th>
+                          <th>Invoice</th>
+                          <th className="numeric">Gross (AUD)</th>
+                          <th className="numeric">GST credit (AUD)</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                {workpaper.sources.length === 0 ? (
-                  <p className="table-empty">No reviewed purchase documents in this period</p>
-                ) : null}
-              </section>
+                      </thead>
+                      <tbody>
+                        {workpaper.sources.map((source) => (
+                          <tr key={`${source.id}:${source.date}:${source.gstCreditMinor}`}>
+                            <td>{displayDate(source.date)}</td>
+                            <td>{source.supplierName || "—"}</td>
+                            <td>{source.invoiceNumber || "—"}</td>
+                            <td className="numeric">{formatAmount(source.grossMinor)}</td>
+                            <td className="numeric">{formatAmount(source.gstCreditMinor)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  {workpaper.sources.length === 0 ? (
+                    <p className="table-empty">No reviewed purchase documents in this period</p>
+                  ) : null}
+                </section>
+              ) : null}
+              {workpaper.candidateGstMinor === null ? null : (
+                <section className="panel table-panel">
+                  <div className="panel-heading">
+                    <div>
+                      <h2>Provisional GST candidates</h2>
+                      <p>Reviewed purchase documents, not included in GST credits (1B)</p>
+                    </div>
+                  </div>
+                  <div className="table-wrap">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>Date</th>
+                          <th>Supplier</th>
+                          <th>Invoice</th>
+                          <th className="numeric">Candidate GST (AUD)</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {workpaper.candidates.map((candidate) => (
+                          <tr key={`${candidate.id}:${candidate.candidateGstMinor}`}>
+                            <td>{displayDate(candidate.date)}</td>
+                            <td>{candidate.supplierName || "—"}</td>
+                            <td>{candidate.invoiceNumber || "—"}</td>
+                            <td className="numeric">{formatAmount(candidate.candidateGstMinor)}</td>
+                          </tr>
+                        ))}
+                        {workpaper.candidates.length ? (
+                          <tr className="total-row">
+                            <td colSpan={3}>Total provisional candidates</td>
+                            <td className="numeric">{formatAmount(workpaper.candidateGstMinor)}</td>
+                          </tr>
+                        ) : null}
+                      </tbody>
+                    </table>
+                  </div>
+                  {workpaper.candidates.length === 0 ? (
+                    <p className="table-empty">No reviewed purchase documents in this period</p>
+                  ) : null}
+                </section>
+              )}
             </>
           ) : null}
         </>

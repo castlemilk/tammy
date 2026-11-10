@@ -8,6 +8,7 @@ import { IdentityService } from "@tammy/connect-client/tammy/v1/identity_pb.js";
 import { OrganisationService } from "@tammy/connect-client/tammy/v1/organisation_pb.js";
 import { WorkspaceService } from "@tammy/connect-client/tammy/v1/workspace_pb.js";
 import { capabilityInterceptor, createCoreClient } from "../../desktop/src/main/core-client";
+import { authenticateCoreExecutable } from "../../desktop/src/main/core-executable";
 import { CoreProcess } from "../../desktop/src/main/core-process";
 import { createFacade } from "./facade.mjs";
 import { createGateway } from "./gateway.mjs";
@@ -17,6 +18,17 @@ const defaultBinary = path.resolve(
   directory,
   `../../desktop/resources/core/${process.platform}-${process.arch}/${process.platform === "win32" ? "tammy-core.exe" : "tammy-core"}`,
 );
+
+/**
+ * Authenticate the core executable before it is supervised. The supervisor re-hashes it immediately
+ * before spawning and checks the live process image, so resolve symlinked parent directories here;
+ * the executable itself must still be a regular file rather than a symlink.
+ */
+async function coreExecutable(requested: string) {
+  const parent = path.dirname(requested);
+  const physicalParent = await realpath(parent).catch(() => parent);
+  return authenticateCoreExecutable(path.join(physicalParent, path.basename(requested)));
+}
 
 export async function startApp(
   options: {
@@ -46,7 +58,9 @@ export async function startApp(
   await mkdir(requestedDataRoot, { recursive: true, mode: 0o700 });
   const dataRoot = await realpath(requestedDataRoot);
   const supervisor = new CoreProcess({
-    binaryPath: path.resolve(options.corePath ?? process.env.TAMMY_CORE_BINARY ?? defaultBinary),
+    binary: await coreExecutable(
+      path.resolve(options.corePath ?? process.env.TAMMY_CORE_BINARY ?? defaultBinary),
+    ),
     args: ["--data-root", dataRoot, "--development-memory-anchors"],
   });
   const readiness = await supervisor.start();

@@ -2,6 +2,7 @@ import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import { readFile, realpath, stat } from "node:fs/promises";
 import { createServer } from "node:http";
 import pathModule from "node:path";
+import { errorCode, httpError } from "./errors.mjs";
 import { isTrustedRequest } from "./security.mjs";
 
 const COOKIE = "tammy_session";
@@ -35,18 +36,7 @@ function uniqueHeader(req, name) {
   return values.length === 1 ? values[0] : undefined;
 }
 function reply(res, status, body, extra = {}) {
-  if (body?.error && !body.error.code) {
-    const codes = {
-      400: "invalid_argument",
-      401: "unauthenticated",
-      403: "forbidden",
-      404: "not_found",
-      409: "conflict",
-      413: "request_too_large",
-      429: "resource_exhausted",
-    };
-    body.error.code = codes[status] ?? "internal";
-  }
+  if (body?.error) body.error.code = errorCode(status, body.error.code);
   res.writeHead(status, {
     "Content-Type": "application/json; charset=utf-8",
     "Cache-Control": "no-store",
@@ -80,7 +70,7 @@ async function jsonBody(req) {
   const chunks = [];
   for await (const chunk of req) {
     size += chunk.length;
-    if (size > MAX_BODY) throw Object.assign(new Error("Request is too large."), { status: 413 });
+    if (size > MAX_BODY) throw httpError("Request is too large.", 413);
     chunks.push(chunk);
   }
   try {
@@ -88,7 +78,7 @@ async function jsonBody(req) {
     if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error();
     return value;
   } catch {
-    throw Object.assign(new Error("Enter valid request details."), { status: 400 });
+    throw httpError("Enter valid request details.", 400, "invalid_request");
   }
 }
 
@@ -312,12 +302,7 @@ export function createGateway({
         await closeSession(currentToken, currentSession);
       return reply(res, status, {
         error: {
-          code:
-            status < 500 && typeof error?.code === "string"
-              ? error.code
-              : status < 500
-                ? "invalid_request"
-                : "internal",
+          code: errorCode(status, error?.code),
           message:
             status < 500 ? error.message : "The accounting service could not complete the request.",
         },
