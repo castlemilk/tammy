@@ -1,16 +1,16 @@
 # Tammy
 
-Tammy is a local-first Australian accounting application with desktop and web interfaces. Both use a supervised Go accounting core and keep the workspace in a local SQLCipher database.
+Tammy is a local-first Australian accounting application. The current development vertical slice runs an Electron desktop interface over a supervised Go core and keeps the workspace in a local SQLCipher database. A separate local [web application](#web-application) runs its own instance of the core behind a loopback Node gateway, with its own encrypted workspace and a smaller set of workflows.
 
-Today the connected application can create and reopen an encrypted workspace, confirm its recovery code, sign in, create the organisation and AU chart of accounts, post balanced manual journals, show a trial balance, review retained documents, import and reconcile bank-statement rows, create a local BAS draft, and show consolidated local activity.
+Today the connected desktop application can create and reopen an encrypted workspace, confirm its recovery code, sign in, create the organisation and AU chart of accounts, post balanced manual journals, show a trial balance, review retained documents, import and reconcile bank-statement rows, create a local BAS draft, and show consolidated local activity.
 
 The invoice builder supports reviewed expense costs, editable line items, exact AUD/GST totals, encrypted drafts, immutable issued invoices, and offline customer PDFs adapted from pdfcn. Issuing atomically posts business income, receivables and basis-aware GST; separately recorded dated receipts reduce the balance owing. Older issued documents can remain unposted and require explicit review before adding them to accounts. Issue and PDF export do not email or deliver the invoice. See [Invoice builder](docs/development/invoice-builder.md).
 
-The native Integrations menu can enable a session-scoped local API and stdio MCP adapter for the signed-in organisation. Clients can read data and stage an invoice proposal for human review; they cannot save or issue invoices or post accounting entries. Access requires Tammy's private connection file. See [Local API and MCP](docs/development/local-api-mcp.md) for pairing and client setup.
+The native Integrations menu can enable a session-scoped local API and stdio MCP adapter for the signed-in organisation. Clients can read data and stage an invoice proposal for human review; they cannot save or issue invoices or post accounting entries. Access requires Tammy's private connection file. See [Local API and MCP](docs/development/local-api-mcp.md) for pairing and client setup. The web application has a separate read-only MCP adapter; see [Local MCP integrations](#local-mcp-integrations).
 
 This is development software, not a production release. BAS workpapers are **drafts only**: there is no production SBR path and no BAS submit or lodge action. Local macOS packages use ad-hoc development signing and are not App Store approval or external assurance evidence.
 
-The desktop foundation builds with electron-vite into `apps/desktop/out/main/index.js`, `apps/desktop/out/preload/index.cjs`, and `apps/desktop/out/renderer/index.html`. The app receives one fixed `window.conveyor` surface with exactly system, workspace, organisation, accounting, banking, documents, reporting, and sbr modules. Ordinary electron-builder artifacts live at `.tmp/electron-builder/ordinary/mac-arm64/Tammy.app` on macOS and `.tmp/electron-builder/ordinary/win-unpacked/Tammy.exe` on Windows.
+The desktop foundation builds with electron-vite into `apps/desktop/out/main/index.js`, `apps/desktop/out/preload/index.cjs`, and `apps/desktop/out/renderer/index.html`. The app receives one fixed `window.conveyor` surface with exactly system, workspace, organisation, accounting, banking, basPreparation, documents, purchases, reporting, and sbr modules. Ordinary electron-builder artifacts live at `.tmp/electron-builder/ordinary/mac-arm64/Tammy.app` on macOS and `.tmp/electron-builder/ordinary/win-unpacked/Tammy.exe` on Windows.
 
 ## Quick start
 
@@ -57,15 +57,26 @@ Inspect the redacted Mac App Store state with `mise exec -- task release:state` 
 
 ## Web application
 
-Build the accounting core and browser app, then start the same-origin local web server:
+The web application in `apps/web` is a React client served by a loopback Node gateway. The gateway supervises its own Go core, keeps the core capability and signed-in session on the server, and gives the browser an HttpOnly session cookie. It is not one of the public browser tools described in [Product truth](PRODUCT.md); those tools do not connect to a Tammy workspace.
+
+After `mise exec -- task setup`, build the core and browser assets and start the gateway:
 
 ```sh
 mise exec -- pnpm web:start
 ```
 
-Open `http://127.0.0.1:4174`. The web app creates a separate encrypted workspace; it does not open the desktop application's data. The current service runs locally on macOS arm64 or Windows x64 and supports one business. Hosted authentication, multiple businesses, and public deployment are separate milestones in the [web application plan](docs/superpowers/plans/2026-10-27-web-application.md).
+Open `http://127.0.0.1:4174`. By default the web app keeps its own encrypted workspace in `~/.tammy-web/development`; it does not open the desktop application's data. It supports one business and one signed-in browser session; unlocking in another browser with the right credentials signs the earlier one out. The browser covers workspace setup and unlock, ordinary accounts, balanced manual journals, the trial balance, document upload and review, bank import, matching and reconciliation, rule-based attention insights, and draft GST workpapers for periods within calendar 2024. It has no invoice, purchase, BAS preparation, export, SBR readiness, or activity screens. The core builds for macOS arm64 and Windows x64, and the web CI workflow is set up for macOS arm64. Hosted authentication, multiple businesses, and public deployment are later milestones in the [web application plan](docs/superpowers/plans/2026-10-27-web-application.md).
 
-The browser uses a protected gateway with server-held core credentials. Read-only MCP tools and source-linked, rule-based insights use that same accounting service. See the [web development guide](docs/development/web-application.md) for development, validation, data storage, and MCP setup.
+The [web application guide](docs/development/web-application.md) covers hot reload, configuration, data storage, validation, and MCP setup. The [local web API](docs/development/web-api.md) describes the gateway's routes, replay rules, and bounds.
+
+## Local MCP integrations
+
+Tammy has two separate local MCP integrations. Each reads only its own interface's workspace.
+
+- Desktop local API and MCP (`packages/local-api`): the native Integrations menu writes a private connection file that authorises an Electron-owned loopback broker. It offers 14 read tools, one invoice proposal tool, and 10 resources for the signed-in organisation. See [Local API and MCP](docs/development/local-api-mcp.md).
+- Web MCP adapter (`apps/web/server/mcp.ts`): it reads the web workspace through fixed gateway endpoints. The gateway and the adapter must share a `TAMMY_MCP_TOKEN` secret of at least 32 characters, and a workspace must be unlocked in the browser. It offers eight read-only tools, with no resources and no invoice proposal tool. See [Connect an MCP client](docs/development/web-application.md#connect-an-mcp-client).
+
+Neither integration can post accounting entries, save or issue invoices, or lodge a BAS.
 
 ## Documentation
 
@@ -76,6 +87,8 @@ The browser uses a protected gateway with server-held core credentials. Read-onl
 - [Local SBR readiness](docs/development/sbr-local-readiness.md) — accounting, simulator, credential handling, and external registration scenarios.
 - [Local API and MCP](docs/development/local-api-mcp.md) — private connection-file pairing, read coverage, revocation, and stdio client setup.
 - [Invoice builder](docs/development/invoice-builder.md) — expense-based line items, MCP proposals, draft/issue workflow, and customer PDFs.
+- [Web application](docs/development/web-application.md) — local web app startup, hot reload, configuration, data storage, validation, and its read-only MCP adapter.
+- [Local web API](docs/development/web-api.md) — gateway sessions, routes, request fields, replay rules, and current bounds.
 - [Local accounting walkthrough](docs/development/local-accounting-walkthrough.md) — the current setup-to-audit journey.
 - [User journey test matrix](docs/development/user-journey-test-matrix.md) — executable coverage by renderer, local core, and packaged Electron layer.
 - [macOS App Store release runbook](docs/release/macos-app-store.md) — repository checks, signing inputs, packaging, inspection, metadata, upload, and remaining operator gates.
