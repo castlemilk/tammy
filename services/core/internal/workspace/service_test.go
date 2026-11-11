@@ -50,6 +50,7 @@ type testWorkspaceIdentity struct {
 	activeSessionErr       error
 	activeSessionReads     *int
 	activeSessionMutations *int
+	passwords              *PasswordPolicy
 }
 
 type testAssertion struct {
@@ -64,6 +65,12 @@ func (identity testWorkspaceIdentity) BootstrapAdministrator(context.Context, st
 	}
 	return &tammyv1.User{Id: "01890f3c-7b2e-7cc4-98c4-dc0c0c073910", Version: 1,
 		State: tammyv1.UserState_USER_STATE_ACTIVE, Roles: []tammyv1.Role{tammyv1.Role_ROLE_WORKSPACE_ADMIN}}, nil
+}
+func (identity testWorkspaceIdentity) ValidateAdministratorBootstrap(_, _ string, password []byte) error {
+	if identity.passwords == nil {
+		return nil
+	}
+	return identity.passwords.Validate(password)
 }
 func (identity testWorkspaceIdentity) BootstrapAdministratorWithin(ctx context.Context, _ MutationExecutor, _ string,
 	username, displayName string, password []byte) (*tammyv1.User, error) {
@@ -384,7 +391,7 @@ func newWorkspaceHarnessWithRepository(t *testing.T, repository Repository) work
 	identity := &testWorkspaceIdentity{now: &now, adminRecovered: &adminRecovered, adminRecoveryMutations: &adminRecoveryMutations,
 		adminRecoveryResults: make(map[string]*tammyv1.User), adminRecoverySemantics: make(map[string]string), invalidations: &invalidations,
 		bootstrapCalls: &bootstrapCalls, activeSessionReads: &activeSessionReads, activeSessionMutations: &activeSessionMutations,
-		assertions: make(map[string]*testAssertion)}
+		assertions: make(map[string]*testAssertion), passwords: policy}
 	audit := &testMutationAudit{counts: make(map[string]int)}
 	organisations := &testOrganisationImpact{}
 	failures := &testFailureCheckpoints{failures: make(map[string]error), hooks: make(map[string]func())}
@@ -3675,5 +3682,56 @@ func overwriteAuthoritativeWorkspaceRecord(t *testing.T, runtime *workspaceRunti
 	if _, err := runtime.storage.Database().ExecContext(context.Background(),
 		`UPDATE workspace_metadata SET value = ?, revision = revision + 1 WHERE key = ?`, payload, authoritativeWorkspaceRecordKey); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestCreateWorkspaceRejectsInvalidAdministratorPasswordBeforeReservation(t *testing.T) {
+	harness := newWorkspaceHarness(t)
+	ctx := context.Background()
+	databaseDirectory := filepath.Dir(harness.databasePath)
+	invalid := []struct{ name, setupID, password string }{
+		{"14 runes", "01890f3c-7b2e-7cc4-98c4-dc0c0c073921", "abcdefghijklmn"},
+		{"non-printable tab", "01890f3c-7b2e-7cc4-98c4-dc0c0c073922", "admin password\tlong-enough"},
+	}
+	for _, tc := range invalid {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := harness.service.CreateWorkspace(ctx, connect.NewRequest(&tammyv1.CreateWorkspaceRequest{
+				SetupId: tc.setupID, Destination: &tammyv1.ApprovedFileRef{CapabilityId: "destination-capability"},
+				WorkspacePassphrase: &tammyv1.SecretInput{Utf8: []byte("workspace-passphrase-long-enough")}, AdministratorUsername: "admin@example.test",
+				AdministratorDisplayName: "Admin", AdministratorPassword: &tammyv1.SecretInput{Utf8: []byte(tc.password)},
+			}))
+			if !errors.Is(err, faults.New(faults.CodeValidation, nil)) {
+				t.Fatalf("err=%v, want validation", err)
+			}
+			if _, statErr := os.Lstat(harness.databasePath); !os.IsNotExist(statErr) {
+				t.Fatalf("database left behind: %v", statErr)
+			}
+			if _, statErr := os.Lstat(harness.databasePath + ".header"); !os.IsNotExist(statErr) {
+				t.Fatalf("header left behind: %v", statErr)
+			}
+			entries, err := os.ReadDir(databaseDirectory)
+			if err != nil || len(entries) != 0 {
+				t.Fatalf("destination not empty: entries=%d err=%v", len(entries), err)
+			}
+			if _, err := harness.repository.BySetup(ctx, tc.setupID); !errors.Is(err, ErrWorkspaceNotFound) {
+				t.Fatalf("setup retained after rejection: %v", err)
+			}
+		})
+	}
+	created, err := harness.service.CreateWorkspace(ctx, connect.NewRequest(&tammyv1.CreateWorkspaceRequest{
+		SetupId: "01890f3c-7b2e-7cc4-98c4-dc0c0c073923", Destination: &tammyv1.ApprovedFileRef{CapabilityId: "destination-capability"},
+		WorkspacePassphrase: &tammyv1.SecretInput{Utf8: []byte("workspace-passphrase-long-enough")}, AdministratorUsername: "admin@example.test",
+		AdministratorDisplayName: "Admin", AdministratorPassword: &tammyv1.SecretInput{Utf8: []byte("admin-password-long-enough")},
+	}))
+	if err != nil || created.Msg.Workspace == nil {
+		t.Fatalf("valid create after rejections err=%v", err)
+	}
+}
+
+func testCreateWorkspaceRequest(setupID, password string) *tammyv1.CreateWorkspaceRequest {
+	return &tammyv1.CreateWorkspaceRequest{
+		SetupId: setupID, Destination: &tammyv1.ApprovedFileRef{CapabilityId: "destination-capability"},
+		WorkspacePassphrase: &tammyv1.SecretInput{Utf8: []byte("workspace-passphrase-long-enough")}, AdministratorUsername: "admin@example.test",
+		AdministratorDisplayName: "Admin", AdministratorPassword: &tammyv1.SecretInput{Utf8: []byte(password)},
 	}
 }

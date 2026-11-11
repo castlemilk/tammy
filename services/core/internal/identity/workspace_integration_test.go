@@ -24,6 +24,9 @@ type switchingWorkspaceIdentity struct{ current *Service }
 func (bridge *switchingWorkspaceIdentity) BootstrapAdministrator(ctx context.Context, username, displayName string, password []byte) (*tammyv1.User, error) {
 	return bridge.current.BootstrapAdministrator(ctx, username, displayName, password)
 }
+func (bridge *switchingWorkspaceIdentity) ValidateAdministratorBootstrap(username, displayName string, password []byte) error {
+	return bridge.current.ValidateAdministratorBootstrap(username, displayName, password)
+}
 func (bridge *switchingWorkspaceIdentity) BootstrapAdministratorWithin(ctx context.Context, executor workspace.MutationExecutor, operationID, username, displayName string, password []byte) (*tammyv1.User, error) {
 	return bridge.current.BootstrapAdministratorWithin(ctx, executor, operationID, username, displayName, password)
 }

@@ -162,6 +162,9 @@ func (bridge *localIdentityBridge) store(service *identity.Service) {
 func (bridge *localIdentityBridge) BootstrapAdministrator(ctx context.Context, username, displayName string, password []byte) (*tammyv1.User, error) {
 	return bridge.load().BootstrapAdministrator(ctx, username, displayName, password)
 }
+func (bridge *localIdentityBridge) ValidateAdministratorBootstrap(username, displayName string, password []byte) error {
+	return bridge.load().ValidateAdministratorBootstrap(username, displayName, password)
+}
 func (bridge *localIdentityBridge) BootstrapAdministratorWithin(ctx context.Context, executor workspace.MutationExecutor, operationID, username, displayName string, password []byte) (*tammyv1.User, error) {
 	return bridge.load().BootstrapAdministratorWithin(ctx, executor, operationID, username, displayName, password)
 }

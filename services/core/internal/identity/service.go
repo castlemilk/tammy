@@ -231,11 +231,28 @@ func validUsername(value string) bool {
 	return count >= 1 && count <= 128 && strings.TrimSpace(value) == value
 }
 
+func validAdministratorDisplayName(displayName string) bool {
+	return displayName != "" && len([]rune(displayName)) <= 128
+}
+
+// ValidateAdministratorBootstrap applies every administrator bootstrap rule
+// without touching state or deriving a verifier. Workspace creation calls it
+// before reserving setup state so invalid input never leaves residue behind.
+func (service *Service) ValidateAdministratorBootstrap(username, displayName string, password []byte) error {
+	if !validUsername(username) || !validAdministratorDisplayName(displayName) {
+		return faults.New(faults.CodeValidation, nil)
+	}
+	if err := service.passwords.Validate(password); err != nil {
+		return faults.New(faults.CodeValidation, nil)
+	}
+	return nil
+}
+
 func (service *Service) BootstrapAdministrator(ctx context.Context, username, displayName string, password []byte) (*tammyv1.User, error) {
 	service.lockOwnedIdentity()
 	defer service.unlockOwnedIdentity()
-	if !validUsername(username) || displayName == "" || len([]rune(displayName)) > 128 {
-		return nil, faults.New(faults.CodeValidation, nil)
+	if err := service.ValidateAdministratorBootstrap(username, displayName, password); err != nil {
+		return nil, err
 	}
 	state, err := service.repository.Load(ctx)
 	if err != nil {
@@ -267,8 +284,11 @@ func (service *Service) BootstrapAdministratorWithin(ctx context.Context, execut
 	operationID, username, displayName string, password []byte) (*tammyv1.User, error) {
 	service.mu.Lock()
 	defer service.mu.Unlock()
-	if executor == nil || !ids.IsCanonicalV7(operationID) || !validUsername(username) || displayName == "" || len([]rune(displayName)) > 128 {
+	if executor == nil || !ids.IsCanonicalV7(operationID) {
 		return nil, faults.New(faults.CodeValidation, nil)
+	}
+	if err := service.ValidateAdministratorBootstrap(username, displayName, password); err != nil {
+		return nil, err
 	}
 	state, err := loadRepositoryStateFrom(ctx, executor)
 	if err != nil {
