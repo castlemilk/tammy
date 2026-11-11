@@ -76,4 +76,10 @@ Native platform checks retain the current master configuration:
 4. Confirm the native macOS 15 foundation and Windows Server smoke checks pass on the exact head. Full signed/notarized distribution and Windows 11 qualification remain separate release gates; foundation passes do not satisfy them.
 5. Merge PR #46 only after those checks pass and confirm the next `master` jobs also report Cuttlefish runner names. Keep the original workflow semantics and timeouts unless real evidence justifies a change.
 
-**Pending blocker:** GitHub's Chat connector can edit/check workflows and read run statuses, but it does not expose runner registration or a remote shell on the Cuttlefish rig. Starting the pool requires an authorised machine-side operation. Until this happens, PR #46 remains **draft** and must not reroute the remaining foundation or roadmap jobs. The already-routed website stays blocked pending its own actual pool execution. Track this in [issue #47](https://github.com/castlemilk/tammy/issues/47).
+## Job VM runtime
+
+The pool runs each job as root in an Ubuntu 24.04 (`noble`) Micropod VM. The job image has `xvfb-run`, but not the GTK, ATK, CUPS and audio libraries Electron loads, so Electron exited with `libgtk-3.so.0: cannot open shared object file`. The foundation job installs those libraries with `apt-get` before checkout, with retries and `--no-upgrade`. Running as root is otherwise fine: the only Linux Electron launch, the packaged ASAR integration test, already passes `--no-sandbox` on Linux, the same as on GitHub-hosted runners. Remove the install step if the Cuttlefish job image gains these libraries.
+
+## Status (12 November 2026)
+
+The repo-scoped pool runs on Gamma-64GB as LaunchAgent `dev.cuttlefish.gha-runner-pool.castlemilk_tammy`, with `--size 1` because the host reached critical memory pressure with two 16 GiB VMs. The root `dev.cuttlefish.vmnet-guard` LaunchDaemon is installed. The readiness workflow, website verification and roadmap jobs have completed on `cf-vm-*` runners, and the foundation job has passed there with the libraries installed. A single slot on a laptop host means Tammy's Linux jobs queue behind each other and stall while the host sleeps. Treat that as an accepted risk before merging, or add capacity.
