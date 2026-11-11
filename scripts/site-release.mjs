@@ -687,7 +687,135 @@ export function cloudflareDeploymentResult(entries) {
     fail("Unexpected deployed route; reconcile the Worker outcome before retrying.");
   return { version_id: result.version_id, url: url.href };
 }
-export function deployCloudflare(root, output) {
+const CLOUDFLARE_API = "https://api.cloudflare.com/client/v4";
+const CLOUDFLARE_API_TIMEOUT_MS = 15_000;
+const CLOUDFLARE_RETRY_DELAY_MS = 1_000;
+// Used only when Cloudflare's Date header is absent or unparseable.
+const CLOCK_FALLBACK_MS = 5_000;
+const UUID_PATTERN = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/;
+const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+// Only numeric Cloudflare error codes leave this module; messages and bodies never do.
+const cloudflareCodes = (body) =>
+  Array.isArray(body?.errors)
+    ? body.errors.map((error) => error?.code).filter(Number.isInteger)
+    : [];
+
+async function cloudflareAttempt(fetcher, token, accountId, route) {
+  let response;
+  try {
+    response = await fetcher(`${CLOUDFLARE_API}/accounts/${accountId}/${route}`, {
+      headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+      redirect: "error",
+      signal: AbortSignal.timeout(CLOUDFLARE_API_TIMEOUT_MS),
+    });
+  } catch {
+    return { ok: false, network: true, status: null, body: null, codes: [], date: null };
+  }
+  const body = await response.json().catch(() => null);
+  const date = Date.parse(response.headers?.get("date") ?? "");
+  return {
+    ok: response.ok && body?.success === true,
+    network: false,
+    status: response.status,
+    body,
+    codes: cloudflareCodes(body),
+    date: Number.isFinite(date) ? date : null,
+  };
+}
+
+const retryable = (result) =>
+  result.network || result.status === 429 || (result.status >= 500 && result.status <= 599);
+
+// One retry, only for network/abort errors, 429 and 5xx. Auth and other 4xx errors are final.
+async function cloudflareGet(fetcher, token, accountId, route, retryDelayMs) {
+  const first = await cloudflareAttempt(fetcher, token, accountId, route);
+  if (!retryable(first)) return first;
+  await delay(retryDelayMs);
+  return cloudflareAttempt(fetcher, token, accountId, route);
+}
+
+// Returns the Date of the first successful preflight read, or null when it had none.
+async function preflightCloudflare(token, accountId, fetcher, retryDelayMs) {
+  const checks = [
+    ["account-subdomain", "workers/subdomain"],
+    ["script-subdomain", `workers/scripts/${CLOUDFLARE_WORKER_NAME}/subdomain`],
+  ];
+  const failures = [];
+  let serverTime;
+  for (const [label, route] of checks) {
+    const result = await cloudflareGet(fetcher, token, accountId, route, retryDelayMs);
+    if (result.ok) {
+      if (serverTime === undefined) serverTime = result.date;
+    } else
+      failures.push(
+        `${label} HTTP ${result.status ?? "unavailable"}, Cloudflare codes ${result.codes.join(",") || "none"}`,
+      );
+  }
+  if (failures.length)
+    fail(
+      `CLOUDFLARE_TOKEN_PREFLIGHT_FAILED: ${failures.join("; ")}. Wrangler was not run; see the direct Worker runbook for the required CI token access.`,
+    );
+  return serverTime ?? null;
+}
+
+// Pure classification of the deployments list read after a non-zero Wrangler exit.
+// Cloudflare timestamps have one-second precision, so the start time is floored to a second.
+export function classifyReadback(deployments, commitSha, startedAt) {
+  const mismatch = { readback: "mismatch" };
+  if (!deployments.length) return mismatch;
+  const times = deployments.map((deployment) => Date.parse(deployment?.created_on));
+  if (times.some((time) => !Number.isFinite(time))) return mismatch;
+  const newest = times.indexOf(Math.max(...times));
+  const deployment = deployments[newest];
+  if (deployment.annotations?.["workers/message"] !== `GitHub ${commitSha}`) return mismatch;
+  if (times[newest] < Math.floor(startedAt / 1000) * 1000) return mismatch;
+  const versions = deployment.versions;
+  if (!Array.isArray(versions) || versions.length !== 1) return mismatch;
+  const [{ version_id: versionId, percentage }] = versions;
+  if (percentage !== 100) return mismatch;
+  if (typeof versionId !== "string" || !UUID_PATTERN.test(versionId)) return mismatch;
+  return { readback: "matched", version_id: versionId };
+}
+
+async function readbackDeployment({
+  fetcher,
+  token,
+  accountId,
+  commitSha,
+  startedAt,
+  retryDelayMs,
+}) {
+  const result = await cloudflareGet(
+    fetcher,
+    token,
+    accountId,
+    `workers/scripts/${CLOUDFLARE_WORKER_NAME}/deployments`,
+    retryDelayMs,
+  );
+  const deployments = result.ok ? result.body?.result?.deployments : undefined;
+  if (!Array.isArray(deployments)) return { readback: "unavailable" };
+  return classifyReadback(deployments, commitSha, startedAt);
+}
+
+async function reconcileFailedDeployment(record, options) {
+  let outcome = { readback: "unavailable" };
+  if (options.token && options.startedAt !== null) {
+    try {
+      outcome = await readbackDeployment(options);
+    } catch {
+      outcome = { readback: "unavailable" };
+    }
+  }
+  record.readback = outcome.readback;
+  if (outcome.readback === "matched") {
+    record.status = "published-unconfirmed";
+    record.version_id = outcome.version_id;
+  } else record.status = "outcome-uncertain";
+}
+
+export async function deployCloudflare(root, output, options = {}) {
+  const { fetcher = fetch, retryDelayMs = CLOUDFLARE_RETRY_DELAY_MS } = options;
   const { source, built } = directBuild(root);
   const env = cloudflareEnvironment(true);
   const out = newOutput(root, output);
@@ -708,11 +836,39 @@ export function deployCloudflare(root, output) {
   const recordPath = path.join(out, "deployment-record.json");
   const outputPath = path.join(out, "wrangler-output.jsonl");
   writeJson(recordPath, record);
+  // Local runs may rely on a cached Wrangler OAuth session without a token. Both the
+  // preflight and the readback need the CI token, so both are skipped without it.
+  const token = process.env.CLOUDFLARE_API_TOKEN;
+  const accountId = env.CLOUDFLARE_ACCOUNT_ID;
+  let startedAt = null;
+  if (token) {
+    try {
+      const serverTime = await preflightCloudflare(token, accountId, fetcher, retryDelayMs);
+      startedAt = serverTime ?? Date.now() - CLOCK_FALLBACK_MS;
+    } catch (error) {
+      Object.assign(record, { status: "preflight-failed", publication: "not-performed" });
+      writeJson(recordPath, record);
+      throw error;
+    }
+  }
   try {
     wrangler(root, ["--message", `GitHub ${source.github.commit_sha}`], {
       ...env,
       WRANGLER_OUTPUT_FILE_PATH: outputPath,
     });
+  } catch (error) {
+    await reconcileFailedDeployment(record, {
+      token,
+      accountId,
+      fetcher,
+      retryDelayMs,
+      commitSha: source.github.commit_sha,
+      startedAt,
+    });
+    writeJson(recordPath, record);
+    throw error;
+  }
+  try {
     const result = cloudflareDeploymentResult(
       readFileSync(outputPath, "utf8")
         .trim()
@@ -729,7 +885,7 @@ export function deployCloudflare(root, output) {
     throw error;
   }
 }
-function main() {
+async function main() {
   const [command, ...args] = process.argv.slice(2);
   const options = {};
   while (args.length) {
@@ -759,7 +915,8 @@ function main() {
   else if (command === "package")
     result = packageWorker(root, options["--output"], options["--sites-plugin"]);
   else if (command === "cloudflare-dry-run") result = cloudflareDryRun(root, options["--output"]);
-  else if (command === "cloudflare-deploy") result = deployCloudflare(root, options["--output"]);
+  else if (command === "cloudflare-deploy")
+    result = await deployCloudflare(root, options["--output"]);
   else
     fail(
       "Expected prepare, build, verify, bundle, package, cloudflare-dry-run or cloudflare-deploy.",
@@ -780,7 +937,7 @@ function main() {
 }
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   try {
-    main();
+    await main();
   } catch (error) {
     console.error(error.message);
     process.exitCode = 1;

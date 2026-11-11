@@ -21,6 +21,7 @@ import {
   build,
   bundle,
   CLOUDFLARE_WORKER_NAME,
+  classifyReadback,
   cloudflareDeploymentResult,
   cloudflareDryRun,
   cloudflareEnvironment,
@@ -710,13 +711,88 @@ function withEnvironment(overrides, action) {
     if (value === undefined) delete process.env[key];
     else process.env[key] = value;
   }
-  try {
-    return action();
-  } finally {
+  const restore = () => {
     for (const key of Object.keys(process.env)) if (!(key in original)) delete process.env[key];
     for (const [key, value] of Object.entries(original)) process.env[key] = value;
+  };
+  let result;
+  try {
+    result = action();
+  } catch (error) {
+    restore();
+    throw error;
+  }
+  if (result && typeof result.then === "function") return result.finally(restore);
+  restore();
+  return result;
+}
+
+// A deployment as the Cloudflare deployments endpoint reports it; created one minute in the future by default.
+function fixtureDeployment(commitSha, overrides = {}) {
+  return {
+    id: "fixture-deployment",
+    created_on: new Date(Date.now() + 60_000).toISOString(),
+    annotations: { "workers/message": `GitHub ${commitSha}` },
+    versions: [{ version_id: testVersion, percentage: 100 }],
+    ...overrides,
+  };
+}
+
+// In-process stand-in for api.cloudflare.com. Routes are keyed by the exact URL the release
+// script must use; any other URL fails the call so an unexpected endpoint is visible.
+function cloudflareApi(state, overrides = {}) {
+  const base = `https://api.cloudflare.com/client/v4/accounts/${testAccount}`;
+  const deployments = [fixtureDeployment(state.provenance.github.commit_sha)];
+  const ok = (result) => ({
+    status: 200,
+    body: { success: true, errors: [], messages: [], result },
+  });
+  const routes = {
+    [`${base}/workers/subdomain`]:
+      overrides.accountSubdomain ?? ok({ subdomain: "fixture-subdomain" }),
+    [`${base}/workers/scripts/tammy-site-direct/subdomain`]:
+      overrides.scriptSubdomain ?? ok({ enabled: true, previews_enabled: false }),
+    [`${base}/workers/scripts/tammy-site-direct/deployments`]:
+      overrides.readback ?? ok({ deployments: overrides.deployments ?? deployments }),
+  };
+  // An array in overrides is a sequence: each call consumes one entry, the last entry repeats.
+  const queues = Object.fromEntries(
+    Object.entries(routes).map(([url, value]) => [url, Array.isArray(value) ? [...value] : null]),
+  );
+  const date = (overrides.date ?? new Date()).toUTCString();
+  const calls = [];
+  const fetcher = async (url, init) => {
+    calls.push({
+      url,
+      authorization: init.headers.Authorization,
+      signal: init.signal,
+      redirect: init.redirect,
+    });
+    const queue = queues[url];
+    const route = queue ? (queue.length > 1 ? queue.shift() : queue[0]) : routes[url];
+    if (!route) throw new Error("unexpected fixture route");
+    if (route.throws) throw new Error("fixture network failure");
+    return new Response(JSON.stringify(route.body), {
+      status: route.status,
+      headers: { date },
+    });
+  };
+  return { fetcher, calls };
+}
+
+function assertNoTokenLeak(output, error) {
+  assert.equal(String(error?.message ?? error).includes(testToken), false);
+  for (const name of readdirSync(output)) {
+    assert.equal(readFileSync(path.join(output, name), "utf8").includes(testToken), false, name);
   }
 }
+
+const isWranglerCall = (entry) => entry.command === "wrangler.js";
+// Tests never sleep between retries, and a call without a stub must not reach the network.
+const deployOptions = (api) => ({ fetcher: api.fetcher, retryDelayMs: 0 });
+const neverFetch = () => {
+  throw new Error("fixture: unexpected Cloudflare network call");
+};
 
 function poisonedEnvironment() {
   return {
@@ -1061,11 +1137,26 @@ test("build and dry-run wrappers strip authentication even when the calling envi
   });
 });
 
-test("deployment wrapper records only an authenticated simulated receipt and never passes endpoint/name overrides", (t) => {
+test("deployment wrapper records only an authenticated simulated receipt and never passes endpoint/name overrides", async (t) => {
   const state = wrapperFixture(t);
   const output = path.join(state.base, "deployment");
-  const result = withEnvironment(state.environment, () => deployCloudflare(state.snapshot, output));
+  const api = cloudflareApi(state);
+  const result = await withEnvironment(state.environment, () =>
+    deployCloudflare(state.snapshot, output, deployOptions(api)),
+  );
   assert.equal(result.status, "published");
+  assert.deepEqual(
+    api.calls.map((call) => call.url),
+    [
+      `https://api.cloudflare.com/client/v4/accounts/${testAccount}/workers/subdomain`,
+      `https://api.cloudflare.com/client/v4/accounts/${testAccount}/workers/scripts/tammy-site-direct/subdomain`,
+    ],
+  );
+  for (const call of api.calls) {
+    assert.equal(call.authorization, `Bearer ${testToken}`);
+    assert.ok(call.signal instanceof AbortSignal);
+    assert.equal(call.redirect, "error");
+  }
   assert.equal(result.live_verification, "pending");
   assert.equal(result.version_id, testVersion);
   assert.equal(result.url, "https://tammy-site-direct.example.workers.dev/");
@@ -1101,13 +1192,14 @@ test("deployment wrapper marks an uncertain outcome rather than success when Wra
       "wrong Worker receipt",
       { receipt: { ...deploymentReceipt(), worker_name: "another-worker" } },
     ],
-    ["Wrangler failure", { exitCode: 27 }],
+    ["Wrangler failure without matching deployment", { exitCode: 27 }],
   ]) {
-    await t.test(label, (t) => {
+    await t.test(label, async (t) => {
       const state = wrapperFixture(t, scenario);
       const output = path.join(state.base, "deployment");
-      withEnvironment(state.environment, () =>
-        assert.throws(() => deployCloudflare(state.snapshot, output)),
+      const api = cloudflareApi(state, { deployments: [] });
+      await withEnvironment(state.environment, () =>
+        assert.rejects(deployCloudflare(state.snapshot, output, deployOptions(api))),
       );
       const record = readJson(path.join(output, "deployment-record.json"));
       assert.equal(record.status, "outcome-uncertain");
@@ -1123,11 +1215,14 @@ test("deployment wrapper marks an uncertain outcome rather than success when Wra
 });
 
 test("deployment wrapper fails before invoking Wrangler when credentials or pinned CLI are unavailable", async (t) => {
-  await t.test("missing existing token", (t) => {
+  await t.test("missing existing token", async (t) => {
     const state = wrapperFixture(t);
     const output = path.join(state.base, "deployment");
-    withEnvironment({ ...state.environment, CLOUDFLARE_API_TOKEN: undefined }, () =>
-      assert.throws(() => deployCloudflare(state.snapshot, output), /existing authorized/),
+    await withEnvironment({ ...state.environment, CLOUDFLARE_API_TOKEN: undefined }, () =>
+      assert.rejects(
+        deployCloudflare(state.snapshot, output, { fetcher: neverFetch }),
+        /existing authorized/,
+      ),
     );
     assert.equal(existsSync(output), false);
     assert.equal(
@@ -1135,12 +1230,15 @@ test("deployment wrapper fails before invoking Wrangler when credentials or pinn
       false,
     );
   });
-  await t.test("unexpected Wrangler version", (t) => {
+  await t.test("unexpected Wrangler version", async (t) => {
     const state = wrapperFixture(t);
     write(state.snapshot, "apps/site/node_modules/wrangler/package.json", { version: "4.93.0" });
     const output = path.join(state.base, "deployment");
-    withEnvironment(state.environment, () =>
-      assert.throws(() => deployCloudflare(state.snapshot, output), /pinned Wrangler 4.92.0/),
+    await withEnvironment(state.environment, () =>
+      assert.rejects(
+        deployCloudflare(state.snapshot, output, { fetcher: neverFetch }),
+        /pinned Wrangler 4.92.0/,
+      ),
     );
     assert.equal(existsSync(output), false);
     assert.equal(
@@ -1148,4 +1246,279 @@ test("deployment wrapper fails before invoking Wrangler when credentials or pinn
       false,
     );
   });
+});
+
+test("Cloudflare credential preflight stops before Wrangler and names the failing endpoint with codes only", async (t) => {
+  const denied = {
+    status: 403,
+    body: {
+      success: false,
+      errors: [{ code: 10000, message: "Authentication error" }],
+      messages: [],
+      result: null,
+    },
+  };
+  for (const [label, override, expected] of [
+    [
+      "account-subdomain",
+      { accountSubdomain: denied },
+      /^CLOUDFLARE_TOKEN_PREFLIGHT_FAILED: account-subdomain HTTP 403, Cloudflare codes 10000\./,
+    ],
+    [
+      "script-subdomain",
+      { scriptSubdomain: denied },
+      /^CLOUDFLARE_TOKEN_PREFLIGHT_FAILED: script-subdomain HTTP 403, Cloudflare codes 10000\./,
+    ],
+  ]) {
+    await t.test(label, async (t) => {
+      const state = wrapperFixture(t);
+      const output = path.join(state.base, "deployment");
+      const api = cloudflareApi(state, override);
+      await withEnvironment(state.environment, () =>
+        assert.rejects(deployCloudflare(state.snapshot, output, deployOptions(api)), (error) => {
+          assert.match(error.message, expected);
+          assert.doesNotMatch(error.message, /Authentication error/);
+          assertNoTokenLeak(output, error);
+          return true;
+        }),
+      );
+      assert.equal(state.observations().some(isWranglerCall), false);
+      // A 403 is an authorization answer, not a transient failure: each read happens once.
+      assert.equal(api.calls.length, 2);
+      assert.equal(new Set(api.calls.map((call) => call.url)).size, 2);
+      const record = readJson(path.join(output, "deployment-record.json"));
+      assert.equal(record.status, "preflight-failed");
+      assert.equal(record.publication, "not-performed");
+      assert.equal(record.version_id, null);
+      assert.equal(record.url, null);
+    });
+  }
+});
+
+test("Cloudflare credential preflight reads both pinned subdomain endpoints with the token before Wrangler runs", async (t) => {
+  const state = wrapperFixture(t);
+  const output = path.join(state.base, "deployment");
+  const api = cloudflareApi(state);
+  const result = await withEnvironment(state.environment, () =>
+    deployCloudflare(state.snapshot, output, deployOptions(api)),
+  );
+  assert.equal(result.status, "published");
+  assert.equal(state.observations().filter(isWranglerCall).length, 1);
+  assert.equal(api.calls.length, 2);
+  for (const call of api.calls)
+    assert.match(call.url, /^https:\/\/api\.cloudflare\.com\/client\/v4\/accounts\/[a-f0-9]{32}\//);
+  assert.equal(api.calls[0].url.endsWith(`/accounts/${testAccount}/workers/subdomain`), true);
+  assert.equal(
+    api.calls[1].url.endsWith(
+      `/accounts/${testAccount}/workers/scripts/tammy-site-direct/subdomain`,
+    ),
+    true,
+  );
+  assertNoTokenLeak(output);
+});
+
+test("failed Wrangler exit reconciles to published-unconfirmed when the newest deployment matches this commit", async (t) => {
+  const state = wrapperFixture(t, { exitCode: 27 });
+  const output = path.join(state.base, "deployment");
+  const api = cloudflareApi(state);
+  await withEnvironment(state.environment, () =>
+    assert.rejects(deployCloudflare(state.snapshot, output, deployOptions(api)), (error) => {
+      assert.match(error.message, /Command failed/);
+      assertNoTokenLeak(output, error);
+      return true;
+    }),
+  );
+  const record = readJson(path.join(output, "deployment-record.json"));
+  assert.equal(record.status, "published-unconfirmed");
+  assert.equal(record.readback, "matched");
+  assert.equal(record.version_id, testVersion);
+  assert.equal(record.url, null);
+  assert.equal(record.live_verification, "pending");
+  assert.equal(state.observations().filter(isWranglerCall).length, 1);
+  const readback = api.calls.at(-1);
+  assert.equal(
+    readback.url,
+    `https://api.cloudflare.com/client/v4/accounts/${testAccount}/workers/scripts/tammy-site-direct/deployments`,
+  );
+  assert.equal(readback.authorization, `Bearer ${testToken}`);
+});
+
+test("failed Wrangler exit stays outcome-uncertain when readback cannot prove this deployment", async (t) => {
+  const older = (state) =>
+    fixtureDeployment(state.provenance.github.commit_sha, {
+      id: "older",
+      created_on: new Date(Date.now() + 30_000).toISOString(),
+    });
+  const newerOtherCommit = () =>
+    fixtureDeployment("8bb2c6d56393c55fc3d88fd527709f0f6f2688fa", {
+      id: "newer",
+      created_on: new Date(Date.now() + 90_000).toISOString(),
+    });
+  const denied = {
+    status: 500,
+    body: { success: false, errors: [{ code: 10000 }], messages: [], result: null },
+  };
+  for (const [label, overrides, readback] of [
+    [
+      "message from another commit",
+      () => ({
+        deployments: [fixtureDeployment("8bb2c6d56393c55fc3d88fd527709f0f6f2688fa")],
+      }),
+      "mismatch",
+    ],
+    [
+      "deployment created before this run",
+      (state) => ({
+        deployments: [
+          fixtureDeployment(state.provenance.github.commit_sha, {
+            created_on: new Date(Date.now() - 3_600_000).toISOString(),
+          }),
+        ],
+      }),
+      "mismatch",
+    ],
+    [
+      "newest deployment is another commit",
+      (state) => ({ deployments: [newerOtherCommit(), older(state)] }),
+      "mismatch",
+    ],
+    ["no deployments listed", () => ({ deployments: [] }), "mismatch"],
+    ["readback HTTP error", () => ({ readback: denied }), "unavailable"],
+    ["readback network failure", () => ({ readback: { throws: true } }), "unavailable"],
+  ]) {
+    await t.test(label, async (t) => {
+      const state = wrapperFixture(t, { exitCode: 27 });
+      const output = path.join(state.base, "deployment");
+      const api = cloudflareApi(state, overrides(state));
+      await withEnvironment(state.environment, () =>
+        assert.rejects(deployCloudflare(state.snapshot, output, deployOptions(api)), (error) => {
+          assert.match(error.message, /Command failed/);
+          assertNoTokenLeak(output, error);
+          return true;
+        }),
+      );
+      const record = readJson(path.join(output, "deployment-record.json"));
+      assert.equal(record.status, "outcome-uncertain");
+      assert.equal(record.readback, readback);
+      assert.equal(record.version_id, null);
+      assert.equal(record.url, null);
+      assert.equal(state.observations().filter(isWranglerCall).length, 1);
+    });
+  }
+});
+
+const reconcileCommit = "fa5ade8a0ea33e455740bec24074d1d3b4e12ac6";
+const unavailable = {
+  status: 503,
+  body: { success: false, errors: [], messages: [], result: null },
+};
+const healthy = (result) => ({
+  status: 200,
+  body: { success: true, errors: [], messages: [], result },
+});
+
+test("Cloudflare preflight network failure names the endpoint, retries once and stops before Wrangler", async (t) => {
+  const state = wrapperFixture(t);
+  const output = path.join(state.base, "deployment");
+  const api = cloudflareApi(state, { accountSubdomain: { throws: true } });
+  await withEnvironment(state.environment, () =>
+    assert.rejects(deployCloudflare(state.snapshot, output, deployOptions(api)), (error) => {
+      assert.match(
+        error.message,
+        /^CLOUDFLARE_TOKEN_PREFLIGHT_FAILED: account-subdomain HTTP unavailable, Cloudflare codes none\./,
+      );
+      assertNoTokenLeak(output, error);
+      return true;
+    }),
+  );
+  const accountCalls = api.calls.filter((call) => call.url.endsWith("/workers/subdomain"));
+  assert.equal(accountCalls.length, 2);
+  assert.equal(state.observations().some(isWranglerCall), false);
+});
+
+test("Cloudflare preflight retries a 503 once and proceeds when the retry succeeds", async (t) => {
+  const state = wrapperFixture(t);
+  const output = path.join(state.base, "deployment");
+  const api = cloudflareApi(state, {
+    accountSubdomain: [unavailable, healthy({ subdomain: "fixture-subdomain" })],
+  });
+  const result = await withEnvironment(state.environment, () =>
+    deployCloudflare(state.snapshot, output, deployOptions(api)),
+  );
+  assert.equal(result.status, "published");
+  assert.equal(api.calls.filter((call) => call.url.endsWith("/workers/subdomain")).length, 2);
+  assert.equal(state.observations().filter(isWranglerCall).length, 1);
+});
+
+test("failed Wrangler readback retries a 503 once before reconciling", async (t) => {
+  const state = wrapperFixture(t, { exitCode: 27 });
+  const output = path.join(state.base, "deployment");
+  const api = cloudflareApi(state, {
+    readback: [
+      unavailable,
+      healthy({ deployments: [fixtureDeployment(state.provenance.github.commit_sha)] }),
+    ],
+  });
+  await withEnvironment(state.environment, () =>
+    assert.rejects(deployCloudflare(state.snapshot, output, deployOptions(api)), /Command failed/),
+  );
+  const record = readJson(path.join(output, "deployment-record.json"));
+  assert.equal(record.status, "published-unconfirmed");
+  assert.equal(record.readback, "matched");
+  assert.equal(api.calls.filter((call) => call.url.endsWith("/deployments")).length, 2);
+});
+
+test("readback start time comes from Cloudflare's Date header rather than the local clock", async (t) => {
+  const state = wrapperFixture(t, { exitCode: 27 });
+  const output = path.join(state.base, "deployment");
+  // The fixture deployment is one minute ahead of the local clock but an hour behind this header.
+  const api = cloudflareApi(state, { date: new Date(Date.now() + 3_600_000) });
+  await withEnvironment(state.environment, () =>
+    assert.rejects(deployCloudflare(state.snapshot, output, deployOptions(api)), /Command failed/),
+  );
+  const record = readJson(path.join(output, "deployment-record.json"));
+  assert.equal(record.status, "outcome-uncertain");
+  assert.equal(record.readback, "mismatch");
+});
+
+test("readback floors the start time to one second for created_on values at -0.5 s, +0.5 s and -1.5 s", () => {
+  const start = Date.parse("2026-11-11T05:38:36Z") + 500;
+  const at = (ms) => [
+    fixtureDeployment(reconcileCommit, { created_on: new Date(ms).toISOString() }),
+  ];
+  assert.deepEqual(classifyReadback(at(start - 500), reconcileCommit, start), {
+    readback: "matched",
+    version_id: testVersion,
+  });
+  assert.equal(classifyReadback(at(start + 500), reconcileCommit, start).readback, "matched");
+  assert.equal(classifyReadback(at(start - 1500), reconcileCommit, start).readback, "mismatch");
+});
+
+test("readback refuses deployments that cannot prove this run", () => {
+  const cases = [
+    ["missing commit annotation", { annotations: {} }],
+    ["unparseable created_on", { created_on: "not-a-date" }],
+    ["non-UUID version id", { versions: [{ version_id: "not-a-uuid", percentage: 100 }] }],
+    ["version percentage below 100", { versions: [{ version_id: testVersion, percentage: 50 }] }],
+    [
+      "more than one version",
+      {
+        versions: [
+          { version_id: testVersion, percentage: 50 },
+          { version_id: "00112233-4455-4677-8899-aabbccddef00", percentage: 50 },
+        ],
+      },
+    ],
+  ];
+  for (const [label, patch] of cases) {
+    assert.equal(
+      classifyReadback(
+        [fixtureDeployment(reconcileCommit, patch)],
+        reconcileCommit,
+        Date.now() - 5000,
+      ).readback,
+      "mismatch",
+      label,
+    );
+  }
 });

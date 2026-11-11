@@ -49,3 +49,45 @@ void it("reports a published but unhealthy Worker as failed acceptance", async (
   assert(result.failures.some((x) => x.includes("503")));
   assert.equal(receipt.status, "published");
 });
+const unconfirmed = { ...receipt, status: "published-unconfirmed", url: null, readback: "matched" };
+void it("accepts a readback-matched publication with url null and reports its publication status", async () => {
+  const requested = [];
+  const recordingFixture = fixture();
+  const result = await verifyDirectDeployment({
+    deployment: unconfirmed, expectedRevision: revision,
+    fetcher: (url, init) => { requested.push(url); return recordingFixture(url, init); },
+  });
+  assert.equal(result.ok, true, result.failures.join("; "));
+  assert.equal(result.publication_status, "published-unconfirmed");
+  assert.equal(result.version_id, receipt.version_id);
+  assert(requested.length > 0);
+  for (const url of requested) assert.equal(new URL(url).origin, "https://tammy-site-direct.ben-ebsworth.workers.dev");
+});
+void it("accepts a published-unconfirmed record that carries the exact direct Worker URL", async () => {
+  const result = await verifyDirectDeployment({
+    deployment: { ...unconfirmed, url: "https://tammy-site-direct.ben-ebsworth.workers.dev/" },
+    expectedRevision: revision, fetcher: fixture(),
+  });
+  assert.equal(result.ok, true, result.failures.join("; "));
+  assert.equal(result.publication_status, "published-unconfirmed");
+});
+void it("reports publication_status published for confirmed receipts", async () => {
+  const result = await verifyDirectDeployment({ deployment: receipt, expectedRevision: revision, fetcher: fixture() });
+  assert.equal(result.publication_status, "published");
+});
+void it("rejects every other status and any foreign URL on an unconfirmed record before any request", async () => {
+  for (const patch of [
+    { status: "outcome-uncertain" }, { status: "preflight-failed" }, { status: "started" },
+    { status: "published-unconfirmed", url: "https://tammy.tax/" },
+    { status: "published-unconfirmed", url: "https://tammy-site-direct.ben-ebsworth.workers.dev/other" },
+    { status: "published-unconfirmed", version_id: null },
+    { status: "published", url: null },
+  ]) {
+    let requests = 0;
+    await assert.rejects(verifyDirectDeployment({
+      deployment: { ...unconfirmed, ...patch }, expectedRevision: revision,
+      fetcher: () => { requests++; },
+    }));
+    assert.equal(requests, 0, JSON.stringify(patch));
+  }
+});

@@ -199,6 +199,34 @@ Exact PDF hashes and review observations are retained in the sanitized metadata;
 
 This release records the unchanged `56bd4ef4…` build. The documentation checkout was `f609d469e82c5af1185ae6fb6f2ef2b12a4a7cfa` before this receipt update; that revision and subsequent documentation/evidence commits are not deployed source. Keep preparation manifests and the original receipt unchanged when recording follow-up evidence.
 
+## 11 November 2026: CI credential preflight and readback
+
+**CI token requirement.** The `CLOUDFLARE_API_TOKEN` repository secret must be an account-owned API token for account `2132ccf47ceb5fff234c34d85490470a` with exactly two permissions: (a) Workers Editor, scoped to the individual Worker `tammy-site-direct`, and (b) Workers Metadata Read-Only at the Workers product scope. The token needs no zone permissions. Without (b), Cloudflare returns code 10000 when Wrangler reads the account subdomain after upload, which is what failed the 11 November CI run.
+
+**Preflight.** `site-release.mjs cloudflare-deploy` now reads two endpoints with the CI token before Wrangler runs: `GET /accounts/{account}/workers/subdomain` and `GET /accounts/{account}/workers/scripts/tammy-site-direct/subdomain`. The host is fixed to `api.cloudflare.com`; it cannot be overridden by environment or flag. If either read is not a success, the command stops, Wrangler is not invoked, and the error names the endpoint (`account-subdomain` or `script-subdomain`), the HTTP status and any numeric Cloudflare error codes. Tokens, headers and response bodies are never printed or written. The record has `status: "preflight-failed"` and `publication: "not-performed"`. The script-subdomain read requires an existing Worker, so the first publication of a Worker that does not yet exist cannot pass this preflight. Each preflight read retries once on HTTP 429, 5xx or a network/abort error; authorization and other 4xx answers are final. Local runs that rely on an existing Wrangler session without `CLOUDFLARE_API_TOKEN` skip both the preflight and the readback.
+
+**Readback after any non-zero Wrangler exit.** The command reads `GET /accounts/{account}/workers/scripts/tammy-site-direct/deployments`, retrying once as above. The record becomes `published-unconfirmed`, with that version ID, only when the newest deployment has the message `GitHub <source commit>`, was created no earlier than the start of this `cloudflare-deploy` command, and has exactly one version at 100%. The start time is the `Date` header of the first successful preflight read, floored to the second; the local clock minus 5 seconds is used only when that header is absent or unparseable. Any other outcome, including a readback that fails, makes the record `outcome-uncertain`. Either way the job fails, and a readback error never replaces the original Wrangler error. The record's `readback` field states `matched`, `mismatch` or `unavailable`. Local runs without `CLOUDFLARE_API_TOKEN` skip the readback and record `unavailable`.
+
+**HTTP acceptance for a `published-unconfirmed` record.** Cloudflare reports that version, but the live site has not been accepted. The record has no URL, so the verifier always probes the pinned direct origin. Run this against the record, with the revision set to the record's `github.commit_sha`:
+
+```sh
+node apps/site/scripts/verify-direct-deployment.mjs \
+  --record /absolute/path/to/tammy-cloudflare-deployment/deployment-record.json \
+  --revision EXACT_RECORD_GITHUB_COMMIT_SHA \
+  --output /absolute/path/to/tammy-cloudflare-deployment/live-verification.json
+```
+
+The output carries `publication_status: "published-unconfirmed"` so the two states stay distinct. The workflow runs this verifier only after a successful deploy step, so an unconfirmed record needs this manual run.
+
+**Observed live state on 11 November 2026.** The `tammy-site-direct` Worker has two deployments that the release process produced:
+
+| Deployment time (UTC) | Version | Message | Notes |
+| --- | --- | --- | --- |
+| 2026-11-07T13:44:25Z | `3503f63e-8ed7-4676-b757-d5b88de7c58b` | `GitHub 8bb2c6d56393c55fc3d88fd527709f0f6f2688fa` | Earlier release |
+| 2026-11-11T05:38:36Z | `7a9585f3-f1a0-4cae-ac1d-dec6968b96d4` | `GitHub fa5ade8a0ea33e455740bec24074d1d3b4e12ac6` | Published by CI run `42777581689`; its job reported failure after the upload, with no deployment receipt |
+
+HTTP acceptance of the live Worker on 11 November 2026 passed for all 12 checked routes. That check read the public site without credentials, so it does not prove the CI token has the permissions above. The 11 November CI job exited 1 after publishing, so its record cannot be treated as a successful release receipt.
+
 ## Release checklist and record
 
 Reusable template for the next release; the completed publication and verification record is above.
