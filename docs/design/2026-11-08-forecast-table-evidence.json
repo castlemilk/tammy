@@ -1,0 +1,664 @@
+{
+  "recorded_at": "2026-11-08T22:05:45.854096+00:00",
+  "baseline_commit": "8bb2c6d56393c55fc3d88fd527709f0f6f2688fa",
+  "release_status": "Local independent branch only. Not pushed, merged or deployed. PR 51 candidate preserved.",
+  "target": "direct Cloudflare; local production build only, no exported release candidate qualification",
+  "baseline": {
+    "url": "https://tammy-site-direct.ben-ebsworth.workers.dev/tools/cash-flow-forecast",
+    "table_at_320": {
+      "client": 231,
+      "scroll": 640,
+      "rows": 12,
+      "chromium_native_keyboard_scrolling": true
+    },
+    "issue": "Financial columns and full explanatory caption require sideways scrolling with no explicit cue.",
+    "reduced_motion_skip_link": {
+      "focused": false,
+      "top": 12,
+      "bottom": 56.78125,
+      "issue": "Static hide transform reset; link covers content while another control is focused."
+    }
+  },
+  "browser": {
+    "ok": true,
+    "checkedAt": "2026-11-08T21:56:59.814Z",
+    "facts": [
+      {
+        "width": 320,
+        "client": 231,
+        "scroll": 640,
+        "left": 0,
+        "hint": "block",
+        "outline": "solid",
+        "outlineWidth": "2px",
+        "font": "14px",
+        "noteOutside": true,
+        "noteFullyWithinSurface": true,
+        "noteText": "Illustrative twelve-week cash forecast. Amounts in AUD, based on the entered expected dates.",
+        "regionDescription": "forecast-scroll-hint",
+        "tableDescription": "forecast-table-note",
+        "page": 305,
+        "viewport": 305,
+        "overflow": true,
+        "closingVisible": true,
+        "exit": {
+          "tag": "A",
+          "text": "business.gov.au guidance on cash flow statements"
+        }
+      },
+      {
+        "width": 390,
+        "client": 301,
+        "scroll": 640,
+        "left": 339,
+        "hint": "block",
+        "outline": "solid",
+        "outlineWidth": "2px",
+        "font": "14px",
+        "noteOutside": true,
+        "noteFullyWithinSurface": true,
+        "noteText": "Illustrative twelve-week cash forecast. Amounts in AUD, based on the entered expected dates.",
+        "regionDescription": "forecast-scroll-hint",
+        "tableDescription": "forecast-table-note",
+        "page": 375,
+        "viewport": 375,
+        "overflow": true,
+        "closingVisible": true,
+        "exit": {
+          "tag": "A",
+          "text": "business.gov.au guidance on cash flow statements"
+        }
+      },
+      {
+        "width": 639,
+        "client": 550,
+        "scroll": 640,
+        "left": 90,
+        "hint": "block",
+        "outline": "solid",
+        "outlineWidth": "2px",
+        "font": "14px",
+        "noteOutside": true,
+        "noteFullyWithinSurface": true,
+        "noteText": "Illustrative twelve-week cash forecast. Amounts in AUD, based on the entered expected dates.",
+        "regionDescription": "forecast-scroll-hint",
+        "tableDescription": "forecast-table-note",
+        "page": 624,
+        "viewport": 624,
+        "overflow": true,
+        "closingVisible": true,
+        "exit": {
+          "tag": "A",
+          "text": "business.gov.au guidance on cash flow statements"
+        }
+      },
+      {
+        "width": 728,
+        "client": 639,
+        "scroll": 640,
+        "left": 1,
+        "hint": "none",
+        "outline": "solid",
+        "outlineWidth": "2px",
+        "font": "14px",
+        "noteOutside": true,
+        "noteFullyWithinSurface": true,
+        "noteText": "Illustrative twelve-week cash forecast. Amounts in AUD, based on the entered expected dates.",
+        "regionDescription": null,
+        "tableDescription": "forecast-table-note",
+        "page": 713,
+        "viewport": 713,
+        "overflow": false,
+        "closingVisible": true,
+        "exit": {
+          "tag": "A",
+          "text": "business.gov.au guidance on cash flow statements"
+        }
+      },
+      {
+        "width": 729,
+        "client": 640,
+        "scroll": 640,
+        "left": 0,
+        "hint": "none",
+        "outline": "solid",
+        "outlineWidth": "2px",
+        "font": "14px",
+        "noteOutside": true,
+        "noteFullyWithinSurface": true,
+        "noteText": "Illustrative twelve-week cash forecast. Amounts in AUD, based on the entered expected dates.",
+        "regionDescription": null,
+        "tableDescription": "forecast-table-note",
+        "page": 714,
+        "viewport": 714,
+        "overflow": false,
+        "closingVisible": true,
+        "exit": {
+          "tag": "A",
+          "text": "business.gov.au guidance on cash flow statements"
+        }
+      },
+      {
+        "width": 760,
+        "client": 671,
+        "scroll": 671,
+        "left": 0,
+        "hint": "none",
+        "outline": "solid",
+        "outlineWidth": "2px",
+        "font": "14px",
+        "noteOutside": true,
+        "noteFullyWithinSurface": true,
+        "noteText": "Illustrative twelve-week cash forecast. Amounts in AUD, based on the entered expected dates.",
+        "regionDescription": null,
+        "tableDescription": "forecast-table-note",
+        "page": 745,
+        "viewport": 745,
+        "overflow": false,
+        "closingVisible": true,
+        "exit": {
+          "tag": "A",
+          "text": "business.gov.au guidance on cash flow statements"
+        }
+      },
+      {
+        "width": 761,
+        "client": 640,
+        "scroll": 640,
+        "left": 0,
+        "hint": "none",
+        "outline": "solid",
+        "outlineWidth": "2px",
+        "font": "14px",
+        "noteOutside": true,
+        "noteFullyWithinSurface": true,
+        "noteText": "Illustrative twelve-week cash forecast. Amounts in AUD, based on the entered expected dates.",
+        "regionDescription": null,
+        "tableDescription": "forecast-table-note",
+        "page": 746,
+        "viewport": 746,
+        "overflow": false,
+        "closingVisible": true,
+        "exit": {
+          "tag": "A",
+          "text": "business.gov.au guidance on cash flow statements"
+        }
+      },
+      {
+        "width": 768,
+        "client": 647,
+        "scroll": 647,
+        "left": 0,
+        "hint": "none",
+        "outline": "solid",
+        "outlineWidth": "2px",
+        "font": "14px",
+        "noteOutside": true,
+        "noteFullyWithinSurface": true,
+        "noteText": "Illustrative twelve-week cash forecast. Amounts in AUD, based on the entered expected dates.",
+        "regionDescription": null,
+        "tableDescription": "forecast-table-note",
+        "page": 753,
+        "viewport": 753,
+        "overflow": false,
+        "closingVisible": true,
+        "exit": {
+          "tag": "A",
+          "text": "business.gov.au guidance on cash flow statements"
+        }
+      },
+      {
+        "width": 1280,
+        "client": 641,
+        "scroll": 641,
+        "left": 0,
+        "hint": "none",
+        "outline": "solid",
+        "outlineWidth": "2px",
+        "font": "14px",
+        "noteOutside": true,
+        "noteFullyWithinSurface": true,
+        "noteText": "Illustrative twelve-week cash forecast. Amounts in AUD, based on the entered expected dates.",
+        "regionDescription": null,
+        "tableDescription": "forecast-table-note",
+        "page": 1265,
+        "viewport": 1265,
+        "overflow": false,
+        "closingVisible": true,
+        "exit": {
+          "tag": "A",
+          "text": "business.gov.au guidance on cash flow statements"
+        }
+      },
+      {
+        "width": 1440,
+        "client": 668,
+        "scroll": 668,
+        "left": 0,
+        "hint": "none",
+        "outline": "solid",
+        "outlineWidth": "2px",
+        "font": "14px",
+        "noteOutside": true,
+        "noteFullyWithinSurface": true,
+        "noteText": "Illustrative twelve-week cash forecast. Amounts in AUD, based on the entered expected dates.",
+        "regionDescription": null,
+        "tableDescription": "forecast-table-note",
+        "page": 1425,
+        "viewport": 1425,
+        "overflow": false,
+        "closingVisible": true,
+        "exit": {
+          "tag": "A",
+          "text": "business.gov.au guidance on cash flow statements"
+        }
+      }
+    ],
+    "forced": {
+      "focused": true,
+      "style": "solid",
+      "width": "2px"
+    },
+    "rows": [
+      "2026-11-08$100.00$0.00$250.00-$150.00",
+      "2026-11-15-$150.00$0.00$0.00-$150.00",
+      "2026-11-22-$150.00$0.00$0.00-$150.00",
+      "2026-11-29-$150.00$0.00$0.00-$150.00",
+      "2026-12-06-$150.00$0.00$0.00-$150.00",
+      "2026-12-13-$150.00$0.00$0.00-$150.00",
+      "2026-12-20-$150.00$0.00$0.00-$150.00",
+      "2026-12-27-$150.00$0.00$0.00-$150.00",
+      "2027-01-03-$150.00$0.00$0.00-$150.00",
+      "2027-01-10-$150.00$0.00$0.00-$150.00",
+      "2027-01-17-$150.00$0.00$0.00-$150.00",
+      "2027-01-24-$150.00$0.00$0.00-$150.00"
+    ],
+    "errors": [],
+    "checks": [
+      "Directory entry and synthetic payment forecast",
+      "Ten widths and cue at actual overflow boundary",
+      "Tab into named region, arrows expose all twelve Closing values, Tab exits",
+      "Complete explanatory note remains outside scrolling area",
+      "Unchanged 14px numbers and all rows",
+      "Forced colours and reduced motion",
+      "Invalid draft recovery and Keep retain values",
+      "Loaded offline keyboard scrolling and actual CSV export"
+    ],
+    "scope": "Chromium native keyboard and viewport emulation. No physical touch, screen-reader, other-engine or OS print qualification."
+  },
+  "boundaries": {
+    "ok": true,
+    "skip": [
+      {
+        "width": 320,
+        "reducedMotion": "no-preference",
+        "before": {
+          "focused": false,
+          "top": -59.650001525878906,
+          "bottom": -14.868751525878906,
+          "transition": "0s"
+        },
+        "focused": {
+          "focused": true,
+          "top": 12,
+          "bottom": 56.78125,
+          "transition": "0s"
+        },
+        "target": {
+          "hash": "#tools-main",
+          "active": ""
+        },
+        "nextFocus": {
+          "withinMain": true,
+          "text": "Home"
+        },
+        "after": {
+          "focused": false,
+          "top": -59.650001525878906,
+          "bottom": -14.868751525878906,
+          "transition": "0s"
+        }
+      },
+      {
+        "width": 320,
+        "reducedMotion": "reduce",
+        "before": {
+          "focused": false,
+          "top": -59.650001525878906,
+          "bottom": -14.868751525878906,
+          "transition": "0s"
+        },
+        "focused": {
+          "focused": true,
+          "top": 12,
+          "bottom": 56.78125,
+          "transition": "0s"
+        },
+        "target": {
+          "hash": "#tools-main",
+          "active": ""
+        },
+        "nextFocus": {
+          "withinMain": true,
+          "text": "Home"
+        },
+        "after": {
+          "focused": false,
+          "top": -59.650001525878906,
+          "bottom": -14.868751525878906,
+          "transition": "0s"
+        }
+      },
+      {
+        "width": 1440,
+        "reducedMotion": "no-preference",
+        "before": {
+          "focused": false,
+          "top": -59.650001525878906,
+          "bottom": -14.868751525878906,
+          "transition": "0s"
+        },
+        "focused": {
+          "focused": true,
+          "top": 12,
+          "bottom": 56.78125,
+          "transition": "0s"
+        },
+        "target": {
+          "hash": "#tools-main",
+          "active": ""
+        },
+        "nextFocus": {
+          "withinMain": true,
+          "text": "Home"
+        },
+        "after": {
+          "focused": false,
+          "top": -59.650001525878906,
+          "bottom": -14.868751525878906,
+          "transition": "0s"
+        }
+      },
+      {
+        "width": 1440,
+        "reducedMotion": "reduce",
+        "before": {
+          "focused": false,
+          "top": -59.650001525878906,
+          "bottom": -14.868751525878906,
+          "transition": "0s"
+        },
+        "focused": {
+          "focused": true,
+          "top": 12,
+          "bottom": 56.78125,
+          "transition": "0s"
+        },
+        "target": {
+          "hash": "#tools-main",
+          "active": ""
+        },
+        "nextFocus": {
+          "withinMain": true,
+          "text": "Home"
+        },
+        "after": {
+          "focused": false,
+          "top": -59.650001525878906,
+          "bottom": -14.868751525878906,
+          "transition": "0s"
+        }
+      }
+    ],
+    "large": [
+      {
+        "width": 761,
+        "client": 640,
+        "scroll": 715,
+        "left": 75,
+        "hintHidden": false,
+        "describedby": "forecast-scroll-hint",
+        "rows": 12,
+        "values": [
+          "2026-11-08",
+          "$999,999,999.99",
+          "$10,999,999,999.89",
+          "$0.00",
+          "$11,999,999,999.88",
+          "2026-11-15",
+          "$11,999,999,999.88",
+          "$0.00",
+          "$10,999,999,999.89",
+          "$999,999,999.99"
+        ]
+      },
+      {
+        "width": 1280,
+        "client": 641,
+        "scroll": 715,
+        "left": 74,
+        "hintHidden": false,
+        "describedby": "forecast-scroll-hint",
+        "rows": 12,
+        "values": [
+          "2026-11-08",
+          "$999,999,999.99",
+          "$10,999,999,999.89",
+          "$0.00",
+          "$11,999,999,999.88",
+          "2026-11-15",
+          "$11,999,999,999.88",
+          "$0.00",
+          "$10,999,999,999.89",
+          "$999,999,999.99"
+        ]
+      },
+      {
+        "width": 1440,
+        "client": 668,
+        "scroll": 715,
+        "left": 47,
+        "hintHidden": false,
+        "describedby": "forecast-scroll-hint",
+        "rows": 12,
+        "values": [
+          "2026-11-08",
+          "$999,999,999.99",
+          "$10,999,999,999.89",
+          "$0.00",
+          "$11,999,999,999.88",
+          "2026-11-15",
+          "$11,999,999,999.88",
+          "$0.00",
+          "$10,999,999,999.89",
+          "$999,999,999.99"
+        ]
+      }
+    ],
+    "recovered": {
+      "hintHidden": true,
+      "descriptionRemoved": true,
+      "rows": 12
+    },
+    "noResizeObserverResizeFallback": true,
+    "scope": "Synthetic valid aggregate boundary; real keyboard and browser feature emulation, not assistive technology or physical hardware."
+  },
+  "focused_capture_geometry": {
+    "ok": true,
+    "captures": [
+      {
+        "width": 320,
+        "skip": {
+          "focused": false,
+          "bottom": -14.868751525878906
+        },
+        "surface": {
+          "x": 37,
+          "y": 112.25,
+          "width": 231,
+          "height": 701
+        }
+      },
+      {
+        "width": 390,
+        "skip": {
+          "focused": false,
+          "bottom": -14.868751525878906
+        },
+        "surface": {
+          "x": 37,
+          "y": 111.65625,
+          "width": 301,
+          "height": 681
+        }
+      },
+      {
+        "width": 1440,
+        "skip": {
+          "focused": false,
+          "bottom": -14.868751525878906
+        },
+        "surface": {
+          "x": 647.578125,
+          "y": 46.109375,
+          "width": 667.90625,
+          "height": 616
+        }
+      }
+    ]
+  },
+  "checks": {
+    "commands": [
+      {
+        "command": ["pnpm", "--dir", "apps/site", "typecheck"],
+        "exit_code": 0,
+        "log": "final-check-00.log",
+        "finished_at": "2026-11-08T21:55:20.809510+00:00"
+      },
+      {
+        "command": ["pnpm", "--dir", "apps/site", "lint"],
+        "exit_code": 0,
+        "log": "final-check-01.log",
+        "finished_at": "2026-11-08T21:55:21.614277+00:00"
+      },
+      {
+        "command": ["pnpm", "--dir", "apps/site", "test"],
+        "exit_code": 0,
+        "log": "final-check-02.log",
+        "finished_at": "2026-11-08T21:55:25.140954+00:00"
+      },
+      {
+        "command": ["pnpm", "--dir", "packages/invoices", "test"],
+        "exit_code": 0,
+        "log": "final-check-03.log",
+        "finished_at": "2026-11-08T21:55:26.409488+00:00"
+      },
+      {
+        "command": ["node", "apps/site/scripts/check-design-system.mjs"],
+        "exit_code": 0,
+        "log": "final-check-04.log",
+        "finished_at": "2026-11-08T21:55:26.443284+00:00"
+      },
+      {
+        "command": ["pnpm", "--dir", "apps/site", "build"],
+        "exit_code": 0,
+        "log": "final-check-05.log",
+        "finished_at": "2026-11-08T21:55:29.690353+00:00"
+      }
+    ],
+    "site_tests": 100,
+    "invoice_tests": 34,
+    "palette_checks": 15,
+    "root_lint": {
+      "exit_code": 0,
+      "existing_warnings": 136,
+      "existing_infos": 54
+    }
+  },
+  "csv": {
+    "bytes": 1158,
+    "sha256": "df6b3387a7462e91bd6680427c17234d6228edf042aa833c7a764611bba0905e",
+    "baseline_final_identical": true
+  },
+  "source_hashes": {
+    "apps/site/components/cash-flow-forecast.tsx": "b528f87b9547cff5fd12c4489f6acf2a2bca2234766d399e45e3bf762e74d59e",
+    "apps/site/app/tools/tools.css": "5713dcfd63c3c7110828d909756b48a363f4b943f5d0bf7f2ba73f4f592b6cb1",
+    "apps/site/DESIGN-SYSTEM.md": "84f040719cf6eb941bfd2d81caa06e8ba80ec4e8541ebd75151996d5056e2206",
+    "apps/site/lib/tools/cash-forecast.ts": "fbdaadbbc1b45a6009b4df64d7bf6bcb48971af3a4a4f1442a8eee857fa56e20",
+    "apps/site/lib/tools/calculations.ts": "b62f74b341aebfb37bee28ec6bd9cb9a44bc00c3aa7a9afb52ff351ff0ac0586"
+  },
+  "assets": [
+    {
+      "file": "assets/evidence/forecast-table/before-table-320.webp",
+      "source_png_sha256": "8fcdc9da9e1c5acfa84ed3d5171ab59c963afec51329f54f1af3f58c463eaee9",
+      "sha256": "8e2404d8ea1c7252ce7740062d61be1920046bbcfd289fe397e55d5f72946463",
+      "dimensions": [231, 644],
+      "capture": "live direct Worker"
+    },
+    {
+      "file": "assets/evidence/forecast-table/after-table-left-320.webp",
+      "source_png_sha256": "7b16aa82885b016d5c0ee4463ecc61da9afda0114da2353fb38685e83ea6eb9f",
+      "sha256": "a63f119986ab30081495bf4a492e0a864c6ea3531e6b11cb204f7e6bf5b14ff4",
+      "dimensions": [231, 702],
+      "capture": "local production build"
+    },
+    {
+      "file": "assets/evidence/forecast-table/after-table-closing-320.webp",
+      "source_png_sha256": "513555ff1b06fd884431a7a595e469da7602bd70dec1dd417bc702d5176628b3",
+      "sha256": "58aaaca16ed745a8901b09e9c341ec4e94db930a4f698bf4f23120aeedda81f1",
+      "dimensions": [231, 702],
+      "capture": "local production build"
+    },
+    {
+      "file": "assets/evidence/forecast-table/after-table-390.webp",
+      "source_png_sha256": "5cdaf3dbfca5649549a994c62bae7816bf0b3dd3fcd6d37a44bc3d9255619c40",
+      "sha256": "015b5b45f1eb413eac202144cd5c036ecf04f9925d3adfd1d53ce0b5a32d3916",
+      "dimensions": [301, 682],
+      "capture": "local production build"
+    },
+    {
+      "file": "assets/evidence/forecast-table/after-table-1440.webp",
+      "source_png_sha256": "75cf81d88955ad0a961b64bdd6fa98a59aa6215db7ac7c4c7fbfdf81cb207af5",
+      "sha256": "2b980dfe12ebdf413013bef4c1bcc17b7444c07e3a45d8134e099d6e7f496e27",
+      "dimensions": [669, 617],
+      "capture": "local production build"
+    },
+    {
+      "file": "assets/evidence/forecast-table/before-skip-320.webp",
+      "source_png_sha256": "58482ca2ad6ce64ac122ae1a9ad3fc911399c9801d2f532b23f108b416d43a1b",
+      "sha256": "b988055225db08fb895d8c8cc83d2291b5c950e50fd759444e8a31f942522cff",
+      "dimensions": [320, 844],
+      "capture": "live direct Worker"
+    },
+    {
+      "file": "assets/evidence/forecast-table/after-skip-320.webp",
+      "source_png_sha256": "3c2d2c68ee3cc8b0921c1890b29ea73d933f48dd96f4c09ea86881f38d21ddec",
+      "sha256": "fcc348369332441b53a073a82ca28307f533263156db76fa74d80c78154ef404",
+      "dimensions": [320, 844],
+      "capture": "local production build"
+    },
+    {
+      "file": "assets/evidence/forecast-table/large-values-1440.webp",
+      "source_png_sha256": "2a603e2ded57854de51dd75ebfede4df4f11be716e8d8536b5e9658359ee8907",
+      "sha256": "7dea4ac4af78970b1fe89e87c267974e4cdb68502bf790d74123f90d4e242ed3",
+      "dimensions": [669, 922],
+      "capture": "local production build"
+    },
+    {
+      "file": "assets/evidence/forecast-table/forced-colours-320.webp",
+      "source_png_sha256": "98ca644fb255a1f27ac6595e2d44d3255e934c4b47cac1954d268294f9b7466f",
+      "sha256": "651553f799382f978682706955499c423fd56f70c09c8d4c7065db7e7a44dd9d",
+      "dimensions": [234, 597],
+      "capture": "local production build"
+    }
+  ],
+  "limitations": [
+    "Chromium keyboard, viewport and media emulation only. No physical touch, screen-reader, other engine, native desktop or OS print qualification.",
+    "The ordinary-table boundary tolerates one pixel of overflow to avoid rounding-only hints.",
+    "Large aggregate checks qualify the table and scrolling cue, not summary-card layout for arbitrary large amounts.",
+    "No Hallmark, Appllama or image-generation tool execution in this bounded pass.",
+    "An early stale-build run was aborted and excluded. Tall element captures that painted an offscreen fixed skip link were excluded; retained table-only and viewport captures fit within the review viewport.",
+    "The initial label locator and native fragment-focus assertions were corrected in the harness. Actual Chrome skip behavior is fragment navigation followed by Tab into main, rather than activeElement equalling main.",
+    "Local source checks do not establish exact-commit CI, Cuttlefish qualification or deployment."
+  ]
+}

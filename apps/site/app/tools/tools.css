@@ -43,6 +43,15 @@
 .tools-shell h2 { font-size: clamp(35px, 4.4vw, 59px); }
 .tools-shell h3 { font-family: var(--t-display); font-size: 29px; font-weight: 550; letter-spacing: -.025em; }
 .tools-shell .tools-forecast-confirmation-title { font: 650 16px/1.5 var(--t-body); letter-spacing: 0; margin-bottom: 0; }
+.tools-forecast-summary { display: flex; flex-wrap: wrap; gap: 12px; }
+.tools-forecast-summary-item { flex: 1 1 12rem; min-width: fit-content; max-width: 100%; }
+.tools-forecast-summary-value { font-size: 1.5rem; line-height: 1.333333; }
+@media (max-width: 374px) {
+  .tools-forecast-summary-value { font-size: 1.125rem; }
+}
+.tools-forecast-table-scroll { max-width: 100%; overflow-x: auto; overscroll-behavior-x: contain; }
+.tools-forecast-table-scroll:focus-visible { outline: 2px solid var(--tammy-forest); outline-offset: 3px; }
+.tools-forecast-scroll-hint { margin: 0 0 12px; color: var(--t-muted); font-size: 12px; }
 .tools-shell :is(h1,h2,h3) { color: var(--t-ink); }
 .tools-hero {
   min-height: 560px; display: grid; grid-template-columns: minmax(0, .92fr) minmax(0, 1.08fr);
@@ -229,7 +238,9 @@
   .tools-form-two, .tools-form-three { grid-template-columns: 1fr; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .tools-shell :is(a,button) { transition: none !important; transform: none !important; }
+  .tools-shell :is(a,button) { transition: none !important; }
+  /* The skip link's transform controls visibility, not motion. */
+  .tools-shell :is(a,button):not(.skip-link) { transform: none !important; }
 }
 
 .tools-form-actions output { display: block; margin-top: 12px; }
