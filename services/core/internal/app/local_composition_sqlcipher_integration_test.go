@@ -12,6 +12,7 @@ import (
 	"io"
 	"io/fs"
 	"net/http"
+	"os"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -361,6 +362,98 @@ func localTestCreateRequest(setupID string) *tammyv1.CreateWorkspaceRequest {
 		WorkspacePassphrase:   &tammyv1.SecretInput{Utf8: []byte("workspace-passphrase-long-enough")},
 		AdministratorUsername: "admin@tammy.local", AdministratorDisplayName: "Tammy Admin",
 		AdministratorPassword: &tammyv1.SecretInput{Utf8: []byte("administrator-password-long-enough")},
+	}
+}
+
+func TestLocalCompositionRejectedAdministratorInputLeavesSetupRetryable(t *testing.T) {
+	for _, testCase := range []struct {
+		name       string
+		password   []byte
+		change     func(*tammyv1.CreateWorkspaceRequest)
+		restart    bool
+		newSetupID bool
+	}{
+		{name: "too short", password: bytes.Repeat([]byte("a"), 14)},
+		{name: "too long after restart", password: bytes.Repeat([]byte("a"), 129), restart: true},
+		{name: "non-printable with fresh setup ID", password: []byte("administrator-password\x00"), newSetupID: true},
+		{name: "invalid UTF-8 after restart with fresh setup ID", password: append([]byte("administrator-password"), 0xff), restart: true, newSetupID: true},
+		{name: "leading username whitespace", change: func(request *tammyv1.CreateWorkspaceRequest) {
+			request.AdministratorUsername = " admin@tammy.local"
+		}},
+		{name: "trailing username whitespace after restart", restart: true, change: func(request *tammyv1.CreateWorkspaceRequest) {
+			request.AdministratorUsername = "admin@tammy.local\t"
+		}},
+		{name: "blank username with fresh setup ID", newSetupID: true, change: func(request *tammyv1.CreateWorkspaceRequest) {
+			request.AdministratorUsername = " \t\u00a0"
+		}},
+		{name: "empty username", change: func(request *tammyv1.CreateWorkspaceRequest) {
+			request.AdministratorUsername = ""
+		}},
+		{name: "overlong username", change: func(request *tammyv1.CreateWorkspaceRequest) {
+			request.AdministratorUsername = strings.Repeat("a", 129)
+		}},
+		{name: "empty display name", change: func(request *tammyv1.CreateWorkspaceRequest) {
+			request.AdministratorDisplayName = ""
+		}},
+		{name: "overlong display name", change: func(request *tammyv1.CreateWorkspaceRequest) {
+			request.AdministratorDisplayName = strings.Repeat("a", 129)
+		}},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			root, err := filepath.EvalSymlinks(t.TempDir())
+			if err != nil {
+				t.Fatal(err)
+			}
+			anchors := workspace.NewMemoryAnchorStore()
+			mirror := newLocalTestAuditMirror()
+			server, stop := startLocalCompositionTestServer(t, root, anchors, mirror)
+			t.Cleanup(stop)
+			const setupID = "01900f3c-7b2e-7cc4-98c4-dc0c0c0739b8"
+			request := localTestCreateRequest(setupID)
+			if testCase.password != nil {
+				request.AdministratorPassword.Utf8 = append([]byte(nil), testCase.password...)
+			}
+			if testCase.change != nil {
+				testCase.change(request)
+			}
+			response, err := server.workspace.CreateWorkspace(context.Background(), localTestRequest(server.capability, request))
+			var connectErr *connect.Error
+			if response != nil || !errors.As(err, &connectErr) || connectErr.Message() != "VALIDATION" {
+				t.Fatalf("invalid administrator input: response present=%t, err=%v", response != nil, err)
+			}
+			entries, err := os.ReadDir(filepath.Join(root, "core", "workspace"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(entries) != 0 {
+				t.Errorf("rejected setup left %d workspace files", len(entries))
+			}
+			if _, err := os.Lstat(filepath.Join(root, "core", "workspace-catalogue.enc")); !os.IsNotExist(err) {
+				t.Errorf("rejected setup reserved a catalogue record: %v", err)
+			}
+			if server.capture.database != nil || server.capture.activations != 0 {
+				t.Error("rejected setup activated workspace modules")
+			}
+			if testCase.restart {
+				stop()
+				server, stop = startLocalCompositionTestServer(t, root, anchors, mirror)
+				t.Cleanup(stop)
+			}
+			retrySetupID := setupID
+			if testCase.newSetupID {
+				retrySetupID = "01900f3c-7b2e-7cc4-98c4-dc0c0c0739b9"
+			}
+			created, groups := server.createWorkspace(t, retrySetupID)
+			if err := server.confirmRecovery(retrySetupID, groups); err != nil {
+				t.Fatalf("ConfirmRecovery() after corrected setup: %v", err)
+			}
+			if _, err := server.signIn(); err != nil {
+				t.Fatalf("SignIn() after corrected setup: %v", err)
+			}
+			if state := server.workspaceState(t, created.Workspace.Id); state != tammyv1.WorkspaceState_WORKSPACE_STATE_AUTHENTICATED {
+				t.Fatalf("corrected setup workspace state = %s, want AUTHENTICATED", state)
+			}
+		})
 	}
 }
 
