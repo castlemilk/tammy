@@ -80,7 +80,7 @@ The implementation provides bounded document intake and manual review, with a li
 
 Historical validation receipts, recorded before the rebase onto `b15ddb45` and its reconciled-purchase GST semantics: 11 frontend tests and 15 server tests pass; complete visible browser E2E passes including commit-then-response-loss retry with exactly one journal, document review, statement reconciliation, draft GST credits, lock/unlock, no unexpected browser errors and overflow checks at 1536/785/390 pixels. Exact observed amounts include $319.00 journal/trial balance, $681.00 bank closing balance and $29.00 reviewed-document GST credits. Web/desktop typecheck, web build, frozen install, Actionlint, Biome, the full untagged Go suite and native SQLCipher app/workspace tests pass. Independent reviewer reran all 11 frontend tests and the PDF/money subset; parent independently ran the complete web tests, browser E2E, build, lint, desktop typecheck, frozen install, Actionlint and untagged Go suite. Native SQLCipher app/workspace receipts came from the backend worker. No hosted deployment or production-security assurance is implied.
 
-Current validation receipts, 2026-11-10, after the rebase onto `b15ddb45`. The commands ran through mise with pinned Node 24.18.0 and a canonical `/private/tmp` `TMPDIR`, with the core binary in `apps/desktop/resources/core/darwin-arm64` rebuilt from these sources by `pnpm core:build`.
+Pre-merge local validation receipts, 2026-11-10, after the rebase onto `b15ddb45`. The commands ran through mise with pinned Node 24.18.0 and a canonical `/private/tmp` `TMPDIR`, with the core binary in `apps/desktop/resources/core/darwin-arm64` rebuilt from these sources by `pnpm core:build`. Later GitHub results are recorded separately below.
 
 - `pnpm web:typecheck`, `pnpm web:build` and `pnpm exec biome check apps/web` (46 files) pass.
 - `pnpm web:test` passes 19 Vitest tests in 7 files and 44 server tests: facade 19, gateway 15, real-core integration 7 and security 3.
@@ -88,7 +88,22 @@ Current validation receipts, 2026-11-10, after the rebase onto `b15ddb45`. The c
 - `pnpm --dir apps/web e2e` passes the browser journey: the recovery deadline notice, commit-then-response-loss retry with exactly one journal, a $319.00 trial balance, document review, statement reconciliation with a $681.00 closing balance, a GST draft with GST credits (1B) of $0.00 and a provisional candidate total of $29.00, lock and unlock, no unexpected browser errors, and no horizontal overflow on the Overview at 785 and 390 pixels.
 - A probe against the real core confirmed that reusing a journal key with different lines returns the same 400 response as an unbalanced journal. It also confirmed that a draft for 10 February to 5 March 2024 is accepted while July to September 2023 and January to March 2025 are rejected, and that MCP `POST` and `DELETE` return 403 while `HEAD` returns 401.
 - `pnpm lint`, `pnpm contracts` and `node --test scripts/*.test.mjs` (942 passed, 1 opt-in reproducibility test skipped) pass, as does `go test -tags=tammy_sqlcipher ./services/core/internal/app/...`. The tagged workspace, identity, audit and command packages passed on the same core sources. The untagged Go suite fails only the two `sbrhelper` tests that also fail on `origin/master` on this Mac: a copied `/bin/sleep` is killed by a launch constraint, and a simulator profile is a gitignored build output.
-- No `web-ci.yml` run has completed; the only run, for an earlier push of this branch, was cancelled. Actionlint 1.7.12 (`pnpm ci:lint`) and `pnpm desktop:typecheck` pass.
+- At the time of these local receipts, the earlier `web-ci.yml` run had been cancelled. This is a historical observation, superseded by the successful exact-head and master runs below. Actionlint 1.7.12 (`pnpm ci:lint`) and `pnpm desktop:typecheck` pass.
+
+### GitHub CI receipts after merge
+
+Checked on 10 November 2026 against `master` at `fa5ade8a0ea33e455740bec24074d1d3b4e12ac6`, the ordinary merge of [PR #56](https://github.com/castlemilk/tammy/pull/56). The PR records successful hosted checks on its evidence head `f413571dab1611a87b3a102c31c5e79368604f62`; the following are the independent post-merge runs, not an inference from the PR status.
+
+| Surface | Observed result | Exact run |
+| --- | --- | --- |
+| Desktop foundation | **Passed:** contracts/local foundation, Windows Server 2025 smoke and macOS 15 arm64 packaged E2E. | [42777581989](https://github.com/castlemilk/tammy/actions/runs/42777581989) |
+| Web accounting application | **Passed:** typecheck/build, browser and server tests, real-core/native lifecycle regressions and browser journey on macOS 15 arm64. | [42777582093](https://github.com/castlemilk/tammy/actions/runs/42777582093) |
+| Master site validation/deployment workflow | **Queued:** the verification job has no assigned runner; the dependent direct Cloudflare deployment has not run. | [42777581689](https://github.com/castlemilk/tammy/actions/runs/42777581689) |
+| PR site validation | **Queued:** no qualifying Cuttlefish execution. | [42774163433](https://github.com/castlemilk/tammy/actions/runs/42774163433) |
+
+The master site job requests `[self-hosted, linux, ARM64, tammy-linux-ci]`; its empty runner assignment and unexecuted steps do not establish a site test failure or a qualified runner pool. Local site checks cannot replace that evidence. [Issue #47](https://github.com/castlemilk/tammy/issues/47) retains the pool qualification work.
+
+These macOS results cover macOS 15 only. The legacy `macos14-arm64-packaged` job identifier and artifact name remain for traceability; they do not describe the runner OS. Windows Server smoke does not qualify Windows 11, and ordinary packaged checks do not establish distribution signing, notarization, Mac App Store acceptance or the complete [accounting release gates](2026-08-02-accounting-release-hardening.md). Later source changes require new exact-head results and descriptor attestation.
 
 ## Chunk 2: Sequenced hosted expansion
 
