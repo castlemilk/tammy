@@ -1,0 +1,78 @@
+apiVersion: cuttlefish.dev/v1alpha1
+kind: Workflow
+metadata:
+  name: tammy-ci
+  description: Tammy contracts, Linux desktop, website, and roadmap validation
+spec:
+  concurrency:
+    group: ${workflow}-pr-${pr}
+    cancelInProgress: true
+  nodes:
+    - id: checkout
+      taskRef:
+        name: pipeline/checkout
+        version: "0.6.1"
+      cachePolicy:
+        keys: [git-mirror-v1]
+        paths: [/cache/git]
+      inputs:
+        repo:
+          value: https://github.com/castlemilk/tammy
+        ref:
+          value: master
+
+    # Checkout starts shallow. Descriptor provenance and the breaking-change
+    # comparison require the complete ancestry and an origin/master ref.
+    - id: prepare
+      image: node:24.18.0-bookworm
+      run:
+        shell: bash
+        timeout: 15m
+      script: node scripts/prepare-cuttlefish-checkout.mjs
+
+    - id: foundation-linux
+      image: node:24.18.0-bookworm
+      run:
+        shell: bash
+        timeout: 60m
+        resources:
+          memory: 8Gi
+      script: bash scripts/cuttlefish-linux-ci.sh
+
+    - id: roadmaps
+      image: node:24.18.0-bookworm
+      run:
+        shell: bash
+        timeout: 5m
+      script: |
+        node scripts/check-xero-roadmap.mjs
+        node scripts/check-growth-backlog.mjs
+
+    - id: site-verify
+      image: node:24.18.0-bookworm
+      run:
+        shell: bash
+        timeout: 45m
+        resources:
+          memory: 8Gi
+      script: bash scripts/cuttlefish-site-ci.sh
+
+  edges:
+    - id: checkout-to-prepare
+      from: { node: checkout, port: workingDir }
+      to: { node: prepare, port: workingDir }
+    - id: prepare-to-foundation
+      from: { node: prepare, port: workingDir }
+      to: { node: foundation-linux, port: workingDir }
+    - id: prepare-to-roadmaps
+      from: { node: prepare, port: workingDir }
+      to: { node: roadmaps, port: workingDir }
+    - id: prepare-to-site
+      from: { node: prepare, port: workingDir }
+      to: { node: site-verify, port: workingDir }
+
+  triggers:
+    - kind: manual
+    - kind: github
+      repositories: [castlemilk/tammy]
+      events: [push, pull_request]

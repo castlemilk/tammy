@@ -262,14 +262,11 @@ test("rejects checkout source changes not represented by the retained revision",
   );
 });
 
-test("delegates non-mutating evidence verification to ordered Linux and Windows CI tasks", async () => {
+test("delegates non-mutating evidence verification to the ordered Linux CI tasks", async () => {
   const packageJson = JSON.parse(
     await readFile(new URL("../package.json", import.meta.url), "utf8"),
   );
-  const workflow = await readFile(
-    new URL("../.github/workflows/foundation-ci.yml", import.meta.url),
-    "utf8",
-  );
+  const linuxCi = await readFile(new URL("./cuttlefish-linux-ci.sh", import.meta.url), "utf8");
   const attributes = await readFile(new URL("../.gitattributes", import.meta.url), "utf8");
 
   assert.equal(
@@ -281,25 +278,10 @@ test("delegates non-mutating evidence verification to ordered Linux and Windows 
     "node scripts/verify-descriptor-evidence.mjs",
   );
   assert.match(attributes, /^compliance\/contracts\/descriptor-manifest\.json text eol=lf$/m);
-  assert.equal((workflow.match(/run: pnpm proto:descriptors:verify/g) ?? []).length, 0);
-  assert.equal(
-    (
-      workflow.match(
-        /TAMMY_EVIDENCE_SUBJECT_REVISION: \$\{\{ github\.event\.pull_request\.head\.sha \|\| github\.sha \}\}/g,
-      ) ?? []
-    ).length,
-    2,
-  );
-  assert.doesNotMatch(workflow, /run: pnpm proto:descriptors:evidence/);
-  assert.match(
-    workflow,
-    /name: Run canonical Ubuntu CI scenarios[\s\S]*task ci:contracts[\s\S]*task ci:linux/,
-  );
-  const windowsJob = workflow.split("windows-server-x64-package-smoke:")[1];
-  assert.match(
-    windowsJob,
-    /TAMMY_EVIDENCE_SUBJECT_REVISION: \$\{\{ github\.event\.pull_request\.head\.sha \|\| github\.sha \}\}[\s\S]*task ci:windows-smoke/,
-  );
+  assert.match(linuxCi, /subject_revision="\$\{CUTTLE_GITHUB_SHA:-\$\(git rev-parse HEAD\)\}"/);
+  assert.match(linuxCi, /TAMMY_EVIDENCE_SUBJECT_REVISION="\$subject_revision"/);
+  assert.doesNotMatch(linuxCi, /pnpm proto:descriptors:evidence/);
+  assert.match(linuxCi, /task ci:contracts[\s\S]*task ci:linux/);
 });
 
 async function largePathHistory(context) {

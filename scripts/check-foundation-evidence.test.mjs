@@ -75,7 +75,6 @@ const NODE_ACTION = "actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
 const GO_ACTION = "actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16";
 const TASK_INSTALL = "go install github.com/go-task/task/v3/cmd/task@v3.52.0";
 const CONCURRENCY_GROUP = "foundation-$" + "{{ github.workflow }}-$" + "{{ github.ref }}";
-const SUBJECT_REVISION = "$" + "{{ github.event.pull_request.head.sha || github.sha }}";
 const WINDOWS_LLVM_AR = "$" + "{{ vars.TAMMY_WINDOWS_LLVM_AR }}";
 const WINDOWS_NMAKE = "$" + "{{ vars.TAMMY_WINDOWS_NMAKE }}";
 const WINDOWS_ARTIFACT_CONDITION = "$" + "{{ always() && steps.checkout.outcome == 'success' }}";
@@ -176,43 +175,17 @@ test("retains runner provisioning, evidence classification, and artifacts around
     assert.match(workflow, /corepack enable pnpm\n {10}corepack prepare pnpm@11\.15\.0 --activate/);
     assert.match(workflow, /pnpm install --frozen-lockfile/);
   }
-  assert.match(foundationWorkflow, /runs-on: ubuntu-24\.04[\s\S]*timeout-minutes: 30/);
+  assert.doesNotMatch(foundationWorkflow, /runs-on: ubuntu-24\.04/);
   assert.match(foundationWorkflow, /runs-on: macos-15\n\s*timeout-minutes: 40/);
-  assert.match(foundationWorkflow, /runs-on: windows-2025[\s\S]*timeout-minutes: 30/);
-  assert.match(foundationWorkflow, /name: Contracts and local foundation/);
+  assert.doesNotMatch(foundationWorkflow, /runs-on: windows-2025/);
   assert.match(foundationWorkflow, /name: macOS 15 arm64 packaged E2E/);
-  assert.match(
-    foundationWorkflow,
-    /name: WINDOWS_SERVER_SMOKE_ONLY \/ Windows Server 2025 desktop checks/,
-  );
   assert.match(foundationWorkflow, /Assert native Apple silicon[\s\S]*uname -m.*arm64/);
-  assert.match(foundationWorkflow, /Verify virtual display availability[\s\S]*command -v xvfb-run/);
-  assert.match(
-    foundationWorkflow,
-    /EVIDENCE_CLASSIFICATION: WINDOWS_SERVER_SMOKE_ONLY[\s\S]*WINDOWS_SERVER_SMOKE_ONLY_REQUIRES_AMD64[\s\S]*WINDOWS_SERVER_EVIDENCE_CLASSIFICATION_INVALID/,
-  );
   assert.equal(
     (foundationWorkflow.match(/name: Verify exact Task version/g) ?? []).length,
-    3,
+    1,
     "every foundation workflow job verifies the installed Task version",
   );
-  assert.match(
-    foundationWorkflow,
-    /go install github\.com\/go-task\/task\/v3\/cmd\/task@v3\.52\.0[\s\S]*echo "\$\(go env GOPATH\)\/bin" >> "\$GITHUB_PATH"[\s\S]*name: Verify exact Task version[\s\S]*test "\$\(task --version\)" = "3\.52\.0"/,
-  );
-  assert.match(
-    foundationWorkflow,
-    /go install github\.com\/go-task\/task\/v3\/cmd\/task@v3\.52\.0[\s\S]*Join-Path \(go env GOPATH\) "bin"[\s\S]*\$env:GITHUB_PATH[\s\S]*name: Verify exact Task version[\s\S]*\$version = task --version[\s\S]*\$LASTEXITCODE -ne 0 -or \$version -ne "3\.52\.0"[\s\S]*UNSUPPORTED_TASK_VERSION:\$version/,
-  );
-  assert.match(
-    foundationWorkflow,
-    /Run canonical Ubuntu CI scenarios[\s\S]*task ci:contracts[\s\S]*task ci:linux/,
-  );
   assert.match(foundationWorkflow, /Run canonical macOS CI scenario[\s\S]*task ci:macos/);
-  assert.match(
-    foundationWorkflow,
-    /Run canonical Windows Server smoke CI scenario[\s\S]*task ci:windows-smoke/,
-  );
   assert.match(
     foundationWorkflow,
     /Retain packaged failure evidence[\s\S]*if: failure\(\)[\s\S]*macos14-arm64-foundation-failure-evidence[\s\S]*apps\/desktop\/test-results\/\*\*[\s\S]*apps\/desktop\/resources\/build\/build-manifest\.json[\s\S]*if-no-files-found: warn[\s\S]*retention-days: 30/,
@@ -441,18 +414,7 @@ test("pins provisioning and evidence ownership independently for every CI job", 
     });
   }
 
-  const contracts = foundation.jobs.contracts;
-  assert.equal(contracts.name, "Contracts and local foundation");
-  assert.equal(contracts["runs-on"], "ubuntu-24.04");
-  assert.equal(contracts["timeout-minutes"], 30);
-  assertSharedCiProvisioning(contracts, "bash");
-  assert.equal(
-    requiredStep(contracts, "Verify virtual display availability").run,
-    "command -v xvfb-run",
-  );
-  const ubuntuTask = requiredStep(contracts, "Run canonical Ubuntu CI scenarios");
-  assert.equal(ubuntuTask.env.TAMMY_EVIDENCE_SUBJECT_REVISION, SUBJECT_REVISION);
-  assert.equal(ubuntuTask.run, "task ci:contracts\ntask ci:linux\n");
+  assert.equal(foundation.jobs.contracts, undefined);
 
   const macos = foundation.jobs["macos14-arm64-packaged"];
   assert.equal(macos.name, "macOS 15 arm64 packaged E2E");
@@ -482,19 +444,7 @@ test("pins provisioning and evidence ownership independently for every CI job", 
   assert.equal(macosArtifact.with["if-no-files-found"], "warn");
   assert.equal(macosArtifact.with["retention-days"], 30);
 
-  const smoke = foundation.jobs["windows-server-x64-package-smoke"];
-  assert.equal(smoke.name, "WINDOWS_SERVER_SMOKE_ONLY / Windows Server 2025 desktop checks");
-  assert.equal(smoke["runs-on"], "windows-2025");
-  assert.equal(smoke["timeout-minutes"], 30);
-  assert.equal(smoke.env.EVIDENCE_CLASSIFICATION, "WINDOWS_SERVER_SMOKE_ONLY");
-  assertSharedCiProvisioning(smoke, "pwsh");
-  assert.match(
-    requiredStep(smoke, "Assert the Windows Server x64 smoke target").run,
-    /WINDOWS_SERVER_SMOKE_ONLY_REQUIRES_AMD64[\s\S]*WINDOWS_SERVER_EVIDENCE_CLASSIFICATION_INVALID/,
-  );
-  const smokeTask = requiredStep(smoke, "Run canonical Windows Server smoke CI scenario");
-  assert.equal(smokeTask.env.TAMMY_EVIDENCE_SUBJECT_REVISION, SUBJECT_REVISION);
-  assert.equal(smokeTask.run, "task ci:windows-smoke");
+  assert.equal(foundation.jobs["windows-server-x64-package-smoke"], undefined);
 
   const releaseGate = windows11.jobs["windows11-23h2-x64-packaged-e2e"];
   assert.equal(releaseGate.name, "Windows 11 23H2 x64 packaged E2E");
@@ -578,8 +528,8 @@ test("macOS outer budget preserves the final SBR deadline after the observed slo
   assert.equal(evidence.maximumMacosJobMinutes, 40);
   // Queue delay is observable, but does not consume GitHub's per-job execution budget.
   assert.ok(Date.parse(slow.jobStartedAt) >= Date.parse(slow.createdAt));
-  assert.equal(workflow.jobs.contracts["timeout-minutes"], 30);
-  assert.equal(workflow.jobs["windows-server-x64-package-smoke"]["timeout-minutes"], 30);
+  assert.equal(workflow.jobs.contracts, undefined);
+  assert.equal(workflow.jobs["windows-server-x64-package-smoke"], undefined);
 });
 
 test("bounds macOS Task acquisition separately and pins the official archive integrity", async () => {
