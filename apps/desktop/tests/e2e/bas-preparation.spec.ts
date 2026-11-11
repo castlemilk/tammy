@@ -91,6 +91,12 @@ import {
 } from "./support/reporting-export-artifacts";
 import { generateTotp } from "./support/totp";
 
+// Success notices appear only after the packaged core commits a mutation or
+// finishes a frozen export. On loaded hosted macOS 15 runners those steps have
+// exceeded the 10 s default while still in progress (buttons disabled, no
+// error), so the notices that end a mutation get a longer bound.
+const MUTATION_NOTICE_TIMEOUT_MS = 30_000;
+
 const listFrozenCodec = createProtoMethodCodec({
   input: ListFrozenBasRequestSchema,
   output: ListFrozenBasResponseSchema,
@@ -713,12 +719,16 @@ async function expectLifecycleMessage(page: Page, message: string) {
     name: "BAS preparation lifecycle",
     exact: true,
   });
-  await expect(lifecycle.getByRole("status").filter({ hasText: message })).toBeVisible();
+  await expect(lifecycle.getByRole("status").filter({ hasText: message })).toBeVisible({
+    timeout: MUTATION_NOTICE_TIMEOUT_MS,
+  });
 }
 
 async function expectAuthorityMessage(page: Page, message: string) {
   const authority = page.getByRole("region", { name: "BAS approval authority", exact: true });
-  await expect(authority.getByRole("status").filter({ hasText: message })).toBeVisible();
+  await expect(authority.getByRole("status").filter({ hasText: message })).toBeVisible({
+    timeout: MUTATION_NOTICE_TIMEOUT_MS,
+  });
 }
 
 function reviewFindings(page: Page) {
@@ -1380,7 +1390,9 @@ async function exportFrozen(
     dialog.showSaveDialog = async () => ({ canceled: false, filePath });
   }, file);
   await page.getByRole("button", { name: `Export ${format}`, exact: true }).click();
-  await expect(page.getByText(new RegExp(`Exact frozen BAS ${format} export saved`))).toBeVisible();
+  await expect(page.getByText(new RegExp(`Exact frozen BAS ${format} export saved`))).toBeVisible({
+    timeout: MUTATION_NOTICE_TIMEOUT_MS,
+  });
   await expect
     .poll(() =>
       stat(file).then(
