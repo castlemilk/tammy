@@ -18,9 +18,20 @@ export async function verifyDirectDeployment({ deployment, expectedRevision, fet
   assert.equal(deployment.account_id, "2132ccf47ceb5fff234c34d85490470a");
   assert.equal(deployment.github?.repository, "castlemilk/tammy");
   assert.equal(deployment.github?.commit_sha, expectedRevision, "Receipt must match this workflow revision");
-  assert.equal(deployment.status, "published", "HTTP acceptance requires confirmed publication");
+  // "published-unconfirmed" comes from a failed wrangler exit whose readback matched this commit.
+  // Its url is null, so the pinned origin below is the only URL ever probed.
+  assert.ok(
+    ["published", "published-unconfirmed"].includes(deployment.status),
+    "HTTP acceptance requires confirmed or readback-matched publication",
+  );
   assert.match(deployment.version_id ?? "", /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/);
-  assert.equal(deployment.url, DIRECT_ORIGIN + "/", "Only the verified direct Worker is accepted");
+  if (deployment.status === "published")
+    assert.equal(deployment.url, DIRECT_ORIGIN + "/", "Only the verified direct Worker is accepted");
+  else
+    assert.ok(
+      deployment.url === null || deployment.url === DIRECT_ORIGIN + "/",
+      "Unconfirmed publication may only carry the verified direct Worker URL or none",
+    );
   for (const field of ["source_sha256", "build_sha256"]) assert.match(deployment[field] ?? "", /^[a-f0-9]{64}$/);
 
   const result = await inspectLiveSite({ origin: DIRECT_ORIGIN, canonicalOrigin: SITE_ORIGIN, fetcher });
@@ -28,6 +39,7 @@ export async function verifyDirectDeployment({ deployment, expectedRevision, fet
     schema_version: 1,
     kind: "direct-worker-http-acceptance",
     checked_at: new Date().toISOString(),
+    publication_status: deployment.status,
     github: deployment.github,
     version_id: deployment.version_id,
     source_sha256: deployment.source_sha256,
