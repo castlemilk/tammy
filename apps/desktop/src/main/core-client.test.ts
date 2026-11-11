@@ -1345,3 +1345,53 @@ describe("capabilityInterceptor", () => {
     expect(next).toHaveBeenCalledWith(request);
   });
 });
+
+describe("getCurrentBasDraft no-draft outcome", () => {
+  it("rejects NotFound with the sanitized code without writing a diagnostic", async () => {
+    const failure = new ConnectError("no draft for private organisation", Code.NotFound);
+    const factory: CoreTransportFactory = () => ({
+      unary: async () => {
+        throw failure;
+      },
+      stream: async () => {
+        throw failure;
+      },
+    });
+    const diagnostic = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    try {
+      await expect(
+        createCoreClient(READINESS, factory).getCurrentBasDraft(
+          create(GetCurrentBasDraftRequestSchema),
+        ),
+      ).rejects.toMatchObject({ code: Code.NotFound, rawMessage: "Core request failed." });
+      expect(diagnostic).not.toHaveBeenCalled();
+    } finally {
+      diagnostic.mockRestore();
+    }
+  });
+
+  it("still logs other failure codes for getCurrentBasDraft", async () => {
+    const failure = new ConnectError("offline", Code.Unavailable);
+    const factory: CoreTransportFactory = () => ({
+      unary: async () => {
+        throw failure;
+      },
+      stream: async () => {
+        throw failure;
+      },
+    });
+    const diagnostic = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    try {
+      await expect(
+        createCoreClient(READINESS, factory).getCurrentBasDraft(
+          create(GetCurrentBasDraftRequestSchema),
+        ),
+      ).rejects.toMatchObject({ code: Code.Unavailable });
+      expect(diagnostic).toHaveBeenCalledExactlyOnceWith(
+        "LOCAL_ENGINE_CORE_RPC_GET_CURRENT_BAS_DRAFT_FAILED LOCAL_ENGINE_CONNECT_UNAVAILABLE",
+      );
+    } finally {
+      diagnostic.mockRestore();
+    }
+  });
+});

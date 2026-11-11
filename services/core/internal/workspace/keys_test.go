@@ -123,3 +123,37 @@ func TestWorkspaceKeyEnvelope(t *testing.T) {
 		t.Fatalf("wrong recovery secret returned %v", err)
 	}
 }
+
+type noEntropyReader struct{}
+
+func (noEntropyReader) Read([]byte) (int, error) { return 0, errors.New("entropy unavailable") }
+
+func TestPasswordPolicyValidateAppliesNormalizationRules(t *testing.T) {
+	// The reader fails on any read, so Validate passing proves it never reaches Argon2 salt generation.
+	policy, err := NewPasswordPolicy(nil, noEntropyReader{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	accepted := map[string][]byte{
+		"15 runes":                []byte(strings.Repeat("a", 15)),
+		"128 runes":               []byte(strings.Repeat("é", 128)),
+		"decomposed 15 after NFC": []byte(strings.Repeat("é", 15)),
+	}
+	for name, secret := range accepted {
+		if err := policy.Validate(secret); err != nil {
+			t.Fatalf("%s rejected: %v", name, err)
+		}
+	}
+	rejected := map[string][]byte{
+		"14 runes":        []byte(strings.Repeat("a", 14)),
+		"129 runes":       []byte(strings.Repeat("é", 129)),
+		"tab character":   []byte("admin password\tlong-enough"),
+		"invalid UTF-8":   []byte("valid-password-\xff-xxxxx"),
+		"over 1024 bytes": []byte(strings.Repeat("中", 342)),
+	}
+	for name, secret := range rejected {
+		if err := policy.Validate(secret); !errors.Is(err, ErrPasswordPolicy) {
+			t.Fatalf("%s returned %v, want ErrPasswordPolicy", name, err)
+		}
+	}
+}

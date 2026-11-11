@@ -49,6 +49,7 @@ vi.mock("../../shared/proto-ipc", async (importOriginal) => {
 });
 
 import manifest from "../../shared/conveyor-manifest.json";
+import { MAX_DOCUMENT_INGEST_REQUEST_BYTES } from "../../shared/document-limits";
 import { ProtoIpcError } from "../../shared/proto-ipc";
 import { createTammyRouter } from "../router";
 
@@ -412,7 +413,7 @@ const ORDINARY_CASES = [
     coreMethod: "ingestDocument",
     input: documentsProto.IngestDocumentRequestSchema,
     output: documentsProto.IngestDocumentResponseSchema,
-    maximumRequestBytes: 11 * 1024 * 1024,
+    maximumRequestBytes: MAX_DOCUMENT_INGEST_REQUEST_BYTES,
     maximumResponseBytes: 2 * 1024 * 1024,
   },
   {

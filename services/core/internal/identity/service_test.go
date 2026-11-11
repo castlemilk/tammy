@@ -8,6 +8,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -1607,5 +1608,25 @@ func TestIdentityServiceRoleQueries(t *testing.T) {
 	listed, err := harness.service.ListUsers(ctx, connect.NewRequest(&tammyv1.ListUsersRequest{Authentication: auth, Page: &tammyv1.PageRequest{PageSize: 20}}))
 	if err != nil || len(listed.Msg.Users) != 1 || listed.Msg.Users[0].Roles[0] != tammyv1.Role_ROLE_WORKSPACE_ADMIN {
 		t.Fatalf("list users: %v", err)
+	}
+}
+
+func TestValidateAdministratorBootstrapRejectsInvalidFields(t *testing.T) {
+	harness := newIdentityHarness(t)
+	password := []byte("admin-password-long-enough")
+	invalid := []struct{ name, username, displayName string }{
+		{"username with surrounding spaces", " admin@example.test ", "Admin"},
+		{"empty display name", "admin@example.test", ""},
+		{"129-rune display name", "admin@example.test", strings.Repeat("d", 129)},
+	}
+	for _, tc := range invalid {
+		t.Run(tc.name, func(t *testing.T) {
+			if err := harness.service.ValidateAdministratorBootstrap(tc.username, tc.displayName, password); !errors.Is(err, faults.New(faults.CodeValidation, nil)) {
+				t.Fatalf("err=%v, want validation", err)
+			}
+		})
+	}
+	if err := harness.service.ValidateAdministratorBootstrap("admin@example.test", strings.Repeat("d", 128), password); err != nil {
+		t.Fatalf("128-rune display name rejected: %v", err)
 	}
 }

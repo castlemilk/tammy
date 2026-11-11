@@ -1,6 +1,7 @@
 import {
   type CallOptions,
   type Client,
+  Code,
   ConnectError,
   createClient,
   type Interceptor,
@@ -437,12 +438,17 @@ export function createCoreClient(
   const coreRequest = async <Response>(
     request: () => Promise<Response>,
     operation?: Parameters<typeof safeCoreRpcFailure>[0],
+    options?: { readonly quietCodes?: readonly Code[] },
   ): Promise<Response> => {
     try {
       return await request();
     } catch (error) {
-      console.error(safeCoreRpcFailure(operation, error));
-      throw new ConnectError("Core request failed.", ConnectError.from(error).code);
+      const code = ConnectError.from(error).code;
+      // Expected outcomes (for example "no BAS draft yet") are not diagnostics.
+      if (!options?.quietCodes?.includes(code)) {
+        console.error(safeCoreRpcFailure(operation, error));
+      }
+      throw new ConnectError("Core request failed.", code);
     }
   };
 
@@ -532,7 +538,10 @@ export function createCoreClient(
     createBasDraft: (request: CreateBasDraftRequest) =>
       coreRequest(() => taxClient.createBasDraft(request), "CREATE_BAS_DRAFT"),
     getCurrentBasDraft: (request: GetCurrentBasDraftRequest) =>
-      coreRequest(() => taxClient.getCurrentBasDraft(request), "GET_CURRENT_BAS_DRAFT"),
+      coreRequest(() => taxClient.getCurrentBasDraft(request), "GET_CURRENT_BAS_DRAFT", {
+        // NotFound means no draft exists yet, which the BAS screen renders as its empty state.
+        quietCodes: [Code.NotFound],
+      }),
     createWorkspace: (request: CreateWorkspaceRequest) =>
       coreRequest(() =>
         workspaceClient.createWorkspace(request, { timeoutMs: WORKSPACE_CREATE_TIMEOUT_MS }),

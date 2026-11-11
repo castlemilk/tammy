@@ -46,6 +46,7 @@ type CapabilityResolver interface {
 }
 
 type IdentityPort interface {
+	ValidateAdministratorBootstrap(string, string, []byte) error
 	BootstrapAdministrator(context.Context, string, string, []byte) (*tammyv1.User, error)
 	BootstrapAdministratorWithin(context.Context, MutationExecutor, string, string, string, []byte) (*tammyv1.User, error)
 	BreakGlassResetAdministrator(context.Context, string, string, []byte) (*tammyv1.User, error)
@@ -197,6 +198,12 @@ func (service *Service) CreateWorkspace(ctx context.Context, request *connect.Re
 		}
 	} else if !errors.Is(retainedErr, ErrWorkspaceNotFound) {
 		return nil, retainedErr
+	}
+	// Reject invalid administrator input before any setup state is reserved;
+	// bootstrap validates the same rules later, but only after the reservation.
+	if err := service.identity.ValidateAdministratorBootstrap(request.Msg.AdministratorUsername,
+		request.Msg.AdministratorDisplayName, request.Msg.AdministratorPassword.Utf8); err != nil {
+		return nil, faults.New(faults.CodeValidation, nil)
 	}
 	if err := service.requireRuntimeAdmission("", false); err != nil {
 		return nil, err

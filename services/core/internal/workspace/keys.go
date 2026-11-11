@@ -140,6 +140,17 @@ func (policy *PasswordPolicy) normalize(secret []byte) ([]byte, error) {
 	return normalized, nil
 }
 
+// Validate applies the v1 normalization and policy checks without deriving a
+// verifier, so callers can reject a secret before reserving any state.
+func (policy *PasswordPolicy) Validate(secret []byte) error {
+	normalized, err := policy.normalize(secret)
+	if err != nil {
+		return err
+	}
+	Zero(normalized)
+	return nil
+}
+
 func (policy *PasswordPolicy) Hash(secret []byte) (PasswordVerifier, error) {
 	normalized, err := policy.normalize(secret)
 	if err != nil {

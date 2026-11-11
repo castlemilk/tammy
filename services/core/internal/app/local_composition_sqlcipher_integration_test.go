@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"net/http"
 	"path/filepath"
 	"slices"
@@ -675,4 +676,27 @@ func TestLocalCompositionActivationRetryKeepsIdentitySessions(t *testing.T) {
 	if err := second.readWithSession(created.Workspace.Id, signedIn); err != nil {
 		t.Fatalf("session after activation retry: %v", err)
 	}
+}
+
+func TestLocalCompositionRejectedAdministratorPasswordLeavesNoDatabaseAndRetrySucceeds(t *testing.T) {
+	root, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	server, stop := startLocalCompositionTestServer(t, root, workspace.NewMemoryAnchorStore(), newLocalTestAuditMirror())
+	t.Cleanup(stop)
+	invalid := localTestCreateRequest("01900f3c-7b2e-7cc4-98c4-dc0c0c0739d1")
+	invalid.AdministratorPassword = &tammyv1.SecretInput{Utf8: []byte("abcdefghijklmn")}
+	if _, err := server.workspace.CreateWorkspace(context.Background(), localTestRequest(server.capability, invalid)); err == nil {
+		t.Fatal("CreateWorkspace() accepted a rejected administrator password")
+	}
+	if err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, walkErr error) error {
+		if walkErr == nil && !entry.IsDir() && entry.Name() == "tammy-workspace.db" {
+			return errors.New("database left behind at " + path)
+		}
+		return walkErr
+	}); err != nil {
+		t.Fatal(err)
+	}
+	server.createWorkspace(t, "01900f3c-7b2e-7cc4-98c4-dc0c0c0739d2")
 }

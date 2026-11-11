@@ -16,6 +16,10 @@ import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { expect, it } from "vitest";
 
+import {
+  MAX_DOCUMENT_INGEST_REQUEST_BYTES,
+  MAX_DOCUMENT_ORIGINAL_BYTES,
+} from "../../../shared/document-limits";
 import { createProtoMethodCodec } from "../../../shared/proto-ipc";
 import { createConveyorFixture, renderWithConveyor as render } from "../../test/conveyor-fixtures";
 import { DocumentsScreen } from "./documents-screen";
@@ -34,7 +38,7 @@ const reviewCodec = createProtoMethodCodec({
 });
 const ingestCodec = createProtoMethodCodec({
   input: IngestDocumentRequestSchema,
-  maximumRequestBytes: 11 * 1024 * 1024,
+  maximumRequestBytes: MAX_DOCUMENT_INGEST_REQUEST_BYTES,
   maximumResponseBytes: 2 * 1024 * 1024,
   output: IngestDocumentResponseSchema,
 });
@@ -657,4 +661,36 @@ it("returns focus to search when a status filter hides the selected source", asy
   await user.click(screen.getByRole("button", { name: "Close review" }));
   expect(document.activeElement).toBe(screen.getByLabelText("Search documents"));
   expect(fixture.procedures.documents.saveDocumentReview).not.toHaveBeenCalled();
+});
+
+it("accepts a source exactly at the 800 KB budget and rejects one byte more", async () => {
+  const { fixture } = createReviewFixture();
+  const user = userEvent.setup();
+  const { container } = renderDocuments(fixture);
+  await screen.findByRole("table", { name: "Retained documents" });
+  const input = () => {
+    const element = container.querySelector<HTMLInputElement>('input[type="file"]');
+    if (!element) throw new Error("file input missing");
+    return element;
+  };
+
+  const atLimit = new File([new Uint8Array(MAX_DOCUMENT_ORIGINAL_BYTES)], "at-limit.png", {
+    type: "image/png",
+  });
+  Object.defineProperty(atLimit, "arrayBuffer", {
+    value: async () => new Uint8Array(MAX_DOCUMENT_ORIGINAL_BYTES).buffer,
+  });
+  await user.upload(input(), atLimit);
+  expect(await screen.findByRole("heading", { name: "at-limit.png" })).toBeTruthy();
+  expect(fixture.procedures.documents.ingestDocument).toHaveBeenCalledOnce();
+
+  const overLimit = new File([new Uint8Array(MAX_DOCUMENT_ORIGINAL_BYTES + 1)], "over-limit.png", {
+    type: "image/png",
+  });
+  Object.defineProperty(overLimit, "arrayBuffer", {
+    value: async () => new Uint8Array(MAX_DOCUMENT_ORIGINAL_BYTES + 1).buffer,
+  });
+  await user.upload(input(), overLimit);
+  expect(await screen.findByText("Choose a PDF, PNG or JPEG no larger than 800 KB.")).toBeTruthy();
+  expect(fixture.procedures.documents.ingestDocument).toHaveBeenCalledOnce();
 });

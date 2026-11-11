@@ -925,3 +925,82 @@ describe("CoreProcess stopping and diagnostics", () => {
     expect(child.listenerCount("exit")).toBe(0);
   });
 });
+
+describe("CoreProcess asynchronous live identity", () => {
+  it("does not accept readiness until the async live check resolves", async () => {
+    const child = new FakeChild();
+    let resolveLive: (() => void) | undefined;
+    const supervisor = new CoreProcess({
+      binary: testBinary(),
+      spawn: () => child,
+      timers: new FakeTimers(),
+      verifyBinary: () => undefined,
+      verifyLiveChild: () =>
+        new Promise<void>((resolve) => {
+          resolveLive = resolve;
+        }),
+    });
+
+    const start = supervisor.start();
+    let settled = false;
+    start.then(() => {
+      settled = true;
+    });
+    child.stdout.write(readinessLine());
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(settled).toBe(false);
+    expect(supervisor.getDiagnostic()).toEqual({ state: "STARTING" });
+
+    resolveLive?.();
+    await expect(start).resolves.toMatchObject({ port: PORT });
+    expect(supervisor.getDiagnostic()).toEqual({ state: "READY" });
+  });
+
+  it("fails closed with SPAWN_FAILED when the async live check rejects", async () => {
+    const child = new FakeChild();
+    const supervisor = new CoreProcess({
+      binary: testBinary(),
+      spawn: () => child,
+      timers: new FakeTimers(),
+      verifyBinary: () => undefined,
+      verifyLiveChild: async () => {
+        throw new Error("replacement image");
+      },
+    });
+
+    const start = supervisor.start();
+    child.stdout.write(readinessLine());
+
+    await expectCoreError(start, "SPAWN_FAILED", "Core process could not be started.");
+    expect(supervisor.getDiagnostic()).toEqual({ state: "FAILED", errorCode: "SPAWN_FAILED" });
+  });
+
+  it("aborts quietly when stop lands while the live check is still pending", async () => {
+    const child = new FakeChild();
+    const warnings: string[] = [];
+    let resolveLive: (() => void) | undefined;
+    const supervisor = new CoreProcess({
+      binary: testBinary(),
+      spawn: () => child,
+      timers: new FakeTimers(),
+      logger: { warn: (message) => warnings.push(message) },
+      verifyBinary: () => undefined,
+      verifyLiveChild: () =>
+        new Promise<void>((resolve) => {
+          resolveLive = resolve;
+        }),
+    });
+
+    const start = supervisor.start();
+    child.stdout.write(readinessLine());
+    const stop = supervisor.stop();
+    child.emit("exit", 0, null);
+    await stop;
+
+    resolveLive?.();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await expectCoreError(start, "START_ABORTED", "Core process start was stopped.");
+    expect(supervisor.getDiagnostic()).not.toEqual(expect.objectContaining({ state: "READY" }));
+    expect(warnings).toEqual([]);
+  });
+});

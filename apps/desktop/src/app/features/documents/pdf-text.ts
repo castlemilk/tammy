@@ -1,5 +1,6 @@
+import { MAX_DOCUMENT_TEXT_BYTES } from "../../../shared/document-limits";
+
 const PDF_HEADER = "%PDF-";
-const MAX_EXTRACTED_BYTES = 1024 * 1024;
 
 // extractNativePdfText reads literal and hexadecimal text operators from
 // native-text PDFs without leaving the renderer. Image-only PDFs intentionally
@@ -12,11 +13,23 @@ export function extractNativePdfText(bytes: Uint8Array): string {
   collectLiteralOperators(source, fragments);
   collectArrayOperators(source, fragments);
   collectHexOperators(source, fragments);
-  return fragments
-    .map((value) => value.replace(/\s+/g, " ").trim())
-    .filter(Boolean)
-    .join("\n")
-    .slice(0, MAX_EXTRACTED_BYTES);
+  return truncateUtf8(
+    fragments
+      .map((value) => value.replace(/\s+/g, " ").trim())
+      .filter(Boolean)
+      .join("\n"),
+    MAX_DOCUMENT_TEXT_BYTES,
+  );
+}
+
+// truncateUtf8 cuts at most maximumBytes UTF-8 bytes, backing off any continuation
+// bytes so a multibyte code point is never split.
+function truncateUtf8(value: string, maximumBytes: number): string {
+  const encoded = new TextEncoder().encode(value);
+  if (encoded.byteLength <= maximumBytes) return value;
+  let end = maximumBytes;
+  while (end > 0 && ((encoded[end] ?? 0) & 0xc0) === 0x80) end -= 1;
+  return new TextDecoder("utf-8").decode(encoded.subarray(0, end));
 }
 
 function collectLiteralOperators(source: string, output: string[]): void {

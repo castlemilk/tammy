@@ -593,3 +593,27 @@ it("submits the edited quarter when cached-draft hydration and input interaction
   expect(screen.getByLabelText("Period start")).toHaveProperty("value", "2026-10-01");
   expect(screen.getByLabelText("Period end")).toHaveProperty("value", "2026-12-31");
 });
+
+it("renders a missing BAS draft as the normal empty state rather than an error", async () => {
+  const fixture = createConveyorFixture();
+  fixture.procedures.reporting.getCurrentBasDraft.mockRejectedValue(
+    new Error("LOCAL_ENGINE_CONNECT_NOT_FOUND"),
+  );
+
+  render(
+    <BasScreen
+      api={fixture.conveyor.reporting}
+      now={new Date(2024, 4, 12)}
+      workspace={{
+        workspaceId: "018f0000-0000-7000-8000-000000000001",
+        userId: "018f0000-0000-7000-8000-000000000002",
+        sessionId: "018f0000-0000-7000-8000-000000000003",
+        organisationId: "018f0000-0000-7000-8000-000000000004",
+      }}
+    />,
+  );
+
+  expect(await screen.findByRole("heading", { name: "Create a BAS workpaper" })).toBeTruthy();
+  expect(screen.queryByRole("alert")).toBeNull();
+  expect(screen.queryByText("Draft — not lodged")).toBeNull();
+});
