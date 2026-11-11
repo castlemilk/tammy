@@ -10,7 +10,7 @@ if (!token || token.length < 32 || !Number.isInteger(port) || port < 1 || port >
   );
   process.exit(1);
 }
-const server = new McpServer({ name: "tammy-local", version: "0.1.0" });
+const server = new McpServer({ name: "tammy-web", version: "0.1.0" });
 const annotations = { readOnlyHint: true, destructiveHint: false, openWorldHint: false };
 function failure(text: string) {
   return { isError: true, content: [{ type: "text" as const, text }] };
