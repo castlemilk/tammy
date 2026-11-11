@@ -176,9 +176,20 @@ test("retains runner provisioning, evidence classification, and artifacts around
     assert.match(workflow, /corepack enable pnpm\n {10}corepack prepare pnpm@11\.15\.0 --activate/);
     assert.match(workflow, /pnpm install --frozen-lockfile/);
   }
-  assert.match(foundationWorkflow, /runs-on: ubuntu-24\.04[\s\S]*timeout-minutes: 30/);
+  assert.match(
+    foundationWorkflow,
+    /runs-on: \[self-hosted, linux, ARM64, tammy-linux-ci\][\s\S]*timeout-minutes: 30/,
+  );
   assert.match(foundationWorkflow, /runs-on: macos-15\n\s*timeout-minutes: 40/);
   assert.match(foundationWorkflow, /runs-on: windows-2025[\s\S]*timeout-minutes: 30/);
+  assert.match(
+    foundationWorkflow,
+    /Verify Cuttlefish Linux runner identity[\s\S]*RUNNER_NOT_CUTTLEFISH/,
+  );
+  assert.match(
+    foundationWorkflow,
+    /github\.event\.pull_request\.head\.repo\.full_name == github\.repository/,
+  );
   assert.match(foundationWorkflow, /name: Contracts and local foundation/);
   assert.match(foundationWorkflow, /name: macOS 15 arm64 packaged E2E/);
   assert.match(
@@ -443,7 +454,7 @@ test("pins provisioning and evidence ownership independently for every CI job", 
 
   const contracts = foundation.jobs.contracts;
   assert.equal(contracts.name, "Contracts and local foundation");
-  assert.equal(contracts["runs-on"], "ubuntu-24.04");
+  assert.deepEqual(contracts["runs-on"], ["self-hosted", "linux", "ARM64", "tammy-linux-ci"]);
   assert.equal(contracts["timeout-minutes"], 30);
   assertSharedCiProvisioning(contracts, "bash");
   assert.equal(
@@ -453,6 +464,20 @@ test("pins provisioning and evidence ownership independently for every CI job", 
   const ubuntuTask = requiredStep(contracts, "Run canonical Ubuntu CI scenarios");
   assert.equal(ubuntuTask.env.TAMMY_EVIDENCE_SUBJECT_REVISION, SUBJECT_REVISION);
   assert.equal(ubuntuTask.run, "task ci:contracts\ntask ci:linux\n");
+  // The Cuttlefish job image lacks Electron's GTK stack; install it before
+  // checkout, on the expected image, without upgrading what is already there.
+  assert.equal(contracts.steps[1].name, "Install the Electron runtime libraries");
+  assert.equal(contracts.steps[1].shell, "bash");
+  const electronLibraries = contracts.steps[1].run;
+  assert.match(electronLibraries, /test "\$\(id -u\)" = 0/);
+  assert.match(electronLibraries, /test "\$\{VERSION_CODENAME\}" = noble/);
+  assert.match(electronLibraries, /-o Acquire::Retries=3 update/);
+  assert.match(
+    electronLibraries,
+    /-o Acquire::Retries=3 install -y -qq --no-install-recommends --no-upgrade/,
+  );
+  assert.match(electronLibraries, /libgtk-3-0t64[\s\S]*libnss3/);
+  assert.equal(contracts.steps[2].name, "Check out the complete comparison history");
 
   const macos = foundation.jobs["macos14-arm64-packaged"];
   assert.equal(macos.name, "macOS 15 arm64 packaged E2E");
