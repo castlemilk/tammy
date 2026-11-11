@@ -51,7 +51,7 @@ Open **Accounting → Trial balance**, choose an as-of date on or after the jour
 
 ## 7. Retain and review a document
 
-Open **Documents** and choose a local PDF, PNG, or JPEG no larger than 10 MiB. PDF text is extracted locally where supported; images do not use a cloud OCR service. Review the proposed supplier, invoice, date, subtotal, GST, and total, correct them if necessary, and save the review.
+Open **Documents** and choose a local PDF, PNG, or JPEG no larger than 800 KB. The original file is limited to 800 KB and its extracted PDF text to 128 KB (UTF-8) because the local core caps each request message at 1 MiB and the original bytes and extracted text travel together. PDF text is extracted locally where supported; images do not use a cloud OCR service. Review the proposed supplier, invoice, date, subtotal, GST, and total, correct them if necessary, and save the review.
 
 The retained document remains local. On a non-cash basis, eligible reviewed purchases within the chosen reporting period contribute to GST credits. Cash-basis purchases need recorded payment evidence; the current reviewed-document workflow excludes their credits and explains the missing evidence.
 

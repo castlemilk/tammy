@@ -1,4 +1,4 @@
-import { execFileSync } from "node:child_process";
+import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
   closeSync,
@@ -15,7 +15,8 @@ const MAX_CORE_BYTES = 512 * 1024 * 1024;
 const READ_BUFFER_BYTES = 1024 * 1024;
 const READ_ONLY_NO_FOLLOW = fsConstants.O_RDONLY | (fsConstants.O_NOFOLLOW ?? 0);
 const LIVE_IDENTITY_OUTPUT_BYTES = 65_536;
-const LIVE_IDENTITY_TIMEOUT_MS = 2_000;
+export const LIVE_IDENTITY_TIMEOUT_MS = 3_000;
+const LIVE_IDENTITY_ATTEMPTS = 2;
 
 export interface CoreExecutableIdentity {
   readonly ctimeNs: bigint;
@@ -250,29 +251,71 @@ export function verifyMacOSPrimaryExecutableImage(
   }
 }
 
-export function verifySpawnedCoreExecutable(
+function runLiveIdentityLsof(processId: number): Promise<string> {
+  return new Promise((resolve, reject) => {
+    execFile(
+      "/usr/sbin/lsof",
+      ["-nP", "-a", "-p", String(processId), "-d", "txt", "-FDin"],
+      {
+        encoding: "utf8",
+        env: { LANG: "C" },
+        maxBuffer: LIVE_IDENTITY_OUTPUT_BYTES,
+        shell: false,
+        killSignal: "SIGKILL",
+        timeout: LIVE_IDENTITY_TIMEOUT_MS,
+        windowsHide: true,
+      },
+      (error, stdout) => {
+        if (error) reject(error);
+        else resolve(stdout);
+      },
+    );
+  });
+}
+
+// Only a timeout or a failure to start lsof is worth one more attempt. Identity
+// mismatches, non-zero exits and oversized output are never retried.
+function isRetryableLiveIdentityFailure(error: unknown): boolean {
+  if (typeof error !== "object" || error === null) return false;
+  const { code, killed, signal } = error as {
+    readonly code?: unknown;
+    readonly killed?: unknown;
+    readonly signal?: unknown;
+  };
+  const timedOut = killed === true && signal === "SIGKILL" && code === null;
+  const spawnFailed = typeof code === "string" && /^E[A-Z]+$/u.test(code);
+  return timedOut || spawnFailed;
+}
+
+export type LiveIdentityLsof = (processId: number) => Promise<string>;
+
+async function readLiveIdentityOutput(
+  processId: number,
+  runLsof: LiveIdentityLsof,
+): Promise<string> {
+  for (let attempt = 1; ; attempt += 1) {
+    try {
+      return await runLsof(processId);
+    } catch (error) {
+      if (attempt >= LIVE_IDENTITY_ATTEMPTS || !isRetryableLiveIdentityFailure(error)) throw error;
+    }
+  }
+}
+
+// Runs lsof asynchronously so a slow process table cannot block the Electron main thread.
+export async function verifySpawnedCoreExecutable(
   processId: number | undefined,
   authority: AuthenticatedCoreExecutable,
   platform = process.platform,
-): void {
+  runLsof: LiveIdentityLsof = runLiveIdentityLsof,
+): Promise<void> {
   requireAuthority(authority);
   if (!Number.isSafeInteger(processId) || (processId ?? 0) <= 0) {
     throw new Error("CORE_EXECUTABLE_AUTHENTICATION_FAILED");
   }
   try {
     if (platform === "darwin") {
-      const output = execFileSync(
-        "/usr/sbin/lsof",
-        ["-nP", "-a", "-p", String(processId), "-d", "txt", "-FDin"],
-        {
-          encoding: "utf8",
-          env: { LANG: "C" },
-          maxBuffer: LIVE_IDENTITY_OUTPUT_BYTES,
-          shell: false,
-          timeout: LIVE_IDENTITY_TIMEOUT_MS,
-          windowsHide: true,
-        },
-      );
+      const output = await readLiveIdentityOutput(processId as number, runLsof);
       verifyMacOSPrimaryExecutableImage(output, processId as number, authority);
     }
     revalidateCoreExecutableForSpawn(authority);

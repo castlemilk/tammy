@@ -114,7 +114,7 @@ export interface CoreProcessOptions {
   readonly verifyLiveChild?: (
     processId: number | undefined,
     binary: AuthenticatedCoreExecutable,
-  ) => void;
+  ) => void | Promise<void>;
 }
 
 export interface CoreProcessDiagnostic {
@@ -167,7 +167,7 @@ export class CoreProcess {
   readonly #verifyLiveChild: (
     processId: number | undefined,
     binary: AuthenticatedCoreExecutable,
-  ) => void;
+  ) => void | Promise<void>;
 
   #state: CoreProcessState = "IDLE";
   #failure: CoreProcessError | undefined;
@@ -254,9 +254,7 @@ export class CoreProcess {
       );
       this.#attachListeners(this.#child);
       if (this.#child.pid !== undefined) {
-        this.#verifyLiveChild(this.#child.pid, this.#binary);
-        this.#liveIdentityVerified = true;
-        this.#acceptReadiness();
+        void this.#confirmLiveChild(this.#child, this.#child.pid);
       }
     } catch {
       this.#fail(new CoreProcessError("SPAWN_FAILED"));
@@ -368,6 +366,22 @@ export class CoreProcess {
     this.#readiness = readiness;
     this.#acceptReadiness();
   };
+
+  // Live identity checks may take a while (lsof runs off the main thread), so readiness
+  // is only accepted once the same child is still STARTING after the check resolves.
+  async #confirmLiveChild(child: CoreChildProcess, processId: number): Promise<void> {
+    try {
+      await this.#verifyLiveChild(processId, this.#binary);
+    } catch {
+      if (this.#state === "STARTING" && this.#child === child) {
+        this.#fail(new CoreProcessError("SPAWN_FAILED"));
+      }
+      return;
+    }
+    if (this.#state !== "STARTING" || this.#child !== child) return;
+    this.#liveIdentityVerified = true;
+    this.#acceptReadiness();
+  }
 
   #acceptReadiness(): void {
     if (this.#state !== "STARTING" || !this.#liveIdentityVerified || !this.#readiness) return;

@@ -1,6 +1,7 @@
 import { ConveyorError, type StandardSchemaV1 } from "electron-conveyor/define";
 import { z } from "zod";
 import { BasCoreCorrection } from "../shared/bas-preparation-errors";
+import { DocumentPayloadTooLarge } from "../shared/document-limits";
 import { PurchaseCoreCorrection } from "../shared/purchase-errors";
 
 export interface ProtoCodec<Request, Response> {
@@ -58,6 +59,7 @@ export async function invokeCore<Request, Response>(
   } catch (error) {
     if (error instanceof PurchaseCoreCorrection || error instanceof BasCoreCorrection)
       throw new ConveyorError(error.code, error.code);
+    if (error instanceof DocumentPayloadTooLarge) throw new ConveyorError(error.code, error.code);
     throw new ConveyorError("CORE_REQUEST_FAILED", "CORE_REQUEST_FAILED");
   }
 }

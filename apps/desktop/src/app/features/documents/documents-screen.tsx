@@ -23,6 +23,11 @@ import { Check, FileText, RefreshCw, Upload, X } from "lucide-react";
 import { type ChangeEvent, type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 
 import type { TammyConveyorModule } from "../../../conveyor/client";
+import {
+  DOCUMENT_PAYLOAD_TOO_LARGE,
+  MAX_DOCUMENT_INGEST_REQUEST_BYTES,
+  MAX_DOCUMENT_ORIGINAL_BYTES,
+} from "../../../shared/document-limits";
 import { createProtoMethodCodec } from "../../../shared/proto-ipc";
 import { HorizontalScrollArea } from "../../components/horizontal-scroll-area";
 import {
@@ -42,9 +47,20 @@ import {
 } from "./purchase-accounting-panel";
 import { aud } from "./purchase-command-state";
 
+const TOO_LARGE_MESSAGE = "Choose a PDF, PNG or JPEG no larger than 800 KB.";
+
+function isPayloadTooLarge(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    error.code === DOCUMENT_PAYLOAD_TOO_LARGE
+  );
+}
+
 const ingestCodec = createProtoMethodCodec({
   input: IngestDocumentRequestSchema,
-  maximumRequestBytes: 11 * 1024 * 1024,
+  maximumRequestBytes: MAX_DOCUMENT_INGEST_REQUEST_BYTES,
   maximumResponseBytes: 2 * 1024 * 1024,
   output: IngestDocumentResponseSchema,
 });
@@ -268,10 +284,10 @@ export function DocumentsScreen({
     if (!file || !workspace?.organisationId || uploadActive.current) return;
     if (
       file.size < 1 ||
-      file.size > 10 * 1024 * 1024 ||
+      file.size > MAX_DOCUMENT_ORIGINAL_BYTES ||
       !["application/pdf", "image/png", "image/jpeg"].includes(file.type)
     ) {
-      setError("Choose a PDF, PNG or JPEG no larger than 10 MB.");
+      setError(TOO_LARGE_MESSAGE);
       return;
     }
     uploadActive.current = true;
@@ -313,8 +329,12 @@ export function DocumentsScreen({
       setStatusChoice("all");
       setQuery("");
       void refreshAfterSave();
-    } catch {
-      if (!confirmed) setError("The document could not be retained. It has not left this device.");
+    } catch (caught) {
+      if (!confirmed && isPayloadTooLarge(caught)) {
+        setError(TOO_LARGE_MESSAGE);
+      } else if (!confirmed) {
+        setError("The document could not be retained. It has not left this device.");
+      }
     } finally {
       uploadActive.current = false;
       setBusy(false);
