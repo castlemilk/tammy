@@ -151,8 +151,8 @@ export function CashFlowForecast() {
               <Button variant="ghost" size="sm" onClick={()=>{setLines(prev=>prev.filter(x=>x.id!==line.id));setConfirmSample(false);}}
                 aria-label={"Remove movement "+(index+1)}>Remove</Button>
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <label className="col-span-2 space-y-1 text-xs font-semibold" htmlFor={"forecast-description-"+line.id}>Description
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <label className="space-y-1 text-xs font-semibold sm:col-span-2" htmlFor={"forecast-description-"+line.id}>Description
                 <Input id={"forecast-description-"+line.id} maxLength={160} value={line.description} placeholder="Client payment, rent..."
                   onChange={(e)=>update(line.id,{description:e.target.value})}/>
               </label>
@@ -166,7 +166,7 @@ export function CashFlowForecast() {
                   <option value="receipt">Receipt (+)</option><option value="payment">Payment (−)</option>
                 </select>
               </label>
-              <label className="col-span-2 space-y-1 text-xs font-semibold" htmlFor={"forecast-amount-"+line.id}>Amount (AUD)
+              <label className="space-y-1 text-xs font-semibold sm:col-span-2" htmlFor={"forecast-amount-"+line.id}>Amount (AUD)
                 <Input id={"forecast-amount-"+line.id} inputMode="decimal" value={line.amount}
                   onChange={(e)=>update(line.id,{amount:e.target.value})}/>
               </label>

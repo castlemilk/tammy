@@ -1,0 +1,667 @@
+{
+  "baseline_commit": "8bb2c6d56393c55fc3d88fd527709f0f6f2688fa",
+  "baseline": {
+    "checked_at": "2026-11-07T18:01:46.986Z",
+    "measures": [
+      {
+        "viewport": 320,
+        "page": 305,
+        "scroll": 305,
+        "controls": [
+          {
+            "label": "Receipt (+)",
+            "value": "receipt",
+            "width": 96.5,
+            "height": 44,
+            "font": "14px",
+            "textWidth": 70.97994995117188,
+            "available": 47,
+            "x": 158.5,
+            "y": 749.65625,
+            "date": {
+              "value": "2026-11-07",
+              "width": 96.5,
+              "height": 44,
+              "x": 50,
+              "y": 749.65625,
+              "font": "14px"
+            },
+            "sameRow": true
+          },
+          {
+            "label": "Payment (\u2212)",
+            "value": "payment",
+            "width": 96.5,
+            "height": 44,
+            "font": "14px",
+            "textWidth": 78.10594177246094,
+            "available": 47,
+            "x": 158.5,
+            "y": 1047.65625,
+            "date": {
+              "value": "2026-11-08",
+              "width": 96.5,
+              "height": 44,
+              "x": 50,
+              "y": 1047.65625,
+              "font": "14px"
+            },
+            "sameRow": true
+          }
+        ]
+      },
+      {
+        "viewport": 390,
+        "page": 375,
+        "scroll": 375,
+        "controls": [
+          {
+            "label": "Receipt (+)",
+            "value": "receipt",
+            "width": 131.5,
+            "height": 44,
+            "font": "14px",
+            "textWidth": 70.97994995117188,
+            "available": 82,
+            "x": 193.5,
+            "y": 477.859375,
+            "date": {
+              "value": "2026-11-07",
+              "width": 131.5,
+              "height": 44,
+              "x": 50,
+              "y": 477.859375,
+              "font": "14px"
+            },
+            "sameRow": true
+          },
+          {
+            "label": "Payment (\u2212)",
+            "value": "payment",
+            "width": 131.5,
+            "height": 44,
+            "font": "14px",
+            "textWidth": 78.10594177246094,
+            "available": 82,
+            "x": 193.5,
+            "y": 775.859375,
+            "date": {
+              "value": "2026-11-08",
+              "width": 131.5,
+              "height": 44,
+              "x": 50,
+              "y": 775.859375,
+              "font": "14px"
+            },
+            "sameRow": true
+          }
+        ]
+      },
+      {
+        "viewport": 639,
+        "page": 624,
+        "scroll": 624,
+        "controls": [
+          {
+            "label": "Receipt (+)",
+            "value": "receipt",
+            "width": 256,
+            "height": 44,
+            "font": "14px",
+            "textWidth": 70.97994995117188,
+            "available": 206,
+            "x": 318,
+            "y": 421.78125,
+            "date": {
+              "value": "2026-11-07",
+              "width": 256,
+              "height": 44,
+              "x": 50,
+              "y": 421.78125,
+              "font": "14px"
+            },
+            "sameRow": true
+          },
+          {
+            "label": "Payment (\u2212)",
+            "value": "payment",
+            "width": 256,
+            "height": 44,
+            "font": "14px",
+            "textWidth": 78.10594177246094,
+            "available": 206,
+            "x": 318,
+            "y": 719.78125,
+            "date": {
+              "value": "2026-11-08",
+              "width": 256,
+              "height": 44,
+              "x": 50,
+              "y": 719.78125,
+              "font": "14px"
+            },
+            "sameRow": true
+          }
+        ]
+      },
+      {
+        "viewport": 640,
+        "page": 625,
+        "scroll": 625,
+        "controls": [
+          {
+            "label": "Receipt (+)",
+            "value": "receipt",
+            "width": 256.5,
+            "height": 44,
+            "font": "14px",
+            "textWidth": 70.97994995117188,
+            "available": 207,
+            "x": 318.5,
+            "y": 341.78125,
+            "date": {
+              "value": "2026-11-07",
+              "width": 256.5,
+              "height": 44,
+              "x": 50,
+              "y": 341.78125,
+              "font": "14px"
+            },
+            "sameRow": true
+          },
+          {
+            "label": "Payment (\u2212)",
+            "value": "payment",
+            "width": 256.5,
+            "height": 44,
+            "font": "14px",
+            "textWidth": 78.10594177246094,
+            "available": 207,
+            "x": 318.5,
+            "y": 639.78125,
+            "date": {
+              "value": "2026-11-08",
+              "width": 256.5,
+              "height": 44,
+              "x": 50,
+              "y": 639.78125,
+              "font": "14px"
+            },
+            "sameRow": true
+          }
+        ]
+      },
+      {
+        "viewport": 768,
+        "page": 753,
+        "scroll": 753,
+        "controls": [
+          {
+            "label": "Receipt (+)",
+            "value": "receipt",
+            "width": 304.5,
+            "height": 44,
+            "font": "14px",
+            "textWidth": 70.97994995117188,
+            "available": 255,
+            "x": 382.5,
+            "y": 361.84375,
+            "date": {
+              "value": "2026-11-07",
+              "width": 304.5,
+              "height": 44,
+              "x": 66,
+              "y": 361.84375,
+              "font": "14px"
+            },
+            "sameRow": true
+          },
+          {
+            "label": "Payment (\u2212)",
+            "value": "payment",
+            "width": 304.5,
+            "height": 44,
+            "font": "14px",
+            "textWidth": 78.10594177246094,
+            "available": 255,
+            "x": 382.5,
+            "y": 659.84375,
+            "date": {
+              "value": "2026-11-08",
+              "width": 304.5,
+              "height": 44,
+              "x": 66,
+              "y": 659.84375,
+              "font": "14px"
+            },
+            "sameRow": true
+          }
+        ]
+      },
+      {
+        "viewport": 1440,
+        "page": 1425,
+        "scroll": 1425,
+        "controls": [
+          {
+            "label": "Receipt (+)",
+            "value": "receipt",
+            "width": 217.046875,
+            "height": 44,
+            "font": "14px",
+            "textWidth": 70.97994995117188,
+            "available": 167,
+            "x": 351.53125,
+            "y": 417.609375,
+            "date": {
+              "value": "2026-11-07",
+              "width": 217.03125,
+              "height": 44,
+              "x": 122.5,
+              "y": 417.609375,
+              "font": "14px"
+            },
+            "sameRow": true
+          },
+          {
+            "label": "Payment (\u2212)",
+            "value": "payment",
+            "width": 217.046875,
+            "height": 44,
+            "font": "14px",
+            "textWidth": 78.10594177246094,
+            "available": 167,
+            "x": 351.53125,
+            "y": 715.609375,
+            "date": {
+              "value": "2026-11-08",
+              "width": 217.03125,
+              "height": 44,
+              "x": 122.5,
+              "y": 715.609375,
+              "font": "14px"
+            },
+            "sameRow": true
+          }
+        ]
+      }
+    ]
+  },
+  "local_browser": {
+    "checked_at": "2026-11-07T18:04:57.798Z",
+    "checks": [
+      "Directory to forecast; add two movements and choose payment with native keyboard type-ahead",
+      "Complete native selection space and responsive layout at six widths",
+      "Date, Direction and amount retain keyboard order and all entered values",
+      "Sample Keep/Escape protects valid and invalid rows; correction restores export",
+      "Add and remove an unfinished row without changing retained movements",
+      "Loaded offline retention, reduced-motion operation and forced-colour keyboard focus",
+      "Download twelve-week CSV and retain expected 9940.48 closing cash",
+      "Emulated mobile entry, native option selection and touch Keep retain payment"
+    ],
+    "measures": [
+      {
+        "viewport": 320,
+        "page": 305,
+        "scroll": 305,
+        "controls": [
+          {
+            "label": "Receipt (+)",
+            "value": "receipt",
+            "width": 205,
+            "height": 44,
+            "font": "14px",
+            "textWidth": 70.97994995117188,
+            "available": 155,
+            "x": 50,
+            "y": 821.65625,
+            "date": {
+              "value": "2026-11-07",
+              "width": 205,
+              "height": 44,
+              "x": 50,
+              "y": 749.65625,
+              "font": "14px"
+            },
+            "sameRow": false
+          },
+          {
+            "label": "Payment (\u2212)",
+            "value": "payment",
+            "width": 205,
+            "height": 44,
+            "font": "14px",
+            "textWidth": 78.10594177246094,
+            "available": 155,
+            "x": 50,
+            "y": 1191.65625,
+            "date": {
+              "value": "2026-11-08",
+              "width": 205,
+              "height": 44,
+              "x": 50,
+              "y": 1119.65625,
+              "font": "14px"
+            },
+            "sameRow": false
+          }
+        ]
+      },
+      {
+        "viewport": 390,
+        "page": 375,
+        "scroll": 375,
+        "controls": [
+          {
+            "label": "Receipt (+)",
+            "value": "receipt",
+            "width": 275,
+            "height": 44,
+            "font": "14px",
+            "textWidth": 70.97994995117188,
+            "available": 225,
+            "x": 50,
+            "y": 405.859375,
+            "date": {
+              "value": "2026-11-07",
+              "width": 275,
+              "height": 44,
+              "x": 50,
+              "y": 333.859375,
+              "font": "14px"
+            },
+            "sameRow": false
+          },
+          {
+            "label": "Payment (\u2212)",
+            "value": "payment",
+            "width": 275,
+            "height": 44,
+            "font": "14px",
+            "textWidth": 78.10594177246094,
+            "available": 225,
+            "x": 50,
+            "y": 775.859375,
+            "date": {
+              "value": "2026-11-08",
+              "width": 275,
+              "height": 44,
+              "x": 50,
+              "y": 703.859375,
+              "font": "14px"
+            },
+            "sameRow": false
+          }
+        ]
+      },
+      {
+        "viewport": 639,
+        "page": 624,
+        "scroll": 624,
+        "controls": [
+          {
+            "label": "Receipt (+)",
+            "value": "receipt",
+            "width": 524,
+            "height": 44,
+            "font": "14px",
+            "textWidth": 70.97994995117188,
+            "available": 474,
+            "x": 50,
+            "y": 349.78125,
+            "date": {
+              "value": "2026-11-07",
+              "width": 524,
+              "height": 44,
+              "x": 50,
+              "y": 277.78125,
+              "font": "14px"
+            },
+            "sameRow": false
+          },
+          {
+            "label": "Payment (\u2212)",
+            "value": "payment",
+            "width": 524,
+            "height": 44,
+            "font": "14px",
+            "textWidth": 78.10594177246094,
+            "available": 474,
+            "x": 50,
+            "y": 719.78125,
+            "date": {
+              "value": "2026-11-08",
+              "width": 524,
+              "height": 44,
+              "x": 50,
+              "y": 647.78125,
+              "font": "14px"
+            },
+            "sameRow": false
+          }
+        ]
+      },
+      {
+        "viewport": 640,
+        "page": 625,
+        "scroll": 625,
+        "controls": [
+          {
+            "label": "Receipt (+)",
+            "value": "receipt",
+            "width": 256.5,
+            "height": 44,
+            "font": "14px",
+            "textWidth": 70.97994995117188,
+            "available": 207,
+            "x": 318.5,
+            "y": 277.78125,
+            "date": {
+              "value": "2026-11-07",
+              "width": 256.5,
+              "height": 44,
+              "x": 50,
+              "y": 277.78125,
+              "font": "14px"
+            },
+            "sameRow": true
+          },
+          {
+            "label": "Payment (\u2212)",
+            "value": "payment",
+            "width": 256.5,
+            "height": 44,
+            "font": "14px",
+            "textWidth": 78.10594177246094,
+            "available": 207,
+            "x": 318.5,
+            "y": 575.78125,
+            "date": {
+              "value": "2026-11-08",
+              "width": 256.5,
+              "height": 44,
+              "x": 50,
+              "y": 575.78125,
+              "font": "14px"
+            },
+            "sameRow": true
+          }
+        ]
+      },
+      {
+        "viewport": 768,
+        "page": 753,
+        "scroll": 753,
+        "controls": [
+          {
+            "label": "Receipt (+)",
+            "value": "receipt",
+            "width": 304.5,
+            "height": 44,
+            "font": "14px",
+            "textWidth": 70.97994995117188,
+            "available": 255,
+            "x": 382.5,
+            "y": 297.84375,
+            "date": {
+              "value": "2026-11-07",
+              "width": 304.5,
+              "height": 44,
+              "x": 66,
+              "y": 297.84375,
+              "font": "14px"
+            },
+            "sameRow": true
+          },
+          {
+            "label": "Payment (\u2212)",
+            "value": "payment",
+            "width": 304.5,
+            "height": 44,
+            "font": "14px",
+            "textWidth": 78.10594177246094,
+            "available": 255,
+            "x": 382.5,
+            "y": 595.84375,
+            "date": {
+              "value": "2026-11-08",
+              "width": 304.5,
+              "height": 44,
+              "x": 66,
+              "y": 595.84375,
+              "font": "14px"
+            },
+            "sameRow": true
+          }
+        ]
+      },
+      {
+        "viewport": 1440,
+        "page": 1425,
+        "scroll": 1425,
+        "controls": [
+          {
+            "label": "Receipt (+)",
+            "value": "receipt",
+            "width": 217.046875,
+            "height": 44,
+            "font": "14px",
+            "textWidth": 70.97994995117188,
+            "available": 167,
+            "x": 351.53125,
+            "y": 353.609375,
+            "date": {
+              "value": "2026-11-07",
+              "width": 217.03125,
+              "height": 44,
+              "x": 122.5,
+              "y": 353.609375,
+              "font": "14px"
+            },
+            "sameRow": true
+          },
+          {
+            "label": "Payment (\u2212)",
+            "value": "payment",
+            "width": 217.046875,
+            "height": 44,
+            "font": "14px",
+            "textWidth": 78.10594177246094,
+            "available": 167,
+            "x": 351.53125,
+            "y": 651.609375,
+            "date": {
+              "value": "2026-11-08",
+              "width": 217.03125,
+              "height": 44,
+              "x": 122.5,
+              "y": 651.609375,
+              "font": "14px"
+            },
+            "sameRow": true
+          }
+        ]
+      }
+    ],
+    "date_tabs": 4,
+    "motion": "0s",
+    "focus": {
+      "style": "solid",
+      "width": "3px"
+    },
+    "main_page_errors": [],
+    "scope": "Chromium native controls and viewport/touch emulation; no physical device, screen reader or OS-native popup qualification. Available-width measurement conservatively reserves 24px for native select affordance and is supported by actual screenshots."
+  },
+  "csv": {
+    "baseline_local_byte_identical": true,
+    "bytes": 1236,
+    "sha256": "771d015983ca118506c046a33b760988048dfdce3034d0c65c2405d9f275635e",
+    "ending_cash": "9940.48"
+  },
+  "desktop_png_byte_identical": {
+    "movement-1-1440.png": true,
+    "movement-2-1440.png": true,
+    "forecast-1440.png": true
+  },
+  "local_tests": {
+    "site": 100,
+    "invoices": 34,
+    "design_tokens": 15
+  },
+  "assets": [
+    {
+      "file": "assets/evidence/forecast-direction/before-payment-320.webp",
+      "source_png_sha256": "8f8073af835bdf8f274f29f862aac7f3ccccf0f5f5cb8d724ba0e5b442137fa5",
+      "sha256": "10f4ac077bd8debe510b693fc554d6a19cf22448ae1f3cc2caffe2be7e018464",
+      "dimensions": [231, 287],
+      "capture": "live baseline"
+    },
+    {
+      "file": "assets/evidence/forecast-direction/after-receipt-320.webp",
+      "source_png_sha256": "ef19315bfad860749993635dfb80286808637608d220e44d74809f2959a28099",
+      "sha256": "bce26a907afc9a289b6404e64626e43f965c06765cdd2909788af1b1efca911f",
+      "dimensions": [231, 359],
+      "capture": "local production build"
+    },
+    {
+      "file": "assets/evidence/forecast-direction/after-payment-320.webp",
+      "source_png_sha256": "dbcd32be6ea9cf6fb740765bdd0c2248a31429f456fff8e1ce73531331cec008",
+      "sha256": "793d41f4eb2eab85b5a23349496e7b5a5382a612b3cc614c809b575009217f63",
+      "dimensions": [231, 359],
+      "capture": "local production build"
+    },
+    {
+      "file": "assets/evidence/forecast-direction/after-payment-390.webp",
+      "source_png_sha256": "fae9723a63b7060ae3123c28f2e821cc2b084c3dc39ec442426839376c67dc97",
+      "sha256": "8b1c9931b9cfbcff9c6265e69fb7f910545e2aef70ee383daaee3f3d72166910",
+      "dimensions": [301, 359],
+      "capture": "local production build"
+    },
+    {
+      "file": "assets/evidence/forecast-direction/after-forecast-1440.webp",
+      "source_png_sha256": "743efd11216ff5f5a5dfcbeb9d7118a9cf898f87e74eaf74bd9799bbd52fa8cc",
+      "sha256": "b13e1635eaaea0cd667561b266023c858e4dc3c8477908f6e268ab5927a3fbaf",
+      "dimensions": [1425, 2473],
+      "capture": "local production build"
+    },
+    {
+      "file": "assets/evidence/forecast-direction/forced-colours-320.webp",
+      "source_png_sha256": "acd993e2348f5130292d92864038b60fcb74811a5360d7b680e0defe1ebc40e8",
+      "sha256": "45c39ebff1ba73a6a55a88b2a42b02d797d484c57bf41121ddcdfc75bcfe1ef9",
+      "dimensions": [234, 359],
+      "capture": "local production build"
+    }
+  ],
+  "source_hashes": {
+    "apps/site/components/cash-flow-forecast.tsx": "8690c5ff613ac923f577bbdddd8f0bc3d826797fc153a350282dc346686f7c68",
+    "apps/site/lib/tools/cash-forecast.ts": "fbdaadbbc1b45a6009b4df64d7bf6bcb48971af3a4a4f1442a8eee857fa56e20",
+    "apps/site/lib/tools/calculations.ts": "b62f74b341aebfb37bee28ec6bd9cb9a44bc00c3aa7a9afb52ff351ff0ac0586"
+  },
+  "limitations": [
+    "Pre-release local evidence; publication and CI have separate records",
+    "Chromium desktop and mobile/touch emulation only; no physical-device, screen-reader, other-engine or native popup qualification",
+    "Main-page console/pageerror capture does not instrument the separate touch context",
+    "Native type-ahead and segmented date keyboard navigation used after correcting test assumptions; no application workaround",
+    "No Hallmark, Appllama or image generation executed for this bounded layout fix"
+  ]
+}
