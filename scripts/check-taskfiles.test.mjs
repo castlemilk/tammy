@@ -243,7 +243,9 @@ function nodePrintCommand(lines) {
 test("site deployment tasks pass adversarial origins as one literal argument", async (context) => {
   const taskBinary = await pinnedTaskBinary();
 
-  const fixtureRoot = await mkdtemp(path.join("/private/tmp", "tammy-site-task-injection-"));
+  const fixtureRoot = await mkdtemp(
+    path.join(await realpath(tmpdir()), "tammy-site-task-injection-"),
+  );
   context.after(() => rm(fixtureRoot, { recursive: true, force: true }));
   const fakeMise = path.join(fixtureRoot, "mise");
   const argumentLog = path.join(fixtureRoot, "arguments.txt");
@@ -283,7 +285,9 @@ test("MCP task requires a private connection file and passes its path literally"
     /node packages\/local-api\/src\/cli\.ts/,
   );
 
-  const fixtureRoot = await mkdtemp(path.join("/private/tmp", "tammy-mcp-task-injection-"));
+  const fixtureRoot = await mkdtemp(
+    path.join(await realpath(tmpdir()), "tammy-mcp-task-injection-"),
+  );
   context.after(() => rm(fixtureRoot, { recursive: true, force: true }));
   const injectedMarker = path.join(fixtureRoot, "injected");
   const connectionPath = `${fixtureRoot}/missing connection.json; touch ${injectedMarker} #`;
@@ -952,7 +956,13 @@ test("local Task front door preserves the safe development contract", async () =
     }
   }
   const actualSbrTarget = `${process.platform}/${process.arch}`;
-  const sbrOutputDirectory = await mkdtemp(path.join("/private/tmp", "tammy-sbr-task-output-"));
+  // Task expands its precondition message with Go's OS/architecture names.
+  const taskPlatform = process.platform === "win32" ? "windows" : process.platform;
+  const taskArchitecture = { x64: "amd64", ia32: "386" }[process.arch] ?? process.arch;
+  const actualSbrTaskTarget = `${taskPlatform}/${taskArchitecture}`;
+  const sbrOutputDirectory = await mkdtemp(
+    path.join(await realpath(tmpdir()), "tammy-sbr-task-output-"),
+  );
   try {
     for (const githubActions of ["", "true"]) {
       const registration = await runTask("sbr:registration:check", {
@@ -983,7 +993,7 @@ test("local Task front door preserves the safe development contract", async () =
         assert.notEqual(registration.code, 0);
         assert.match(
           `${registration.stdout}${registration.stderr}`,
-          new RegExp(`UNSUPPORTED_SBR_TARGET:${actualSbrTarget}`),
+          new RegExp(`UNSUPPORTED_SBR_TARGET:${actualSbrTaskTarget}`),
         );
       }
     }
@@ -996,7 +1006,7 @@ test("local Task front door preserves the safe development contract", async () =
       `${evte.stdout}${evte.stderr}`,
       actualSbrTarget === "darwin/arm64"
         ? /EVTE_SIGNED_INPUTS_REQUIRED/
-        : new RegExp(`UNSUPPORTED_SBR_TARGET:${actualSbrTarget}`),
+        : new RegExp(`UNSUPPORTED_SBR_TARGET:${actualSbrTaskTarget}`),
     );
     assert.deepEqual(await readdir(sbrOutputDirectory), []);
   } finally {
