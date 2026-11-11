@@ -73,7 +73,9 @@ const SIGTERM_KILL = Object.assign(new Error("lsof terminated"), {
 const SPAWN_ENOENT = Object.assign(new Error("spawn lsof ENOENT"), { code: "ENOENT" });
 const NON_ZERO_EXIT = Object.assign(new Error("lsof failed"), { code: 1, killed: false });
 
-describe("asynchronous live identity verification", () => {
+// These tests authenticate a real temporary file, and this module mocks node:path as POSIX,
+// so they run only on POSIX hosts. The live lsof identity check they cover is macOS-only.
+describe.skipIf(process.platform === "win32")("asynchronous live identity verification", () => {
   let root: string | undefined;
 
   afterEach(async () => {
