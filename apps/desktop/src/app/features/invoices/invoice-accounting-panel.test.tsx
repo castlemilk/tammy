@@ -191,7 +191,9 @@ it("blocks view changes and repeated submits while a receipt is pending", async 
   expect(onBusyChange).toHaveBeenLastCalledWith(true);
   confirm?.({ ...posted, version: 2, receivedMinor: 11000, outstandingMinor: 0 });
   await screen.findByText("Payment recorded.");
-  expect(onBusyChange).toHaveBeenLastCalledWith(false);
+  // The notice commits with busy=false; onBusyChange runs in a passive effect
+  // that a loaded runner can flush after findByText resolves.
+  await waitFor(() => expect(onBusyChange).toHaveBeenLastCalledWith(false));
   expect(screen.getByRole("button", { name: "Items" }).matches(":disabled")).toBe(false);
   expect(screen.getByTestId("invoice-outstanding").textContent).toContain("$0.00");
 });
