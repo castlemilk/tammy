@@ -1,0 +1,1157 @@
+/* Tammy landing: invoicing. Section styles, imported by app/page.tsx.
+ *
+ * One scene: an invoice sheet on the desk, the ledger beside it, and a bar
+ * holding the app's own buttons. The island in invoicing-figure.tsx sets
+ *   data-state = draft | confirming | issued | paid
+ *   data-via   = rest | press             (press plays the choreography)
+ *   data-lit   = total | subtotal | gst   (a pinned butter trace)
+ * on .lp-invoicing-fig. With no script it is paid / rest: the finished books.
+ */
+
+.lp-invoicing {
+  display: grid;
+  gap: clamp(28px, 4vw, 56px);
+}
+
+/* ---------- Head: title in the margin, statement and copy in the measure ---------- */
+
+.lp-invoicing-head {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  column-gap: clamp(16px, 2.2vw, 32px);
+  row-gap: clamp(16px, 1.8vw, 24px);
+  align-items: start;
+}
+
+.lp-invoicing-title {
+  grid-column: 1 / span 4;
+  grid-row: 1 / span 2;
+  display: grid;
+  gap: 10px;
+}
+
+.lp-invoicing-summary {
+  max-width: 24ch;
+  color: var(--l-text-muted);
+  font-size: var(--l-fs-small);
+  line-height: 1.45;
+  text-wrap: balance;
+}
+
+.lp-invoicing-statement {
+  grid-column: 5 / -1;
+  color: var(--l-text);
+  /* Large, but a clear step under the chapter heading it sits beneath. */
+  font: 500 clamp(1.75rem, 1.2rem + 2.6vw, 3.125rem) / 1.04 var(--l-serif);
+  letter-spacing: -0.034em;
+  text-wrap: balance;
+}
+
+/* The short sentence, then the long one, when the measure allows it. */
+.lp-invoicing-statement span {
+  display: block;
+}
+
+.lp-invoicing-lede {
+  grid-column: 5 / span 5;
+}
+
+.lp-invoicing-limit {
+  grid-column: 10 / -1;
+  margin-top: 4px;
+}
+
+/* ---------- The figure: an oat desk holding the sheet, the ledger and the buttons ---------- */
+
+.lp-invoicing-fig {
+  --l-text: var(--l-ink);
+  --l-text-muted: var(--l-muted);
+  --l-hairline: var(--l-rule);
+  --l-accent: var(--l-forest);
+  --l-focus: var(--l-forest);
+  --lp-invoicing-cols: minmax(0, 0.82fr) minmax(0, 1fr);
+  --lp-invoicing-gap: clamp(20px, 3vw, 44px);
+  display: grid;
+  grid-template-columns: var(--lp-invoicing-cols);
+  grid-template-areas:
+    "sheet books"
+    "dock dock";
+  gap: clamp(12px, 1.4vw, 18px) var(--lp-invoicing-gap);
+  padding: clamp(20px, 3.2vw, 44px);
+  border-radius: var(--l-r-arrival);
+  background: var(--l-oat);
+  color: var(--l-ink);
+}
+
+.lp-invoicing-doc {
+  grid-area: sheet;
+  display: flex;
+  min-width: 0;
+  container-type: inline-size;
+}
+
+.lp-invoicing-books {
+  grid-area: books;
+  display: flex;
+  min-width: 0;
+  container: lp-invoicing-books / inline-size;
+}
+
+.lp-invoicing-books > .lp-window {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* ---------- The invoice sheet: a paper document, not a card ---------- */
+
+.lp-invoicing-sheet {
+  position: relative;
+  isolation: isolate;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: clip;
+  padding: clamp(14px, 1.8vw, 24px);
+  border-radius: 6px;
+  box-shadow: var(--l-shadow-lift);
+  font-size: var(--l-fs-micro);
+  line-height: 1.4;
+}
+
+.lp-invoicing-band {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 18px 20px 20px;
+  border-radius: 4px;
+  background: var(--l-forest);
+  color: var(--l-paper);
+}
+
+.lp-invoicing-kind {
+  font: 700 1.375rem / 1.15 var(--l-sans);
+  letter-spacing: -0.012em;
+}
+
+.lp-invoicing-seller {
+  margin-top: 6px;
+  color: color-mix(in srgb, var(--l-paper) 84%, var(--l-forest));
+}
+
+.lp-invoicing-status {
+  flex: 0 0 auto;
+}
+
+.lp-invoicing-meta {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px 16px;
+  margin-top: clamp(16px, 1.8vw, 22px);
+}
+
+.lp-invoicing-meta > [data-wide] {
+  grid-column: 1 / -1;
+}
+
+/* A wide sheet sets its four particulars on one line. */
+@container (min-width: 450px) {
+  .lp-invoicing-meta {
+    grid-template-columns: repeat(4, auto);
+    justify-content: space-between;
+  }
+
+  .lp-invoicing-meta > [data-wide] {
+    grid-column: auto;
+  }
+}
+
+.lp-invoicing-meta dt,
+.lp-invoicing-items thead th {
+  color: var(--l-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.lp-invoicing-meta dd {
+  margin-top: 2px;
+  font-weight: 500;
+  font-variant-numeric: lining-nums tabular-nums;
+}
+
+.lp-invoicing-items {
+  width: 100%;
+  margin-top: clamp(16px, 1.8vw, 22px);
+}
+
+.lp-invoicing-items :where(th, td) {
+  padding: 9px 0 9px 12px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.lp-invoicing-items :where(th, td):first-child {
+  padding-left: 0;
+}
+
+.lp-invoicing-items [data-num] {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.lp-invoicing-items thead th {
+  border-block: 1px solid var(--l-rule);
+}
+
+.lp-invoicing-items tbody :where(th, td) {
+  padding-block: 12px;
+  border-bottom: 1px solid var(--l-rule);
+  font-weight: 500;
+}
+
+.lp-invoicing-items tbody td:last-child {
+  font-weight: 600;
+}
+
+.lp-invoicing-items tbody th span {
+  display: block;
+  margin-top: 2px;
+  color: var(--l-muted);
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.lp-invoicing-fineprint {
+  max-width: 44ch;
+  margin-top: 10px;
+  color: var(--l-muted);
+  font-size: 0.75rem;
+  line-height: 1.45;
+  text-wrap: pretty;
+}
+
+.lp-invoicing-totals {
+  width: min(100%, 15.5rem);
+  margin: auto 0 0 auto;
+  padding-top: clamp(20px, 2.4vw, 32px);
+}
+
+.lp-invoicing-totals > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 40px;
+}
+
+.lp-invoicing-totals > div + div {
+  border-top: 1px solid var(--l-rule);
+}
+
+.lp-invoicing-totals dt {
+  color: var(--l-muted);
+}
+
+.lp-invoicing-totals dd {
+  font: 600 1em / 1.2 var(--l-sans);
+  font-variant-numeric: lining-nums tabular-nums;
+}
+
+.lp-invoicing-totals > [data-total] {
+  min-height: 48px;
+  border-top-color: var(--l-ink);
+}
+
+.lp-invoicing-totals > [data-total] dt {
+  color: var(--l-ink);
+  font-weight: 650;
+}
+
+.lp-invoicing-totals > [data-total] dd {
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.lp-invoicing-sheet-foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: clamp(16px, 2vw, 26px);
+  padding-top: 10px;
+  border-top: 1px solid var(--l-rule);
+  color: var(--l-muted);
+  font-size: 0.75rem;
+}
+
+/* A trace is a figure you can press. Give it a finger-sized target. */
+.lp-invoicing-trace {
+  position: relative;
+  font-variant-numeric: lining-nums tabular-nums;
+  white-space: nowrap;
+}
+
+.lp-invoicing-trace::after {
+  content: "";
+  position: absolute;
+  inset: -11px -10px;
+}
+
+/*
+ * The DRAFT watermark, as the app prints on a draft PDF. It is generated
+ * content, so the finished page carries no stray word for anyone reading the
+ * markup; the pill says "Draft" for everyone. It is also drawn, on its way
+ * out, for the one press that issues the invoice.
+ */
+.lp-invoicing-fig:is([data-state="draft"], [data-state="confirming"], [data-state="issued"][data-via="press"])
+  .lp-invoicing-sheet::after {
+  content: "DRAFT";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  display: grid;
+  place-items: center;
+  color: color-mix(in srgb, var(--l-ink) 9%, transparent);
+  font: 800 25cqi / 1 var(--l-sans);
+  letter-spacing: 0.08em;
+  rotate: -28deg;
+  pointer-events: none;
+}
+
+.lp-invoicing-fig[data-state="issued"][data-via="press"] .lp-invoicing-sheet::after {
+  opacity: 0;
+}
+
+/* ---------- The buttons: one bar, the same place for every step ----------
+ * The action sits under the invoice it acts on; what it means sits under the
+ * ledger it writes to. */
+
+.lp-invoicing-dock {
+  grid-area: dock;
+  container: lp-invoicing-dock / inline-size;
+  display: grid;
+  /* The figure's own two columns, so the copy lines up with the ledger. */
+  grid-template-columns: var(--lp-invoicing-cols);
+  align-items: center;
+  gap: 14px var(--lp-invoicing-gap);
+  min-width: 0;
+  padding: 18px;
+  border: 1px solid var(--l-rule);
+  border-radius: 16px;
+  background: var(--l-paper);
+  font-size: var(--l-fs-micro);
+  line-height: 1.5;
+}
+
+/* The confirmation is the longest thing the bar ever says. Setting it once,
+ * unseen, reserves its height, so the buttons stay put and nothing below
+ * moves on a press. */
+.lp-invoicing-dock::before {
+  content: attr(data-sizer);
+  grid-area: 1 / 2;
+  visibility: hidden;
+}
+
+/* Indented by the window's own padding, so the words sit under the ledger's. */
+.lp-invoicing-dock::before,
+.lp-invoicing-dock-copy {
+  padding-left: clamp(12px, 1.5vw, 18px);
+}
+
+/* No gap between the notice and its sentence: a notice line plus a wrapped
+ * sentence must never stand taller than the confirmation it shares a slot with. */
+.lp-invoicing-dock-copy {
+  grid-area: 1 / 2;
+  display: grid;
+  min-width: 0;
+  color: var(--l-muted);
+}
+
+.lp-invoicing-confirm {
+  color: var(--l-ink);
+}
+
+.lp-invoicing-notice {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--l-forest);
+  font-weight: 650;
+}
+
+.lp-invoicing-notice[data-tone="plain"] {
+  color: var(--l-ink);
+}
+
+.lp-invoicing-notice .lp-icon {
+  width: 16px;
+  height: 16px;
+  stroke-width: 2.4;
+}
+
+.lp-invoicing-actions {
+  grid-area: 1 / 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* The two confirmation buttons sit side by side down to a 360px phone. Below
+ * that they stack, and the bar keeps room for both in every step so the
+ * ledger under it never moves. */
+@container lp-invoicing-dock (max-width: 340px) {
+  .lp-invoicing-actions .lp-btn {
+    padding-inline: 16px;
+  }
+}
+
+@container lp-invoicing-dock (max-width: 280px) {
+  .lp-invoicing-actions {
+    align-content: flex-start;
+    min-height: 104px;
+  }
+}
+
+/* ---------- The ledger, as the app sets it ---------- */
+
+.lp-invoicing-books .lp-window-title b {
+  color: var(--l-ink);
+  font-weight: 650;
+}
+
+.lp-invoicing-ledger {
+  display: grid;
+  gap: 14px;
+  padding: clamp(14px, 1.7vw, 20px);
+}
+
+.lp-invoicing-journal {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 4px 16px;
+  min-height: 3.25rem;
+}
+
+.lp-invoicing-journal-title {
+  margin-top: 2px;
+}
+
+.lp-invoicing-journal-title[data-empty] {
+  color: var(--l-muted);
+}
+
+.lp-invoicing-journal-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 3px;
+  color: var(--l-muted);
+  font-size: var(--l-fs-app);
+  font-variant-numeric: lining-nums tabular-nums;
+}
+
+.lp-invoicing-entry {
+  position: relative;
+  isolation: isolate;
+  overflow: clip;
+  border: 1px solid var(--l-rule);
+  border-radius: 14px;
+  background: var(--l-paper);
+  container: lp-invoicing-entry / inline-size;
+}
+
+.lp-invoicing .lp-invoicing-lines caption {
+  padding: 11px 16px 10px;
+  border-bottom: 1px solid var(--l-rule);
+}
+
+.lp-invoicing-lines caption b {
+  margin-right: 8px;
+  color: var(--l-ink);
+  font-size: var(--l-fs-micro);
+  font-weight: 650;
+}
+
+.lp-invoicing .lp-invoicing-lines :where(th, td) {
+  height: 46px;
+  padding: 6px 16px;
+}
+
+.lp-invoicing .lp-invoicing-lines thead th {
+  height: 36px;
+}
+
+.lp-invoicing-lines tbody td {
+  font-weight: 600;
+}
+
+.lp-invoicing-ink {
+  display: inline-block;
+}
+
+.lp-invoicing-nil {
+  color: var(--l-line);
+  font-weight: 400;
+}
+
+/* The total band is one sage strip laid under the row, so it can be drawn
+ * across in a single stroke when the lines post. */
+.lp-invoicing .lp-invoicing-lines tfoot :where(th, td) {
+  position: relative;
+  background: none;
+}
+
+.lp-invoicing-lines tfoot th::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  z-index: -1;
+  width: 100cqi;
+  background: var(--l-sage);
+  transform-origin: left;
+}
+
+.lp-invoicing-lines tfoot .lp-tick {
+  margin-right: 7px;
+}
+
+.lp-invoicing-figures {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.lp-invoicing-figures > div {
+  min-width: 0;
+  padding: 10px 14px 11px;
+  border: 1px solid var(--l-rule);
+  border-radius: 12px;
+  background: var(--l-paper);
+}
+
+.lp-invoicing-figures dt {
+  color: var(--l-muted);
+  font-size: 0.75rem;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.lp-invoicing-figures dd {
+  margin-top: 1px;
+  font: 600 1.125rem / 1.3 var(--l-sans);
+  font-variant-numeric: lining-nums tabular-nums;
+  white-space: nowrap;
+}
+
+.lp-invoicing-figures > [data-owing] dd {
+  font-weight: 700;
+}
+
+.lp-invoicing-foot {
+  display: grid;
+  gap: 4px;
+  color: var(--l-muted);
+  font-size: var(--l-fs-app);
+  line-height: 1.5;
+}
+
+.lp-invoicing-income {
+  max-width: 62ch;
+  color: var(--l-ink);
+  text-wrap: pretty;
+}
+
+.lp-invoicing-income .lp-invoicing-trace {
+  font-weight: 650;
+}
+
+/* The window bar sheds what it cannot fit, by the width of the window itself. */
+@container lp-invoicing-books (max-width: 650px) {
+  .lp-invoicing-crumb {
+    display: none;
+  }
+}
+
+@container lp-invoicing-books (max-width: 500px) {
+  .lp-invoicing-books .lp-window-local,
+  .lp-invoicing-figures dt span {
+    display: none;
+  }
+}
+
+@container lp-invoicing-books (max-width: 400px) {
+  .lp-invoicing-books .lp-window-bar {
+    flex-wrap: wrap;
+    gap: 2px 10px;
+    padding-block: 7px;
+  }
+
+  .lp-invoicing-books .lp-window-title {
+    flex: 0 0 auto;
+  }
+
+  .lp-invoicing-books .lp-window-label {
+    font-size: 0.75rem;
+  }
+}
+
+/* A narrow ledger sets the account code above its name, as a phone would. */
+@container lp-invoicing-entry (max-width: 400px) {
+  .lp-invoicing-lines {
+    font-size: var(--l-fs-app);
+  }
+
+  .lp-invoicing .lp-invoicing-lines :where(th, td) {
+    padding-inline: 10px;
+  }
+
+  .lp-invoicing .lp-invoicing-lines :where(th, td)[data-num] {
+    padding-left: 0;
+  }
+
+  .lp-invoicing .lp-invoicing-lines caption {
+    padding-inline: 10px;
+  }
+
+  .lp-invoicing-lines .lp-code {
+    display: block;
+    margin: 0;
+    line-height: 1.3;
+  }
+}
+
+/* ---------- What a draft looks like: ruled lines, nothing written on them ---------- */
+
+.lp-invoicing-fig:is([data-state="draft"], [data-state="confirming"]) .lp-invoicing-lines :is(tbody, tfoot) .lp-invoicing-ink,
+.lp-invoicing-fig:is([data-state="draft"], [data-state="confirming"]) .lp-invoicing-journal-meta {
+  visibility: hidden;
+}
+
+.lp-invoicing-fig:is([data-state="draft"], [data-state="confirming"]) .lp-invoicing-lines tfoot th::before {
+  scale: 0 1;
+}
+
+.lp-invoicing-fig:is([data-state="draft"], [data-state="confirming"]) .lp-invoicing-lines tfoot :where(th, td) {
+  border-top-color: var(--l-rule);
+}
+
+.lp-invoicing-fig:is([data-state="draft"], [data-state="confirming"]) .lp-invoicing-figures dd {
+  color: var(--l-line);
+  font-weight: 400;
+}
+
+.lp-invoicing-fig:not([data-state="paid"]) .lp-invoicing-income {
+  visibility: hidden;
+}
+
+/* ---------- The butter trace: a figure and the ledger line it became ---------- */
+
+.lp-invoicing-fig[data-lit="total"] [data-trace="total"],
+.lp-invoicing-fig[data-lit="subtotal"] [data-trace="subtotal"],
+.lp-invoicing-fig[data-lit="gst"] [data-trace="gst"],
+.lp-invoicing-fig:has([data-trace="total"]:focus-visible) [data-trace="total"],
+.lp-invoicing-fig:has([data-trace="subtotal"]:focus-visible) [data-trace="subtotal"],
+.lp-invoicing-fig:has([data-trace="gst"]:focus-visible) [data-trace="gst"] {
+  --lit: 1;
+}
+
+@media (hover: hover) {
+  .lp-invoicing-fig:has(:is([data-trace="total"], [data-row="total"]):hover) [data-trace="total"],
+  .lp-invoicing-fig:has(:is([data-trace="subtotal"], [data-row="subtotal"]):hover) [data-trace="subtotal"],
+  .lp-invoicing-fig:has(:is([data-trace="gst"], [data-row="gst"]):hover) [data-trace="gst"] {
+    --lit: 1;
+  }
+}
+
+/* ---------- Invoicing in detail: a typographic index, not cards ---------- */
+
+.lp-invoicing-more {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  column-gap: clamp(16px, 2.2vw, 32px);
+  row-gap: 14px;
+}
+
+.lp-invoicing-more-title {
+  grid-column: 1 / span 4;
+  padding-top: 14px;
+}
+
+.lp-invoicing-list {
+  grid-column: 5 / -1;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  column-gap: clamp(16px, 2.2vw, 32px);
+}
+
+.lp-invoicing-list li {
+  display: grid;
+  align-content: start;
+  gap: 3px;
+  padding: 14px 0 18px;
+  border-top: 1px solid var(--l-hairline);
+  font-size: var(--l-fs-small);
+  line-height: 1.45;
+}
+
+.lp-invoicing-list strong {
+  color: var(--l-text);
+  font-weight: 650;
+}
+
+.lp-invoicing-list span {
+  color: var(--l-text-muted);
+  text-wrap: pretty;
+}
+
+.lp-invoicing-list span span {
+  white-space: nowrap;
+}
+
+/* ---------- The browser tool: named once, kept separate ---------- */
+
+.lp-invoicing-browser {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  column-gap: clamp(16px, 2.2vw, 32px);
+  align-items: baseline;
+  margin-top: 6px;
+  padding-top: 10px;
+  border-top: 1px solid var(--l-hairline);
+  color: var(--l-text-muted);
+  font-size: var(--l-fs-small);
+  line-height: 1.45;
+}
+
+.lp-invoicing-browser-ask {
+  grid-column: 1 / span 4;
+  color: var(--l-text);
+  font-weight: 650;
+}
+
+.lp-invoicing-browser-tool {
+  grid-column: 5 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 18px;
+}
+
+/* ---------- Narrower ---------- */
+
+@media (max-width: 1080px) {
+  .lp-invoicing-statement span {
+    display: inline;
+  }
+
+  .lp-invoicing-title {
+    grid-column: 1 / -1;
+    grid-row: auto;
+  }
+
+  .lp-invoicing-summary {
+    max-width: none;
+  }
+
+  .lp-invoicing-statement {
+    grid-column: 1 / -1;
+  }
+
+  .lp-invoicing-lede {
+    grid-column: 1 / span 8;
+  }
+
+  .lp-invoicing-limit {
+    grid-column: 9 / -1;
+  }
+
+  .lp-invoicing-more-title {
+    grid-column: 1 / -1;
+    padding-top: 0;
+  }
+
+  .lp-invoicing-list {
+    grid-column: 1 / -1;
+  }
+
+  .lp-invoicing-browser {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 18px;
+  }
+}
+
+/* One column: the invoice, then its buttons, then the ledger they write to. */
+@media (max-width: 860px) {
+  .lp-invoicing-fig {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "sheet"
+      "dock"
+      "books";
+    gap: 12px;
+  }
+
+  /* Before the invoice is issued the Journals window is only its bar and
+   * "Nothing posted yet.", not four empty rows and three empty tiles. */
+  .lp-invoicing-fig:is([data-state="draft"], [data-state="confirming"]) :is(.lp-invoicing-entry, .lp-invoicing-figures, .lp-invoicing-foot) {
+    display: none;
+  }
+
+  .lp-invoicing-books {
+    scroll-margin-block: 16px;
+  }
+
+  .lp-invoicing-lines .lp-trace-target {
+    scroll-margin-block: 24px;
+  }
+
+  .lp-invoicing-dock {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+    padding: 16px 18px 18px;
+  }
+
+  .lp-invoicing-dock::before,
+  .lp-invoicing-dock-copy {
+    grid-area: 1 / 1;
+    padding-left: 0;
+  }
+
+  .lp-invoicing-actions {
+    grid-area: 2 / 1;
+  }
+
+  .lp-invoicing-lede,
+  .lp-invoicing-limit {
+    grid-column: 1 / -1;
+  }
+
+  .lp-invoicing-limit {
+    max-width: none;
+    margin-top: 0;
+  }
+
+  .lp-invoicing-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .lp-invoicing-fig {
+    margin-inline: calc(var(--l-gutter) * -0.5);
+    padding: 10px;
+    border-radius: var(--l-r-surface);
+  }
+
+  .lp-invoicing-band {
+    padding: 14px 12px 15px 14px;
+  }
+
+  .lp-invoicing-kind {
+    font-size: 1.1875rem;
+  }
+
+  /* A phone keeps the sheet to what the scene needs. */
+  .lp-invoicing-fineprint {
+    display: none;
+  }
+
+  .lp-invoicing-meta {
+    gap: 10px 14px;
+    margin-top: 14px;
+  }
+
+  .lp-invoicing-items {
+    margin-top: 12px;
+  }
+
+  .lp-invoicing-totals {
+    padding-top: 10px;
+  }
+
+  .lp-invoicing-sheet-foot {
+    margin-top: 10px;
+  }
+
+  /* The table keeps its caption for assistive technology; the window's own
+   * heading already says what it is. */
+  .lp-invoicing .lp-invoicing-lines caption {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    padding: 0;
+    border: 0;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .lp-invoicing-dock {
+    padding: 14px 14px 16px;
+  }
+
+  .lp-invoicing-ledger {
+    padding: 12px 10px 14px;
+  }
+
+  .lp-invoicing-figures {
+    gap: 6px;
+  }
+
+  .lp-invoicing-figures > div {
+    padding: 8px 9px 9px;
+  }
+
+  .lp-invoicing-figures dd {
+    font-size: 1rem;
+  }
+
+  /* A phone reads the head once: the summary, the statement and the note. The
+   * lede repeats them, and the sheet's footer repeats the status. */
+  .lp-invoicing-lede,
+  .lp-invoicing-sheet-foot {
+    display: none;
+  }
+
+  /* The six features as short names in two columns; their detail is on the desktop. */
+  .lp-invoicing-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 16px;
+  }
+
+  .lp-invoicing-list li {
+    display: block;
+    padding: 8px 0 9px;
+  }
+
+  .lp-invoicing-list li > span {
+    display: none;
+  }
+}
+
+@media (max-width: 380px) {
+  .lp-invoicing-meta {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .lp-invoicing-meta > [data-wide] {
+    grid-column: auto;
+  }
+
+  .lp-invoicing .lp-invoicing-lines :where(th, td) {
+    padding-inline: 8px;
+  }
+
+  /* Three tiles no longer fit a figure each: set them as one ruled list. */
+  .lp-invoicing-figures {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+    border: 1px solid var(--l-rule);
+    border-radius: 12px;
+    background: var(--l-paper);
+  }
+
+  .lp-invoicing-figures > div {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 7px 10px;
+    border: 0;
+    border-radius: 0;
+    background: none;
+  }
+
+  .lp-invoicing-figures > div + div {
+    border-top: 1px solid var(--l-rule);
+  }
+
+  .lp-invoicing .lp-invoicing-figures dt span {
+    display: inline;
+  }
+
+  /* The draft's footer line needs the whole width. */
+  .lp-invoicing-sheet-foot span + span {
+    display: none;
+  }
+}
+
+/* ============================================================
+ * Motion. Only a press plays anything (data-via="press"); a state
+ * reached any other way is simply shown. Reduced motion swaps
+ * states at once. Fill is "backwards" throughout, so once a step
+ * has played the elements are back under hover, focus and tap.
+ * ============================================================ */
+
+@keyframes lp-invoicing-lift {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+    translate: 0 -24px;
+    scale: 1.05;
+  }
+}
+
+@keyframes lp-invoicing-arrive {
+  from {
+    opacity: 0;
+    translate: 0 9px;
+  }
+}
+
+/* The highlighter goes on, rests, and comes off. */
+@keyframes lp-invoicing-stroke {
+  0% {
+    background-size: 0% 0.62em;
+  }
+  26%,
+  66% {
+    background-size: 100% 0.62em;
+  }
+  100% {
+    background-size: 0% 0.62em;
+  }
+}
+
+@keyframes lp-invoicing-press {
+  0%,
+  100% {
+    scale: 1;
+  }
+  42% {
+    scale: 0.93;
+  }
+}
+
+@media screen and (prefers-reduced-motion: no-preference) {
+  /* The visitor's press is shown on the button, not just announced. */
+  .lp-invoicing-fig[data-pressing] .lp-invoicing-actions [data-primary] {
+    animation: lp-invoicing-press 340ms var(--l-ease);
+  }
+
+  /* The order the three lines post in: receivable, sales, GST. */
+  .lp-invoicing-fig [data-trace="total"] {
+    --i: 0;
+  }
+
+  .lp-invoicing-fig [data-trace="subtotal"] {
+    --i: 1;
+  }
+
+  .lp-invoicing-fig [data-trace="gst"] {
+    --i: 2;
+  }
+
+  /* --- Confirm issue: the watermark lifts, the pill lands, three lines post --- */
+
+  .lp-invoicing-fig[data-state="issued"][data-via="press"] .lp-invoicing-sheet::after {
+    animation: lp-invoicing-lift 700ms var(--l-ease) backwards;
+  }
+
+  .lp-invoicing-fig[data-state="issued"][data-via="press"] .lp-invoicing-status .lp-pill {
+    animation: lp-land 720ms var(--l-bounce) 140ms backwards;
+  }
+
+  .lp-invoicing-fig[data-state="issued"][data-via="press"] :is(.lp-invoicing-journal-title, .lp-invoicing-journal-meta) {
+    animation: lp-fade 320ms ease 220ms backwards;
+  }
+
+  .lp-invoicing-fig[data-state="issued"][data-via="press"] .lp-invoicing-lines tbody .lp-invoicing-ink {
+    animation: lp-invoicing-arrive 460ms var(--l-settle) backwards;
+    animation-delay: calc(340ms + var(--i, 0) * 140ms);
+  }
+
+  .lp-invoicing-fig[data-state="issued"][data-via="press"] .lp-invoicing-lines tbody .lp-trace-target {
+    animation:
+      lp-invoicing-arrive 460ms var(--l-settle) backwards,
+      lp-invoicing-stroke 760ms ease backwards;
+    animation-delay:
+      calc(340ms + var(--i, 0) * 140ms),
+      calc(420ms + var(--i, 0) * 140ms);
+  }
+
+  .lp-invoicing-fig[data-state="issued"][data-via="press"] .lp-invoicing-totals [data-trace] {
+    animation: lp-invoicing-stroke 760ms ease backwards;
+    animation-delay: calc(420ms + var(--i, 0) * 140ms);
+  }
+
+  .lp-invoicing-fig[data-state="issued"][data-via="press"] .lp-invoicing-lines tfoot th::before {
+    animation: lp-rule 560ms var(--l-settle) 900ms backwards;
+  }
+
+  .lp-invoicing-fig[data-state="issued"][data-via="press"] .lp-invoicing-lines tfoot .lp-invoicing-ink {
+    animation: lp-fade 300ms ease 1040ms backwards;
+  }
+
+  .lp-invoicing-fig[data-state="issued"][data-via="press"] .lp-invoicing-lines tfoot .lp-tick path {
+    animation: lp-draw 520ms var(--l-ease) 1120ms backwards;
+  }
+
+  .lp-invoicing-fig[data-state="issued"][data-via="press"] .lp-invoicing-figures dd {
+    animation: lp-fade 300ms ease 1100ms backwards;
+  }
+
+  .lp-invoicing-fig[data-state="issued"][data-via="press"] .lp-invoicing-dock-copy {
+    animation: lp-fade 300ms ease 260ms backwards;
+  }
+
+  /* --- Record payment: two figures are replaced whole; income stays where it was --- */
+
+  .lp-invoicing-fig[data-state="paid"][data-via="press"] .lp-invoicing-figures [data-moves] dd {
+    animation: lp-pop 460ms var(--l-snap) backwards;
+  }
+
+  .lp-invoicing-fig[data-state="paid"][data-via="press"] .lp-invoicing-figures [data-owing] dd {
+    animation-delay: 110ms;
+  }
+
+  .lp-invoicing-fig[data-state="paid"][data-via="press"] .lp-invoicing-income {
+    animation: lp-fade 360ms ease 320ms backwards;
+  }
+
+  .lp-invoicing-fig[data-state="paid"][data-via="press"] [data-trace="subtotal"] {
+    animation: lp-invoicing-stroke 760ms ease 560ms backwards;
+  }
+
+  .lp-invoicing-fig[data-state="paid"][data-via="press"] .lp-invoicing-dock-copy {
+    animation: lp-fade 240ms ease backwards;
+  }
+
+  /* --- Issue invoice, and Start again: quiet swaps --- */
+
+  .lp-invoicing-fig[data-state="confirming"][data-via="press"] .lp-invoicing-dock-copy {
+    animation: lp-fade 200ms ease backwards;
+  }
+
+  .lp-invoicing-fig[data-state="draft"][data-via="press"] .lp-invoicing-sheet::after {
+    animation: lp-fade 320ms ease backwards;
+  }
+
+  .lp-invoicing-fig[data-state="draft"][data-via="press"] :is(.lp-invoicing-status .lp-pill, .lp-invoicing-dock-copy, .lp-invoicing-journal-title) {
+    animation: lp-fade 240ms ease backwards;
+  }
+}
+
+/* Without script the buttons cannot do anything, so they are not shown; the
+ * finished books stay. Hover and focus still light the traces. */
+@media (scripting: none) {
+  .lp-invoicing .lp-invoicing-actions,
+  .lp-invoicing-dock::before {
+    display: none;
+  }
+
+  .lp-invoicing .lp-invoicing-dock {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .lp-invoicing .lp-invoicing-dock-copy {
+    grid-area: 1 / 1;
+    padding-left: 0;
+  }
+}

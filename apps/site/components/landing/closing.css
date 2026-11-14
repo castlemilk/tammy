@@ -1,0 +1,211 @@
+/*
+ * Tammy landing: closing. Section styles, imported by app/page.tsx.
+ *
+ * Forest ground, ivory type. The statement and the two-leaf mark are the two
+ * masses of the band; the copy, the actions and the version line sit under
+ * them on one measure. The mark opening once is the band's only motion.
+ */
+
+/* ============================================================
+ * Top row: the statement and the mark
+ * ============================================================ */
+
+.lp-closing-top {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  row-gap: 28px;
+}
+
+/* The statement is sized from its own column, so each sentence always breaks
+ * into two lines and never outgrows a phone. */
+.lp-closing-lead {
+  min-width: 0;
+  container-type: inline-size;
+}
+
+.lp-closing-title {
+  font-size: min(var(--l-fs-statement), 13.2cqi);
+  line-height: 0.96;
+  letter-spacing: -0.042em;
+}
+
+.lp-closing-title > span {
+  display: block;
+}
+
+/*
+ * The mark. Same geometry as .tammy-brand-mark (app/site-brand.css): a 28 by
+ * 29 unit box, two 14 by 23 leaves turned 12 degrees apart.
+ */
+.lp-closing-mark {
+  --lp-closing-u: clamp(3px, 0.75vw, 4.5px);
+  position: relative;
+  display: block;
+  order: -1;
+  width: calc(28 * var(--lp-closing-u));
+  height: calc(29 * var(--lp-closing-u));
+}
+
+.lp-closing-leaf {
+  position: absolute;
+  display: block;
+  width: calc(14 * var(--lp-closing-u));
+  height: calc(23 * var(--lp-closing-u));
+  background: var(--l-paper);
+}
+
+.lp-closing-leaf:first-child {
+  left: 0;
+  top: calc(4 * var(--lp-closing-u));
+  border-radius: calc(13 * var(--lp-closing-u)) var(--lp-closing-u) calc(13 * var(--lp-closing-u)) var(--lp-closing-u);
+  rotate: -12deg;
+}
+
+.lp-closing-leaf:last-child {
+  right: 0;
+  top: 0;
+  border-radius: var(--lp-closing-u) calc(13 * var(--lp-closing-u)) var(--lp-closing-u) calc(13 * var(--lp-closing-u));
+  rotate: 12deg;
+}
+
+@media (forced-colors: active) {
+  .lp-closing-leaf {
+    background: CanvasText;
+  }
+}
+
+/* ============================================================
+ * Bottom row: the copy and the actions
+ * ============================================================ */
+
+/* One row when the copy can keep its measure beside the actions; otherwise
+ * the actions drop under it. */
+.lp-closing-bottom {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 28px 48px;
+  margin-top: clamp(28px, 4.4vw, 64px);
+}
+
+.lp-closing-copy {
+  display: grid;
+  flex: 1 1 26em;
+  gap: 6px;
+  max-width: 34em;
+  color: var(--l-text-muted);
+  font-size: var(--l-fs-lede);
+  line-height: 1.5;
+  text-wrap: pretty;
+}
+
+.lp-closing-copy > p:first-child {
+  color: var(--l-text);
+}
+
+.lp-closing-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+/* The quiet third action: ivory, not the butter accent of the dark ground. */
+.lp-closing-support {
+  margin-left: 12px;
+  color: var(--l-text);
+}
+
+@media (max-width: 520px) {
+  .lp-closing-actions > .lp-btn {
+    flex: 1 1 100%;
+  }
+
+  .lp-closing-support {
+    margin-left: 0;
+  }
+}
+
+/* ============================================================
+ * The version line
+ * ============================================================ */
+
+.lp-closing-version {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: clamp(36px, 5vw, 72px);
+  padding-top: 20px;
+  border-top: 1px solid var(--l-hairline);
+  color: var(--l-text-muted);
+  font-size: var(--l-fs-micro);
+  line-height: 1.45;
+}
+
+@media (min-width: 640px) {
+  .lp-closing-version {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 4px 0;
+  }
+
+  .lp-closing-version > span + span {
+    margin-left: 18px;
+    padding-left: 18px;
+    border-left: 1px solid var(--l-hairline);
+  }
+}
+
+/* ============================================================
+ * Wide: two masses side by side
+ * ============================================================ */
+
+@media (min-width: 860px) {
+  .lp-closing-top {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    column-gap: clamp(28px, 4vw, 72px);
+  }
+
+  .lp-closing-mark {
+    --lp-closing-u: clamp(7px, 1.06vw, 14px);
+    order: 0;
+  }
+}
+
+/* ============================================================
+ * The mark opens once, like a book
+ * ============================================================ */
+
+@keyframes lp-closing-open-left {
+  from {
+    rotate: -2deg;
+  }
+}
+
+@keyframes lp-closing-open-right {
+  from {
+    rotate: 2deg;
+  }
+}
+
+@media screen and (prefers-reduced-motion: no-preference) {
+  /* Closed: both leaves stay in place and only turn a little, nearly shut.
+   * They are still two leaves, so the mark reads as leaves before it opens. */
+  .lp-closing-mark[data-phase="armed"] > .lp-closing-leaf:first-child {
+    rotate: -2deg;
+  }
+
+  .lp-closing-mark[data-phase="armed"] > .lp-closing-leaf:last-child {
+    rotate: 2deg;
+  }
+
+  .lp-closing-mark[data-phase="in"] > .lp-closing-leaf {
+    animation: lp-closing-open-left 700ms var(--l-settle) 140ms both;
+  }
+
+  .lp-closing-mark[data-phase="in"] > .lp-closing-leaf:last-child {
+    animation-name: lp-closing-open-right;
+  }
+}

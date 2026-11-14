@@ -28,6 +28,12 @@
   --tammy-radius-arrival: 28px;
   --tammy-duration-fast: 140ms;
   --tammy-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  /* Spring step responses as linear() curves. Settle has no overshoot; snap
+   * overshoots 4.6%; bounce (20%) is reserved for status pill landings. Use the
+   * overshooting curves on scale, rotate and translate only. */
+  --tammy-spring-settle: linear(0, 0.004 1%, 0.019 2.2%, 0.079 5%, 0.161 7.8%, 0.465 17%, 0.558 20.2%, 0.638 23.5%, 0.707 26.8%, 0.768 30.2%, 0.818 33.8%, 0.86 37.5%, 0.899 42%, 0.929 46.8%, 0.953 52.2%, 0.971 58.5%, 0.991 73.8%, 1);
+  --tammy-spring-snap: linear(0, 0.008 1.2%, 0.029 2.5%, 0.062 3.8%, 0.113 5.2%, 0.216 7.8%, 0.483 13.5%, 0.593 16%, 0.701 18.8%, 0.786 21.2%, 0.857 23.8%, 0.919 26.5%, 0.967 29.2%, 1.003 32.2%, 1.035 37%, 1.046 42.8%, 1.003 70.5%, 1);
+  --tammy-spring-bounce: linear(0, 0.006 0.8%, 0.033 1.8%, 0.077 2.8%, 0.151 4%, 0.302 6%, 0.625 9.8%, 0.768 11.5%, 0.894 13.2%, 0.987 14.8%, 1.063 16.2%, 1.13 18%, 1.17 19.5%, 1.196 21.2%, 1.205 23.5%, 1.191 25.8%, 1.157 28.2%, 1.053 34.2%, 1.01 37.2%, 0.978 40.5%, 0.96 44%, 0.961 48.8%, 0.997 60%, 1.008 66.2%, 0.999 88%, 1);
   --tammy-space-1: 4px;
   --tammy-space-2: 8px;
   --tammy-space-3: 12px;

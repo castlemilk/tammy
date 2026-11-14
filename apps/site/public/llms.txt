@@ -9,11 +9,13 @@ Support: https://tammy-accounting.castlemilk.chatgpt.site/support
 ## Supported development capabilities
 
 - Encrypted on-device macOS workspace (Apple silicon, macOS 14 or later).
-- Manual journals, trial balance, retained documents and review workflows.
-- File-based bank-statement import and reconciliation, not automatic bank feeds.
+- Manual journals, an as-at trial balance, a chart of accounts, and retained source documents that a person reviews.
+- Purchases posted from reviewed documents once the allocation is confirmed, with dated part or full payments recorded.
+- Imported bank-statement rows, matched by hand and then reconciled, not automatic bank feeds.
 - Customer invoice drafts and exported PDFs. The explicit issue action posts receivables, income and basis-aware GST in the local ledger. It does not email the invoice or collect payment; receipts are recorded separately.
+- An income overview of posted income, payments received and invoices owing, with PDF and CSV export. It is not a profit and loss, balance sheet or cash-flow statement.
 - Local GST/BAS workpaper drafts for review, not ATO lodgement.
-- Optional, session-scoped, permission-limited local API/MCP adapter.
+- Optional, session-scoped local API and MCP adapter on the same Mac: 14 read tools, 10 resources and one invoice-proposal tool. Clients cannot save, issue, post or send.
 
 ## Release boundaries
 
@@ -82,7 +84,7 @@ These stories are authored in .mdx, using registered local components for source
 
 These new MDX posts use an accessible scenario explorer, validated balanced journal entries, and/or a local-only reader checklist. Numbers are illustrative, source-backed and never taken from real business records.
 
-- [Quote generator](https://tammy-accounting.castlemilk.chatgpt.site/tools/quote-generator) - anonymous itemised quote, browser printing or Save as PDF; never issues invoices, collects payments, posts accounting or uploads customer details.
+- [Quote generator](https://tammy-accounting.castlemilk.chatgpt.site/tools/quote-generator) - itemised quote with a downloadable PDF, a print fallback and an unencrypted draft file you can export and re-import; never issues invoices, collects payments, posts accounting or uploads customer details.
 
 ## Free self-lodgement preparation (5 November 2026)
 

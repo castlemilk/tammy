@@ -1,0 +1,652 @@
+/* Tammy landing: journal. Section styles, imported by app/page.tsx.
+ *
+ * A reading room on the sage ground /blog uses. The band is set like the front
+ * page of a periodical: a masthead, one lead story across the measure, then a
+ * second story beside two briefs in ruled columns, then the guides on the same
+ * columns. Each story is led by the number its article is argued from, at
+ * three scales; the numbers are the composition.
+ *
+ * Nothing here plays. A title underlines and a cover eases a few pixels under
+ * the pointer or the focus ring; the guess-first prompt is a native <details>.
+ */
+
+.lp-journal {
+  --lp-journal-pad: clamp(26px, 3.2vw, 46px);
+  --lp-journal-gutter: clamp(20px, 2.6vw, 40px);
+}
+
+/* ---------- Masthead ---------- */
+
+.lp-journal-head {
+  display: grid;
+  gap: 18px clamp(32px, 6vw, 96px);
+  margin-bottom: clamp(28px, 3.6vw, 52px);
+}
+
+.lp-journal-intro {
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+  max-width: 33rem;
+}
+
+.lp-journal-intro .lp-deck {
+  color: var(--l-text);
+}
+
+.lp-journal-intro .lp-link {
+  margin-top: 2px;
+}
+
+@media (min-width: 900px) {
+  .lp-journal-head {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 30rem);
+    align-items: end;
+  }
+}
+
+/* ---------- The stories ---------- */
+
+.lp-journal-stories {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  border-top: 1px solid var(--l-text);
+}
+
+.lp-journal-story {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: 1fr;
+  grid-auto-rows: auto;
+  padding-block: var(--lp-journal-pad);
+  border-top: 1px solid var(--l-hairline);
+  /* Each story sizes its figure and places its cover by its own width. */
+  container: lp-journal-story / inline-size;
+}
+
+.lp-journal-story:first-child {
+  border-top: 0;
+}
+
+/* One link per story. The grid places its parts; the cover is last in the source. */
+.lp-journal-link {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto auto 1fr;
+  grid-template-areas:
+    "figure"
+    "label"
+    "text";
+  color: inherit;
+  text-decoration: none;
+}
+
+/* The number: sans, semibold, tabular lining figures, set as the picture. */
+.lp-journal-figure {
+  grid-area: figure;
+  /* Tabular figures carry side bearings; pull the first glyph back to the edge. */
+  margin-left: -0.045em;
+  color: var(--l-accent);
+  font: 600 4rem / 0.84 var(--l-sans);
+  font-variant-numeric: lining-nums tabular-nums;
+  letter-spacing: -0.055em;
+  white-space: nowrap;
+}
+
+.lp-journal-arrow {
+  display: inline-block;
+  width: 0.74em;
+  height: 0.64em;
+  margin-inline: 0.2em 0.16em;
+  overflow: visible;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vertical-align: 0.02em;
+  opacity: 0.62;
+}
+
+/* What the number is, in the article's own words. */
+.lp-journal-figure-label {
+  grid-area: label;
+  max-width: 27ch;
+  margin-top: 0.8rem;
+  color: var(--l-text-muted);
+  font-size: var(--l-fs-micro);
+  line-height: 1.42;
+  text-wrap: balance;
+}
+
+.lp-journal-text {
+  grid-area: text;
+  display: grid;
+  align-content: start;
+  justify-items: start;
+  gap: 6px;
+  margin-top: clamp(18px, 2.2vw, 30px);
+}
+
+.lp-journal .lp-journal-category {
+  color: var(--l-accent);
+}
+
+.lp-journal-nowrap {
+  white-space: nowrap;
+}
+
+.lp-journal .lp-journal-title {
+  font-size: clamp(1.3rem, 1.16rem + 0.5vw, 1.55rem);
+  line-height: 1.16;
+  letter-spacing: -0.018em;
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  text-decoration-thickness: 0.055em;
+  text-underline-offset: 0.16em;
+  transition: text-decoration-color 180ms ease;
+}
+
+.lp-journal-hook {
+  max-width: 44ch;
+  margin-top: 2px;
+  color: var(--l-text-muted);
+  font-size: var(--l-fs-small);
+  line-height: 1.5;
+  text-wrap: pretty;
+}
+
+/* Phones read the number and the story; only the lead keeps its cover there. */
+.lp-journal-cover {
+  grid-area: cover;
+  display: none;
+  width: 100%;
+  height: auto;
+}
+
+/* Hover and focus: the title underlines and the cover eases across. Nothing lifts. */
+.lp-journal-link:is(:hover, :focus-visible) .lp-journal-title {
+  text-decoration-color: currentColor;
+}
+
+.lp-journal-link:is(:hover, :focus-visible) .lp-journal-cover {
+  translate: 6px 0;
+}
+
+@media screen and (prefers-reduced-motion: no-preference) {
+  .lp-journal-cover {
+    transition: translate 520ms var(--l-settle);
+  }
+}
+
+/* The ring stands clear of the number, which is set hard against the column edge. */
+.lp-journal .lp-journal-link:focus-visible,
+.lp-journal .lp-journal-guide:focus-visible {
+  outline-offset: 8px;
+  border-radius: 8px;
+}
+
+/* ----- The lead: the largest number on the band, its cover beside it ----- */
+
+.lp-journal-story[data-tier="lead"] .lp-journal-link {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 44%);
+  grid-template-areas:
+    "figure figure"
+    "label  cover"
+    "text   text";
+  column-gap: 12px;
+}
+
+.lp-journal-story[data-tier="lead"] .lp-journal-figure {
+  /* Alone on its line it can take most of a phone's measure. */
+  font-size: clamp(4.75rem, 28cqi, 9rem);
+  line-height: 0.8;
+  letter-spacing: -0.065em;
+}
+
+.lp-journal-story[data-tier="lead"] .lp-journal-figure-label {
+  max-width: 34ch;
+  margin-top: 1.1rem;
+  font-size: var(--l-fs-small);
+}
+
+.lp-journal-story[data-tier="lead"] .lp-journal-title {
+  font-size: clamp(1.6rem, 1.1rem + 1.7vw, 2.6rem);
+  line-height: 1.08;
+  letter-spacing: -0.026em;
+}
+
+.lp-journal-story[data-tier="lead"] .lp-journal-hook {
+  font-size: var(--l-fs-body);
+}
+
+/* On a phone the cover is a small engraving beside what the number is. */
+.lp-journal-story[data-tier="lead"] .lp-journal-cover {
+  display: block;
+  align-self: center;
+  margin-top: 8px;
+}
+
+@container lp-journal-story (min-width: 620px) {
+  .lp-journal-story[data-tier="lead"] .lp-journal-link {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 0.76fr);
+    grid-template-rows: auto auto 1fr;
+    grid-template-areas:
+      "figure cover"
+      "label  cover"
+      "text   cover";
+    column-gap: clamp(24px, 4cqi, 64px);
+  }
+
+  .lp-journal-story[data-tier="lead"] .lp-journal-figure {
+    font-size: clamp(4.75rem, 17.4cqi, 15rem);
+  }
+
+  .lp-journal-story[data-tier="lead"] .lp-journal-text {
+    align-content: end;
+  }
+
+  .lp-journal-story[data-tier="lead"] .lp-journal-cover {
+    margin-top: 0;
+  }
+}
+
+/* ----- The second story: a number as wide as its column ----- */
+
+.lp-journal-story[data-tier="second"] .lp-journal-figure {
+  /* Stacked on a phone it stays under the lead's size. */
+  font-size: clamp(3.5rem, 17cqi, 5.25rem);
+  line-height: 0.82;
+  letter-spacing: -0.06em;
+}
+
+.lp-journal-story[data-tier="second"] .lp-journal-title {
+  font-size: var(--l-fs-h3);
+  line-height: 1.12;
+  letter-spacing: -0.022em;
+}
+
+@media (min-width: 700px) {
+  .lp-journal-story[data-tier="second"] .lp-journal-link {
+    grid-template-rows: auto auto auto 1fr;
+    grid-template-areas:
+      "figure"
+      "label"
+      "text"
+      "cover";
+  }
+
+  .lp-journal-story[data-tier="second"] .lp-journal-figure {
+    font-size: clamp(3.5rem, 24.5cqi, 10rem);
+  }
+
+  .lp-journal-story[data-tier="second"] .lp-journal-figure-label {
+    max-width: none;
+  }
+
+  .lp-journal-story[data-tier="second"] .lp-journal-cover {
+    display: block;
+    align-self: end;
+    width: min(100%, 24rem);
+    /* The drawings carry their own margin; bring the ink back to the text edge. */
+    margin: 20px 0 0 -9%;
+  }
+}
+
+/* With room, the story reads on from its number and the cover is set into the corner. */
+@media (min-width: 700px) {
+  @container lp-journal-story (min-width: 440px) {
+    .lp-journal-story[data-tier="second"] .lp-journal-link {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      grid-template-rows: auto auto 1fr;
+      grid-template-areas:
+        "figure figure"
+        "label  label"
+        "text   cover";
+      column-gap: clamp(16px, 4cqi, 32px);
+    }
+
+    .lp-journal-story[data-tier="second"] .lp-journal-cover {
+      width: 100%;
+      /* This drawing stands on a ground line set high in its frame; drop it to the briefs' line. */
+      margin: 20px 0 -1.1rem;
+    }
+  }
+}
+
+/* ----- The briefs: a pair of amounts ----- */
+
+@media (min-width: 700px) {
+  /* Beside the second story: the cover sits small in the corner by the amount. */
+  .lp-journal-story[data-tier="brief"] .lp-journal-link {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 6.75rem);
+    grid-template-areas:
+      "figure cover"
+      "label  label"
+      "text   text";
+    column-gap: 10px;
+  }
+
+  .lp-journal-story[data-tier="brief"] .lp-journal-cover {
+    display: block;
+    align-self: center;
+  }
+}
+
+@media (min-width: 1000px) {
+  /* In columns of their own: type first, the cover at the foot of the column. */
+  .lp-journal-story[data-tier="brief"] .lp-journal-link {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto auto 1fr;
+    grid-template-areas:
+      "figure"
+      "label"
+      "text"
+      "cover";
+  }
+
+  /* Both briefs at one size and on one set of lines, so the two amounts read as a pair. */
+  .lp-journal-story[data-tier="brief"] .lp-journal-figure {
+    font-size: clamp(4rem, 0.5rem + 5.6vw, 5.75rem);
+  }
+
+  .lp-journal-story[data-tier="brief"] .lp-journal-figure-label {
+    min-height: calc(3 * 1.42em);
+  }
+
+  .lp-journal-story[data-tier="brief"] .lp-journal-cover {
+    align-self: end;
+    width: min(100%, 12rem);
+    /* The drawings carry their own margin; bring the ink back to the text edge. */
+    margin: 20px 0 0 -1.3rem;
+  }
+}
+
+/* ----- The guess-first prompt under the lead ----- */
+
+.lp-journal-guess {
+  max-width: 36rem;
+  margin-top: 10px;
+}
+
+.lp-journal-guess > summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  color: var(--l-accent);
+  font-weight: 650;
+  list-style: none;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, currentColor 34%, transparent);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.3em;
+  text-wrap: balance;
+  transition: text-decoration-color 160ms ease;
+}
+
+.lp-journal-guess > summary::-webkit-details-marker {
+  display: none;
+}
+
+.lp-journal-guess > summary:hover {
+  text-decoration-color: currentColor;
+}
+
+.lp-journal-guess-mark {
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  padding: 3px;
+  border: 1px solid color-mix(in srgb, currentColor 46%, transparent);
+  border-radius: 50%;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.lp-journal-guess[open] .lp-journal-guess-mark {
+  rotate: 45deg;
+}
+
+.lp-journal-guess-answer {
+  display: grid;
+  gap: 10px;
+  padding: 4px 0 6px 32px;
+  color: var(--l-text-muted);
+  text-wrap: pretty;
+}
+
+.lp-journal-guess-answer strong {
+  margin-right: 0.2em;
+  color: var(--l-text);
+  font-size: 1.5rem;
+  letter-spacing: -0.02em;
+}
+
+/* The deposits to scale: the sales first and darkest, then GST, the loan, the owner's money. */
+.lp-journal-guess-split {
+  display: flex;
+  gap: 2px;
+  height: 10px;
+}
+
+.lp-journal-guess-split > i {
+  flex: 1 1 0;
+  min-width: 3px;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--l-forest) 24%, var(--l-sage));
+}
+
+.lp-journal-guess-split > i:first-child {
+  background: var(--l-forest);
+}
+
+.lp-journal-guess-split > i:nth-child(2) {
+  background: color-mix(in srgb, var(--l-forest) 56%, var(--l-sage));
+}
+
+.lp-journal-guess-split > i:last-child {
+  background: color-mix(in srgb, var(--l-forest) 38%, var(--l-sage));
+}
+
+/* Opening the prompt is the reader's own act: the answer arrives and its bar is drawn once. */
+@media screen and (prefers-reduced-motion: no-preference) {
+  .lp-journal-guess-mark {
+    transition: rotate 320ms var(--l-settle);
+  }
+
+  .lp-journal-guess[open] .lp-journal-guess-answer > p {
+    animation: lp-fade 260ms ease both;
+  }
+
+  .lp-journal-guess[open] .lp-journal-guess-split {
+    animation: lp-wipe 620ms var(--l-ease) 120ms both;
+  }
+}
+
+/* ----- Columns ----- */
+
+/* Phone: the briefs keep to the number, what it is and the title. */
+@media (max-width: 699.98px) {
+  .lp-journal-hook-rest {
+    display: none;
+  }
+
+  .lp-journal-story[data-tier="brief"] .lp-journal-figure {
+    font-size: 3.25rem;
+  }
+
+  .lp-journal-story[data-tier="brief"] .lp-journal-hook {
+    display: none;
+  }
+}
+
+/* A phone wide enough sets the two briefs side by side, as a pair of amounts. */
+@media (min-width: 360px) and (max-width: 699.98px) {
+  .lp-journal-story[data-tier="brief"] {
+    grid-column: span 6;
+    padding-right: 16px;
+  }
+
+  .lp-journal-story[data-tier="brief"]:last-child {
+    padding-inline: 16px 0;
+    border-left: 1px solid var(--l-hairline);
+  }
+}
+
+/* Tablet: lead across, then the second story beside the two briefs. */
+@media (min-width: 700px) {
+  .lp-journal-story[data-tier="second"] {
+    grid-column: span 6;
+    grid-row: span 2;
+    padding-right: var(--lp-journal-gutter);
+  }
+
+  .lp-journal-story[data-tier="brief"] {
+    grid-column: span 6;
+    padding-left: var(--lp-journal-gutter);
+    border-left: 1px solid var(--l-hairline);
+  }
+}
+
+/* Desktop: lead across, then second | brief | brief in ruled columns. */
+@media (min-width: 1000px) {
+  .lp-journal-story[data-tier="second"] {
+    grid-row: auto;
+  }
+
+  .lp-journal-story[data-tier="brief"] {
+    grid-column: span 3;
+    padding-right: var(--lp-journal-gutter);
+  }
+
+  .lp-journal-story[data-tier="brief"]:last-child {
+    padding-right: 0;
+  }
+}
+
+/* ---------- The shelf: guides, counts and the feed, on the same columns ---------- */
+
+.lp-journal-shelf {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  border-block: 1px solid var(--l-hairline);
+}
+
+.lp-journal-shelf-lead {
+  grid-column: 1 / -1;
+  display: grid;
+  align-content: start;
+  justify-items: start;
+  gap: 6px;
+  padding-block: clamp(20px, 2.4vw, 30px);
+}
+
+.lp-journal .lp-journal-shelf-title {
+  font-size: clamp(1.3rem, 1.16rem + 0.5vw, 1.55rem);
+}
+
+.lp-journal-counts {
+  max-width: 34ch;
+}
+
+.lp-journal-more {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 26px;
+}
+
+.lp-journal-guides {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.lp-journal-guides > li {
+  border-top: 1px solid var(--l-hairline);
+}
+
+.lp-journal-guide {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  height: 100%;
+  padding-block: clamp(18px, 2.4vw, 30px);
+  color: inherit;
+  text-decoration: none;
+}
+
+.lp-journal-guide-title {
+  color: var(--l-text);
+  font: 500 1.1875rem / 1.2 var(--l-serif);
+  letter-spacing: -0.012em;
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  text-decoration-thickness: 0.055em;
+  text-underline-offset: 0.18em;
+  text-wrap: balance;
+  transition: text-decoration-color 180ms ease;
+}
+
+.lp-journal-guide:is(:hover, :focus-visible) .lp-journal-guide-title {
+  text-decoration-color: currentColor;
+}
+
+.lp-journal-guide-line {
+  color: var(--l-text-muted);
+  font-size: var(--l-fs-micro);
+  line-height: 1.5;
+  text-wrap: pretty;
+}
+
+@media (min-width: 700px) {
+  /* Two halves of the measure: with no column gap they land on the story columns. */
+  .lp-journal-guides {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .lp-journal-guides > li:first-child {
+    padding-right: var(--lp-journal-gutter);
+  }
+
+  .lp-journal-guides > li:last-child {
+    padding-left: var(--lp-journal-gutter);
+    border-left: 1px solid var(--l-hairline);
+  }
+}
+
+@media (min-width: 1000px) {
+  .lp-journal-shelf-lead {
+    grid-column: span 6;
+    padding-right: var(--lp-journal-gutter);
+  }
+
+  .lp-journal-guides {
+    grid-column: span 6;
+  }
+
+  .lp-journal-guides > li {
+    border-top: 0;
+  }
+
+  .lp-journal-guides > li,
+  .lp-journal-guides > li:first-child {
+    padding-inline: var(--lp-journal-gutter);
+    border-left: 1px solid var(--l-hairline);
+  }
+
+  .lp-journal-guides > li:last-child {
+    padding-right: 0;
+  }
+}
+
+@media (forced-colors: active) {
+  .lp-journal-title,
+  .lp-journal-guide-title {
+    text-decoration-color: transparent;
+  }
+}

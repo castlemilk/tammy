@@ -1,0 +1,684 @@
+/* Tammy landing: privacy. Section styles, imported by app/page.tsx.
+ *
+ * The one full-bleed dark chapter (forest-deep). Layouts:
+ *   1000px and up  three statements across, the wide drawing beneath
+ *   700 to 999px   statements stacked beside the tall drawing
+ *   under 700px    one column; the three setup sheets become one sheet
+ */
+
+.lp-privacy-head {
+  max-width: none;
+}
+
+/* ---------- Three things that do not exist ---------- */
+
+.lp-privacy-body {
+  display: grid;
+  gap: clamp(36px, 5vw, 72px) 40px;
+}
+
+.lp-privacy-nos {
+  display: grid;
+  align-content: start;
+  gap: 28px clamp(24px, 3.4vw, 56px);
+}
+
+.lp-privacy-no {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  padding-top: 20px;
+  border-top: 1px solid var(--l-hairline);
+}
+
+.lp-privacy-no h3 {
+  font-size: clamp(1.75rem, 1.2rem + 1.6vw, 2.5rem);
+  line-height: 1.06;
+  letter-spacing: -0.028em;
+}
+
+.lp-privacy-no strong {
+  color: var(--l-text);
+  font-weight: 600;
+}
+
+/* ---------- The line ---------- */
+
+.lp-privacy-map {
+  min-width: 0;
+}
+
+/* The drawing's own box: the link is placed, and sized, against its width. */
+.lp-privacy-map-canvas {
+  position: relative;
+  max-width: 400px;
+  container-type: inline-size;
+}
+
+.lp-privacy-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.lp-privacy-svg--wide {
+  display: none;
+}
+
+/* Labels: real text. 17 units in the tall drawing is 14px at a 320px screen. */
+.lp-privacy-t {
+  fill: var(--l-text);
+  font: 600 17px/1 var(--l-sans);
+}
+
+.lp-privacy-svg--wide .lp-privacy-t {
+  font-size: 21px;
+}
+
+.lp-privacy-t--line {
+  fill: var(--l-accent);
+}
+
+.lp-privacy-t--quiet {
+  fill: var(--l-text-muted);
+  font-weight: 500;
+}
+
+.lp-privacy-svg--wide .lp-privacy-t--quiet {
+  font-size: 20px;
+}
+
+/* The words break the line: a ground-coloured copy with a wide stroke. */
+.lp-privacy-halo {
+  pointer-events: none;
+  user-select: none;
+  fill: var(--l-ground);
+  stroke: var(--l-ground);
+  stroke-width: 22px;
+  stroke-linejoin: round;
+}
+
+.lp-privacy-gap {
+  fill: none;
+  stroke: var(--l-ground);
+  stroke-width: 14px;
+}
+
+/*
+ * The contour scales with its drawing instead of holding a fixed pixel width:
+ * a non-scaling stroke measures its dashes on screen, so a path drawn with
+ * pathLength={1} stops short whenever the drawing is shown above its natural
+ * size. The widths below keep it within a quarter pixel of 1.5px.
+ */
+.lp-privacy-contour {
+  stroke-width: 1.5;
+  vector-effect: none;
+}
+
+/* Gate posts and the arrows through an open gate, in the line's own weight. */
+.lp-privacy-post,
+.lp-privacy-bolt {
+  fill: none;
+  stroke: var(--l-accent);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* A shut gate: the line carries straight across it, bolted. */
+.lp-privacy-bolt {
+  stroke-width: 4.5;
+  stroke-linecap: butt;
+}
+
+.lp-privacy-svg--wide :is(.lp-privacy-contour, .lp-privacy-post) {
+  stroke-width: 1.8;
+}
+
+.lp-privacy-svg--wide .lp-privacy-bolt {
+  stroke-width: 5.4;
+}
+
+/* Paper things can be read: the app and the files that cross the line. */
+.lp-privacy-g-paper {
+  fill: var(--l-paper);
+}
+
+.lp-privacy-g-fold,
+.lp-privacy-g-hair {
+  fill: none;
+  stroke: var(--l-rule);
+  stroke-width: 1;
+}
+
+.lp-privacy-g-rule {
+  fill: none;
+  stroke: color-mix(in srgb, var(--l-ink) 44%, var(--l-paper));
+  stroke-width: 1.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.lp-privacy-g-band {
+  fill: var(--l-sage);
+}
+
+.lp-privacy-g-skel {
+  fill: none;
+  stroke: color-mix(in srgb, var(--l-ink) 26%, var(--l-paper));
+  stroke-width: 5;
+  stroke-linecap: round;
+}
+
+.lp-privacy-g-done {
+  fill: none;
+  stroke: var(--l-forest);
+  stroke-width: 5;
+  stroke-linecap: round;
+}
+
+.lp-privacy-g-lock {
+  fill: none;
+  stroke: var(--l-forest);
+  stroke-width: 1.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Sealed things cannot: the encrypted workspace and the Keychain. */
+.lp-privacy-g-vault {
+  fill: var(--l-deep-raised);
+  stroke: color-mix(in srgb, var(--l-paper) 52%, var(--l-deep));
+  stroke-width: 1.25;
+  vector-effect: non-scaling-stroke;
+}
+
+.lp-privacy-g-ring {
+  fill: none;
+  stroke: color-mix(in srgb, var(--l-paper) 24%, var(--l-deep));
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.lp-privacy-g-padlock {
+  fill: var(--l-paper);
+}
+
+.lp-privacy-g-shackle {
+  fill: none;
+  stroke: var(--l-paper);
+  stroke-width: 4;
+  stroke-linecap: round;
+}
+
+.lp-privacy-g-keyhole {
+  fill: none;
+  stroke: var(--l-deep);
+  stroke-width: 4;
+  stroke-linecap: round;
+}
+
+.lp-privacy-g-key {
+  fill: none;
+  stroke: var(--l-paper);
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* An empty outline where a thing is not. */
+.lp-privacy-absent {
+  fill: none;
+  stroke: color-mix(in srgb, var(--l-paper) 36%, var(--l-deep));
+  stroke-width: 1;
+  stroke-dasharray: 3 5;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+
+/* The one label that is a link, laid over the drawing at its gate. */
+.lp-privacy-api {
+  position: absolute;
+  left: calc(32 / 340 * 100%);
+  top: calc(323 / 620 * 100%);
+  translate: 0 -50%;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--l-accent);
+  font: 600 5cqi/1.3 var(--l-sans);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, currentColor 44%, transparent);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.28em;
+  transition: text-decoration-color 160ms ease;
+}
+
+.lp-privacy-api:hover {
+  text-decoration-color: currentColor;
+}
+
+@media (min-width: 700px) {
+  .lp-privacy-body {
+    grid-template-columns: minmax(0, 1.1fr) minmax(280px, 1fr);
+    align-items: start;
+  }
+}
+
+@media (min-width: 1000px) {
+  .lp-privacy-body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* The third statement is the longest, so its column is the widest: each
+   * heading then sits on one line in the page's own serif. */
+  .lp-privacy-nos {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.25fr);
+    grid-template-rows: auto auto;
+    row-gap: 0;
+  }
+
+  .lp-privacy-no h3 {
+    font-size: clamp(1.625rem, 2.6vw, 2.375rem);
+  }
+
+  /* Headings share one row and mechanisms the next, however the headings wrap. */
+  .lp-privacy-no {
+    grid-row: span 2;
+    grid-template-rows: subgrid;
+    row-gap: 14px;
+  }
+
+  .lp-privacy-map-canvas {
+    max-width: none;
+  }
+
+  .lp-privacy-svg--wide {
+    display: block;
+  }
+
+  .lp-privacy-svg--tall {
+    display: none;
+  }
+
+  /* On the line itself here, so the link clears its own gap in it. */
+  .lp-privacy-api {
+    left: calc(142 / 1320 * 100%);
+    top: calc(330 / 436 * 100%);
+    margin-left: -0.45em;
+    padding-inline: 0.45em;
+    background: var(--l-ground);
+    font-size: 1.591cqi;
+    line-height: 1.2;
+  }
+
+  .lp-privacy-api br {
+    display: none;
+  }
+}
+
+/* ---------- Setting up ---------- */
+
+.lp-privacy-setup {
+  display: grid;
+  gap: 20px;
+  margin-top: clamp(44px, 5.6vw, 80px);
+}
+
+.lp-privacy-setup-head {
+  display: grid;
+  gap: 8px;
+}
+
+.lp-privacy-sheets {
+  display: grid;
+  overflow: clip;
+  border-radius: var(--l-r-surface);
+  background: var(--l-paper);
+}
+
+/* Paper again: the ink roles come back inside a sheet. */
+.lp-privacy-sheet {
+  --l-text: var(--l-ink);
+  --l-text-muted: var(--l-muted);
+  --l-hairline: var(--l-rule);
+  --l-accent: var(--l-forest);
+  --l-focus: var(--l-forest);
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  padding: 18px 18px 20px;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  font-size: var(--l-fs-micro);
+  line-height: 1.45;
+}
+
+.lp-privacy-sheet + .lp-privacy-sheet {
+  border-top: 1px solid var(--l-rule);
+}
+
+/* Phones with touch: the three setup sheets become a swipe shelf. */
+@media (max-width: 699px) and (pointer: coarse) {
+  .lp-privacy-sheets {
+    display: flex;
+    align-items: stretch;
+    gap: 12px;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x mandatory;
+    scroll-padding-inline: var(--l-gutter);
+    margin-inline: calc(var(--l-gutter) * -1);
+    padding-inline: var(--l-gutter);
+    border-radius: 0;
+    background: none;
+    scrollbar-width: none;
+  }
+
+  .lp-privacy-sheets::-webkit-scrollbar {
+    display: none;
+  }
+
+  .lp-privacy-sheet {
+    flex: 0 0 min(calc(100vw - var(--l-gutter) - 56px), 320px);
+    scroll-snap-align: start;
+    border-radius: var(--l-r-surface);
+    background: var(--l-paper);
+  }
+
+  .lp-privacy-sheet + .lp-privacy-sheet {
+    border-top: 0;
+  }
+}
+
+.lp-privacy-step {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  font: 650 1rem/1.3 var(--l-sans);
+  letter-spacing: -0.005em;
+}
+
+.lp-privacy-step .lp-num {
+  color: var(--l-forest);
+  font-size: var(--l-fs-micro);
+}
+
+/* On a phone the form is three ruled rows; from tablets up, three fields. */
+.lp-privacy-fields {
+  display: grid;
+}
+
+.lp-privacy-fields > div {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0 16px;
+  padding-block: 7px;
+  border-top: 1px solid var(--l-rule);
+}
+
+.lp-privacy-fields dt {
+  color: var(--l-muted);
+  font-size: var(--l-fs-app);
+  font-weight: 600;
+}
+
+.lp-privacy-fields dd {
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.lp-privacy-app-line {
+  color: var(--l-muted);
+  text-wrap: pretty;
+}
+
+/* A drawn control. It does nothing, so it is not a button. */
+.lp-privacy-chip {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 0 14px;
+  border-radius: var(--l-r-control);
+  background: var(--l-forest);
+  color: var(--l-paper);
+  font-weight: 650;
+  text-align: center;
+}
+
+/* The app's sage box. */
+.lp-privacy-code {
+  display: grid;
+  gap: 6px;
+  padding: 14px 16px;
+  border: 1px solid var(--l-sage-edge);
+  border-radius: var(--l-r-control);
+  background: var(--l-sage);
+}
+
+.lp-privacy-code-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--l-forest);
+  font-weight: 650;
+}
+
+.lp-privacy-code-value {
+  font-family: var(--l-mono);
+  font-size: var(--l-fs-micro);
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+/* The app's top bar: breadcrumb, then the lock. */
+.lp-privacy-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 14px;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid var(--l-rule);
+  border-radius: var(--l-r-control);
+  background: var(--l-canvas);
+  font-size: var(--l-fs-app);
+}
+
+.lp-privacy-bar-crumb {
+  color: var(--l-muted);
+}
+
+.lp-privacy-bar-crumb strong {
+  color: var(--l-ink);
+  font-weight: 650;
+}
+
+.lp-privacy-bar-local {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--l-forest);
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.lp-privacy-bar-local .lp-icon {
+  width: 16px;
+  height: 16px;
+}
+
+.lp-privacy-limits {
+  max-width: 62ch;
+}
+
+.lp-privacy-policy {
+  justify-self: start;
+  align-self: start;
+}
+
+@media (min-width: 700px) {
+  .lp-privacy-sheets {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.14fr) minmax(0, 1.06fr);
+    align-items: start;
+    gap: 16px;
+    overflow: visible;
+    border-radius: 0;
+    background: none;
+  }
+
+  .lp-privacy-sheet {
+    padding: 20px;
+    border: 1px solid var(--l-rule);
+    border-radius: 16px;
+    box-shadow: var(--l-shadow-sheet);
+  }
+
+  .lp-privacy-sheet + .lp-privacy-sheet {
+    border-top: 1px solid var(--l-rule);
+  }
+
+  .lp-privacy-fields {
+    gap: 8px;
+  }
+
+  .lp-privacy-fields > div {
+    display: grid;
+    align-items: normal;
+    justify-content: normal;
+    gap: 4px;
+    padding: 0;
+    border: 0;
+  }
+
+  .lp-privacy-fields dd {
+    display: flex;
+    align-items: center;
+    min-height: 38px;
+    padding: 0 12px;
+    border: 1px solid var(--l-rule);
+    border-radius: var(--l-r-control);
+    background: var(--l-canvas);
+    overflow: hidden;
+  }
+
+  .lp-privacy-chip {
+    display: flex;
+  }
+}
+
+/* Tablets: the first sheet stands beside the other two. */
+@media (min-width: 700px) and (max-width: 999.98px) {
+  .lp-privacy-sheets {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .lp-privacy-sheet:first-child {
+    grid-row: span 2;
+  }
+}
+
+/* Three sheets stepping down: the order is the sequence. */
+@media (min-width: 1000px) {
+  .lp-privacy-sheet:nth-child(2) {
+    margin-top: 28px;
+  }
+
+  .lp-privacy-sheet:nth-child(3) {
+    margin-top: 56px;
+  }
+}
+
+@media (min-width: 1280px) {
+  .lp-privacy-setup {
+    grid-template-columns: minmax(0, 3fr) minmax(0, 9fr);
+    grid-template-rows: auto auto 1fr;
+    gap: 24px clamp(32px, 4vw, 64px);
+  }
+
+  .lp-privacy-sheets {
+    grid-column: 2;
+    grid-row: 1 / span 3;
+    gap: 20px;
+  }
+
+  .lp-privacy-setup-head,
+  .lp-privacy-limits,
+  .lp-privacy-policy {
+    grid-column: 1;
+  }
+}
+
+/* ---------- Motion: the line, drawn once ---------- */
+
+@media screen and (prefers-reduced-motion: no-preference) {
+  /* One stroke round the whole edge: the longest the motion contract allows. */
+  .lp-privacy-map[data-scene="in"] path.lp-privacy-contour[data-enter="draw"] {
+    animation-duration: 760ms;
+    animation-timing-function: var(--l-settle);
+  }
+
+  /* The document passes in through its gate; the copies come to rest outside. */
+  .lp-privacy-map[data-scene="in"] .lp-privacy-cross[data-enter="fade"] {
+    animation-duration: 620ms;
+    animation-timing-function: var(--l-settle);
+  }
+
+  .lp-privacy-map[data-scene="in"] .lp-privacy-cross--in[data-enter="fade"] {
+    animation-name: lp-privacy-cross-in;
+  }
+
+  .lp-privacy-map[data-scene="in"] .lp-privacy-cross--out[data-enter="fade"] {
+    animation-name: lp-privacy-cross-out;
+  }
+}
+
+@keyframes lp-privacy-cross-in {
+  from {
+    opacity: 0;
+    translate: 0 -16px;
+  }
+}
+
+@keyframes lp-privacy-cross-out {
+  from {
+    opacity: 0;
+    translate: 0 -22px;
+  }
+}
+
+@media (forced-colors: active) {
+  .lp-privacy-halo,
+  .lp-privacy-gap {
+    stroke: Canvas;
+  }
+
+  .lp-privacy-halo {
+    fill: Canvas;
+  }
+
+  .lp-privacy-svg {
+    --l-text: CanvasText;
+    --l-text-muted: CanvasText;
+    --l-accent: CanvasText;
+    --l-ground: Canvas;
+  }
+
+  .lp-privacy-absent {
+    stroke: CanvasText;
+  }
+
+  /* These lines sit on the ivory paper fill, which forced colours leave alone inside an SVG, so they keep the ink colour in light and dark themes. */
+  .lp-privacy-g-fold,
+  .lp-privacy-g-hair,
+  .lp-privacy-g-rule,
+  .lp-privacy-g-skel {
+    stroke: var(--l-ink);
+  }
+}

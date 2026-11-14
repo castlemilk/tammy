@@ -1,0 +1,803 @@
+/*
+ * Tammy landing: features. Section styles, imported by app/page.tsx.
+ *
+ * Three things on a paper ground, separated by space and one hairline each:
+ * the invoicing article (owned by invoicing.css), the Overview scene and the
+ * closing list. Nothing here is boxed except the illustrative window.
+ */
+
+.lp-features-ov,
+.lp-features-also {
+  margin-top: clamp(40px, 5vw, 72px);
+  padding-top: clamp(32px, 3.4vw, 48px);
+  border-top: 1px solid var(--l-hairline);
+}
+
+/* ============================================================
+ * The Overview scene
+ * ============================================================ */
+
+.lp-features-ov {
+  /* One flag per figure. :has() raises it; marks and working read it. */
+  --t-income: 0;
+  --t-invoice: 0;
+  --t-received: 0;
+  --t-owing: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  row-gap: 20px;
+}
+
+.lp-features-ov-head {
+  display: grid;
+  gap: 10px;
+}
+
+.lp-features-ov-window {
+  container-type: inline-size;
+  margin-top: 8px;
+}
+
+/* On a phone the shared title bar cannot hold its three parts on one line:
+ * the breadcrumb and the lock share the first, the label takes the second. */
+@container (max-width: 520px) {
+  .lp-features-ov-window .lp-window-bar {
+    flex-wrap: wrap;
+    gap: 4px 12px;
+    padding-block: 9px;
+  }
+
+  .lp-features-ov-window .lp-window-title {
+    flex-basis: 40%;
+  }
+
+  .lp-features-ov-window .lp-window-label {
+    order: 1;
+    white-space: normal;
+  }
+}
+
+/* The canvas inside the window: the app's panel, and the entries it reads. */
+.lp-features-ov-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 14px;
+  padding: 12px;
+}
+
+/* ---------- The app's "Business income" panel ---------- */
+
+.lp-features-ov-panel {
+  min-width: 0;
+  border: 1px solid var(--l-rule);
+  border-radius: 16px;
+  background: var(--l-paper);
+}
+
+.lp-features-ov-panel > * + * {
+  border-top: 1px solid var(--l-rule);
+}
+
+.lp-features-ov-panel-head {
+  padding: 14px 16px 13px;
+}
+
+.lp-features-ov-panel-title {
+  color: var(--l-ink);
+  font: 600 1rem/1.4 var(--l-sans);
+}
+
+.lp-features-ov-panel-caption {
+  margin-top: 2px;
+  color: var(--l-muted);
+  font-size: var(--l-fs-app);
+  line-height: 1.45;
+}
+
+/* The period controls, drawn as the app's fields. Text, not inputs. */
+.lp-features-ov-fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+  padding: 12px 16px 14px;
+}
+
+/* "This quarter" already says which dates; a narrow window folds them away. */
+.lp-features-ov-fields > [data-fold] {
+  display: none;
+}
+
+.lp-features-ov-fields dt {
+  margin-bottom: 5px;
+  color: var(--l-ink);
+  font: 600 0.75rem/1.3 var(--l-sans);
+}
+
+.lp-features-ov-fields dd {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--l-rule);
+  border-radius: 10px;
+  color: var(--l-ink);
+  font-size: var(--l-fs-app);
+  line-height: 1.2;
+}
+
+.lp-features-ov-fields .lp-icon {
+  flex: 0 0 auto;
+  width: 15px;
+  height: 15px;
+  color: var(--l-muted);
+}
+
+/* The four figures. The first is the app's prominent one. */
+.lp-features-ov-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  column-gap: 12px;
+  padding: 0 16px;
+}
+
+.lp-features-ov-metric {
+  display: grid;
+  grid-template-rows: 1fr auto;
+  min-width: 0;
+  padding: 12px 0 14px;
+}
+
+.lp-features-ov-metric[data-prominent] {
+  grid-column: 1 / -1;
+  border-bottom: 1px solid var(--l-rule);
+}
+
+.lp-features-ov-metric dt {
+  color: var(--l-muted);
+  font-size: 0.75rem;
+  line-height: 1.35;
+}
+
+.lp-features-ov-metric dd {
+  margin-top: 3px;
+}
+
+/* The figure sits close under its label, so the focus ring hugs it. */
+.lp-features-ov-metric .lp-trace:focus-visible {
+  outline-width: 2px;
+  outline-offset: 1px;
+}
+
+.lp-features-ov-metric .lp-trace {
+  position: relative;
+  color: var(--l-ink);
+  font-size: 1.1875rem;
+  font-weight: 600;
+  line-height: 1.45;
+  letter-spacing: -0.01em;
+}
+
+.lp-features-ov-metric[data-prominent] .lp-trace {
+  font-size: 2.125rem;
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+}
+
+/* A 44px target around a figure that is only one line tall. */
+.lp-features-ov-metric .lp-trace::after {
+  content: "";
+  position: absolute;
+  inset: -9px -8px;
+}
+
+/* Export controls: drawn, inert, hidden from assistive technology. */
+.lp-features-ov-export {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 12px 16px;
+  user-select: none;
+}
+
+.lp-features-ov-export span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 0 14px;
+  border: 1px solid var(--l-rule);
+  border-radius: 10px;
+  color: var(--l-ink);
+  font: 600 var(--l-fs-app)/1 var(--l-sans);
+  white-space: nowrap;
+}
+
+/* ---------- The entries behind the figures ---------- */
+
+.lp-features-ov-source {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 2px 4px 4px;
+}
+
+.lp-features-ov-entries {
+  font-size: var(--l-fs-app);
+}
+
+.lp-features-ov-entries caption {
+  padding: 4px 8px 8px;
+  color: var(--l-ink);
+  font: 600 var(--l-fs-app)/1.4 var(--l-sans);
+}
+
+.lp-features-ov-entries th,
+.lp-features-ov-entries td {
+  padding: 7px 8px;
+}
+
+.lp-features-ov-entries thead th {
+  padding-block: 4px 6px;
+}
+
+.lp-features-ov-entries tbody th {
+  font-weight: 400;
+}
+
+.lp-features-ov-entries th[data-num],
+.lp-features-ov-entries td[data-num] {
+  width: 1%;
+  padding-left: 14px;
+}
+
+/* A journal's own row: date, memo, and its state held at the right. */
+.lp-features-ov-entries .lp-features-ov-entry th {
+  position: relative;
+  padding-block: 10px 8px;
+  padding-right: 5.6rem;
+  border-top-color: var(--l-line);
+  color: var(--l-ink);
+  font-weight: 600;
+}
+
+.lp-features-ov-entry-date {
+  margin-right: 0.7em;
+  color: var(--l-muted);
+  font-weight: 400;
+}
+
+.lp-features-ov-entry .lp-pill {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  translate: 0 -50%;
+}
+
+/* The lines of a journal hang under its memo. */
+.lp-features-ov-entries tbody tr:not(.lp-features-ov-entry) :where(th, td) {
+  border-top-style: dashed;
+}
+
+/* Room for the stroke to run past the glyphs, as a highlighter does. */
+.lp-features-ov-mark {
+  margin: 0 -0.2em;
+  padding: 0.05em 0.2em;
+  border-radius: 3px;
+}
+
+/* What the traced figure is read from. One line shows; all occupy one cell,
+ * so the window never changes height as the visitor moves between figures. */
+.lp-features-ov-working {
+  display: grid;
+  padding: 12px 8px 4px;
+  border-top: 1px solid var(--l-rule);
+  color: var(--l-ink);
+  font-size: var(--l-fs-micro);
+  line-height: 1.5;
+  text-wrap: pretty;
+}
+
+.lp-features-ov-working > p {
+  grid-area: 1 / 1;
+  opacity: 0;
+  transition: opacity 160ms ease;
+}
+
+.lp-features-ov-working > [data-for="rest"] {
+  color: var(--l-muted);
+  opacity: calc(1 - max(var(--t-income), var(--t-invoice), var(--t-received), var(--t-owing)));
+}
+
+.lp-features-ov-working > [data-for="income"] {
+  opacity: var(--t-income);
+}
+
+.lp-features-ov-working > [data-for="invoice"] {
+  opacity: var(--t-invoice);
+}
+
+.lp-features-ov-working > [data-for="received"] {
+  opacity: var(--t-received);
+}
+
+.lp-features-ov-working > [data-for="owing"] {
+  opacity: var(--t-owing);
+}
+
+/* ---------- The butter trace ---------- */
+
+/* Pointing at a figure wins; otherwise the figure last pressed keeps its trace. */
+.lp-features-ov:has(.lp-trace[data-trace="income"]:hover),
+.lp-features-ov:not(:has(.lp-trace:hover)):has(.lp-trace[data-trace="income"]:focus) {
+  --t-income: 1;
+}
+
+.lp-features-ov:has(.lp-trace[data-trace="invoice"]:hover),
+.lp-features-ov:not(:has(.lp-trace:hover)):has(.lp-trace[data-trace="invoice"]:focus) {
+  --t-invoice: 1;
+}
+
+.lp-features-ov:has(.lp-trace[data-trace="received"]:hover),
+.lp-features-ov:not(:has(.lp-trace:hover)):has(.lp-trace[data-trace="received"]:focus) {
+  --t-received: 1;
+}
+
+.lp-features-ov:has(.lp-trace[data-trace="owing"]:hover),
+.lp-features-ov:not(:has(.lp-trace:hover)):has(.lp-trace[data-trace="owing"]:focus) {
+  --t-owing: 1;
+}
+
+.lp-features-ov [data-trace="income"] {
+  --lit: var(--t-income);
+}
+
+.lp-features-ov [data-trace="invoice"] {
+  --lit: var(--t-invoice);
+}
+
+.lp-features-ov [data-trace="received"] {
+  --lit: var(--t-received);
+}
+
+.lp-features-ov [data-trace="owing"] {
+  --lit: var(--t-owing);
+}
+
+.lp-features-ov [data-trace="income invoice"] {
+  --lit: max(var(--t-income), var(--t-invoice));
+}
+
+/* While a figure is traced, the lines it does not read step back. */
+.lp-features-ov-entries tbody tr {
+  --row: 0;
+  --back: calc(max(var(--t-income), var(--t-invoice), var(--t-received), var(--t-owing)) * (1 - var(--row)));
+  color: color-mix(in srgb, var(--l-muted) calc(var(--back) * 100%), var(--l-ink));
+  transition: color 180ms var(--l-ease);
+}
+
+.lp-features-ov-entries tr[data-reads="owing"] {
+  --row: var(--t-owing);
+}
+
+.lp-features-ov-entries tr[data-reads="received"] {
+  --row: var(--t-received);
+}
+
+.lp-features-ov-entries tr[data-reads="income invoice"] {
+  --row: max(var(--t-income), var(--t-invoice));
+}
+
+.lp-features-ov-entries tr[data-reads="income invoice owing"] {
+  --row: max(var(--t-income), var(--t-invoice), var(--t-owing));
+}
+
+.lp-features-ov-entries tr[data-reads="received owing"] {
+  --row: max(var(--t-received), var(--t-owing));
+}
+
+/* features-trace.tsx sets data-traced when the owing figure and its first entry are on screen together; the trace is then struck once. */
+@keyframes lp-features-ov-shown {
+  0% {
+    background-size: 0% 0.62em;
+  }
+  16%,
+  76% {
+    background-size: 100% 0.62em;
+  }
+  100% {
+    background-size: 100% 0;
+  }
+}
+
+@media screen and (prefers-reduced-motion: no-preference) {
+  .lp-features-ov[data-scene="in"][data-traced] :is(.lp-trace, .lp-trace-target)[data-trace="owing"] {
+    animation: lp-features-ov-shown 2200ms var(--l-ease) 300ms 1 backwards;
+  }
+}
+
+/* ---------- The exported copies, outside the frame ---------- */
+
+.lp-features-ov-out {
+  display: grid;
+  gap: 14px;
+  margin-top: 4px;
+}
+
+.lp-features-ov-files {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 8.25rem));
+  gap: 16px;
+  align-items: start;
+}
+
+.lp-features-ov-files li {
+  display: grid;
+  gap: 10px;
+}
+
+.lp-features-ov-files li + li {
+  margin-top: 14px;
+}
+
+.lp-features-ov-sheet {
+  display: grid;
+  align-content: start;
+  gap: 5px;
+  aspect-ratio: 1 / 1.34;
+  padding: 10px 10px 12px;
+  border-radius: 6px;
+  color: var(--l-muted);
+  font-size: var(--l-fs-micro);
+  line-height: 1.3;
+  rotate: -1.6deg;
+}
+
+.lp-features-ov-files li + li .lp-features-ov-sheet {
+  rotate: 1.2deg;
+}
+
+.lp-features-ov-sheet-kind {
+  justify-self: start;
+  padding: 1px 6px;
+  border-radius: var(--l-r-chip);
+  background: var(--l-oat);
+  color: var(--l-ink);
+  font: 650 0.75rem/1.5 var(--l-sans);
+}
+
+.lp-features-ov-sheet-title {
+  margin-block: 3px 2px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--l-rule);
+  color: var(--l-ink);
+  font: 500 0.9375rem/1.2 var(--l-serif);
+  letter-spacing: -0.01em;
+}
+
+.lp-features-ov-sheet-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.lp-features-ov-sheet-bar {
+  flex: 0 1 2.2rem;
+  height: 5px;
+  border-radius: 2px;
+  background: var(--l-rule);
+}
+
+.lp-features-ov-sheet-row:nth-child(odd) .lp-features-ov-sheet-bar {
+  flex-basis: 1.6rem;
+}
+
+/* The CSV is a grid of cells, with plain decimals as the exporter writes them. */
+.lp-features-ov-sheet[data-kind="csv"] {
+  gap: 0;
+}
+
+.lp-features-ov-sheet[data-kind="csv"] .lp-features-ov-sheet-kind {
+  margin-bottom: 8px;
+}
+
+.lp-features-ov-sheet[data-kind="csv"] .lp-features-ov-sheet-row {
+  padding: 4px 0 4px 6px;
+  border: 1px solid var(--l-rule);
+  border-width: 1px 0 0 1px;
+}
+
+.lp-features-ov-sheet[data-kind="csv"] .lp-features-ov-sheet-row:last-child {
+  border-bottom-width: 1px;
+}
+
+.lp-features-ov-sheet[data-kind="csv"] .lp-features-ov-sheet-row[data-head] {
+  min-height: 1.6em;
+  background: var(--l-canvas);
+}
+
+.lp-features-ov-file-name {
+  justify-self: center;
+  color: var(--l-text);
+  font: 600 var(--l-fs-micro)/1.3 var(--l-sans);
+  white-space: nowrap;
+}
+
+.lp-features-ov-out-note {
+  max-width: 26ch;
+}
+
+/* ---------- Scene layout by width ---------- */
+
+/*
+ * Inside the window, by the window's own width (it is a container).
+ *   under 330   the three smaller figures become rows; tighter gutters
+ *   under 680   the period's two dates fold away ("This quarter" says them)
+ *   680 to 819  one pane, the four fields in a row
+ *   820 up      two panes, entries on the left, so the scene reads entries,
+ *               then income, then the copies that leave
+ */
+@container (max-width: 329.98px) {
+  .lp-features-ov-body {
+    padding: 8px;
+  }
+
+  .lp-features-ov-source {
+    padding-inline: 0;
+  }
+
+  .lp-features-ov-metrics {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .lp-features-ov-metric:not([data-prominent]) {
+    grid-template: auto / minmax(0, 1fr) auto;
+    align-items: baseline;
+    column-gap: 12px;
+    padding-block: 9px;
+  }
+
+  .lp-features-ov-metric:not([data-prominent]) + .lp-features-ov-metric {
+    border-top: 1px solid var(--l-rule);
+  }
+}
+
+@container (max-width: 419.98px) {
+  .lp-features-ov-entries th,
+  .lp-features-ov-entries td {
+    padding-inline: 5px;
+  }
+
+  .lp-features-ov-entries th[data-num],
+  .lp-features-ov-entries td[data-num] {
+    padding-left: 8px;
+  }
+
+  .lp-features-ov-entries .lp-code {
+    margin-right: 6px;
+  }
+
+  .lp-features-ov-entry .lp-pill {
+    right: 5px;
+  }
+
+  .lp-features-ov-fields .lp-icon:not(.lp-features-ov-chevron) {
+    display: none;
+  }
+}
+
+@container (min-width: 330px) {
+  .lp-features-ov-fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@container (min-width: 680px) {
+  .lp-features-ov-fields {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .lp-features-ov-fields > [data-fold] {
+    display: block;
+  }
+}
+
+@container (min-width: 820px) {
+  .lp-features-ov-body {
+    grid-template-columns: minmax(0, 0.86fr) minmax(0, 1fr);
+    gap: 18px;
+    padding: 16px;
+  }
+
+  .lp-features-ov-source {
+    order: -1;
+  }
+
+  /* Beside the taller panel the lines take a little more air, so the two
+   * panes end together. */
+  .lp-features-ov-entries th,
+  .lp-features-ov-entries td {
+    padding-block: 9px;
+  }
+
+  .lp-features-ov-fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* On phones the paper copies repeat the Export chips drawn inside the window. */
+@media (max-width: 559.98px) {
+  .lp-features-ov-files {
+    display: none;
+  }
+}
+
+/*
+ * Around the window, by the viewport.
+ *   under 560     heading, limit, window, then the copies and their note
+ *   560 to 859    the note sits beside the copies
+ *   860 to 919    the limit moves beside the heading
+ *   920 to 1279   the window is two panes wide (820 or more inside, with or
+ *                 without a scrollbar); the copies rest under the panel they
+ *                 were exported from
+ *   1280 up       nine columns of window, three of margin
+ */
+@media (min-width: 560px) {
+  .lp-features-ov-out {
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: end;
+    gap: 24px;
+  }
+
+  .lp-features-ov-files {
+    grid-template-columns: repeat(2, minmax(0, 9.5rem));
+  }
+}
+
+@media (min-width: 860px) {
+  .lp-features-ov {
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    column-gap: clamp(16px, 2.2vw, 32px);
+    row-gap: 28px;
+  }
+
+  .lp-features-ov-head {
+    grid-column: 1 / span 8;
+  }
+
+  .lp-features-ov-note {
+    grid-column: 9 / -1;
+    align-self: end;
+  }
+
+  .lp-features-ov-window,
+  .lp-features-ov-out {
+    grid-column: 1 / -1;
+    margin-top: 0;
+  }
+}
+
+@media (min-width: 920px) {
+  /* The offset is the entries pane (0.86 of 1.86 parts) plus its gutters. */
+  .lp-features-ov-out {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+    margin-left: calc((100% - 52px) * 0.86 / 1.86 + 35px);
+  }
+
+  .lp-features-ov-out-note {
+    max-width: none;
+  }
+}
+
+@media (min-width: 1280px) {
+  .lp-features-ov-head {
+    grid-column: 1 / span 9;
+  }
+
+  .lp-features-ov-window {
+    grid-area: 2 / 1 / auto / span 9;
+  }
+
+  /* The margin beside the window: the limit at the top, level with the
+   * panel's title; the copies at the foot, level with the export controls. */
+  .lp-features-ov-note {
+    grid-area: 2 / 10 / auto / -1;
+    align-self: start;
+    margin-top: 52px;
+  }
+
+  .lp-features-ov-out {
+    grid-area: 2 / 10 / auto / -1;
+    align-self: end;
+    gap: 16px;
+    margin-left: 0;
+    padding: 0 4px 6px 0;
+  }
+
+  .lp-features-ov-files {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+  }
+
+  .lp-features-ov-out-note {
+    max-width: 26ch;
+  }
+}
+
+/* ============================================================
+ * Also in the workspace: a ruled list, name then sentence
+ * ============================================================ */
+
+.lp-features-also {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  row-gap: 22px;
+}
+
+.lp-features-also-item {
+  display: grid;
+  gap: 4px 28px;
+  padding-block: 16px;
+  border-top: 1px solid var(--l-hairline);
+}
+
+.lp-features-also-item:last-child {
+  padding-bottom: 0;
+}
+
+.lp-features-also-item dt {
+  color: var(--l-text);
+  font: 500 1.25rem/1.3 var(--l-serif);
+  letter-spacing: -0.015em;
+}
+
+.lp-features-also-item dd {
+  max-width: 38em;
+  color: var(--l-text-muted);
+  font-size: var(--l-fs-small);
+  line-height: 1.5;
+  text-wrap: pretty;
+}
+
+@media (min-width: 640px) {
+  .lp-features-also-item {
+    grid-template-columns: minmax(0, 14rem) minmax(0, 1fr);
+    align-items: baseline;
+    padding-block: 18px;
+  }
+
+  .lp-features-also-item dd {
+    font-size: var(--l-fs-body);
+    line-height: 1.55;
+  }
+}
+
+@media (min-width: 1180px) {
+  .lp-features-also {
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    column-gap: clamp(16px, 2.2vw, 32px);
+  }
+
+  .lp-features-also > h3 {
+    grid-column: 1 / span 4;
+  }
+
+  .lp-features-also-list {
+    grid-column: 5 / -1;
+  }
+
+  .lp-features-also-item:first-child {
+    padding-top: 6px;
+    border-top: 0;
+  }
+}
+
+@media (forced-colors: active) {
+  .lp-features-ov-panel,
+  .lp-features-ov-fields dd,
+  .lp-features-ov-export span {
+    border-color: CanvasText;
+  }
+}

@@ -1,0 +1,331 @@
+/*
+ * Tammy landing: answers. Section styles, imported by app/page.tsx.
+ *
+ * Two things on the oat ground: one T-account drawn with two ink rules, and
+ * six questions as native <details>. The account is type only and never
+ * moves. The questions open without script; the eased height and the fade are
+ * an upgrade for browsers that can animate ::details-content.
+ */
+
+.lp-answers {
+  /* The ledger line between entries: ink, thinned. */
+  --lp-answers-ledger: color-mix(in srgb, var(--l-ink) 14%, transparent);
+  --lp-answers-pad: clamp(20px, 3.2vw, 44px);
+}
+
+.lp-answers-head {
+  margin-bottom: clamp(36px, 4.6vw, 64px);
+}
+
+/* ============================================================
+ * The account
+ * ============================================================ */
+
+/* An account's name sits over the bar of its T. */
+.lp-answers-account-name {
+  padding-bottom: 12px;
+  color: var(--l-text-muted);
+  font: 650 var(--l-fs-micro)/1.3 var(--l-sans);
+}
+
+/* Narrow first: the two sides stack, each under its own bar. */
+.lp-answers-t {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  row-gap: 36px;
+}
+
+.lp-answers-side {
+  border-top: 2px solid var(--l-ink);
+}
+
+.lp-answers-side-head {
+  padding-block: 18px 16px;
+}
+
+/* Sized so the longest entry still sets on one line at desktop widths. */
+.lp-answers-entries > li {
+  padding-block: 9px;
+  border-top: 1px solid var(--lp-answers-ledger);
+  color: var(--l-text);
+  font-size: clamp(1.0625rem, 0.07rem + 1.27vw, 1.1875rem);
+  line-height: 1.4;
+  text-wrap: pretty;
+}
+
+/* Phones: the two sides face each other as one T, rows level across the stem. */
+@media (max-width: 759px) {
+  .lp-answers-t {
+    position: relative;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    row-gap: 0;
+  }
+
+  .lp-answers-t::before {
+    content: "";
+    position: absolute;
+    inset: 0 auto 0 50%;
+    width: 2px;
+    margin-left: -1px;
+    background: var(--l-ink);
+  }
+
+  .lp-answers-side:first-child {
+    padding-right: 12px;
+  }
+
+  .lp-answers-side:last-child {
+    padding-left: 12px;
+  }
+
+  .lp-answers-side-head {
+    padding-block: 12px 10px;
+    font-size: 1.1875rem;
+  }
+
+  .lp-answers-entries > li {
+    padding-block: 8px;
+    font-size: var(--l-fs-small);
+    line-height: 1.35;
+  }
+
+  @supports (grid-template-rows: subgrid) {
+    .lp-answers-t {
+      grid-template-rows: auto repeat(var(--lp-answers-rows, 8), auto);
+    }
+
+    .lp-answers-side {
+      display: grid;
+      grid-row: 1 / -1;
+      grid-template-rows: subgrid;
+    }
+
+    .lp-answers-entries {
+      display: grid;
+      grid-row: 2 / -1;
+      grid-template-rows: subgrid;
+    }
+  }
+}
+
+/* Wide: one bar, one stem. The bar is the two sides' top rules meeting. */
+@media (min-width: 760px) {
+  .lp-answers-account-name {
+    text-align: center;
+  }
+
+  .lp-answers-t {
+    position: relative;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    row-gap: 0;
+  }
+
+  .lp-answers-t::before {
+    content: "";
+    position: absolute;
+    inset: 0 auto 0 50%;
+    width: 2px;
+    margin-left: -1px;
+    background: var(--l-ink);
+  }
+
+  .lp-answers-side:first-child {
+    padding-right: var(--lp-answers-pad);
+  }
+
+  .lp-answers-side:last-child {
+    padding-left: var(--lp-answers-pad);
+  }
+
+  .lp-answers-side-head {
+    padding-block: 22px 20px;
+  }
+
+  .lp-answers-entries > li {
+    padding-block: 12px;
+  }
+
+  /* Entry n on the left shares a row with entry n on the right, so the ledger
+   * lines run straight across the stem even when one side wraps. */
+  @supports (grid-template-rows: subgrid) {
+    .lp-answers-t {
+      grid-template-rows: auto repeat(var(--lp-answers-rows, 8), auto);
+    }
+
+    .lp-answers-side {
+      display: grid;
+      grid-row: 1 / -1;
+      grid-template-rows: subgrid;
+    }
+
+    .lp-answers-entries {
+      display: grid;
+      grid-row: 2 / -1;
+      grid-template-rows: subgrid;
+    }
+  }
+}
+
+@media (forced-colors: active) {
+  .lp-answers-t::before {
+    background: CanvasText;
+  }
+}
+
+/* ============================================================
+ * The questions
+ * ============================================================ */
+
+.lp-answers-faq {
+  margin-top: clamp(40px, 5vw, 72px);
+}
+
+.lp-answers-faq-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 32px;
+  margin-bottom: 14px;
+}
+
+.lp-answers-faq-cols {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.lp-answers-item {
+  border-bottom: 1px solid var(--lp-answers-ledger);
+}
+
+.lp-answers-faq-col:first-child > .lp-answers-item:first-child {
+  border-top: 1px solid var(--lp-answers-ledger);
+}
+
+/* The same centre line as the account above, once each column can hold a
+ * question on one line. */
+@media (min-width: 960px) {
+  .lp-answers-faq-cols {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: calc(2 * var(--lp-answers-pad));
+    align-items: start;
+  }
+
+  .lp-answers-faq-col > .lp-answers-item:first-child {
+    border-top: 1px solid var(--lp-answers-ledger);
+  }
+}
+
+.lp-answers-q {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  min-height: 60px;
+  padding-block: 14px;
+  color: var(--l-text);
+  font: 500 clamp(1.1875rem, 1.08rem + 0.46vw, 1.4rem)/1.25 var(--l-serif);
+  letter-spacing: -0.012em;
+  list-style: none;
+  cursor: pointer;
+}
+
+.lp-answers-q::-webkit-details-marker {
+  display: none;
+}
+
+.lp-answers-q:hover {
+  color: var(--l-accent);
+}
+
+/* A plus that turns to a cross when its answer is open. Drawn with borders so
+ * it survives forced colours. */
+.lp-answers-plus {
+  position: relative;
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+}
+
+.lp-answers-plus::before,
+.lp-answers-plus::after {
+  content: "";
+  position: absolute;
+  inset: 50% 0 auto;
+  margin-top: -1px;
+  border-top: 2px solid currentColor;
+  border-radius: 1px;
+}
+
+.lp-answers-plus::after {
+  rotate: 90deg;
+}
+
+.lp-answers-item[open] .lp-answers-plus {
+  rotate: 45deg;
+}
+
+/* The wrapper is the one grid item ::details-content sizes; see below. */
+.lp-answers-a {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.lp-answers-a > p {
+  max-width: 60ch;
+  padding: 0 40px 22px 0;
+  color: var(--l-text);
+  text-wrap: pretty;
+}
+
+@media (min-width: 760px) {
+  .lp-answers-q {
+    min-height: 68px;
+    padding-block: 16px;
+  }
+
+  .lp-answers-a > p {
+    padding-bottom: 26px;
+  }
+}
+
+@media screen and (prefers-reduced-motion: no-preference) {
+  .lp-answers-q {
+    transition: color 160ms ease;
+  }
+
+  .lp-answers-plus {
+    transition: rotate 380ms var(--l-snap);
+  }
+
+  /*
+   * Opening and closing. ::details-content becomes a one-row grid whose row
+   * runs 0fr to 1fr, which every engine interpolates, so the height eases
+   * without interpolate-size. content-visibility is held for the length of
+   * the close so the answer stays painted while it shrinks.
+   *
+   * Fallbacks, in order: no ::details-content, the whole block is skipped; no
+   * allow-discrete, the transition declaration is dropped. Either way the
+   * answer opens at once, at full height and full opacity.
+   */
+  @supports selector(::details-content) {
+    .lp-answers-item::details-content {
+      display: grid;
+      grid-template-rows: 0fr;
+      opacity: 0;
+      transition:
+        grid-template-rows 420ms var(--l-settle),
+        opacity 160ms ease,
+        content-visibility 420ms allow-discrete;
+    }
+
+    .lp-answers-item[open]::details-content {
+      grid-template-rows: 1fr;
+      opacity: 1;
+      transition:
+        grid-template-rows 420ms var(--l-settle),
+        opacity 260ms ease 110ms,
+        content-visibility 420ms allow-discrete;
+    }
+  }
+}
