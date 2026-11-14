@@ -209,8 +209,8 @@ async function collectEntries(stagingRoot) {
 function validatePublicLinks(value) {
   if (
     !exactKeys(value, ["privacyPolicy", "support"]) ||
-    value.privacyPolicy !== "https://tammy-accounting.castlemilk.chatgpt.site/privacy" ||
-    value.support !== "https://tammy-accounting.castlemilk.chatgpt.site/support"
+    value.privacyPolicy !== "https://tammy.tax/privacy" ||
+    value.support !== "https://tammy.tax/support"
   ) {
     fail();
   }

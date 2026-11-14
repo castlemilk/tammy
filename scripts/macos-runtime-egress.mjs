@@ -10,8 +10,8 @@ const SHA40 = /^[0-9a-f]{40}$/u;
 const VERSION = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/u;
 const BUILD = /^[1-9]\d*$/u;
 const UTC = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/u;
-const PRIVACY_URL = "https://tammy-accounting.castlemilk.chatgpt.site/privacy";
-const SUPPORT_URL = "https://tammy-accounting.castlemilk.chatgpt.site/support";
+const PRIVACY_URL = "https://tammy.tax/privacy";
+const SUPPORT_URL = "https://tammy.tax/support";
 
 export const MACOS_RUNTIME_EGRESS_SANDBOX_PROFILE = [
   "(version 1)",

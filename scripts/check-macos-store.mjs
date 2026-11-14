@@ -35,7 +35,7 @@ const PNG_SIGNATURE = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
 const APP_BUNDLE_ID = "com.tammy.desktop";
 const APP_CATEGORY = "public.app-category.finance";
 const CANONICAL_METADATA_SHA256 =
-  "e43b2639003bf25a7885ba925e96a5f93862017ec0090dc8f4a3e85501bf06ce";
+  "7bc903bd9ad35018e8a43da7342e0e1e8dbcaa7b1d4c9a0332a83a4f69ee98ed";
 
 function fail(code = "MACOS_STORE_REPOSITORY_INVALID") {
   throw new Error(code);
@@ -412,7 +412,9 @@ export function validateMacOSStorePlists({
   }
 }
 
-const PUBLIC_ORIGIN = "https://tammy-accounting.castlemilk.chatgpt.site";
+const PUBLIC_ORIGIN = "https://tammy.tax";
+// The Vercel project that serves tammy.tax (team document-analyser).
+const VERCEL_PROJECT_ID = "prj_zlt5QLKUW3QrdkrHuHq7wkqVkU4j";
 const METADATA_OPERATOR_CONFIRMATIONS = Object.freeze([
   "active-agreements",
   "age-rating",
@@ -734,6 +736,25 @@ function exactKeys(value, expected) {
   );
 }
 
+/**
+ * A change to PRIVACY.md or the public origin is merged before its CI deployment can be
+ * recorded, so current.json may name the pending origin and policy instead of a record.
+ * The pointer still binds the repository to that exact policy; readiness stays blocked.
+ */
+export function validatePendingPublicSite(pointer, policyBytes) {
+  const policySha256 = createHash("sha256").update(policyBytes).digest("hex");
+  if (
+    !exactKeys(pointer, ["schemaVersion", "status", "origin", "policySha256"]) ||
+    pointer.schemaVersion !== 1 ||
+    pointer.status !== "pending-deployment" ||
+    pointer.origin !== PUBLIC_ORIGIN ||
+    pointer.policySha256 !== policySha256
+  ) {
+    fail("MACOS_PUBLIC_SITE_INVALID");
+  }
+  return { origin: pointer.origin, policySha256 };
+}
+
 export function validateCurrentPublicSite(pointer, deployment, policyBytes) {
   const deploymentKeys = [
     "schemaVersion",
@@ -752,18 +773,18 @@ export function validateCurrentPublicSite(pointer, deployment, policyBytes) {
   if (
     !exactKeys(pointer, ["schemaVersion", "deploymentEvidence"]) ||
     pointer.schemaVersion !== 1 ||
-    !/^deployments\/appgdep_[a-z0-9]+\.json$/.test(pointer.deploymentEvidence) ||
+    !/^deployments\/dpl_[A-Za-z0-9]+\.json$/.test(pointer.deploymentEvidence) ||
     !exactKeys(deployment, deploymentKeys) ||
     deployment.schemaVersion !== 1 ||
-    deployment.provider !== "OpenAI Sites" ||
+    deployment.provider !== "Vercel" ||
     deployment.access !== "public" ||
     deployment.origin !== PUBLIC_ORIGIN ||
     deployment.policySha256 !== policySha256 ||
     pointer.deploymentEvidence !== `deployments/${deployment.deploymentId}.json` ||
-    !/^appgprj_[a-z0-9]+$/.test(deployment.projectId) ||
-    !deployment.versionId.startsWith(`${deployment.projectId}~appgver_`) ||
-    !/^appgprj_[a-z0-9]+~appgver_[a-z0-9]+$/.test(deployment.versionId) ||
-    !/^appgdep_[a-z0-9]+$/.test(deployment.deploymentId) ||
+    // A Vercel deployment is an immutable build, so it is also the served version.
+    deployment.projectId !== VERCEL_PROJECT_ID ||
+    !/^dpl_[A-Za-z0-9]+$/.test(deployment.deploymentId) ||
+    deployment.versionId !== deployment.deploymentId ||
     !/^[0-9a-f]{40}$/.test(deployment.sourceCommit) ||
     !isValidUtcRfc3339(deployment.deployedAt) ||
     !isDeepStrictEqual(deployment.routes, [
@@ -996,6 +1017,14 @@ export async function inspectMacOSStoreRepository(
     !resolvedPublicSiteRoot.startsWith(`${resolvedRepositoryRoot}${path.sep}`)
   ) {
     fail("MACOS_PUBLIC_SITE_INVALID");
+  }
+  if (
+    publicSitePointer !== null &&
+    typeof publicSitePointer === "object" &&
+    "status" in publicSitePointer
+  ) {
+    validatePendingPublicSite(publicSitePointer, privacyPolicyBytes);
+    fail("MACOS_PUBLIC_SITE_PENDING");
   }
   const deploymentsDirectory = path.join(publicSiteRoot, "deployments");
   const deploymentsStatus = await lstat(deploymentsDirectory).catch(() =>

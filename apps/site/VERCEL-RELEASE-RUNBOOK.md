@@ -9,15 +9,17 @@ On 14 November 2026 the owner asked for tammy.tax to move to Vercel. The domain 
 | Vercel team | gamma systems, slug `document-analyser`, ID `team_xE5DMN3hIo8aPqyHNkBybg8r` |
 | Project | `tammy-site`, ID `prj_zlt5QLKUW3QrdkrHuHq7wkqVkU4j` |
 | Build | `TAMMY_DEPLOY_TARGET=vercel`: vinext static export (`output: "export"`). Every route is prerendered HTML; invoice and quote PDFs are generated in the browser. No server code is deployed |
-| Output | Build Output API v3, prebuilt: `.vercel/output/static/` plus `config.json`. Nothing is built on Vercel |
+| Output | Build Output API v3, prebuilt: `.vercel/output/static/` plus `config.json`. Nothing is built on Vercel: the project has no Git connection, Git deployments are disabled, and its build command deliberately fails, so only `vercel deploy --prebuilt` can publish |
 | CLI | `vercel@56.4.1` through `npx`, credentials from the environment only |
-| Canonical origin | `https://tammy.tax` since 14 November 2026 (`SITE_ORIGIN` in `lib/site-config.ts`). The desktop app's privacy and support links and the macOS App Store evidence tooling (`scripts/check-public-site.mjs`) still use the former Sites origin, which stays published; moving them is a separate desktop compatibility review |
+| Canonical origin | `https://tammy.tax` since 14 November 2026 (`SITE_ORIGIN` in `lib/site-config.ts`). The desktop app's privacy and support links, its packaging checks and the macOS App Store evidence tooling use it too |
 
 `site-release.mjs vercel-output` copies the verified `dist/client` into `.vercel/output/static`, leaving out hidden build metadata such as `.vite/`, and refuses any byte that differs from `build-provenance.json`. Its `config.json` uses the routes that `vercel build` 56.4.1 generates for `cleanUrls: true` and `trailingSlash: false`: `/x.html`, `/x/` and `/index` redirect with 308, each `x.html` is served at `/x`, `.rsc` payloads are served as `text/x-component`, `/_next/static/*` is cached as immutable, and misses get `404.html` with status 404. The routes live in `VERCEL_ROUTES` in `scripts/site-release.mjs`; change them only with a matching test.
 
 ## Release
 
 Commit and attest first, exactly as in [AGENTS.md](../../AGENTS.md): finish source and documentation, commit, run `proto:descriptors:evidence` with `TAMMY_SOURCE_REVISION` set to that commit, commit only the manifest as its immediate child, verify again. The candidate is the evidence commit, pushed to GitHub.
+
+Every release to tammy.tax is built and deployed by the Cuttlefish CI job below on merge to master (or a manual `deploy_vercel` dispatch). The commands in this section are what that job runs, and are for diagnosis or a break-glass release only; a release from a workstation needs the owner's say-so and a recorded reason.
 
 From a clean checkout of the candidate, with the pinned toolchain (`mise exec --`):
 
@@ -82,12 +84,18 @@ The **Tammy website** workflow has a `deploy-vercel` job. On every master push (
 
 It never rebuilds, uploads only `deployment-record.json` and `live-verification.json`, and cannot be cancelled mid-publish.
 
-The job is skipped until the repository is configured. One-time setup, by the owner:
+The job needs the repository secret `VERCEL_TOKEN` and the variables `VERCEL_ORG_ID` (`team_xE5DMN3hIo8aPqyHNkBybg8r`) and `VERCEL_PROJECT_ID` (`prj_zlt5QLKUW3QrdkrHuHq7wkqVkU4j`); it is skipped while `VERCEL_PROJECT_ID` is unset. All three were configured on 14 November 2026, and the first CI deployment (a `deploy_vercel` dispatch of master `755cc9b0`) passed every step: Cuttlefish build, prebuilt upload, the tammy.tax byte check and the preflight.
 
-1. Create a Vercel access token scoped to the gamma systems team (Vercel dashboard → Account Settings → Tokens), with an expiry you are comfortable rotating.
-2. Store it without echoing it: `gh secret set VERCEL_TOKEN --repo castlemilk/tammy` and paste when prompted.
-3. Set the two non-secret variables, which also switch the job on:
-   `gh variable set VERCEL_ORG_ID --repo castlemilk/tammy --body team_xE5DMN3hIo8aPqyHNkBybg8r`
-   `gh variable set VERCEL_PROJECT_ID --repo castlemilk/tammy --body prj_zlt5QLKUW3QrdkrHuHq7wkqVkU4j`
+After a deployment that changes `PRIVACY.md` or the origin, record it as App Store public-site evidence from a clean checkout of master, using the job's `tammy-vercel-deployment-<sha>-<attempt>` artifact:
 
-Until then, each tammy.tax release is run by hand with the commands above. A merge without the variables still publishes the Cloudflare Worker and leaves tammy.tax unchanged.
+```sh
+gh run download <run-id> --repo castlemilk/tammy --name tammy-vercel-deployment-<sha>-<attempt> --dir /abs/vercel-record
+mise exec -- node scripts/check-public-site.mjs --origin https://tammy.tax --record-vercel-deployment /abs/vercel-record/deployment-record.json
+```
+
+It requires the job's `live-verification.json` from the same artifact (proof that tammy.tax served that deployment's exact bytes), the `tammy-site` project, the `castlemilk/tammy` repository and a deployed commit on the checked-out branch. It then re-runs the three-route check, takes `policySha256` from `PRIVACY.md` at the deployed commit (which must equal the working tree's), writes `docs/release/public-site/deployments/<dpl id>.json` and points `current.json` at it; a retry after a partial write resumes. Commit those two files with descriptor attestation. They sit outside the site workflow's path filter, so that commit does not trigger another deployment. Deployments made before this recorder existed have no `deployed_at` and cannot be recorded.
+
+Until the record exists, `current.json` is a `pending-deployment` pointer and every App Store release command stops with `MACOS_PUBLIC_SITE_PENDING`. Later site deployments that leave `PRIVACY.md` and the origin unchanged do not need a new record.
+
+Owner steps outside the repository: verify the `tammy.tax` Domain property in Google Search Console and submit `https://tammy.tax/sitemap.xml`, and set the App Store Connect privacy and support URLs to tammy.tax (see [the App Store runbook](../../docs/release/macos-app-store.md)).
+

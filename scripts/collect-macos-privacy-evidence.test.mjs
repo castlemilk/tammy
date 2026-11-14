@@ -37,11 +37,8 @@ function evidence() {
         reasons: ["3B52.1", "C617.1"],
       },
     ],
-    embeddedHostnames: ["tammy-accounting.castlemilk.chatgpt.site"],
-    embeddedPublicUrls: [
-      "https://tammy-accounting.castlemilk.chatgpt.site/privacy",
-      "https://tammy-accounting.castlemilk.chatgpt.site/support",
-    ],
+    embeddedHostnames: ["tammy.tax"],
+    embeddedPublicUrls: ["https://tammy.tax/privacy", "https://tammy.tax/support"],
     entitlements: [
       {
         keys: ["com.apple.security.app-sandbox", "com.apple.security.network.client"],

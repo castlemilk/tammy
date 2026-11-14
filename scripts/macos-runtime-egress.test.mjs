@@ -9,8 +9,8 @@ import {
 } from "./macos-runtime-egress.mjs";
 
 const sha = (digit) => digit.repeat(64);
-const privacyUrl = "https://tammy-accounting.castlemilk.chatgpt.site/privacy";
-const supportUrl = "https://tammy-accounting.castlemilk.chatgpt.site/support";
+const privacyUrl = "https://tammy.tax/privacy";
+const supportUrl = "https://tammy.tax/support";
 
 test("enforces loopback-only networking in the actual macOS sandbox and child", {
   skip: process.platform !== "darwin",

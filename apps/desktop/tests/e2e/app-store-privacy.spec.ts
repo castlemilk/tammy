@@ -5,8 +5,8 @@ import {
 import { expect, test } from "./fixtures";
 import { setupAndRunCurrentAccountingWorkflow } from "./support/current-accounting-workflow";
 
-const PRIVACY_URL = "https://tammy-accounting.castlemilk.chatgpt.site/privacy";
-const SUPPORT_URL = "https://tammy-accounting.castlemilk.chatgpt.site/support";
+const PRIVACY_URL = "https://tammy.tax/privacy";
+const SUPPORT_URL = "https://tammy.tax/support";
 
 test("runs one serial contained packaged privacy journey", async ({ electronHarness }) => {
   await setupAndRunCurrentAccountingWorkflow(electronHarness.page, electronHarness, {

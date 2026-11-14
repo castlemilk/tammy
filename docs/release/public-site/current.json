@@ -1,4 +1,6 @@
 {
   "schemaVersion": 1,
-  "deploymentEvidence": "deployments/appgdep_6adade2fc6a88191810df7751d7400bf.json"
+  "status": "pending-deployment",
+  "origin": "https://tammy.tax",
+  "policySha256": "17b13bd9440d0ca6516eeb1b33f15f8cd005fb347f9024c7c8e9563429f2d59a"
 }

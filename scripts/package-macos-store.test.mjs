@@ -82,8 +82,8 @@ async function executeMacOSStoreBuild(plan, options = {}) {
 }
 
 function environment(mode = "distribution") {
-  const privacyPolicy = "https://tammy-accounting.castlemilk.chatgpt.site/privacy";
-  const support = "https://tammy-accounting.castlemilk.chatgpt.site/support";
+  const privacyPolicy = "https://tammy.tax/privacy";
+  const support = "https://tammy.tax/support";
   return {
     TAMMY_MACOS_BUILD_NUMBER: "42",
     TAMMY_MACOS_EXPORT_COMPLIANCE: "exempt",
@@ -116,8 +116,8 @@ ${
   helper
     ? ""
     : `<key>CFBundleIconFile</key><string>icon.icns</string>
-<key>TammyPrivacyPolicyURL</key><string>https://tammy-accounting.castlemilk.chatgpt.site/privacy</string>
-<key>TammySupportURL</key><string>https://tammy-accounting.castlemilk.chatgpt.site/support</string>`
+<key>TammyPrivacyPolicyURL</key><string>https://tammy.tax/privacy</string>
+<key>TammySupportURL</key><string>https://tammy.tax/support</string>`
 }
 </dict></plist>\n`;
 }

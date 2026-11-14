@@ -14,8 +14,8 @@ const sha = (digit) => digit.repeat(64);
 const sourceCommit = "a".repeat(40);
 const sourceTree = "b".repeat(40);
 const eventId = "019fefd9-5d51-7c01-a20d-a43ad49f0afc";
-const privacyUrl = "https://tammy-accounting.castlemilk.chatgpt.site/privacy";
-const supportUrl = "https://tammy-accounting.castlemilk.chatgpt.site/support";
+const privacyUrl = "https://tammy.tax/privacy";
+const supportUrl = "https://tammy.tax/support";
 
 function candidate() {
   return {
@@ -46,7 +46,7 @@ function privacyEvidence() {
     buildNumber: "42",
     developmentAppSha256: sha("3"),
     distributionAppSha256: sha("1"),
-    embeddedHostnames: ["tammy-accounting.castlemilk.chatgpt.site"],
+    embeddedHostnames: ["tammy.tax"],
     embeddedPublicUrls: [privacyUrl, supportUrl],
     entitlements: [
       {
@@ -155,7 +155,7 @@ function metadataSnapshot() {
     productSourceCommit: sourceCommit,
     productSourceTree: sourceTree,
     publicSiteDeploymentId: "tammy-site-2026-08-31",
-    publicSiteOrigin: "https://tammy-accounting.castlemilk.chatgpt.site",
+    publicSiteOrigin: "https://tammy.tax",
     publicSiteVersion: "1",
     schemaVersion: 1,
   };

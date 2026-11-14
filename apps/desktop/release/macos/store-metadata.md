@@ -19,8 +19,8 @@ This is the canonical repository-owned product copy for Tammy Accounting 0.1.0. 
 - **Default language:** `English (Australia) — en-AU`
 - **SKU:** `tammy-macos-001`
 - **Release method:** `Manual`
-- **Privacy policy URL:** `https://tammy-accounting.castlemilk.chatgpt.site/privacy`
-- **Support URL:** `https://tammy-accounting.castlemilk.chatgpt.site/support`
+- **Privacy policy URL:** `https://tammy.tax/privacy`
+- **Support URL:** `https://tammy.tax/support`
 - **Copyright:** `© 2026 Gamma Systems Pty Ltd`
 - **Intended price and availability:** `Free — Australia`
 - **Review support email:** `ben.ebsworth@gmail.com`

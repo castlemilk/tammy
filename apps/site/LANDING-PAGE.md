@@ -54,7 +54,7 @@ Validation: `pnpm --filter sites-project typecheck`, `pnpm --filter sites-projec
 - `pnpm --dir apps/site seo:check` scans routes for metadata/canonicals and compares their URLs against the sitemap and llms.txt. CI runs this audit before the production build.
 
 ### Domain transition (completed 14 November 2026)
-`tammy.tax` is served from Vercel and is the canonical origin: `SITE_ORIGIN`, sitemap, robots.txt, llms.txt and the RSS item links moved together. RSS GUIDs keep their former URLs as non-permalink identifiers so subscribers do not see every post again. The former Sites host stays published with its older build; the desktop app's privacy and support links still point there until the desktop compatibility review moves them.
+`tammy.tax` is served from Vercel and is the canonical origin: `SITE_ORIGIN`, sitemap, robots.txt, llms.txt and the RSS item links moved together. RSS GUIDs keep their former URLs as non-permalink identifiers so subscribers do not see every post again. The former Sites host stays published with its older build; the desktop app's privacy and support links moved to tammy.tax on the same day.
 
 ### Release boundaries
 Site changes do not change Tammy's desktop application, ATO/EVTE/SBR readiness, public download availability, tax eligibility or business registration. Generated illustration is decorative; no synthetic financial evidence is claimed as customer data or performance proof.

@@ -22,9 +22,9 @@ const VERSION = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/u;
 const PACKAGE_VERSION =
   /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/u;
 const BUILD = /^[1-9]\d*$/u;
-const PRIVACY_URL = "https://tammy-accounting.castlemilk.chatgpt.site/privacy";
-const SUPPORT_URL = "https://tammy-accounting.castlemilk.chatgpt.site/support";
-const PUBLIC_HOSTNAME = "tammy-accounting.castlemilk.chatgpt.site";
+const PRIVACY_URL = "https://tammy.tax/privacy";
+const SUPPORT_URL = "https://tammy.tax/support";
+const PUBLIC_HOSTNAME = "tammy.tax";
 const FORBIDDEN_PACKAGE =
   /(?:^|[/_@.-])(analytics?|advertis(?:e|ing)|crash(?:lytics|report(?:er|ing)?)?|fingerprint(?:ing)?|remote[-_]?code|sentry|telemetry|tracking|updat(?:e|er)|web[-_]?content)(?:$|[/_@.-])/iu;
 const FORBIDDEN_HOSTNAME =

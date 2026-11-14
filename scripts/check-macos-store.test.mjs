@@ -28,11 +28,12 @@ import {
   validateMacOSStoreMetadata,
   validateMacOSStorePlists,
   validateMacOSUnsignedEnvironment,
+  validatePendingPublicSite,
 } from "./check-macos-store.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const execFile = promisify(nodeExecFile);
-const publicSiteOrigin = "https://tammy-accounting.castlemilk.chatgpt.site";
+const publicSiteOrigin = "https://tammy.tax";
 const desktopFixtureFilter = (source) =>
   !source.split(path.sep).some((segment) => ["node_modules", "out", ".vite"].includes(segment));
 const validStoreIdentity = {
@@ -55,8 +56,8 @@ const validStoreIdentity = {
 };
 
 function syntheticPublicSiteEvidence(policyBytes) {
-  const projectId = "appgprj_testfixture";
-  const deploymentId = "appgdep_testfixture";
+  const projectId = "prj_zlt5QLKUW3QrdkrHuHq7wkqVkU4j";
+  const deploymentId = "dpl_testfixture";
   return {
     pointer: {
       schemaVersion: 1,
@@ -64,10 +65,10 @@ function syntheticPublicSiteEvidence(policyBytes) {
     },
     deployment: {
       schemaVersion: 1,
-      provider: "OpenAI Sites",
+      provider: "Vercel",
       access: "public",
       projectId,
-      versionId: `${projectId}~appgver_testfixture`,
+      versionId: deploymentId,
       deploymentId,
       origin: publicSiteOrigin,
       deployedAt: "2026-10-23T00:00:00.000Z",
@@ -546,19 +547,28 @@ test("repository readiness binds the exact deployed public site to the canonical
   const actualPointer = JSON.parse(
     await readFile(path.join(actualRecordsRoot, "current.json"), "utf8"),
   );
-  const actualDeployment = JSON.parse(
-    await readFile(path.join(actualRecordsRoot, actualPointer.deploymentEvidence), "utf8"),
-  );
   const policy = await readFile(path.join(root, "PRIVACY.md"));
   const actualPolicySha256 = createHash("sha256").update(policy).digest("hex");
-  assert.equal(actualDeployment.policySha256, actualPolicySha256);
-  assert.deepEqual(validateCurrentPublicSite(actualPointer, actualDeployment, policy), {
-    deploymentEvidence: actualPointer.deploymentEvidence,
-    origin: publicSiteOrigin,
-    policySha256: actualPolicySha256,
-    privacyPolicy: `${publicSiteOrigin}/privacy`,
-    support: `${publicSiteOrigin}/support`,
-  });
+  if ("status" in actualPointer) {
+    // A merged policy or origin change whose CI deployment is not recorded yet: the
+    // pointer must still name this exact policy and origin.
+    assert.deepEqual(validatePendingPublicSite(actualPointer, policy), {
+      origin: publicSiteOrigin,
+      policySha256: actualPolicySha256,
+    });
+  } else {
+    const actualDeployment = JSON.parse(
+      await readFile(path.join(actualRecordsRoot, actualPointer.deploymentEvidence), "utf8"),
+    );
+    assert.equal(actualDeployment.policySha256, actualPolicySha256);
+    assert.deepEqual(validateCurrentPublicSite(actualPointer, actualDeployment, policy), {
+      deploymentEvidence: actualPointer.deploymentEvidence,
+      origin: publicSiteOrigin,
+      policySha256: actualPolicySha256,
+      privacyPolicy: `${publicSiteOrigin}/privacy`,
+      support: `${publicSiteOrigin}/support`,
+    });
+  }
 
   const synthetic = syntheticPublicSiteEvidence(policy);
   const validated = validateCurrentPublicSite(synthetic.pointer, synthetic.deployment, policy);
@@ -621,6 +631,8 @@ test("repository readiness rejects deployment evidence through a symlinked ances
       cp(path.join(root, "README.md"), path.join(fixtureRoot, "README.md")),
       cp(path.join(root, "PRIVACY.md"), path.join(fixtureRoot, "PRIVACY.md")),
     ]);
+    // Test symlink handling with a recorded deployment, whatever the repository's pointer state.
+    await writeSyntheticPublicSiteEvidence(fixtureRoot);
     const publicSiteRoot = path.join(fixtureRoot, "docs/release/public-site");
     const pointer = JSON.parse(await readFile(path.join(publicSiteRoot, "current.json"), "utf8"));
     await cp(
@@ -671,6 +683,14 @@ test("repository readiness rejects a symlinked public-site root", async () => {
       cp(path.join(root, "README.md"), path.join(fixtureRoot, "README.md")),
       cp(path.join(root, "PRIVACY.md"), path.join(fixtureRoot, "PRIVACY.md")),
     ]);
+    // Test symlink handling with a recorded deployment, whatever the repository's pointer state.
+    const evidence = syntheticPublicSiteEvidence(await readFile(path.join(root, "PRIVACY.md")));
+    await mkdir(path.join(outside, "deployments"), { recursive: true });
+    await writeFile(path.join(outside, "current.json"), `${JSON.stringify(evidence.pointer)}\n`);
+    await writeFile(
+      path.join(outside, evidence.pointer.deploymentEvidence),
+      `${JSON.stringify(evidence.deployment)}\n`,
+    );
     await symlink(outside, path.join(fixtureRoot, "docs", "release", "public-site"));
     await assert.rejects(
       inspectMacOSStoreRepository(fixtureRoot, { repositoryTestsPassed: true }),
@@ -1116,10 +1136,10 @@ test("the repository checker emits the only release facts consumed by Builder", 
       TAMMY_MACOS_BUILD_NUMBER: "42",
       TAMMY_MACOS_EXPORT_COMPLIANCE: "exempt",
       TAMMY_MACOS_PROVISIONING_PROFILE: "/private/tmp/tammy.provisionprofile",
-      TAMMY_MACOS_PRIVACY_POLICY_URL: "https://tammy-accounting.castlemilk.chatgpt.site/privacy",
+      TAMMY_MACOS_PRIVACY_POLICY_URL: "https://tammy.tax/privacy",
       TAMMY_MACOS_SIGNING_IDENTITY: "Apple Development: Tammy (ABCDE12345)",
       TAMMY_MACOS_SIGNING_MODE: "development",
-      TAMMY_MACOS_SUPPORT_URL: "https://tammy-accounting.castlemilk.chatgpt.site/support",
+      TAMMY_MACOS_SUPPORT_URL: "https://tammy.tax/support",
       TAMMY_MACOS_TARGET: "mas/arm64",
       TAMMY_MACOS_TEAM_ID: "ABCDE12345",
     };
@@ -1141,8 +1161,8 @@ test("the repository checker emits the only release facts consumed by Builder", 
       },
       marketingVersion: "0.1.0",
       publicLinks: {
-        privacyPolicy: "https://tammy-accounting.castlemilk.chatgpt.site/privacy",
-        support: "https://tammy-accounting.castlemilk.chatgpt.site/support",
+        privacyPolicy: "https://tammy.tax/privacy",
+        support: "https://tammy.tax/support",
       },
       target: "mas/arm64",
     });
@@ -1189,11 +1209,10 @@ test("seller eligibility cannot be supplied through a symlink", async () => {
           TAMMY_MACOS_INSTALLER_IDENTITY:
             "Mac Installer Distribution: Gamma Systems Pty Ltd (ABCDE12345)",
           TAMMY_MACOS_PROVISIONING_PROFILE: "/private/tmp/tammy.provisionprofile",
-          TAMMY_MACOS_PRIVACY_POLICY_URL:
-            "https://tammy-accounting.castlemilk.chatgpt.site/privacy",
+          TAMMY_MACOS_PRIVACY_POLICY_URL: "https://tammy.tax/privacy",
           TAMMY_MACOS_SIGNING_IDENTITY: "Apple Distribution: Gamma Systems Pty Ltd (ABCDE12345)",
           TAMMY_MACOS_SIGNING_MODE: "distribution",
-          TAMMY_MACOS_SUPPORT_URL: "https://tammy-accounting.castlemilk.chatgpt.site/support",
+          TAMMY_MACOS_SUPPORT_URL: "https://tammy.tax/support",
           TAMMY_MACOS_TARGET: "mas/arm64",
           TAMMY_MACOS_TEAM_ID: "ABCDE12345",
         },
@@ -1293,14 +1312,14 @@ test("store metadata is truthful, public-site bound, and leaves Apple facts oper
       "processed-build",
       "seller-eligibility",
     ],
-    privacyPolicy: "https://tammy-accounting.castlemilk.chatgpt.site/privacy",
+    privacyPolicy: "https://tammy.tax/privacy",
     publisher: "Gamma Systems Pty Ltd",
-    support: "https://tammy-accounting.castlemilk.chatgpt.site/support",
+    support: "https://tammy.tax/support",
     supportEmail: "ben.ebsworth@gmail.com",
   });
   for (const drift of [
     metadata.replace(
-      "https://tammy-accounting.castlemilk.chatgpt.site/privacy",
+      "https://tammy.tax/privacy",
       "https://github.com/castlemilk/tammy/blob/master/PRIVACY.md",
     ),
     metadata.replace("- **Publisher:** `Gamma Systems Pty Ltd`", "- **Publisher:** `Ben Ebsworth`"),
@@ -1463,4 +1482,107 @@ test("store plist validation requires exact sandbox inheritance and privacy valu
       }),
     /MACOS_STORE_REPOSITORY_INVALID/,
   );
+});
+
+test("a pending public-site pointer binds the policy and origin but blocks readiness", async () => {
+  const policy = Buffer.from("# Tammy privacy policy\n\nEffective 1 January 2027.\n");
+  const policySha256 = createHash("sha256").update(policy).digest("hex");
+  const pending = {
+    schemaVersion: 1,
+    status: "pending-deployment",
+    origin: publicSiteOrigin,
+    policySha256,
+  };
+  assert.deepEqual(validatePendingPublicSite(pending, policy), {
+    origin: publicSiteOrigin,
+    policySha256,
+  });
+  for (const [label, pointer] of [
+    ["another policy", { ...pending, policySha256: "0".repeat(64) }],
+    [
+      "the former Sites origin",
+      { ...pending, origin: "https://tammy-accounting.castlemilk.chatgpt.site" },
+    ],
+    ["another status", { ...pending, status: "recorded" }],
+    ["an extra field", { ...pending, deploymentEvidence: "deployments/dpl_x.json" }],
+    ["another schema", { ...pending, schemaVersion: 2 }],
+  ])
+    assert.throws(
+      () => validatePendingPublicSite(pointer, policy),
+      /MACOS_PUBLIC_SITE_INVALID/,
+      label,
+    );
+
+  const fixtureRoot = await mkdtemp(path.join(tmpdir(), "tammy-macos-public-site-pending-"));
+  try {
+    await mkdir(path.join(fixtureRoot, "apps"), { recursive: true });
+    await mkdir(path.join(fixtureRoot, "docs"), { recursive: true });
+    await Promise.all([
+      cp(path.join(root, "apps", "desktop"), path.join(fixtureRoot, "apps", "desktop"), {
+        filter: desktopFixtureFilter,
+        recursive: true,
+      }),
+      cp(path.join(root, "docs", "development"), path.join(fixtureRoot, "docs", "development"), {
+        recursive: true,
+      }),
+      cp(path.join(root, "docs", "release"), path.join(fixtureRoot, "docs", "release"), {
+        recursive: true,
+      }),
+      cp(path.join(root, "README.md"), path.join(fixtureRoot, "README.md")),
+      cp(path.join(root, "PRIVACY.md"), path.join(fixtureRoot, "PRIVACY.md")),
+    ]);
+    const repositoryPolicy = await readFile(path.join(fixtureRoot, "PRIVACY.md"));
+    const pointerPath = path.join(fixtureRoot, "docs/release/public-site/current.json");
+    await writeFile(
+      pointerPath,
+      `${JSON.stringify({
+        ...pending,
+        policySha256: createHash("sha256").update(repositoryPolicy).digest("hex"),
+      })}\n`,
+    );
+    await assert.rejects(
+      inspectMacOSStoreRepository(fixtureRoot, { repositoryTestsPassed: true }),
+      /^Error: MACOS_PUBLIC_SITE_PENDING$/,
+    );
+    await writeFile(pointerPath, `${JSON.stringify(pending)}\n`);
+    await assert.rejects(
+      inspectMacOSStoreRepository(fixtureRoot, { repositoryTestsPassed: true }),
+      /^Error: MACOS_PUBLIC_SITE_INVALID$/,
+    );
+  } finally {
+    await rm(fixtureRoot, { force: true, recursive: true });
+  }
+});
+
+test("only a Vercel deployment of tammy.tax can be the current public site", () => {
+  const policy = Buffer.from("# Tammy privacy policy\n\nEffective 1 January 2027.\n");
+  const { pointer, deployment } = syntheticPublicSiteEvidence(policy);
+  assert.equal(validateCurrentPublicSite(pointer, deployment, policy).origin, publicSiteOrigin);
+  const sites = {
+    ...deployment,
+    provider: "OpenAI Sites",
+    projectId: "appgprj_old",
+    versionId: "appgprj_old~appgver_old",
+    deploymentId: "appgdep_old",
+  };
+  for (const [label, candidatePointer, candidate] of [
+    [
+      "a former Sites record",
+      { ...pointer, deploymentEvidence: "deployments/appgdep_old.json" },
+      sites,
+    ],
+    [
+      "the former origin",
+      pointer,
+      { ...deployment, origin: "https://tammy-accounting.castlemilk.chatgpt.site" },
+    ],
+    ["a version that is not the deployment", pointer, { ...deployment, versionId: "dpl_other" }],
+    ["a non-Vercel project", pointer, { ...deployment, projectId: "appgprj_testfixture" }],
+    ["another Vercel project", pointer, { ...deployment, projectId: "prj_someoneelse" }],
+  ])
+    assert.throws(
+      () => validateCurrentPublicSite(candidatePointer, candidate, policy),
+      /MACOS_PUBLIC_SITE_INVALID/,
+      label,
+    );
 });

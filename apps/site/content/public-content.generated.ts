@@ -272,7 +272,7 @@ export const publicContent = {
               {
                 "type": "link",
                 "text": "support page",
-                "href": "https://tammy-accounting.castlemilk.chatgpt.site/support"
+                "href": "https://tammy.tax/support"
               },
               {
                 "type": "text",

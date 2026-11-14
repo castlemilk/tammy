@@ -1,8 +1,8 @@
 import { abnLookupUrl } from "./abn.ts";
 
 export const TAMMY_PUBLIC_LINKS = Object.freeze({
-  privacyPolicy: "https://tammy-accounting.castlemilk.chatgpt.site/privacy",
-  support: "https://tammy-accounting.castlemilk.chatgpt.site/support",
+  privacyPolicy: "https://tammy.tax/privacy",
+  support: "https://tammy.tax/support",
 });
 
 export const OFFICIAL_RESOURCES = Object.freeze({
