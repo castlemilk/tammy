@@ -35,7 +35,7 @@ The accountable Apple setup needs Apple Development and Apple Distribution certi
 - **Metadata and assets entered:** `OPERATOR_CONFIRMATION_REQUIRED`
 - **App Store warning review:** `OPERATOR_CONFIRMATION_REQUIRED`
 
-The explicit Mac App ID is `com.tammy.desktop` (`DXP9QHD7JH`), and the App Store Connect record is `6800226692` for **Tammy Accounting** 0.1.0. These identifiers do not prove seller eligibility, agreement status, declaration answers, build processing, or submission readiness. The public [privacy policy](https://tammy-accounting.castlemilk.chatgpt.site/privacy) and [support page](https://tammy-accounting.castlemilk.chatgpt.site/support) are bound to the immutable deployment record checked by `release:check`.
+The explicit Mac App ID is `com.tammy.desktop` (`DXP9QHD7JH`), and the App Store Connect record is `6800226692` for **Tammy Accounting** 0.1.0. These identifiers do not prove seller eligibility, agreement status, declaration answers, build processing, or submission readiness. The public [privacy policy](https://tammy.tax/privacy) and [support page](https://tammy.tax/support) are bound to the immutable deployment record checked by `release:check`.
 
 Reserve each positive decimal `CFBundleVersion` only after candidate-affecting repository changes are committed:
 
@@ -68,9 +68,9 @@ Record the accountable export-compliance determination for the exact release as 
 export TAMMY_MACOS_BUILD_NUMBER='1'
 export TAMMY_MACOS_EXPORT_COMPLIANCE='exempt' # or non-exempt, from the legal determination
 export TAMMY_MACOS_PROVISIONING_PROFILE='/absolute/path/Tammy_MAS_Development.provisionprofile'
-export TAMMY_MACOS_PRIVACY_POLICY_URL='https://tammy-accounting.castlemilk.chatgpt.site/privacy'
+export TAMMY_MACOS_PRIVACY_POLICY_URL='https://tammy.tax/privacy'
 export TAMMY_MACOS_SIGNING_IDENTITY='Apple Development: Example Person (TEAMID1234)'
-export TAMMY_MACOS_SUPPORT_URL='https://tammy-accounting.castlemilk.chatgpt.site/support'
+export TAMMY_MACOS_SUPPORT_URL='https://tammy.tax/support'
 export TAMMY_MACOS_TEAM_ID='TEAMID1234'
 
 mise exec -- task release:development
@@ -95,10 +95,10 @@ For an upload candidate, use the distribution profile and identities:
 export TAMMY_MACOS_BUILD_NUMBER='2'
 export TAMMY_MACOS_EXPORT_COMPLIANCE='exempt' # or non-exempt
 export TAMMY_MACOS_PROVISIONING_PROFILE='/absolute/path/Tammy_MAS_Distribution.provisionprofile'
-export TAMMY_MACOS_PRIVACY_POLICY_URL='https://tammy-accounting.castlemilk.chatgpt.site/privacy'
+export TAMMY_MACOS_PRIVACY_POLICY_URL='https://tammy.tax/privacy'
 export TAMMY_MACOS_SIGNING_IDENTITY='Apple Distribution: Example Company Pty Ltd (TEAMID1234)'
 export TAMMY_MACOS_INSTALLER_IDENTITY='Mac Installer Distribution: Example Company Pty Ltd (TEAMID1234)'
-export TAMMY_MACOS_SUPPORT_URL='https://tammy-accounting.castlemilk.chatgpt.site/support'
+export TAMMY_MACOS_SUPPORT_URL='https://tammy.tax/support'
 export TAMMY_MACOS_TEAM_ID='TEAMID1234'
 
 mise exec -- task release:candidate
@@ -191,9 +191,9 @@ Manually upload the signed `.pkg` with Apple's Transporter app, wait for App Sto
 
 Record the commit, marketing version, build number, signing/profile names, package SHA-256, validation results, screenshots, privacy report, App Store Connect build identifier, and reviewer notes. Do not record private key material or credentials. Every candidate, attestation, and lifecycle fact consumed by a readiness gate must be in a clean commit reachable from the fetched trusted remote; local or merely committed evidence reports a `*_RECORD_NOT_DURABLE` blocker.
 
-The public privacy/support site has a separate immutable record under `docs/release/public-site`. A successful public deployment exclusively creates `deployments/<deployment-id>.json`; `current.json` is only an atomic pointer to the latest passing record. Credentials, source-write URLs, account-user IDs, tokens, and mutable deployment URLs never belong in those files.
+The public privacy/support site has a separate immutable record under `docs/release/public-site`. Since 14 November 2026 the site is served from Vercel (project `tammy-site`) at `https://tammy.tax` and deployed only by the Cuttlefish CI job (see [the Vercel runbook](../../apps/site/VERCEL-RELEASE-RUNBOOK.md)). After that job publishes, record the deployment with `mise exec -- node scripts/check-public-site.mjs --origin https://tammy.tax --record-vercel-deployment <deployment-record.json>`, which re-runs the three-route check, binds `policySha256` to `PRIVACY.md` at the deployed commit, exclusively creates `deployments/<dpl id>.json`, and atomically points `current.json` at it. When a change to `PRIVACY.md` or the public origin is merged before its deployment is recorded, `current.json` is a `pending-deployment` pointer naming that origin and policy hash, and `release:check` reports `MACOS_PUBLIC_SITE_PENDING` until the record exists. Earlier records under `deployments/appgdep_*.json` describe the former Sites host and are history. Credentials, source-write URLs, account-user IDs, tokens, and mutable deployment URLs never belong in those files.
 
-To roll the public site back, first confirm that at least one distinct prior deployment file has a passing result for `/`, `/privacy`, and `/support`. Select that immutable prior Sites version intentionally, deploy it, and poll the returned deployment ID until it succeeds or fails. After success, run `mise exec -- task site:post-deploy-check SITE_ORIGIN=<exact-canonical-origin>`. Exclusively create one immutable rollback event under `docs/release/public-site/events` that identifies the new deployment ID/version/time, the version rolled back from, the prior version restored, the exact prior deployment-evidence path, and the new passing three-route result. Atomically update `current.json` only after the event and passing deployment record exist. Never delete or modify an earlier deployment or rollback file. If deployment or route verification fails, leave `current.json` and App Store metadata unchanged.
+To roll the public site back, first confirm that at least one distinct prior Vercel deployment file has a passing result for `/`, `/privacy`, and `/support`. Promote that immutable prior deployment intentionally (`vercel promote <deployment-url> --scope document-analyser`), then run `mise exec -- task site:post-deploy-check SITE_ORIGIN=https://tammy.tax`. Exclusively create one immutable rollback event under `docs/release/public-site/events` that identifies the deployment rolled back from, the prior deployment restored, the exact prior deployment-evidence path, and the new passing three-route result, then atomically point `current.json` at the prior deployment's existing record. Never delete or modify an earlier deployment or rollback file. If promotion or route verification fails, leave `current.json` and App Store metadata unchanged.
 
 App Store rollback means selecting a previously approved version where Apple permits it or shipping a higher build/version with the corrective change. Never reuse an uploaded build number. Preserve the release record and exact source commit for every submitted candidate.
 

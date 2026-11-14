@@ -3,7 +3,6 @@
  * llms.txt / rss.xml links and inspecting the live canonical tags.
  *
  * The desktop app's privacy and support links and the macOS App Store evidence
- * tooling still use the former Sites origin, which stays published; moving them is
- * a separate desktop compatibility review.
+ * tooling use the same origin (PRIVACY.md, apps/desktop/src/shared/official-resources.ts).
  */
 export const SITE_ORIGIN = "https://tammy.tax";
