@@ -340,10 +340,10 @@ test("the actual artifact verification scripts reject mismatched or tampered inp
 });
 
 test("Vercel publication is restricted to configured trusted master push or explicit dispatch", () => {
+  // GitHub evaluates an unset repository variable as an empty string.
   const allowed = jobGate(vercelJob);
   for (const repository of ["castlemilk/tammy", "someone/tammy"])
     for (const ref of ["refs/heads/master", "refs/heads/feature", "refs/pull/65/merge"])
-      // GitHub evaluates an unset repository variable as an empty string.
       for (const event_name of ["push", "pull_request", "workflow_dispatch", "workflow_run"])
         for (const deploy_vercel of [true, false, undefined])
           for (const project of [undefined, "", "prj_example"]) {
