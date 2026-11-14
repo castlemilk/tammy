@@ -56,7 +56,7 @@ const validStoreIdentity = {
 };
 
 function syntheticPublicSiteEvidence(policyBytes) {
-  const projectId = "prj_testfixture";
+  const projectId = "prj_zlt5QLKUW3QrdkrHuHq7wkqVkU4j";
   const deploymentId = "dpl_testfixture";
   return {
     pointer: {
@@ -1578,6 +1578,7 @@ test("only a Vercel deployment of tammy.tax can be the current public site", () 
     ],
     ["a version that is not the deployment", pointer, { ...deployment, versionId: "dpl_other" }],
     ["a non-Vercel project", pointer, { ...deployment, projectId: "appgprj_testfixture" }],
+    ["another Vercel project", pointer, { ...deployment, projectId: "prj_someoneelse" }],
   ])
     assert.throws(
       () => validateCurrentPublicSite(candidatePointer, candidate, policy),

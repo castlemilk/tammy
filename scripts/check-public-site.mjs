@@ -580,14 +580,58 @@ export async function createRollbackEvent({
   return { event, eventPath };
 }
 
+export const VERCEL_PROJECT_ID = "prj_zlt5QLKUW3QrdkrHuHq7wkqVkU4j";
+const SOURCE_REPOSITORY = "castlemilk/tammy";
+
+/**
+ * Reads the two files the Cuttlefish CI deploy-vercel job keeps for a deployment:
+ * site-release.mjs's deployment record and its passing byte-for-byte check that
+ * tammy.tax served that deployment's exact files.
+ */
+export function vercelEvidenceFromDeploymentRecord(vercel, live) {
+  if (
+    vercel?.target !== "vercel" ||
+    vercel.status !== "published" ||
+    vercel.deployment_target !== "production" ||
+    vercel.github?.repository !== SOURCE_REPOSITORY ||
+    vercel.vercel?.project_id !== VERCEL_PROJECT_ID ||
+    !/^dpl_[A-Za-z0-9]+$/.test(vercel.deployment_id ?? "") ||
+    !/^[0-9a-f]{40}$/.test(vercel.github?.commit_sha ?? "") ||
+    typeof vercel.deployed_at !== "string"
+  ) {
+    throw new Error(
+      `Expected a published production record from site-release.mjs vercel-deploy for ${SOURCE_REPOSITORY} and ${VERCEL_PROJECT_ID}, with deployed_at`,
+    );
+  }
+  if (
+    live?.kind !== "vercel-live-verification" ||
+    live.ok !== true ||
+    live.origin !== TRUSTED_PUBLIC_ORIGIN ||
+    live.deployment_id !== vercel.deployment_id ||
+    live.github?.commit_sha !== vercel.github.commit_sha
+  ) {
+    throw new Error(
+      "Expected the CI job's passing live-verification.json showing tammy.tax served this deployment",
+    );
+  }
+  return {
+    projectId: vercel.vercel.project_id,
+    deploymentId: vercel.deployment_id,
+    sourceCommit: vercel.github.commit_sha,
+    deployedAt: vercel.deployed_at,
+  };
+}
+
 /**
  * Records a production deployment made by the Cuttlefish CI Vercel job as the current
- * public-site evidence. The live three-route check must pass, and the policy hash is
- * taken from PRIVACY.md at the deployed commit, which must equal the working tree's.
+ * public-site evidence. It needs the job's passing live byte check for that deployment,
+ * a deployed commit on the checked-out branch, a live three-route check that passes now,
+ * and PRIVACY.md at the deployed commit equal to the working tree's.
  */
 export async function recordVercelDeployment({
   origin,
   deploymentRecordPath,
+  liveVerificationPath = path.join(path.dirname(deploymentRecordPath), "live-verification.json"),
   recordsRoot = "docs/release/public-site",
   repositoryRoot = process.cwd(),
   fetchImpl = fetch,
@@ -596,26 +640,36 @@ export async function recordVercelDeployment({
       cwd: repositoryRoot,
       maxBuffer: 4 * 1024 * 1024,
     }),
+  isAncestorOfHead = (commit) => {
+    try {
+      execFileSync("git", ["merge-base", "--is-ancestor", commit, "HEAD"], {
+        cwd: repositoryRoot,
+        stdio: "ignore",
+      });
+      return true;
+    } catch {
+      return false;
+    }
+  },
 }) {
   if (origin !== TRUSTED_PUBLIC_ORIGIN) {
     throw new Error(`Vercel deployments are recorded only for ${TRUSTED_PUBLIC_ORIGIN}`);
   }
-  const vercel = JSON.parse(await readFile(deploymentRecordPath, "utf8"));
-  const deployedAt = vercel?.deployed_at;
-  if (
-    vercel?.target !== "vercel" ||
-    vercel.status !== "published" ||
-    vercel.deployment_target !== "production" ||
-    !/^dpl_[A-Za-z0-9]+$/.test(vercel.deployment_id ?? "") ||
-    !/^prj_[A-Za-z0-9]+$/.test(vercel.vercel?.project_id ?? "") ||
-    !/^[0-9a-f]{40}$/.test(vercel.github?.commit_sha ?? "") ||
-    typeof deployedAt !== "string"
-  ) {
-    throw new Error(
-      "Expected a published production record from site-release.mjs vercel-deploy, with deployed_at",
-    );
+  const readJson = async (file) => {
+    try {
+      return JSON.parse(await readFile(file, "utf8"));
+    } catch {
+      return null;
+    }
+  };
+  const evidence = vercelEvidenceFromDeploymentRecord(
+    await readJson(deploymentRecordPath),
+    await readJson(liveVerificationPath),
+  );
+  if (!isAncestorOfHead(evidence.sourceCommit)) {
+    throw new Error("The deployed commit is not on the checked-out branch; record from master");
   }
-  const deployedPolicy = Buffer.from(readPolicyAtCommit(vercel.github.commit_sha));
+  const deployedPolicy = Buffer.from(readPolicyAtCommit(evidence.sourceCommit));
   const currentPolicy = await readFile(path.join(repositoryRoot, "PRIVACY.md"));
   if (!deployedPolicy.equals(currentPolicy)) {
     throw new Error(
@@ -627,16 +681,25 @@ export async function recordVercelDeployment({
     schemaVersion: 1,
     provider: "Vercel",
     access: "public",
-    projectId: vercel.vercel.project_id,
-    versionId: vercel.deployment_id,
-    deploymentId: vercel.deployment_id,
+    projectId: evidence.projectId,
+    versionId: evidence.deploymentId,
+    deploymentId: evidence.deploymentId,
     origin: result.origin,
-    deployedAt,
-    sourceCommit: vercel.github.commit_sha,
+    deployedAt: evidence.deployedAt,
+    sourceCommit: evidence.sourceCommit,
     policySha256: createHash("sha256").update(deployedPolicy).digest("hex"),
     routes: result.routes,
   };
-  const evidencePath = await writePublicSiteDeployment({ record, recordsRoot });
+  let evidencePath;
+  try {
+    evidencePath = await writePublicSiteDeployment({ record, recordsRoot });
+  } catch (error) {
+    if (error?.code !== "EEXIST") throw error;
+    // Resume after a partial write: the pointer step re-reads the existing file and
+    // accepts it only if it is exactly this record.
+    const prepared = await prepareRecordsDirectory(recordsRoot, "deployments");
+    evidencePath = deploymentEvidencePath(prepared.root, record.deploymentId);
+  }
   const pointerPath = await writeCurrentPublicSitePointer({ record, evidencePath, recordsRoot });
   return { record, evidencePath, pointerPath };
 }

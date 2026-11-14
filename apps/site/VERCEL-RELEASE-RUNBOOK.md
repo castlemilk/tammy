@@ -93,5 +93,9 @@ gh run download <run-id> --repo castlemilk/tammy --name tammy-vercel-deployment-
 mise exec -- node scripts/check-public-site.mjs --origin https://tammy.tax --record-vercel-deployment /abs/vercel-record/deployment-record.json
 ```
 
-It re-runs the three-route check, takes `policySha256` from `PRIVACY.md` at the deployed commit, writes `docs/release/public-site/deployments/<dpl id>.json` and points `current.json` at it. Commit those two files (with descriptor attestation). Until then `current.json` is a `pending-deployment` pointer and App Store readiness reports `MACOS_PUBLIC_SITE_PENDING`.
+It requires the job's `live-verification.json` from the same artifact (proof that tammy.tax served that deployment's exact bytes), the `tammy-site` project, the `castlemilk/tammy` repository and a deployed commit on the checked-out branch. It then re-runs the three-route check, takes `policySha256` from `PRIVACY.md` at the deployed commit (which must equal the working tree's), writes `docs/release/public-site/deployments/<dpl id>.json` and points `current.json` at it; a retry after a partial write resumes. Commit those two files with descriptor attestation. They sit outside the site workflow's path filter, so that commit does not trigger another deployment. Deployments made before this recorder existed have no `deployed_at` and cannot be recorded.
+
+Until the record exists, `current.json` is a `pending-deployment` pointer and every App Store release command stops with `MACOS_PUBLIC_SITE_PENDING`. Later site deployments that leave `PRIVACY.md` and the origin unchanged do not need a new record.
+
+Owner steps outside the repository: verify the `tammy.tax` Domain property in Google Search Console and submit `https://tammy.tax/sitemap.xml`, and set the App Store Connect privacy and support URLs to tammy.tax (see [the App Store runbook](../../docs/release/macos-app-store.md)).
 

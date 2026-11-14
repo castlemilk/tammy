@@ -413,6 +413,8 @@ export function validateMacOSStorePlists({
 }
 
 const PUBLIC_ORIGIN = "https://tammy.tax";
+// The Vercel project that serves tammy.tax (team document-analyser).
+const VERCEL_PROJECT_ID = "prj_zlt5QLKUW3QrdkrHuHq7wkqVkU4j";
 const METADATA_OPERATOR_CONFIRMATIONS = Object.freeze([
   "active-agreements",
   "age-rating",
@@ -780,7 +782,7 @@ export function validateCurrentPublicSite(pointer, deployment, policyBytes) {
     deployment.policySha256 !== policySha256 ||
     pointer.deploymentEvidence !== `deployments/${deployment.deploymentId}.json` ||
     // A Vercel deployment is an immutable build, so it is also the served version.
-    !/^prj_[A-Za-z0-9]+$/.test(deployment.projectId) ||
+    deployment.projectId !== VERCEL_PROJECT_ID ||
     !/^dpl_[A-Za-z0-9]+$/.test(deployment.deploymentId) ||
     deployment.versionId !== deployment.deploymentId ||
     !/^[0-9a-f]{40}$/.test(deployment.sourceCommit) ||

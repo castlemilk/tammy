@@ -9,7 +9,9 @@ import {
   checkPublicSite,
   createRollbackEvent,
   recordVercelDeployment,
+  VERCEL_PROJECT_ID,
   validatePublicSiteDeployment,
+  vercelEvidenceFromDeploymentRecord,
   writeCurrentPublicSitePointer,
   writePublicSiteDeployment,
 } from "./check-public-site.mjs";
@@ -552,19 +554,21 @@ test("validates Vercel deployment records, where the deployment is the version",
     assert.throws(() => validatePublicSiteDeployment(invalid), /Vercel deployment evidence/);
 });
 
-async function vercelRecordFixture(context, overrides = {}) {
+async function vercelRecordFixture(context, overrides = {}, liveOverrides = {}) {
   const base = await mkdtemp(
     path.join(await realpath(process.env.TMPDIR ?? os.tmpdir()), "tammy-public-site-vercel-"),
   );
   context.after(() => rm(base, { recursive: true, force: true }));
   const policy = Buffer.from("# Tammy privacy policy\n\nEffective 1 January 2027.\n");
   await writeFile(path.join(base, "PRIVACY.md"), policy);
+  const github = { repository: "castlemilk/tammy", commit_sha: "c".repeat(40) };
+  // Shapes written by scripts/site-release.mjs vercel-deploy and vercel-verify-live.
   const record = {
-    schemaVersion: 1,
+    schema_version: 1,
     target: "vercel",
     project: "tammy-site",
-    vercel: { org_id: "team_fixture", project_id: "prj_fixture" },
-    github: { repository: "castlemilk/tammy", commit_sha: "c".repeat(40) },
+    vercel: { org_id: "team_fixture", project_id: VERCEL_PROJECT_ID },
+    github,
     status: "published",
     deployment_id: "dpl_fixture",
     deployment_target: "production",
@@ -572,33 +576,61 @@ async function vercelRecordFixture(context, overrides = {}) {
     deployed_at: "2026-11-14T12:00:00.000Z",
     ...overrides,
   };
+  const live = {
+    schema_version: 1,
+    kind: "vercel-live-verification",
+    origin,
+    github,
+    deployment_id: "dpl_fixture",
+    ok: true,
+    ...liveOverrides,
+  };
   const recordPath = path.join(base, "deployment-record.json");
   await writeFile(recordPath, JSON.stringify(record));
+  await writeFile(path.join(base, "live-verification.json"), JSON.stringify(live));
   return { base, policy, recordPath, recordsRoot: path.join(base, "records") };
 }
 
-test("records a CI Vercel deployment of tammy.tax as current public-site evidence", async (context) => {
-  const { base, policy, recordPath, recordsRoot } = await vercelRecordFixture(context);
-  const commits = [];
-  const { fetchImpl, calls } = mockFetch();
-  const result = await recordVercelDeployment({
+function recordOptions({ base, policy, recordPath, recordsRoot }, extra = {}) {
+  return {
     origin,
     deploymentRecordPath: recordPath,
     recordsRoot,
     repositoryRoot: base,
-    fetchImpl,
-    readPolicyAtCommit: (commit) => {
-      commits.push(commit);
-      return policy;
-    },
-  });
+    fetchImpl: mockFetch().fetchImpl,
+    readPolicyAtCommit: () => policy,
+    isAncestorOfHead: () => true,
+    ...extra,
+  };
+}
+
+test("records a CI Vercel deployment of tammy.tax as current public-site evidence", async (context) => {
+  const fixture = await vercelRecordFixture(context);
+  const { policy, recordsRoot } = fixture;
+  const commits = [];
+  const ancestry = [];
+  const { fetchImpl, calls } = mockFetch();
+  const result = await recordVercelDeployment(
+    recordOptions(fixture, {
+      fetchImpl,
+      readPolicyAtCommit: (commit) => {
+        commits.push(commit);
+        return policy;
+      },
+      isAncestorOfHead: (commit) => {
+        ancestry.push(commit);
+        return true;
+      },
+    }),
+  );
   assert.deepEqual(commits, ["c".repeat(40)]);
+  assert.deepEqual(ancestry, ["c".repeat(40)]);
   assert.deepEqual(calls, [`${origin}/`, `${origin}/privacy`, `${origin}/support`]);
   assert.deepEqual(result.record, {
     schemaVersion: 1,
     provider: "Vercel",
     access: "public",
-    projectId: "prj_fixture",
+    projectId: VERCEL_PROJECT_ID,
     versionId: "dpl_fixture",
     deploymentId: "dpl_fixture",
     origin,
@@ -615,61 +647,135 @@ test("records a CI Vercel deployment of tammy.tax as current public-site evidenc
     JSON.parse(await readFile(path.join(recordsRoot, "deployments/dpl_fixture.json"), "utf8")),
     result.record,
   );
+});
+
+test("recording resumes after a partial write but never replaces a different record", async (context) => {
+  const fixture = await vercelRecordFixture(context);
+  const first = await recordVercelDeployment(recordOptions(fixture));
+  // The pointer was lost after the deployment file was written: a retry resumes.
+  await rm(path.join(fixture.recordsRoot, "current.json"));
+  const retried = await recordVercelDeployment(recordOptions(fixture));
+  assert.deepEqual(retried.record, first.record);
+  assert.deepEqual(
+    JSON.parse(await readFile(path.join(fixture.recordsRoot, "current.json"), "utf8")),
+    { schemaVersion: 1, deploymentEvidence: "deployments/dpl_fixture.json" },
+  );
+  // A different record for the same deployment is refused.
+  const changed = await vercelRecordFixture(context, { deployed_at: "2026-11-15T00:00:00.000Z" });
   await assert.rejects(
-    recordVercelDeployment({
-      origin,
-      deploymentRecordPath: recordPath,
-      recordsRoot,
-      repositoryRoot: base,
-      fetchImpl,
-      readPolicyAtCommit: () => policy,
-    }),
-    /exist/i,
+    recordVercelDeployment(recordOptions({ ...changed, recordsRoot: fixture.recordsRoot })),
+    /does not match/,
   );
 });
 
-test("refuses to record anything but a passing production deployment of the current policy", async (context) => {
+test("refuses to record anything but a verified production deployment of the current policy", async (context) => {
   const cases = [
     [
       "another origin",
       {},
+      {},
       { origin: "https://tammy-accounting.castlemilk.chatgpt.site" },
       /recorded only for/,
     ],
-    ["a preview deployment", { deployment_target: "preview" }, {}, /published production record/],
-    ["an uncertain outcome", { status: "outcome-uncertain" }, {}, /published production record/],
-    ["a record without its time", { deployed_at: undefined }, {}, /published production record/],
-    ["a Worker record", { target: "cloudflare" }, {}, /published production record/],
+    [
+      "a preview deployment",
+      { deployment_target: "preview" },
+      {},
+      {},
+      /published production record/,
+    ],
+    [
+      "an uncertain outcome",
+      { status: "outcome-uncertain" },
+      {},
+      {},
+      /published production record/,
+    ],
+    [
+      "a record without its time",
+      { deployed_at: undefined },
+      {},
+      {},
+      /published production record/,
+    ],
+    ["a Worker record", { target: "cloudflare" }, {}, {}, /published production record/],
+    [
+      "another Vercel project",
+      { vercel: { org_id: "team_x", project_id: "prj_other" } },
+      {},
+      {},
+      /published production record/,
+    ],
+    [
+      "a fork's deployment",
+      { github: { repository: "someone/tammy", commit_sha: "c".repeat(40) } },
+      {},
+      {},
+      /published production record/,
+    ],
+    ["a failed live byte check", {}, { ok: false }, {}, /live-verification/],
+    [
+      "a live check of another deployment",
+      {},
+      { deployment_id: "dpl_other" },
+      {},
+      /live-verification/,
+    ],
+    ["no live check at all", {}, null, {}, /live-verification/],
+    [
+      "a commit that is not on this branch",
+      {},
+      {},
+      { isAncestorOfHead: () => false },
+      /not on the checked-out branch/,
+    ],
     [
       "a different policy at the deployed commit",
       {},
-      { policy: Buffer.from("older policy\n") },
+      {},
+      { readPolicyAtCommit: () => Buffer.from("older policy\n") },
       /PRIVACY\.md differs/,
     ],
     [
       "a failing live page",
       {},
-      { fetchOverrides: { "/support": { status: 500 } } },
+      {},
+      { fetchImpl: mockFetch({ "/support": { status: 500 } }).fetchImpl },
       /unexpected status 500/,
     ],
   ];
-  for (const [label, recordOverrides, options, expected] of cases) {
-    const { base, policy, recordPath, recordsRoot } = await vercelRecordFixture(
-      context,
-      recordOverrides,
-    );
+  for (const [label, recordOverrides, liveOverrides, extra, expected] of cases) {
+    const fixture = await vercelRecordFixture(context, recordOverrides, liveOverrides ?? {});
+    if (liveOverrides === null) await rm(path.join(fixture.base, "live-verification.json"));
+    await assert.rejects(recordVercelDeployment(recordOptions(fixture, extra)), expected, label);
     await assert.rejects(
-      recordVercelDeployment({
-        origin: options.origin ?? origin,
-        deploymentRecordPath: recordPath,
-        recordsRoot,
-        repositoryRoot: base,
-        fetchImpl: mockFetch(options.fetchOverrides).fetchImpl,
-        readPolicyAtCommit: () => options.policy ?? policy,
-      }),
-      expected,
-      label,
+      readdir(fixture.recordsRoot),
+      { code: "ENOENT" },
+      `${label} writes nothing`,
     );
-    await assert.rejects(readdir(recordsRoot), { code: "ENOENT" }, `${label} writes nothing`);
   }
+});
+
+test("reads exactly the fields the CI deployment and live check provide", () => {
+  const github = { repository: "castlemilk/tammy", commit_sha: "d".repeat(40) };
+  assert.deepEqual(
+    vercelEvidenceFromDeploymentRecord(
+      {
+        target: "vercel",
+        status: "published",
+        deployment_target: "production",
+        github,
+        vercel: { project_id: VERCEL_PROJECT_ID },
+        deployment_id: "dpl_x",
+        deployed_at: "2026-11-14T12:00:00.000Z",
+      },
+      { kind: "vercel-live-verification", ok: true, origin, deployment_id: "dpl_x", github },
+    ),
+    {
+      projectId: VERCEL_PROJECT_ID,
+      deploymentId: "dpl_x",
+      sourceCommit: "d".repeat(40),
+      deployedAt: "2026-11-14T12:00:00.000Z",
+    },
+  );
 });

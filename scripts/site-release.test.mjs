@@ -16,6 +16,7 @@ import {
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
+import { VERCEL_PROJECT_ID, vercelEvidenceFromDeploymentRecord } from "./check-public-site.mjs";
 import {
   assertCloudflareConfig,
   build,
@@ -1965,4 +1966,33 @@ test("the live check proves the production domain serves this exact build", asyn
       /Only a published Vercel deployment/,
     );
   });
+});
+
+test("the CI deployment record and live check are exactly what the evidence recorder reads", async (t) => {
+  withEnv(t, {
+    VERCEL_ORG_ID: "team_xE5DMN3hIo8aPqyHNkBybg8r",
+    VERCEL_PROJECT_ID,
+    VERCEL_TOKEN: testToken,
+  });
+  const { snapshot, output, commitSha } = vercelBuilt(t);
+  const record = deployVercel(snapshot, output, () =>
+    JSON.stringify({ status: "ok", deployment: readyDeployment }),
+  );
+  const live = await verifyVercelLive(output, {
+    fetcher: servedFrom(path.join(output, ".vercel/output/static")),
+    delayMs: 0,
+  });
+  assert.deepEqual(
+    vercelEvidenceFromDeploymentRecord(
+      readJson(path.join(output, "deployment-record.json")),
+      readJson(path.join(output, "live-verification.json")),
+    ),
+    {
+      projectId: VERCEL_PROJECT_ID,
+      deploymentId: readyDeployment.id,
+      sourceCommit: commitSha,
+      deployedAt: record.deployed_at,
+    },
+  );
+  assert.equal(live.deployment_id, record.deployment_id);
 });
