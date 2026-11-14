@@ -33,7 +33,11 @@ node scripts/site-release.mjs verify
 node scripts/site-release.mjs vercel-output --output /abs/tammy-vercel-output
 VERCEL_ORG_ID=team_xE5DMN3hIo8aPqyHNkBybg8r VERCEL_PROJECT_ID=prj_zlt5QLKUW3QrdkrHuHq7wkqVkU4j \
   node scripts/site-release.mjs vercel-deploy --output /abs/tammy-vercel-output
+node scripts/site-release.mjs vercel-verify-live --output /abs/tammy-vercel-output
+pnpm --dir apps/site site:preflight -- https://tammy.tax
 ```
+
+`vercel-verify-live` fetches `/`, `/tools`, `/sitemap.xml` and one hashed script from https://tammy.tax and requires each to match the deployed file byte for byte, retrying for about 30 seconds. It writes `live-verification.json` beside the record. A deployment that is READY but did not take the domain fails here, even though route and canonical checks would pass.
 
 `vercel-deploy` rechecks the static files and routing against the build record and refuses any other file beside the output (the CLI would read a stray `vercel.json`). It then runs `vercel deploy --prebuilt --prod --format=json`. Locally it uses the signed-in Vercel CLI session; in GitHub Actions it requires `VERCEL_TOKEN`. It never takes a token as an argument and never logs in, and the CLI receives only an allowlist of environment variables (path, home, temp, locale, proxy and npm settings, plus the three `VERCEL_` values), so other tokens and the variables the CLI uses to detect AI agents never reach it. `npx` fetches the exact `vercel@56.4.1` from npm; it is not in the lockfile.
 
@@ -73,9 +77,10 @@ The **Tammy website** workflow has a `deploy-vercel` job. On every master push (
 2. downloads that exact artifact and rechecks its revision, target and hashes;
 3. writes the reviewed output;
 4. runs `vercel-deploy` with the token in that one step only;
-5. runs `live-site-preflight.mjs https://tammy.tax`.
+5. runs `vercel-verify-live` to confirm tammy.tax serves those exact bytes;
+6. runs `live-site-preflight.mjs https://tammy.tax`.
 
-It never rebuilds, uploads only `deployment-record.json`, and cannot be cancelled mid-publish.
+It never rebuilds, uploads only `deployment-record.json` and `live-verification.json`, and cannot be cancelled mid-publish.
 
 The job is skipped until the repository is configured. One-time setup, by the owner:
 

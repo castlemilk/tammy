@@ -415,6 +415,10 @@ jobs:
           VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
         run: node scripts/site-release.mjs vercel-deploy --output "$RUNNER_TEMP/tammy-vercel-output"
+      - name: Confirm tammy.tax serves this exact build
+        id: live
+        working-directory: ${{ runner.temp }}/tammy-vercel-source
+        run: node scripts/site-release.mjs vercel-verify-live --output "$RUNNER_TEMP/tammy-vercel-output"
       - name: Check tammy.tax routes, canonicals and sitemap
         id: health
         working-directory: ${{ runner.temp }}/tammy-vercel-source
@@ -423,6 +427,7 @@ jobs:
         if: ${{ always() && (steps.deploy.outcome == 'success' || steps.deploy.outcome == 'failure') }}
         shell: bash
         env:
+          LIVE_OUTCOME: ${{ steps.live.outcome }}
           HEALTH_OUTCOME: ${{ steps.health.outcome }}
         run: |
           node --input-type=module <<'NODE'
@@ -431,6 +436,8 @@ jobs:
           const file = path.join(process.env.RUNNER_TEMP, 'tammy-vercel-output', 'deployment-record.json');
           const record = existsSync(file) ? JSON.parse(readFileSync(file, 'utf8')) : null;
           const health = process.env.HEALTH_OUTCOME;
+          const live = process.env.LIVE_OUTCOME;
+          const outcome = (value) => (value === 'success' ? 'Passed' : value === 'failure' ? 'Failed' : 'Not completed');
           const lines = [
             '## Tammy on Vercel (tammy.tax)', '',
             '| Evidence | Result |', '| --- | --- |',
@@ -438,7 +445,8 @@ jobs:
             '| Publication | ' + (record?.status ?? 'No confirmed record') + ' |',
             '| Deployment | ' + (record?.deployment_id ?? 'Not confirmed') + ' |',
             '| URL | ' + (record?.url ?? 'Not confirmed') + ' |',
-            '| tammy.tax preflight | ' + (health === 'success' ? 'Passed' : health === 'failure' ? 'Failed' : 'Not completed') + ' |',
+            '| tammy.tax serves this build | ' + outcome(live) + ' |',
+            '| tammy.tax preflight | ' + outcome(health) + ' |',
             '| Static output hash | ' + (record?.static_sha256 ?? 'Not recorded') + ' |', '',
             'The preflight checks routes, indexability and canonical host; it does not replace browser or PDF checks. A failed preflight does not undo publication.', '',
           ];
@@ -449,8 +457,9 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: tammy-vercel-deployment-${{ github.sha }}-${{ github.run_attempt }}
-          # Only the redacted record; never CLI logs or the uploaded output.
+          # Only the redacted record and the live check; never CLI logs or the uploaded output.
           path: |
             ${{ runner.temp }}/tammy-vercel-output/deployment-record.json
+            ${{ runner.temp }}/tammy-vercel-output/live-verification.json
           if-no-files-found: ignore
           retention-days: 30

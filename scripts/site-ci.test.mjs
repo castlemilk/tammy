@@ -343,20 +343,21 @@ test("Vercel publication is restricted to configured trusted master push or expl
   const allowed = jobGate(vercelJob);
   for (const repository of ["castlemilk/tammy", "someone/tammy"])
     for (const ref of ["refs/heads/master", "refs/heads/feature", "refs/pull/65/merge"])
+      // GitHub evaluates an unset repository variable as an empty string.
       for (const event_name of ["push", "pull_request", "workflow_dispatch", "workflow_run"])
         for (const deploy_vercel of [true, false, undefined])
-          for (const project of ["", "prj_example"]) {
+          for (const project of [undefined, "", "prj_example"]) {
             const expected =
               repository === "castlemilk/tammy" &&
               ref === "refs/heads/master" &&
-              project !== "" &&
+              Boolean(project) &&
               (event_name === "push" ||
                 (event_name === "workflow_dispatch" && deploy_vercel === true));
             assert.equal(
               allowed(
                 { repository, ref, event_name },
                 { deploy_vercel },
-                { VERCEL_PROJECT_ID: project },
+                { VERCEL_PROJECT_ID: project ?? "" },
               ),
               expected,
               JSON.stringify({ repository, ref, event_name, deploy_vercel, project }),
@@ -389,6 +390,7 @@ test("Vercel publication uses this run's verified static export without rebuildi
     "Restore and verify the exact source and static export",
     "Write the reviewed Vercel output",
     VERCEL_PUBLISH,
+    "Confirm tammy.tax serves this exact build",
     "Check tammy.tax routes, canonicals and sitemap",
   ].map((name) => vercelSteps.findIndex((step) => step.name === name));
   assert.ok(
@@ -399,6 +401,12 @@ test("Vercel publication uses this run's verified static export without rebuildi
     named(vercelSteps, "Restore and verify the exact source and static export"),
     /site-release\.mjs verify/,
   );
+  const live = named(vercelSteps, "Confirm tammy.tax serves this exact build");
+  assert.match(
+    live,
+    /site-release\.mjs vercel-verify-live --output "\$RUNNER_TEMP\/tammy-vercel-output"/,
+  );
+  assert.doesNotMatch(live, /continue-on-error|secrets\.|always\(\)/);
   const health = named(vercelSteps, "Check tammy.tax routes, canonicals and sitemap");
   assert.match(health, /live-site-preflight\.mjs https:\/\/tammy\.tax/);
   assert.doesNotMatch(health, /continue-on-error|secrets\.|always\(\)/);
@@ -410,8 +418,12 @@ test("Vercel publication uses this run's verified static export without rebuildi
       ?.trim()
       .split("\n")
       .map((line) => line.trim()),
-    // biome-ignore lint/suspicious/noTemplateCurlyInString: Literal GitHub Actions expression.
-    ["${{ runner.temp }}/tammy-vercel-output/deployment-record.json"],
+    [
+      // biome-ignore lint/suspicious/noTemplateCurlyInString: Literal GitHub Actions expression.
+      "${{ runner.temp }}/tammy-vercel-output/deployment-record.json",
+      // biome-ignore lint/suspicious/noTemplateCurlyInString: Literal GitHub Actions expression.
+      "${{ runner.temp }}/tammy-vercel-output/live-verification.json",
+    ],
   );
   assert.match(uploads[0].text, /always\(\)/);
 });
@@ -424,7 +436,7 @@ test("the Vercel summary distinguishes publication from failed or absent accepta
   const output = path.join(directory, "summary.md");
   const evidence = path.join(directory, "tammy-vercel-output");
   mkdirSync(evidence);
-  const run = (health) =>
+  const run = (health, live = health) =>
     execFileSync(process.execPath, ["--input-type=module", "-e", code], {
       env: {
         ...process.env,
@@ -432,21 +444,24 @@ test("the Vercel summary distinguishes publication from failed or absent accepta
         GITHUB_STEP_SUMMARY: output,
         GITHUB_SHA: "a".repeat(40),
         HEALTH_OUTCOME: health,
+        LIVE_OUTCOME: live,
       },
     });
   try {
     run("skipped");
     assert.match(readFileSync(output, "utf8"), /No confirmed record/);
     assert.match(readFileSync(output, "utf8"), /preflight \| Not completed/);
+    assert.match(readFileSync(output, "utf8"), /serves this build \| Not completed/);
     writeFileSync(output, "");
     writeFileSync(
       path.join(evidence, "deployment-record.json"),
       JSON.stringify({ status: "published", deployment_id: "dpl_example" }),
     );
-    run("failure");
+    run("skipped", "failure");
     const text = readFileSync(output, "utf8");
     assert.match(text, /Publication \| published/);
-    assert.match(text, /preflight \| Failed/);
+    assert.match(text, /serves this build \| Failed/);
+    assert.match(text, /preflight \| Not completed/);
     assert.doesNotMatch(text, /\| Passed \|/);
   } finally {
     rmSync(directory, { recursive: true, force: true });

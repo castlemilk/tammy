@@ -18,6 +18,21 @@ describe("Tammy public SEO and assets", () => {
     expect(sitemap).not.toContain("/login");
   });
 
+  it("links feed items to tammy.tax but keeps their former GUIDs so subscribers see no repeats", () => {
+    const feed = readPublic("rss.xml");
+    const links = [...feed.matchAll(/<item>[\s\S]*?<link>([^<]+)<\/link>/g)].map((m) => m[1]);
+    const guids = [...feed.matchAll(/<guid isPermaLink="([^"]+)">([^<]+)<\/guid>/g)];
+    expect(links.length).toBeGreaterThan(0);
+    expect(guids).toHaveLength(links.length);
+    links.forEach((link, index) => {
+      expect(link.startsWith("https://tammy.tax/blog/")).toBe(true);
+      const [, permalink, guid] = guids[index];
+      // Changing a GUID makes feed readers show the post again as new.
+      expect(permalink).toBe("false");
+      expect(guid).toBe(link.replace("https://tammy.tax", "https://tammy-accounting.castlemilk.chatgpt.site"));
+    });
+  });
+
   it("describes real offline accounting capabilities without fictional marketing claims", () => {
     expect(homeMetadata.alternates?.canonical).toBe("/");
     expect(String(homeMetadata.description)).toMatch(/reconcile imported bank statements/i);
