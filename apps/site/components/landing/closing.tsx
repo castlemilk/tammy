@@ -16,6 +16,12 @@ import { Arrow } from "./kit";
 const { identity, marketingVersion } = publicContent;
 const minimumMacOSLabel = identity.minimumMacOSVersion.replace(/\.0$/, "");
 const platformLabel = "macOS " + minimumMacOSLabel + " or later, Apple silicon";
+// The App Store public-site check (scripts/check-public-site.mjs) requires the home page
+// to state the reporting boundary, so it comes from the same identity data.
+const boundaryLabel =
+  "Reports are " +
+  identity.capabilityBoundary.reporting +
+  (identity.capabilityBoundary.atoLodgement === "not-lodged" ? " and not lodged" : "");
 const enquiryHref = "mailto:" + identity.supportEmail + "?subject=Tammy%20development%20access";
 
 export function Closing() {
@@ -54,6 +60,7 @@ export function Closing() {
           <span>{"Version " + marketingVersion}</span>
           <span>Development software</span>
           <span>{platformLabel}</span>
+          <span>{boundaryLabel}</span>
         </p>
       </div>
     </section>
