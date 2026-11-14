@@ -33,7 +33,7 @@ The forecast tool consumes these components and Tailwind directly. The quote edi
 
 Catalogue source: Gamma component `empty-state` (reviewed/validated) with native div, h3, optional icon, explicit recovery action and focusable children. Design-system reference: Gamma Atelier (humanist interface + editorial display) and Ledger (quiet table lines and tabular values). The Tammy token adapter maps `--gamma-surface`, `--gamma-ink`, `--gamma-accent`, `--gamma-border` and radii to Soft Precision tokens.
 
-**Do not** copy the default Gamma cobalt theme over the product, invent variant badges, or use animation to imply a financial calculation has run. A reusable component should keep meaning when motion is disabled.
+**Do not** copy the default Gamma cobalt theme over the product, invent variant badges, or use animation to imply a financial calculation has run. A reusable component should keep meaning when motion is disabled. The landing page's labelled synthetic demonstrations are the one exception: each renders its finished state without motion, plays once or on a press, and says who pressed what.
 
 ## Financial and privacy requirements
 

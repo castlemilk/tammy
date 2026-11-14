@@ -4,7 +4,7 @@ Tammy’s [Soft Precision identity](../../DESIGN.md) is a warm accounting desk w
 
 ## Ownership and reuse
 
-[`app/tokens.css`](app/tokens.css) is the canonical **public-site runtime** token owner. It implements the accepted palette, type families, radii, spacing rhythm and short-motion tokens. [`globals.css`](app/globals.css) maps those tokens to Tailwind v4; [`design-system.css`](app/design-system.css) adapts Gamma, with the existing [`tools/gamma-theme.css`](app/tools/gamma-theme.css) scoped to the tool shell. The [`landing.css`](app/landing.css) and [`tools/tools.css`](app/tools/tools.css) `--l-*` / `--t-*` names are compatibility aliases, not separate palettes. Desktop’s `apps/desktop/src/app/styles.css` remains its own implementation. No browser control migration adds a desktop capability.
+[`app/tokens.css`](app/tokens.css) is the canonical **public-site runtime** token owner. It implements the accepted palette, type families, radii, spacing rhythm and short-motion and spring tokens. [`globals.css`](app/globals.css) maps those tokens to Tailwind v4; [`design-system.css`](app/design-system.css) adapts Gamma, with the existing [`tools/gamma-theme.css`](app/tools/gamma-theme.css) scoped to the tool shell. The [`landing.css`](app/landing.css) and [`tools/tools.css`](app/tools/tools.css) `--l-*` / `--t-*` names are compatibility aliases, not separate palettes. Desktop’s `apps/desktop/src/app/styles.css` remains its own implementation. No browser control migration adds a desktop capability.
 
 The root [DESIGN.md frontmatter](../../DESIGN.md) records durable primitive values; [`.impeccable/design.json`](../../.impeccable/design.json) adds display metadata, motion, responsive rules and standalone component specimens. The sidecar is documentation, not an alternative runtime theme. Its generated tonal ramps are inspection aids, not approved UI colours.
 
@@ -23,11 +23,11 @@ The root [DESIGN.md frontmatter](../../DESIGN.md) records durable primitive valu
 | Warning | `--tammy-warning` · #845020 | Draft/unmatched labels with text |
 | Warning surface | `--tammy-warning-soft` · #FBECD6 | Background for warning record labels |
 | Danger | `--tammy-danger` · #A1352B | Validation/destructive intent |
-| Apricot / butter | `--tammy-apricot` · #F2BFA5 / `--tammy-butter` · #F4DC91 | Supporting art and arrival material, not body text |
+| Apricot / butter | `--tammy-apricot` · #F2BFA5 / `--tammy-butter` · #F4DC91 | Supporting art and arrival material; on the landing page butter is the trace that joins a figure to its record and apricot marks the part a browser instrument is teaching. Never body text |
 
-Control/surface/arrival radii are 12/20/28px, following the existing identity. Compact financial status labels may use a pill-like shape. Type uses Avenir Next / Segoe UI Variable / Helvetica Neue for controls and records; Iowan Old Style / Palatino / Georgia for large headings. Financial data uses tabular numerals. Never animate amounts. Space follows the existing 4/8/12/16/24/32/48/64px rhythm.
+Control/surface/arrival radii are 12/20/28px, following the existing identity. Compact financial status labels may use a pill-like shape. Type uses Avenir Next / Segoe UI Variable / Helvetica Neue for controls and records; Iowan Old Style / Palatino / Georgia for large headings. Financial data uses tabular numerals. Never tween or count up an amount: a figure appears whole at its final value and may be replaced whole when an input changes. The row, pill, rule or highlight around it may move. Space follows the existing 4/8/12/16/24/32/48/64px rhythm.
 
-The public hierarchy is surface-specific: the shared sans wordmark is 28px/1 at weight 770; tools body copy is 16px/1.5; shared fields/actions are 14px, and static record labels are 12px/1.5. Tools-directory headings use `clamp(42px, 5vw, 68px)` and the landing heading uses `clamp(62px, 6.7vw, 113px)` before its responsive overrides. These editorial sizes do not replace the native app's compact type scale.
+The public hierarchy is surface-specific: the shared sans wordmark is 28px/1 at weight 770; tools body copy is 16px/1.5; shared fields/actions are 14px, and static record labels are 12px/1.5. Tools-directory headings use `clamp(42px, 5vw, 68px)` and the landing statement heading uses `clamp(3.25rem, 1.4rem + 6.9vw, 7.75rem)` and its section headings `clamp(2.25rem, 1.3rem + 3.6vw, 4.25rem)` before its responsive overrides. These editorial sizes do not replace the native app's compact type scale.
 
 | Capability | Canonical owner | Contract |
 | --- | --- | --- |
@@ -62,7 +62,7 @@ A visitor to `/tools` should see search, task filters and real choices in the fi
 
 The tools shell is at most 1248px with 32px gutters. The directory uses three columns, moves controls into one column and results into two below 1100px, then one result column below 760px. These are public layout rules, not replacements for the desktop's 1120px workspace and navigation breakpoints. Warm material changes and fine rules provide most depth; the shared Card primitive retains its small inherited shadow, while calculator work surfaces explicitly remove it. Invoice-paper shadows and page geometry remain local.
 
-The landing remains the feature-led introduction. Generated images are supporting editorial art; financial demonstrations remain labelled synthetic HTML. The calculator/paper/pencil still life joins the earlier receipt/ledger illustration. Use small responsive WebP assets and explicit dimensions. Hide the non-essential tools-header art at narrow widths. Do not put illustration behind records, or turn generated UI into a product claim.
+The landing is the feature-led introduction: illustrative app windows, working browser instruments and the tray of twelve tools, all labelled synthetic HTML. It uses no generated raster art. The calculator still life appears on /tools only; the receipt/ledger illustration is not used on any page. Use small responsive WebP assets and explicit dimensions. Hide the non-essential tools-header art at narrow widths. Do not put illustration behind records, or turn generated UI into a product claim.
 
 [Generated desktop/mobile study](../../docs/design/assets/soft-precision-tools-study.webp) is a critique aid, not an approved pixel comp, screenshot or source of tax rules. The implemented directory retains the real descriptions and complete categories that the study abbreviated. This is a code-led extension of established Soft Precision; no new seed or comp approval is claimed.
 

@@ -3,21 +3,22 @@
 This standalone marketing surface lives in apps/site, distinct from the Electron desktop app.
 
 ## Visual direction
-- Soft Precision: ivory editorial canvas, warm paper, forest/sage, ledger-inspired grids and topographic contour SVGs.
+- Soft Precision: oat canvas, ivory paper, forest/sage, with deep-forest, ink and draft-amber bands. Product scenes are illustrative app windows drawn in HTML from one synthetic set of books (components/landing/scenario.ts).
 - First viewport presents an illustrative, synthetic workspace and the real product differentiator: local encrypted accounting on macOS.
 - Semantic HTML, keyboard-focused navigation, reduced-motion fallbacks, mobile layout from 320px.
-- Local illustration SVGs in public/assets are decorative and can be swapped for authentic product screenshots after release verification.
+- Motion: the server HTML is the finished page. Demonstrations play once or wait for a press, nothing loops, and an amount is never tweened or counted up.
+- The landing page uses no illustration assets apart from the four Journal covers; product scenes are synthetic HTML and must never pass for screenshots.
 
 ## Copy and publication truth
-- **Do not** describe bank feeds, bank sync, AI auto-categorization, live ATO/SBR lodgement, email sending, payment tracking, remote MCP access, free trials, published price plans, or public binaries as available.
+- **Do not** describe bank feeds, bank sync, AI auto-categorization, live ATO/SBR lodgement, email sending, payment collection or reminders, remote MCP access, free trials, published price plans, or public binaries as available. Recording dated payments against an issued invoice or a posted purchase is implemented: say payments are recorded and the balance owing falls; do not call it payment tracking.
 - The illustrative workspace is explicitly labelled synthetic.
 - Public CTA is an internal walkthrough or a mailto enquiry. The site is not a purchase, signup or download flow.
 - Keep apps/site/content/public-content.generated.ts as the identity/privacy/legal source. This change does not touch it.
-- Do not update release claims until qualified by the desktop app owner.
+- The 12 November 2026 landing page describes purchases and recorded payments, invoice receipts, the Overview and its exports, the cash and non-cash GST workpaper views and the local API counts, each checked against PRODUCT.md and docs/development/tech-state.md. Owner sign-off: on 14 November 2026 the owner asked for this page to be merged and released, after these claims were listed for review. Do not add further release claims until qualified by the desktop app owner.
 
 ## SEO
 - Canonical and OG origin: tammy-accounting.castlemilk.chatgpt.site.
-- Homepage metadata, JSON-LD SoftwareApplication (no invented review/rating/offer), static sitemap.xml, robots.txt, llms.txt.
+- Homepage metadata, JSON-LD SoftwareApplication and FAQPage (the six visible questions, word for word), with no invented review/rating/offer, static sitemap.xml, robots.txt, llms.txt.
 - Change the origin consistently before connecting a custom production domain.
 - The site uses local SVGs, system fonts and no external tracking tags.
 
@@ -139,3 +140,80 @@ BAS, quote arithmetic, customer data handling, publishing or ATO integration.
 - CSV export quotes/formula-neutralises user-controlled text; JSON import/export validates version and fields strictly with a 2 MB file cap. Both are browser initiated and contain private supplier details; binary receipt attachments are **not embedded** and must be kept separately.
 - No account, backend upload, automatic OCR, browser localStorage, ATO filing or ledger posting. No claims of persistent synced storage.
 - Tool directory, homepage, canonical sitemap and llms.txt updated. Actual Sites publication/canonical migration remains a separate release gate.
+
+## Landing rebuild (November 2026)
+
+The landing page is built from one component per band in `components/landing/`. `app/page.tsx` imports each band's `.tsx` and `.css` by its fixed filename. Use this section as the rule set for any edit to a band.
+
+### Page order
+
+`app/page.tsx` renders the bands in this order. Each band is a `<section>` with its own component and an `aria-labelledby` heading.
+
+| # | Band | Component | id | Ground (`data-tone`) | `data-room` |
+| --- | --- | --- | --- | --- | --- |
+| 1 | Hero: the encrypted workspace unlocks into a trial balance; a rail you can click | `hero.tsx` | (h1 `landing-heading`) | canvas (default) | mac |
+| 2 | GST instrument: a tool that works right now | `gst-strip.tsx` | `try-gst` | oat | browser |
+| 3 | How it works: pinned stage, five steps a person takes | `workflow.tsx` | `workflow` | canvas | mac |
+| 4 | What the workspace does: invoicing signature, overview, the rest | `features.tsx` + `invoicing.tsx` | `features` | paper | mac |
+| 5 | GST workpaper: prepared is not lodged | `bas.tsx` | `bas` | draft | mac |
+| 6 | Privacy: encrypted on disk | `privacy.tsx` | `privacy-first` | deep | mac |
+| 7 | Local API and MCP | `integrations.tsx` | `integrations` | ink | mac |
+| 8 | Free tools: bench of three sums and tray of twelve | `tools.tsx` + `bench.tsx` | `free-tools` | canvas | browser |
+| 9 | The Journal and guides | `journal.tsx` | `journal` | sage | reading |
+| 10 | Plain answers: T-account of limits and FAQ | `answers.tsx` | `questions` | oat | mac |
+| 11 | Availability and enquiry | `closing.tsx` | `availability` | forest | mac |
+
+The header, footer, base stylesheet (`app/landing.css`), tokens (`app/tokens.css`), the kit (`components/landing/kit.tsx`), the motion primitives (`motion.tsx`) and the shared scenario (`scenario.ts`) are shared. Change them only in a page-level edit, never from inside a band.
+
+### File ownership and class names
+
+- A band owns `components/landing/<band>.tsx`, `<band>.css`, and any helper file it creates. Helper files must start with the band name (for example `hero-window.tsx`, `bench-abn.tsx`) so that two bands never write to the same file.
+- Every class a band writes starts with `lp-<band>-` (for example `.lp-hero-rail`). The GST strip is the one exception: its files are named `gst-strip…` and its classes start with `lp-gst-`. Shared classes from `landing.css` (`.lp-frame`, `.lp-h2`, `.lp-btn`, `.lp-pill`) are used, not redefined. Scope styles under the section's class; do not style bare elements.
+- Relative imports only, with no `@/` alias and no runtime `next/*` imports. Add the oxlint header comments the existing bands use for internal `<a href>` links and `<img>` elements.
+
+### Motion contract
+
+The server HTML is the finished page. Every scene is in its final state, and every panel's content is present. Motion is an upgrade applied on top of that.
+
+1. Motion sits inside `@media screen and (prefers-reduced-motion: no-preference)`; every landing stylesheet uses that exact form. Under reduced motion every state change is an instant swap or a cross-fade of 200ms or less, with no pinning transforms, drawing or staggered arrival.
+2. Never server-render `hidden`, `aria-hidden="true"`, inline `display:none` or `visibility:hidden` on real content. Hide things only with classes or attributes, and only for hidden-before-reveal states that script sets.
+3. Amounts never tween or count up. Rows, figures and marks arrive whole at their final value. A figure may be replaced whole when an input changes.
+4. Animate `opacity`, `transform` (`translate`, `scale`, `rotate`) and, for small areas only, `background-size`, `clip-path` and `stroke-dashoffset`. Do not animate layout on anything larger than a disclosure panel. No `filter`, `backdrop-filter` or `box-shadow` animation, and no `will-change` left on.
+5. Overshoot (`--l-bounce`, `--l-snap`) applies to `scale`, `translate` and `rotate` only. `--l-bounce` is for pill landings only. Everything else uses `--l-settle` or `--l-ease`. A single move runs 140ms to 760ms; a highlight that holds before it fades (the tray's answer sweep, the GST strip and bench flashes, the Overview trace) may run longer, and a panel that is cut away may leave faster (the match panel in How it works leaves in 80ms). A whole demonstration takes under five seconds.
+6. Nothing loops. Anything that plays without being pressed plays once and offers a `<button class="lp-replay">` with the replay icon and the word "Replay".
+7. The hero's load moment is CSS-only keyframes that start at first paint, with no script and no `data-scene`. The h1 (the LCP element), lede, buttons and availability line are never animated.
+8. Do not fade and rise whole sections. Motion goes where something arrives, lands, is drawn or is traced.
+
+Demonstrations use CSS choreography with a single attribute flip. The finished state is rendered; a `data-play` or `data-state` attribute drives before, press and after sequences in CSS; the island only sets the attribute, and sets it again for Replay. Avoid `setTimeout` state machines where a CSS delay will do.
+
+### Pinned strings
+
+The test suite renders the whole page in jsdom, with no CSS, and everything rendered exists at once (all tabs, panels and steps). Each string below must appear exactly once on the page, in the band that owns it.
+
+| String or rule | Owner |
+| --- | --- |
+| The only `<h1>`, text `Your books. On your Mac.`; the hero `<section>` is `aria-labelledby` it | hero |
+| Text `In development. Public Mac download not yet available.` as the direct text of one visible element, not inside `<details>` | hero |
+| Link `Release status` to `#availability` (one in the hero; the footer has its own) | hero |
+| Link `See how it works` to `#workflow` (the only one on the page) | hero |
+| Link `Try free tools` to `#free-tools` (one, inside the hero) | hero |
+| Text matching `macOS 14 or later, Apple silicon`, derived from `publicContent` | hero, closing |
+| Heading `From source records to a balanced ledger.` | workflow |
+| Heading `Customer invoicing` in an `<article>` that also holds the link `Browser invoice generator` to `/tools/invoice-generator`, the text `Creates a PDF independently of your Mac workspace.` as the direct text of one visible element (not inside a closed `<details>`), and the text `Issue to the local ledger; export a customer PDF` as the direct text of one element | invoicing |
+| Heading `Prepared is not lodged.` and the text `BAS drafts, not lodgement` as the direct text of one element | bas |
+| Region `Free business tools` with exactly twelve links to `/tools/` routes, each once; the bench has no `/tools/` links | tools |
+| Region `The Tammy Journal` with links to `/blog/which-quarter-gets-the-gst`, `/blog/not-every-bank-deposit-is-sales`, `/blog/the-month-end-review-that-found-220` and `/blog/the-price-rise-that-didnt-fix-margin`, each once | journal |
+| Text `Can Tammy lodge my BAS with the ATO?` as the direct text of one element | answers |
+| One element each whose direct text contains `Automatic bank feeds and bank-account syncing are not part`, `explicit issue action posts receivables, income and GST`, `does not email the invoice or collect payment` and `There is no Tammy cloud workspace` (the FAQ answers, kept word for word) | answers |
+| Link `Enquire about Tammy`, a `mailto:` link (the only one on the page) | closing |
+| At least one `Gamma Systems Pty Ltd` | footer |
+
+The page must not contain a link named `Download for Mac` or `Get started for free`, nor the text `company EOFY`, `company tax return`, or any sentence saying Tammy does not post a receivable. Every `<a href="#x">` must point at exactly one element with `id="x"`, and no `href="#"` may appear.
+
+### Scenario and figures
+
+Every Mac figure comes from `components/landing/scenario.ts`, so one quarter of books is the single source. The $120.00 GST on the invoice is the same $120.00 in GST payable and at label 1A. Business names are "Example …". Browser instruments compute with the pure functions in `lib/tools/*` and `@tammy/invoices/model`, and never import the PDF engine or a full tool component.
+
+### Checks
+
+From `apps/site`, run `pnpm typecheck`, `pnpm lint`, `pnpm test` and `pnpm seo:check`. Check each band at 320, 390, 768, 1280 and 1440 wide, with reduced motion and with JavaScript off, before release.

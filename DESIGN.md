@@ -76,8 +76,9 @@ not a generated runtime token source. There is no external font dependency.
 ## Colors
 
 Oat canvas, ivory paper, cocoa text and forest actions. Pale forest is selection and
-success support. Apricot and butter belong to arrival art or supportive surfaces,
-never low-contrast body text. Warnings and errors have explicit text as well as colour.
+success support. Apricot and butter belong to arrival art or supportive surfaces and, on the
+public landing page, to the trace highlight (butter) and the taught part of a
+browser instrument (apricot); never low-contrast body text. Warnings and errors have explicit text as well as colour.
 The app uses one light theme; forced-colour mode retains system-operable scrollbars.
 
 **The Token Owner Rule.** Reuse each surface's runtime tokens through its adapters;
@@ -148,8 +149,12 @@ Reuse Lucide at 1.8px stroke. Labels remain present or accessible when the rail 
 
 ### Motion
 
-Use short colour transitions and a restrained button press. Reduced motion disables
-transitions and removes spinner animation; it never changes financial values.
+Product UI uses short colour transitions and a restrained button press. Reduced motion disables
+transitions and removes spinner animation; it never changes financial values. The public landing
+page follows its own motion contract in apps/site/LANDING-PAGE.md: scenes render finished without
+script or with reduced motion, a demonstration plays once or waits for a press, the bounce spring is reserved
+for a status pill landing, nothing loops, and an amount is never tweened or counted up. The product
+UI rules above still apply to the app.
 
 ### Content and data visualization
 
