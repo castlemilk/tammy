@@ -33,7 +33,7 @@ function expression(value) {
   assert.match(value, /^[\s\w.='"!&|()/-]+$/, "Review newly introduced expression syntax");
   // The restricted GitHub boolean expressions used here have identical JS
   // semantics for the boolean inputs and exact string contexts in these cases.
-  return new Function("github", "inputs", `return Boolean(${value});`);
+  return new Function("github", "inputs", "vars", `return Boolean(${value});`);
 }
 
 function jobGate(body) {
@@ -44,8 +44,11 @@ function jobGate(body) {
 
 const verifyJob = job("verify-site");
 const deployJob = job("deploy-cloudflare");
+const vercelJob = job("deploy-vercel");
 const verifySteps = steps(verifyJob);
 const deploySteps = steps(deployJob);
+const vercelSteps = steps(vercelJob);
+const VERCEL_PUBLISH = "Deploy the static export to Vercel production with existing access";
 
 function named(items, name) {
   const matches = items.filter((step) => step.name === name);
@@ -86,7 +89,7 @@ test("Cloudflare publication is restricted to trusted master push or explicit ma
 });
 
 test("both jobs require the isolated Cuttlefish identity and fork builds remain blocked", () => {
-  for (const body of [verifyJob, deployJob]) {
+  for (const body of [verifyJob, deployJob, vercelJob]) {
     const labels = /^ {4}runs-on: \[([^\]]+)\]$/m
       .exec(body)?.[1]
       .split(",")
@@ -120,9 +123,14 @@ test("publication credentials are isolated to the deployment command", () => {
   assert.match(deploy, /CLOUDFLARE_API_TOKEN: \$\{\{ secrets\.CLOUDFLARE_API_TOKEN \}\}/);
   assert.match(deploy, /CLOUDFLARE_ACCOUNT_ID: \$\{\{ vars\.CLOUDFLARE_ACCOUNT_ID \}\}/);
   assert.match(deploy, /run: node scripts\/site-release\.mjs cloudflare-deploy --output /);
+  const vercelDeploy = named(vercelSteps, VERCEL_PUBLISH);
+  assert.match(vercelDeploy, /VERCEL_TOKEN: \$\{\{ secrets\.VERCEL_TOKEN \}\}/);
+  assert.match(vercelDeploy, /VERCEL_ORG_ID: \$\{\{ vars\.VERCEL_ORG_ID \}\}/);
+  assert.match(vercelDeploy, /VERCEL_PROJECT_ID: \$\{\{ vars\.VERCEL_PROJECT_ID \}\}/);
+  assert.match(vercelDeploy, /run: node scripts\/site-release\.mjs vercel-deploy --output /);
   assert.doesNotMatch(
-    workflow.replace(deploy, ""),
-    /\bsecrets\.|\bCLOUDFLARE_API_TOKEN\b|\bCLOUDFLARE_ACCOUNT_ID\b/,
+    workflow.replace(deploy, "").replace(vercelDeploy, ""),
+    /\bsecrets\.|\bCLOUDFLARE_API_TOKEN\b|\bCLOUDFLARE_ACCOUNT_ID\b|\bVERCEL_TOKEN\b/,
   );
   assert.doesNotMatch(
     workflow,
@@ -253,18 +261,17 @@ test("the actual CI summary distinguishes publication from failed or absent HTTP
   }
 });
 
-test("the actual artifact verification script rejects mismatched or tampered inputs", () => {
-  const step = named(deploySteps, "Verify the downloaded revision and source archive");
+function checkArtifactVerification(step, directory, target) {
   const match = /node --input-type=module <<'NODE'\n([\s\S]*?)\n {10}NODE/.exec(step);
   assert.ok(match, "Review changed artifact verification implementation");
   const script = match[1].replace(/^ {10}/gm, "");
   const root = mkdtempSync(path.join(tmpdir(), "tammy-ci-contract-"));
-  const artifact = path.join(root, "tammy-cloudflare-artifact");
+  const artifact = path.join(root, directory);
   mkdirSync(artifact);
   const sha = "a".repeat(40);
   const github = { repository: "castlemilk/tammy", commit_sha: sha };
   const archive = Buffer.from("test source archive bytes");
-  const source = { target: "cloudflare", github, source_sha256: "source-digest" };
+  const source = { target, github, source_sha256: "source-digest" };
   const build = { ...source, build_sha256: "build-digest" };
   const release = {
     ...build,
@@ -294,10 +301,12 @@ test("the actual artifact verification script rejects mismatched or tampered inp
     write();
     assert.throws(run, "Reject an artifact from a different revision");
     source.github = github;
-    source.target = "sites";
-    write();
-    assert.throws(run, "Reject the separate Sites artifact");
-    source.target = "cloudflare";
+    for (const other of ["sites", "cloudflare", "vercel"].filter((name) => name !== target)) {
+      source.target = other;
+      write();
+      assert.throws(run, `Reject the separate ${other} artifact`);
+    }
+    source.target = target;
     write();
     writeFileSync(path.join(artifact, "source.tar.gz"), "tampered");
     assert.throws(run, "Reject source archive tampering before extraction");
@@ -314,5 +323,132 @@ test("the actual artifact verification script rejects mismatched or tampered inp
     assert.throws(run, "Reject an unexpected source archive path");
   } finally {
     rmSync(root, { recursive: true, force: true });
+  }
+}
+
+test("the actual artifact verification scripts reject mismatched or tampered inputs", () => {
+  checkArtifactVerification(
+    named(deploySteps, "Verify the downloaded revision and source archive"),
+    "tammy-cloudflare-artifact",
+    "cloudflare",
+  );
+  checkArtifactVerification(
+    named(vercelSteps, "Verify the downloaded Vercel revision and source archive"),
+    "tammy-vercel-artifact",
+    "vercel",
+  );
+});
+
+test("Vercel publication is restricted to configured trusted master push or explicit dispatch", () => {
+  const allowed = jobGate(vercelJob);
+  for (const repository of ["castlemilk/tammy", "someone/tammy"])
+    for (const ref of ["refs/heads/master", "refs/heads/feature", "refs/pull/65/merge"])
+      for (const event_name of ["push", "pull_request", "workflow_dispatch", "workflow_run"])
+        for (const deploy_vercel of [true, false, undefined])
+          for (const project of ["", "prj_example"]) {
+            const expected =
+              repository === "castlemilk/tammy" &&
+              ref === "refs/heads/master" &&
+              project !== "" &&
+              (event_name === "push" ||
+                (event_name === "workflow_dispatch" && deploy_vercel === true));
+            assert.equal(
+              allowed(
+                { repository, ref, event_name },
+                { deploy_vercel },
+                { VERCEL_PROJECT_ID: project },
+              ),
+              expected,
+              JSON.stringify({ repository, ref, event_name, deploy_vercel, project }),
+            );
+          }
+  assert.match(workflow, /deploy_vercel:\n(?: {8}[^\n]*\n)* {8}type: boolean\n/);
+  assert.match(workflow, /deploy_vercel:\n(?: {8}[^\n]*\n)* {8}default: false\n/);
+  assert.match(vercelJob, /^ {4}needs: verify-site$/m);
+  assert.match(
+    vercelJob,
+    /concurrency:\n {6}group: tammy-vercel-tammy-site\n {6}cancel-in-progress: false\n/,
+  );
+});
+
+test("Vercel publication uses this run's verified static export without rebuilding", () => {
+  const download = named(vercelSteps, "Download the verified Vercel artifact from this run");
+  assert.match(download, /name: tammy-vercel-preparation-\$\{\{ github\.sha \}\}/);
+  assert.doesNotMatch(download, /^\s+(github-token|repository|run-id):/m);
+  assert.match(
+    named(verifySteps, "Retain the Vercel preparation artifact"),
+    /name: tammy-vercel-preparation-\$\{\{ github\.sha \}\}/,
+  );
+  assert.match(verifyJob, /prepare --target vercel --output /);
+  assert.doesNotMatch(
+    vercelJob,
+    /\bpnpm (build|install)\b|site-release\.mjs (prepare|build|package|bundle)\b/,
+  );
+  const order = [
+    "Verify the downloaded Vercel revision and source archive",
+    "Restore and verify the exact source and static export",
+    "Write the reviewed Vercel output",
+    VERCEL_PUBLISH,
+    "Check tammy.tax routes, canonicals and sitemap",
+  ].map((name) => vercelSteps.findIndex((step) => step.name === name));
+  assert.ok(
+    order.every((index, i) => index >= 0 && (i === 0 || index > order[i - 1])),
+    String(order),
+  );
+  assert.match(
+    named(vercelSteps, "Restore and verify the exact source and static export"),
+    /site-release\.mjs verify/,
+  );
+  const health = named(vercelSteps, "Check tammy.tax routes, canonicals and sitemap");
+  assert.match(health, /live-site-preflight\.mjs https:\/\/tammy\.tax/);
+  assert.doesNotMatch(health, /continue-on-error|secrets\.|always\(\)/);
+  const uploads = vercelSteps.filter((step) => /uses: actions\/upload-artifact@/.test(step.text));
+  assert.equal(uploads.length, 1);
+  const paths = /path: \|\n((?: {12}[^\n]+\n)+)/.exec(uploads[0].text)?.[1];
+  assert.deepEqual(
+    paths
+      ?.trim()
+      .split("\n")
+      .map((line) => line.trim()),
+    // biome-ignore lint/suspicious/noTemplateCurlyInString: Literal GitHub Actions expression.
+    ["${{ runner.temp }}/tammy-vercel-output/deployment-record.json"],
+  );
+  assert.match(uploads[0].text, /always\(\)/);
+});
+
+test("the Vercel summary distinguishes publication from failed or absent acceptance", () => {
+  const step = named(vercelSteps, "Summarise the Vercel publication and HTTP acceptance");
+  const code = /node --input-type=module <<'NODE'\n([\s\S]*?)\n {10}NODE/.exec(step)?.[1];
+  assert.ok(code);
+  const directory = mkdtempSync(path.join(tmpdir(), "tammy-vercel-summary-"));
+  const output = path.join(directory, "summary.md");
+  const evidence = path.join(directory, "tammy-vercel-output");
+  mkdirSync(evidence);
+  const run = (health) =>
+    execFileSync(process.execPath, ["--input-type=module", "-e", code], {
+      env: {
+        ...process.env,
+        RUNNER_TEMP: directory,
+        GITHUB_STEP_SUMMARY: output,
+        GITHUB_SHA: "a".repeat(40),
+        HEALTH_OUTCOME: health,
+      },
+    });
+  try {
+    run("skipped");
+    assert.match(readFileSync(output, "utf8"), /No confirmed record/);
+    assert.match(readFileSync(output, "utf8"), /preflight \| Not completed/);
+    writeFileSync(output, "");
+    writeFileSync(
+      path.join(evidence, "deployment-record.json"),
+      JSON.stringify({ status: "published", deployment_id: "dpl_example" }),
+    );
+    run("failure");
+    const text = readFileSync(output, "utf8");
+    assert.match(text, /Publication \| published/);
+    assert.match(text, /preflight \| Failed/);
+    assert.doesNotMatch(text, /\| Passed \|/);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
   }
 });
