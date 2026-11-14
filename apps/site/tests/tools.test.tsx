@@ -105,7 +105,7 @@ describe("Tammy business tools", () => {
     for (const route of [
       "/tools", "/tools/invoice-generator", "/tools/gst-calculator",
       "/tools/invoice-due-date-calculator",
-    ]) expect(sitemap).toContain("https://tammy-accounting.castlemilk.chatgpt.site" + route + "</loc>");
+    ]) expect(sitemap).toContain("https://tammy.tax" + route + "</loc>");
     expect(readFileSync("public/robots.txt", "utf8")).toContain("/sitemap.xml");
     expect(readFileSync("public/llms.txt", "utf8")).toContain("## Free tools");
   });

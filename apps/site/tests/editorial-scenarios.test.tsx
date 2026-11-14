@@ -102,7 +102,7 @@ describe("Tammy accounting editorial blocks", () => {
   });
 
   it("indexes every source and keeps the illustrations text-free", () => {
-    const root = "https://tammy-accounting.castlemilk.chatgpt.site";
+    const root = "https://tammy.tax";
     const rss = readFileSync("public/rss.xml", "utf8");
     const sitemap = readFileSync("public/sitemap.xml", "utf8");
     const llms = readFileSync("public/llms.txt", "utf8");

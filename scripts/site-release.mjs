@@ -1150,6 +1150,82 @@ export function deployVercel(root, output, runCli = capture) {
     throw error;
   }
 }
+export const VERCEL_PRODUCTION_ORIGIN = "https://tammy.tax";
+// Confirms the production domain serves this exact output: a READY deployment that
+// did not take the domain alias would otherwise pass route and canonical checks.
+export async function verifyVercelLive(
+  output,
+  { fetcher = fetch, attempts = 6, delayMs = 5000, origin = VERCEL_PRODUCTION_ORIGIN } = {},
+) {
+  if (
+    !output ||
+    !path.isAbsolute(output) ||
+    !existsSync(path.join(output, "deployment-record.json"))
+  )
+    fail("Pass --output with the directory that holds a Vercel deployment record.");
+  const out = realpathSync(output);
+  const record = json(path.join(out, "deployment-record.json"));
+  if (record.target !== "vercel" || record.status !== "published")
+    fail("Only a published Vercel deployment record can be checked against the live domain.");
+  const resultPath = path.join(out, "live-verification.json");
+  if (existsSync(resultPath)) fail("A live verification already exists; keep it as evidence.");
+  const staticRoot = path.join(out, ".vercel/output/static");
+  const files = regularFiles(staticRoot);
+  const asset = files.find((name) => name.startsWith("_next/static/") && name.endsWith(".js"));
+  const probes = [
+    ["/", "index.html"],
+    ["/tools", "tools.html"],
+    ["/sitemap.xml", "sitemap.xml"],
+    ...(asset ? [[`/${asset}`, asset]] : []),
+  ].filter(([, file]) => files.includes(file));
+  if (!probes.some(([route]) => route === "/"))
+    fail("The Vercel output has no index.html to compare.");
+  let checks = [];
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    checks = await Promise.all(
+      probes.map(async ([route, file]) => {
+        const expected = hash(readFileSync(path.join(staticRoot, file)));
+        try {
+          const response = await fetcher(origin + route, {
+            redirect: "manual",
+            headers: { "cache-control": "no-cache" },
+          });
+          const sha256 = hash(Buffer.from(await response.arrayBuffer()));
+          return { route, status: response.status, sha256, expected_sha256: expected };
+        } catch (error) {
+          return {
+            route,
+            status: null,
+            error: String(error?.message ?? error),
+            expected_sha256: expected,
+          };
+        }
+      }),
+    );
+    if (checks.every((check) => check.status === 200 && check.sha256 === check.expected_sha256))
+      break;
+    if (attempt < attempts) await new Promise((resolve) => setTimeout(resolve, delayMs));
+  }
+  const ok = checks.every(
+    (check) => check.status === 200 && check.sha256 === check.expected_sha256,
+  );
+  const result = {
+    schema_version: 1,
+    kind: "vercel-live-verification",
+    origin,
+    github: record.github,
+    deployment_id: record.deployment_id,
+    static_sha256: record.static_sha256,
+    checks,
+    ok,
+  };
+  writeJson(resultPath, result);
+  if (!ok)
+    fail(
+      `${origin} does not serve this exact build; inspect the project's domains and deployments.`,
+    );
+  return result;
+}
 async function main() {
   const [command, ...args] = process.argv.slice(2);
   const options = {};
@@ -1157,7 +1233,7 @@ async function main() {
     const key = args.shift();
     if (!["--output", "--sites-plugin", "--target"].includes(key) || !args[0] || options[key])
       fail(
-        "Usage: site-release.mjs prepare|build|verify|bundle|package|cloudflare-dry-run|cloudflare-deploy|vercel-output|vercel-deploy [--target sites|cloudflare|vercel] [--output ABS_DIR] [--sites-plugin ABS_PLUGIN_ROOT]",
+        "Usage: site-release.mjs prepare|build|verify|bundle|package|cloudflare-dry-run|cloudflare-deploy|vercel-output|vercel-deploy|vercel-verify-live [--target sites|cloudflare|vercel] [--output ABS_DIR] [--sites-plugin ABS_PLUGIN_ROOT]",
       );
     options[key] = args.shift();
   }
@@ -1184,9 +1260,10 @@ async function main() {
     result = await deployCloudflare(root, options["--output"]);
   else if (command === "vercel-output") result = vercelOutput(root, options["--output"]);
   else if (command === "vercel-deploy") result = deployVercel(root, options["--output"]);
+  else if (command === "vercel-verify-live") result = await verifyVercelLive(options["--output"]);
   else
     fail(
-      "Expected prepare, build, verify, bundle, package, cloudflare-dry-run, cloudflare-deploy, vercel-output or vercel-deploy.",
+      "Expected prepare, build, verify, bundle, package, cloudflare-dry-run, cloudflare-deploy, vercel-output, vercel-deploy or vercel-verify-live.",
     );
   console.log(
     JSON.stringify(

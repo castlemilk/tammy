@@ -17,7 +17,7 @@ This standalone marketing surface lives in apps/site, distinct from the Electron
 - The 12 November 2026 landing page describes purchases and recorded payments, invoice receipts, the Overview and its exports, the cash and non-cash GST workpaper views and the local API counts, each checked against PRODUCT.md and docs/development/tech-state.md. Owner sign-off: on 14 November 2026 the owner asked for this page to be merged and released, after these claims were listed for review. Do not add further release claims until qualified by the desktop app owner.
 
 ## SEO
-- Canonical and OG origin: tammy-accounting.castlemilk.chatgpt.site.
+- Canonical and OG origin: tammy.tax (since 14 November 2026; previously tammy-accounting.castlemilk.chatgpt.site).
 - Homepage metadata, JSON-LD SoftwareApplication and FAQPage (the six visible questions, word for word), with no invented review/rating/offer, static sitemap.xml, robots.txt, llms.txt.
 - Change the origin consistently before connecting a custom production domain.
 - The site uses local SVGs, system fonts and no external tracking tags.
@@ -53,8 +53,8 @@ Validation: `pnpm --filter sites-project typecheck`, `pnpm --filter sites-projec
 - Site-level `SITE_ORIGIN` now owns canonical URL configuration in shared layout, tools and homepage JSON-LD; the sitemap and llms.txt remain materialized public files.
 - `pnpm --dir apps/site seo:check` scans routes for metadata/canonicals and compares their URLs against the sitemap and llms.txt. CI runs this audit before the production build.
 
-### Domain transition hold
-`tammy.tax` is the desired branded hostname, but **do not** change `SITE_ORIGIN`, sitemap, robots.txt or llms.txt until the ChatGPT Sites custom-domain validation, apex routing and HTTPS work on that hostname. Once verified, change them together, build, deploy and validate live canonical tags and sitemap. No domain or DNS change is part of this code-only PR. The preceding `tammy-accounting.castlemilk.chatgpt.site` canonical remains correct until migration.
+### Domain transition (completed 14 November 2026)
+`tammy.tax` is served from Vercel and is the canonical origin: `SITE_ORIGIN`, sitemap, robots.txt, llms.txt and the RSS item links moved together. RSS GUIDs keep their former URLs as non-permalink identifiers so subscribers do not see every post again. The former Sites host stays published with its older build; the desktop app's privacy and support links still point there until the desktop compatibility review moves them.
 
 ### Release boundaries
 Site changes do not change Tammy's desktop application, ATO/EVTE/SBR readiness, public download availability, tax eligibility or business registration. Generated illustration is decorative; no synthetic financial evidence is claimed as customer data or performance proof.
@@ -66,7 +66,7 @@ Site changes do not change Tammy's desktop application, ATO/EVTE/SBR readiness, 
 - `/tools/cash-runway-calculator` estimates a constant-rate cash runway using integer cents, with explicit no-net-burn and input-error states. It is not a dated cash forecast.
 - `/blog` maintains a curated post inventory in `lib/blog/posts.ts` used by the index and BlogPosting structured data. The visual system has editorial paper-like layouts, responsive examples, an accessible reading index, and no invented metrics, quotes, or product guarantees.
 - Sitemap, `llms.txt`, and an XML RSS feed index all public journal pages. The existing `seo:check` audit also checks those links.
-- Existing canonical origin remains the ChatGPT Sites host pending verified production routing and HTTPS for `tammy.tax`.
+- Canonical origin: `tammy.tax` (moved 14 November 2026).
 
 These changes do not alter desktop software, issue real invoices, contact any remote business service, add monitoring, or claim ATO qualification. All example figures are synthetic and disclosed as such.
 

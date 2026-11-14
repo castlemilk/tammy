@@ -38,6 +38,7 @@ import {
   vercelOutput,
   verify,
   verifySource,
+  verifyVercelLive,
 } from "./site-release.mjs";
 
 const hosting = { project_id: PROJECT_ID, d1: null, r2: null };
@@ -1837,4 +1838,129 @@ test("Vercel deployment takes credentials only from the environment and records 
       assert.ok(!JSON.stringify(saved).includes(testToken), "token must be redacted");
     });
   }
+});
+
+function publishedVercel(t) {
+  withEnv(t, { ...vercelIds, VERCEL_TOKEN: testToken });
+  const state = vercelBuilt(t);
+  deployVercel(state.snapshot, state.output, () =>
+    JSON.stringify({ status: "ok", deployment: readyDeployment }),
+  );
+  return state;
+}
+
+function servedFrom(staticRoot, overrides = {}) {
+  return async (url) => {
+    const route = new URL(url).pathname;
+    if (route in overrides) return overrides[route]();
+    const file =
+      route === "/"
+        ? "index.html"
+        : existsSync(path.join(staticRoot, `${route.slice(1)}.html`))
+          ? `${route.slice(1)}.html`
+          : route.slice(1);
+    return new Response(readFileSync(path.join(staticRoot, file)), { status: 200 });
+  };
+}
+
+test("the live check proves the production domain serves this exact build", async (t) => {
+  await t.test("matching bytes", async (t) => {
+    const { output } = publishedVercel(t);
+    const staticRoot = path.join(output, ".vercel/output/static");
+    const requested = [];
+    const fetcher = servedFrom(staticRoot);
+    const result = await verifyVercelLive(output, {
+      fetcher: (url, init) => {
+        requested.push({ url, init });
+        return fetcher(url);
+      },
+      delayMs: 0,
+    });
+    assert.equal(result.ok, true);
+    assert.equal(result.origin, "https://tammy.tax");
+    assert.deepEqual(
+      requested.map((call) => call.url),
+      [
+        "https://tammy.tax/",
+        "https://tammy.tax/tools",
+        "https://tammy.tax/_next/static/chunks/app.js",
+      ],
+    );
+    assert.ok(requested.every((call) => call.init.redirect === "manual"));
+    assert.deepEqual(readJson(path.join(output, "live-verification.json")), result);
+    await assert.rejects(verifyVercelLive(output, { fetcher, delayMs: 0 }), /already exists/);
+  });
+  await t.test("an older build on the domain fails after retries", async (t) => {
+    const { output } = publishedVercel(t);
+    let calls = 0;
+    const stale = servedFrom(path.join(output, ".vercel/output/static"), {
+      "/": () => {
+        calls += 1;
+        return new Response("<h1>Older build</h1>", { status: 200 });
+      },
+    });
+    await assert.rejects(
+      verifyVercelLive(output, { fetcher: stale, attempts: 3, delayMs: 0 }),
+      /does not serve this exact build/,
+    );
+    assert.equal(calls, 3);
+    const saved = readJson(path.join(output, "live-verification.json"));
+    assert.equal(saved.ok, false);
+    assert.equal(
+      saved.checks.find((check) => check.route === "/").sha256 !==
+        saved.checks.find((check) => check.route === "/").expected_sha256,
+      true,
+    );
+  });
+  await t.test("the domain catching up on a later attempt passes", async (t) => {
+    const { output } = publishedVercel(t);
+    const staticRoot = path.join(output, ".vercel/output/static");
+    let first = true;
+    const fresh = servedFrom(staticRoot);
+    const result = await verifyVercelLive(output, {
+      fetcher: (url) => {
+        if (first && new URL(url).pathname === "/") {
+          first = false;
+          return new Response("<h1>Older build</h1>", { status: 200 });
+        }
+        return fresh(url);
+      },
+      delayMs: 0,
+    });
+    assert.equal(result.ok, true);
+  });
+  await t.test("a redirect or network error is not a match", async (t) => {
+    const { output } = publishedVercel(t);
+    const staticRoot = path.join(output, ".vercel/output/static");
+    await assert.rejects(
+      verifyVercelLive(output, {
+        fetcher: servedFrom(staticRoot, {
+          "/tools": () =>
+            new Response(null, {
+              status: 308,
+              headers: { location: "https://elsewhere.example/" },
+            }),
+          "/_next/static/chunks/app.js": () => Promise.reject(new Error("network down")),
+        }),
+        attempts: 1,
+        delayMs: 0,
+      }),
+      /does not serve this exact build/,
+    );
+    const checks = readJson(path.join(output, "live-verification.json")).checks;
+    assert.equal(checks.find((check) => check.route === "/tools").status, 308);
+    assert.match(
+      checks.find((check) => check.route === "/_next/static/chunks/app.js").error,
+      /network down/,
+    );
+  });
+  await t.test("an unpublished record is never checked", async (t) => {
+    withEnv(t, { ...vercelIds, VERCEL_TOKEN: testToken });
+    const { snapshot, output } = vercelBuilt(t);
+    assert.throws(() => deployVercel(snapshot, output, () => "not json"));
+    await assert.rejects(
+      verifyVercelLive(output, { fetcher: () => assert.fail("must not fetch"), delayMs: 0 }),
+      /Only a published Vercel deployment/,
+    );
+  });
 });

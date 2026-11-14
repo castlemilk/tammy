@@ -1,12 +1,17 @@
 name: Tammy website
 run-name: >-
-  Tammy website · ${{ github.event_name == 'pull_request' && format('PR #{0}', github.event.pull_request.number) || github.ref_name }} · ${{ github.ref == 'refs/heads/master' && (github.event_name == 'push' || inputs.deploy_cloudflare) && 'deploy' || 'verify' }}
+  Tammy website · ${{ github.event_name == 'pull_request' && format('PR #{0}', github.event.pull_request.number) || github.ref_name }} · ${{ github.ref == 'refs/heads/master' && (github.event_name == 'push' || inputs.deploy_cloudflare || inputs.deploy_vercel) && 'deploy' || 'verify' }}
 
 on:
   workflow_dispatch:
     inputs:
       deploy_cloudflare:
         description: Deploy the verified direct Worker from master (no domain changes)
+        type: boolean
+        required: false
+        default: false
+      deploy_vercel:
+        description: Deploy the verified static export from master to Vercel (serves tammy.tax)
         type: boolean
         required: false
         default: false
@@ -158,6 +163,28 @@ jobs:
           include-hidden-files: true
           if-no-files-found: error
           retention-days: 14
+      - name: Export a separate Vercel static candidate
+        run: node scripts/site-release.mjs prepare --target vercel --output "$RUNNER_TEMP/tammy-vercel-source"
+      - name: Install Vercel candidate dependencies without deployment credentials
+        working-directory: ${{ runner.temp }}/tammy-vercel-source
+        run: pnpm install --frozen-lockfile --filter sites-project...
+      - name: Build and verify the Vercel static export
+        working-directory: ${{ runner.temp }}/tammy-vercel-source
+        run: |
+          pnpm build
+          node scripts/site-release.mjs verify
+          node scripts/site-release.mjs vercel-output --output "$RUNNER_TEMP/tammy-vercel-output-check"
+      - name: Bundle the Vercel source and static export
+        working-directory: ${{ runner.temp }}/tammy-vercel-source
+        run: node scripts/site-release.mjs bundle --output "$RUNNER_TEMP/tammy-vercel-artifact"
+      - name: Retain the Vercel preparation artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: tammy-vercel-preparation-${{ github.sha }}
+          path: ${{ runner.temp }}/tammy-vercel-artifact/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14
       - name: Record the preparation boundary
         shell: bash
         run: |
@@ -166,7 +193,7 @@ jobs:
             printf 'Source commit: %s\n\n' "$GITHUB_SHA"
             printf 'Cuttlefish runner: %s (%s / %s)\n\n' "$RUNNER_NAME" "$RUNNER_OS" "$RUNNER_ARCH"
             printf 'Separate Sites and direct Cloudflare artifacts contain their source closure, Worker output and provenance.\n\n'
-            printf 'This job does not publish. The separate Cloudflare deployment job is restricted to trusted master runs; it does not change tammy.tax or publish through Sites.\n'
+            printf 'This job does not publish. The separate Cloudflare and Vercel deployment jobs are restricted to trusted master runs. Only the Vercel job changes what tammy.tax serves; neither publishes through Sites.\n'
           } >> "$GITHUB_STEP_SUMMARY"
 
   deploy-cloudflare:
@@ -303,5 +330,136 @@ jobs:
           path: |
             ${{ runner.temp }}/tammy-cloudflare-deployment/deployment-record.json
             ${{ runner.temp }}/tammy-cloudflare-deployment/live-verification.json
+          if-no-files-found: ignore
+          retention-days: 30
+
+  deploy-vercel:
+    name: Deploy verified static export to Vercel (tammy.tax)
+    needs: verify-site
+    # Only trusted master pushes, or explicit master dispatches, can publish, and
+    # only once the repository variables naming the Vercel project exist.
+    if: >-
+      ${{ github.repository == 'castlemilk/tammy' &&
+          github.ref == 'refs/heads/master' &&
+          vars.VERCEL_PROJECT_ID != '' &&
+          (github.event_name == 'push' ||
+           (github.event_name == 'workflow_dispatch' && inputs.deploy_vercel)) }}
+    runs-on: [self-hosted, linux, ARM64, tammy-linux-ci]
+    timeout-minutes: 20
+    concurrency:
+      group: tammy-vercel-tammy-site
+      cancel-in-progress: false
+    steps:
+      - name: Verify Cuttlefish Linux runner identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${RUNNER_OS}" = Linux
+          test "${RUNNER_ARCH}" = ARM64
+          test "$(uname -m)" = aarch64
+          case "${RUNNER_NAME}" in
+            cf-vm-*) ;;
+            *) printf 'RUNNER_NOT_CUTTLEFISH: %s\n' "${RUNNER_NAME}" >&2; exit 1 ;;
+          esac
+      - name: Download the verified Vercel artifact from this run
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+        with:
+          name: tammy-vercel-preparation-${{ github.sha }}
+          path: ${{ runner.temp }}/tammy-vercel-artifact
+      - name: Use pinned Node.js
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
+        with:
+          node-version: 24.18.0
+          package-manager-cache: false
+      - name: Verify the downloaded Vercel revision and source archive
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { createHash } from 'node:crypto';
+          import { readFileSync } from 'node:fs';
+          import path from 'node:path';
+          const artifact = path.join(process.env.RUNNER_TEMP, 'tammy-vercel-artifact');
+          const read = (name) => JSON.parse(readFileSync(path.join(artifact, name), 'utf8'));
+          const release = read('release-manifest.json');
+          const source = read('source-provenance.json');
+          const build = read('build-provenance.json');
+          for (const record of [release, source, build]) {
+            assert.equal(record.github.repository, 'castlemilk/tammy');
+            assert.equal(record.github.commit_sha, process.env.GITHUB_SHA, 'Artifact must match this exact workflow revision');
+            assert.equal(record.target, 'vercel', 'Only the Vercel static export can be published to Vercel');
+          }
+          assert.equal(release.source_archive.path, 'source.tar.gz');
+          assert.equal(createHash('sha256').update(readFileSync(path.join(artifact, 'source.tar.gz'))).digest('hex'), release.source_archive.sha256);
+          assert.equal(release.source_sha256, source.source_sha256);
+          assert.equal(build.source_sha256, source.source_sha256);
+          assert.equal(release.build_sha256, build.build_sha256);
+          NODE
+      - name: Restore and verify the exact source and static export
+        shell: bash
+        run: |
+          mkdir "$RUNNER_TEMP/tammy-vercel-source"
+          tar -xzf "$RUNNER_TEMP/tammy-vercel-artifact/source.tar.gz" -C "$RUNNER_TEMP/tammy-vercel-source"
+          cp -R "$RUNNER_TEMP/tammy-vercel-artifact/dist" "$RUNNER_TEMP/tammy-vercel-source/dist"
+          cp "$RUNNER_TEMP/tammy-vercel-artifact/build-provenance.json" "$RUNNER_TEMP/tammy-vercel-source/build-provenance.json"
+          cd "$RUNNER_TEMP/tammy-vercel-source"
+          node scripts/site-release.mjs verify
+      - name: Write the reviewed Vercel output
+        working-directory: ${{ runner.temp }}/tammy-vercel-source
+        run: node scripts/site-release.mjs vercel-output --output "$RUNNER_TEMP/tammy-vercel-output"
+      - name: Deploy the static export to Vercel production with existing access
+        id: deploy
+        working-directory: ${{ runner.temp }}/tammy-vercel-source
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
+        run: node scripts/site-release.mjs vercel-deploy --output "$RUNNER_TEMP/tammy-vercel-output"
+      - name: Confirm tammy.tax serves this exact build
+        id: live
+        working-directory: ${{ runner.temp }}/tammy-vercel-source
+        run: node scripts/site-release.mjs vercel-verify-live --output "$RUNNER_TEMP/tammy-vercel-output"
+      - name: Check tammy.tax routes, canonicals and sitemap
+        id: health
+        working-directory: ${{ runner.temp }}/tammy-vercel-source
+        run: node apps/site/scripts/live-site-preflight.mjs https://tammy.tax
+      - name: Summarise the Vercel publication and HTTP acceptance
+        if: ${{ always() && (steps.deploy.outcome == 'success' || steps.deploy.outcome == 'failure') }}
+        shell: bash
+        env:
+          LIVE_OUTCOME: ${{ steps.live.outcome }}
+          HEALTH_OUTCOME: ${{ steps.health.outcome }}
+        run: |
+          node --input-type=module <<'NODE'
+          import { appendFileSync, existsSync, readFileSync } from 'node:fs';
+          import path from 'node:path';
+          const file = path.join(process.env.RUNNER_TEMP, 'tammy-vercel-output', 'deployment-record.json');
+          const record = existsSync(file) ? JSON.parse(readFileSync(file, 'utf8')) : null;
+          const health = process.env.HEALTH_OUTCOME;
+          const live = process.env.LIVE_OUTCOME;
+          const outcome = (value) => (value === 'success' ? 'Passed' : value === 'failure' ? 'Failed' : 'Not completed');
+          const lines = [
+            '## Tammy on Vercel (tammy.tax)', '',
+            '| Evidence | Result |', '| --- | --- |',
+            '| Git revision | ' + process.env.GITHUB_SHA + ' |',
+            '| Publication | ' + (record?.status ?? 'No confirmed record') + ' |',
+            '| Deployment | ' + (record?.deployment_id ?? 'Not confirmed') + ' |',
+            '| URL | ' + (record?.url ?? 'Not confirmed') + ' |',
+            '| tammy.tax serves this build | ' + outcome(live) + ' |',
+            '| tammy.tax preflight | ' + outcome(health) + ' |',
+            '| Static output hash | ' + (record?.static_sha256 ?? 'Not recorded') + ' |', '',
+            'The preflight checks routes, indexability and canonical host; it does not replace browser or PDF checks. A failed preflight does not undo publication.', '',
+          ];
+          appendFileSync(process.env.GITHUB_STEP_SUMMARY, lines.join('\n'));
+          NODE
+      - name: Retain the Vercel deployment record
+        if: ${{ always() && (steps.deploy.outcome == 'success' || steps.deploy.outcome == 'failure') }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: tammy-vercel-deployment-${{ github.sha }}-${{ github.run_attempt }}
+          # Only the redacted record and the live check; never CLI logs or the uploaded output.
+          path: |
+            ${{ runner.temp }}/tammy-vercel-output/deployment-record.json
+            ${{ runner.temp }}/tammy-vercel-output/live-verification.json
           if-no-files-found: ignore
           retention-days: 30

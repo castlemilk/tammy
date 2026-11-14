@@ -129,7 +129,7 @@ describe("Expense tool presentation and discovery", () => {
     expect(metadata.alternates).toEqual({canonical:"/tools/expense-organiser"});
     expect(publicTools.find(t=>t.href==="/tools/expense-organiser")?.category).toBe("bookkeeping");
     expect(matchTools("receipt","bookkeeping").map(t=>t.href)).toEqual(["/tools/expense-organiser"]);
-    const origin="https://tammy-accounting.castlemilk.chatgpt.site";
+    const origin="https://tammy.tax";
     expect(readFileSync("public/sitemap.xml","utf8")).toContain(origin+"/tools/expense-organiser</loc>");
     expect(readFileSync("public/llms.txt","utf8")).toContain(origin+"/tools/expense-organiser");
   });

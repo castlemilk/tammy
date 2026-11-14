@@ -94,7 +94,7 @@ describe("Tools and article routes", () => {
     const rss=readFileSync("public/rss.xml","utf8");
     const sitemap=readFileSync("public/sitemap.xml","utf8");
     for(const post of blogPosts.slice(0,3)) {
-      const root="https://tammy-accounting.castlemilk.chatgpt.site/blog/"+post.slug;
+      const root="https://tammy.tax/blog/"+post.slug;
       expect(rss).toContain("<link>"+root+"</link>");
       expect(sitemap).toContain("<loc>"+root+"</loc>");
       const svg=readFileSync("public"+post.cover,"utf8");
