@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "provider": "Vercel",
+  "access": "public",
+  "projectId": "prj_zlt5QLKUW3QrdkrHuHq7wkqVkU4j",
+  "versionId": "dpl_2D3YVS5QDpu5aUicuU23thuXVUhX",
+  "deploymentId": "dpl_2D3YVS5QDpu5aUicuU23thuXVUhX",
+  "origin": "https://tammy.tax",
+  "deployedAt": "2026-11-14T14:01:03.527Z",
+  "sourceCommit": "be4efd79dd3d3377470945bd88ff768c3eb1f095",
+  "policySha256": "17b13bd9440d0ca6516eeb1b33f15f8cd005fb347f9024c7c8e9563429f2d59a",
+  "routes": [
+    {
+      "path": "/",
+      "status": 200,
+      "contentType": "text/html",
+      "check": "passed"
+    },
+    {
+      "path": "/privacy",
+      "status": 200,
+      "contentType": "text/html",
+      "check": "passed"
+    },
+    {
+      "path": "/support",
+      "status": 200,
+      "contentType": "text/html",
+      "check": "passed"
+    }
+  ]
+}
