@@ -1,0 +1,1542 @@
+/* Tammy landing: workflow ("How it works"). Section styles, imported by app/page.tsx.
+ *
+ * Three layouts, one markup (caption, figure, caption, figure ...):
+ *   stacked   the default: one card per step, every figure finished
+ *   paired    from 960px: caption left, its own figure right (no script, or
+ *             reduced motion, at desktop widths)
+ *   pinned    from 960px with script and motion allowed: the five figures
+ *             share one sticky cell and the captions scroll past it
+ * The window internals follow the layout; the demonstration is last.
+ */
+.lp-workflow {
+  /* The pinned stage: the viewport less the header and a margin, within limits. */
+  --lp-workflow-stage-h: clamp(512px, 100svh - var(--l-header-h) - 64px, 592px);
+}
+
+.lp-workflow-head .lp-deck strong {
+  color: var(--l-text);
+  font-weight: 600;
+}
+
+/* ---------- Stacked: one card per step ---------- */
+
+.lp-workflow-steps {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.lp-workflow-caption {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  margin-top: clamp(28px, 6vw, 56px);
+  padding-top: clamp(24px, 5vw, 36px);
+  border-top: 1px solid var(--l-hairline);
+}
+
+.lp-workflow-caption:first-child {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
+
+.lp-workflow-where {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  color: var(--l-text);
+  font: 650 var(--l-fs-micro) / 1.3 var(--l-sans);
+}
+
+.lp-workflow-where .lp-icon {
+  width: 16px;
+  height: 16px;
+  color: var(--l-accent);
+}
+
+.lp-workflow-where span {
+  order: 1;
+  color: var(--l-text-muted);
+  font-weight: 500;
+}
+
+.lp-workflow-where span::before {
+  content: "·";
+  margin-right: 8px;
+}
+
+.lp-workflow-caption .lp-body {
+  max-width: 34em;
+}
+
+/* The name of an app button, written as it is on the button. */
+.lp-workflow-key {
+  color: var(--l-text);
+  font-weight: 650;
+}
+
+.lp-workflow-caption .lp-note {
+  max-width: 40ch;
+  margin-top: 2px;
+}
+
+.lp-workflow-figure {
+  container: lp-workflow-fig / inline-size;
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) auto;
+  min-width: 0;
+  margin-top: 20px;
+}
+
+/* Replay needs script: it takes its place only once the island is live. */
+.lp-workflow-foot {
+  display: flex;
+  min-height: 44px;
+  margin-top: 4px;
+  visibility: hidden;
+}
+
+.lp-workflow-figure[data-live] .lp-workflow-foot {
+  visibility: inherit;
+}
+
+.lp-workflow-foot .lp-replay {
+  margin-left: -10px;
+}
+
+/* A narrow figure keeps Replay in the window bar, beside the label, so the
+ * five cards stay compact. */
+@container lp-workflow-fig (max-width: 519px) {
+  .lp-workflow-foot {
+    position: absolute;
+    top: -2px;
+    right: 6px;
+    margin: 0;
+  }
+
+  .lp-workflow-foot .lp-replay {
+    margin-left: 0;
+    padding: 0 6px;
+  }
+
+  .lp-workflow-figure[data-live] .lp-window-bar {
+    gap: 8px;
+    padding-right: 86px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lp-workflow-foot {
+    display: none;
+  }
+}
+
+@media (scripting: none) {
+  .lp-workflow-foot {
+    display: none;
+  }
+}
+
+/* ---------- Touch, narrow: a swipe shelf of five cards ---------- */
+
+@media (max-width: 959px) and (pointer: coarse) {
+  .lp-workflow-steps {
+    grid-template-columns: none;
+    grid-template-rows: auto auto;
+    grid-auto-flow: column;
+    grid-auto-columns: min(calc(100vw - var(--l-gutter) - 28px), 420px);
+    column-gap: 14px;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x mandatory;
+    scroll-padding-inline: var(--l-gutter);
+    margin-inline: calc(var(--l-gutter) * -1);
+    margin-bottom: -36px;
+    padding: 0 var(--l-gutter) 36px;
+    scrollbar-width: none;
+  }
+
+  .lp-workflow-steps::-webkit-scrollbar {
+    display: none;
+  }
+
+  .lp-workflow-caption,
+  .lp-workflow-caption:first-child {
+    margin-top: 0;
+    padding-top: 0;
+    border-top: 0;
+    scroll-snap-align: start;
+  }
+
+  .lp-workflow-figure {
+    align-self: start;
+  }
+}
+
+/* ---------- Paired: caption beside its own figure ---------- */
+
+@media (min-width: 960px) {
+  .lp-workflow-steps {
+    grid-template-columns: minmax(280px, 0.54fr) minmax(0, 1fr);
+    align-items: center;
+    column-gap: clamp(40px, 5vw, 80px);
+    row-gap: clamp(64px, 7vw, 104px);
+  }
+
+  .lp-workflow-caption,
+  .lp-workflow-caption:first-child {
+    grid-column: 1;
+    margin-top: 0;
+    padding-top: 0;
+    border-top: 0;
+  }
+
+  .lp-workflow-figure {
+    grid-column: 2;
+    margin-top: 0;
+  }
+}
+
+/* ---------- Pinned: one sticky window, five captions ---------- */
+
+@media screen and (prefers-reduced-motion: no-preference) and (min-width: 960px) and (min-height: 640px) {
+  .lp-workflow-steps[data-steps="on"] {
+    align-items: stretch;
+    row-gap: 0;
+  }
+
+  .lp-workflow-steps[data-steps="on"] > .lp-workflow-caption {
+    grid-row: var(--step);
+    align-content: start;
+    min-height: max(64svh, 420px);
+  }
+
+  .lp-workflow-steps[data-steps="on"] > .lp-workflow-caption :is(.lp-h3, .lp-workflow-where, .lp-workflow-key, .lp-icon) {
+    transition: color 240ms ease;
+  }
+
+  .lp-workflow-steps[data-steps="on"] > .lp-workflow-caption:not([data-active]) :is(.lp-h3, .lp-workflow-where, .lp-workflow-key, .lp-workflow-where .lp-icon) {
+    color: var(--l-text-muted);
+  }
+
+  /* DOM order stays caption, figure: the figures are placed, not moved. An
+   * outgoing figure waits under the incoming one, so the frame never dips. */
+  .lp-workflow-steps[data-steps="on"] > .lp-workflow-figure {
+    grid-row: 1 / span 5;
+    position: sticky;
+    /* Centred in the viewport below the header, never closer to it than 24px. */
+    top: calc(var(--l-header-h) + max(24px, (100svh - var(--l-header-h) - var(--lp-workflow-stage-h)) / 2));
+    z-index: 1;
+    align-self: start;
+    height: var(--lp-workflow-stage-h);
+    opacity: 0;
+    visibility: hidden;
+    transition:
+      opacity 200ms ease 240ms,
+      visibility 0s linear 440ms;
+  }
+
+  .lp-workflow-steps[data-steps="on"] > .lp-workflow-caption[data-active] + .lp-workflow-figure {
+    z-index: 2;
+    opacity: 1;
+    visibility: visible;
+    transition:
+      opacity 240ms ease,
+      visibility 0s;
+  }
+}
+
+/* On a short viewport the pinned window drops what it can spare, so every
+ * step still fits inside it: .lp-workflow-tall marks those parts. */
+@media screen and (prefers-reduced-motion: no-preference) and (min-width: 960px) and (min-height: 640px) and (max-height: 767px) {
+  .lp-workflow-steps[data-steps="on"] .lp-workflow-tall {
+    display: none;
+  }
+
+  .lp-workflow-steps[data-steps="on"] .lp-workflow-rail {
+    gap: 9px;
+    padding-block: 12px;
+  }
+
+  .lp-workflow-steps[data-steps="on"] .lp-workflow-rail-item {
+    min-height: 26px;
+  }
+}
+
+/* ============================================================
+ * The inside of the illustrative window, drawn in the desktop
+ * app's own style.
+ *
+ * Two containers decide what a figure can afford:
+ *   lp-workflow-fig   the whole figure: the rail and the long bar label
+ *   lp-workflow-main  the screen beside the rail: optional columns and panes
+ * .lp-workflow-roomy marks anything a narrow figure does without, and
+ * .lp-workflow-wide what only the widest screen has room for.
+ * ============================================================ */
+
+/* ---------- Window, bar, rail ---------- */
+
+.lp-workflow-window {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+.lp-workflow-window .lp-window-bar {
+  flex: none;
+}
+
+.lp-workflow-crumb b {
+  color: var(--l-ink);
+  font-weight: 650;
+}
+
+.lp-workflow-app {
+  flex: 1 1 auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  min-height: 0;
+}
+
+.lp-workflow-rail {
+  display: none;
+}
+
+.lp-workflow-wordmark {
+  padding: 0 8px 2px;
+  color: var(--l-forest);
+  font: 700 1.5rem / 1 var(--l-serif);
+  letter-spacing: -0.04em;
+}
+
+.lp-workflow-rail-group {
+  display: grid;
+  gap: 2px;
+}
+
+.lp-workflow-rail-group .lp-app-eyebrow {
+  padding: 0 8px 3px;
+}
+
+.lp-workflow-rail-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 28px;
+  padding: 0 8px;
+  border-radius: 8px;
+  color: var(--l-muted);
+  font-size: var(--l-fs-app);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.lp-workflow-rail-item .lp-icon {
+  width: 15px;
+  height: 15px;
+}
+
+.lp-workflow-rail-item[data-current] {
+  background: var(--l-sage);
+  color: var(--l-forest);
+  font-weight: 650;
+}
+
+/* The rail appears only where the screen beside it keeps its full layout. */
+@container lp-workflow-fig (min-width: 680px) {
+  .lp-workflow-app {
+    grid-template-columns: 160px minmax(0, 1fr);
+  }
+
+  .lp-workflow-rail {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 14px 10px;
+    border-right: 1px solid var(--l-rule);
+    background: var(--l-paper);
+  }
+}
+
+/* The bar keeps the screen name whole: the business name goes first, then
+ * the long form of the label and the lock. */
+@container lp-workflow-fig (max-width: 599px) {
+  .lp-workflow-org {
+    display: none;
+  }
+}
+
+@container lp-workflow-fig (max-width: 519px) {
+  .lp-window-bar .lp-workflow-roomy {
+    display: none;
+  }
+}
+
+@container lp-workflow-fig (max-width: 339px) {
+  .lp-window-bar .lp-workflow-snug {
+    display: none;
+  }
+}
+
+/* ---------- The screen ---------- */
+
+.lp-workflow-main {
+  container: lp-workflow-main / inline-size;
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  min-width: 0;
+  padding: 14px;
+  font-size: var(--l-fs-app);
+  line-height: 1.4;
+}
+
+@container lp-workflow-main (max-width: 559px) {
+  .lp-workflow-main .lp-workflow-wide {
+    display: none;
+  }
+}
+
+.lp-workflow-pagehead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 34px;
+}
+
+.lp-workflow-titleblock {
+  display: grid;
+  gap: 1px;
+}
+
+.lp-workflow-sub {
+  color: var(--l-muted);
+  font-size: 0.75rem;
+  line-height: 1.4;
+  text-wrap: pretty;
+}
+
+.lp-workflow-strong {
+  font-weight: 650;
+}
+
+.lp-workflow-serif {
+  font: 500 1.125rem / 1.2 var(--l-serif);
+  letter-spacing: -0.015em;
+}
+
+/* Cards: the app's work surface at this scale. */
+.lp-workflow-card {
+  min-width: 0;
+  overflow: clip;
+  border: 1px solid var(--l-rule);
+  border-radius: 14px;
+  background: var(--l-paper);
+}
+
+.lp-workflow-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+  padding: 12px 14px 14px;
+}
+
+.lp-workflow-panelhead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 10px;
+  min-height: 26px;
+}
+
+.lp-workflow-panelhead > b {
+  font-size: var(--l-fs-micro);
+  font-weight: 650;
+}
+
+.lp-workflow-panelhead > b.lp-workflow-serif {
+  font-size: 1.125rem;
+  font-weight: 500;
+}
+
+.lp-workflow-panelhead .lp-workflow-swap {
+  justify-items: end;
+}
+
+.lp-workflow-panelhead > span:not([class]) {
+  color: var(--l-muted);
+  font-size: 0.75rem;
+}
+
+.lp-workflow-panelfoot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.lp-workflow-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+/* One thing in its successive states, stacked so a swap never shifts layout. */
+.lp-workflow-swap {
+  display: inline-grid;
+  align-items: center;
+  justify-items: start;
+}
+
+.lp-workflow-swap > * {
+  grid-area: 1 / 1;
+}
+
+.lp-workflow [data-num] .lp-workflow-swap {
+  justify-items: end;
+}
+
+.lp-workflow-panelfoot .lp-workflow-swap {
+  display: grid;
+  flex: 1 1 auto;
+}
+
+.lp-workflow-layers {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.lp-workflow-layers > * {
+  grid-area: 1 / 1;
+  min-width: 0;
+}
+
+/* App buttons, drawn. The demonstration presses them; a tap replays the step. */
+.lp-workflow-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 0 14px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  font: 650 var(--l-fs-app) / 1 var(--l-sans);
+  white-space: nowrap;
+}
+
+.lp-workflow-btn[data-tone="solid"] {
+  background: var(--l-forest);
+  color: var(--l-paper);
+}
+
+.lp-workflow-btn[data-tone="quiet"] {
+  border-color: var(--l-rule);
+  background: var(--l-paper);
+  color: var(--l-ink);
+}
+
+/* The press: the button dips under a brief ink wash, inside the ring a
+ * pressed control wears, so it is plain that someone pressed it. */
+.lp-workflow-btn::before,
+.lp-workflow-btn::after {
+  content: "";
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.lp-workflow-btn::before {
+  inset: -5px;
+  border: 2px solid var(--l-forest);
+  border-radius: 14px;
+}
+
+.lp-workflow-btn::after {
+  inset: -1px;
+  border-radius: inherit;
+  background: var(--l-ink);
+}
+
+/* Used up, or not yet available: the app's disabled state. */
+.lp-workflow-btn[data-state] {
+  opacity: 0.5;
+}
+
+.lp-workflow-iconbtn {
+  width: 34px;
+  padding: 0;
+}
+
+.lp-workflow-iconbtn .lp-icon {
+  width: 15px;
+  height: 15px;
+}
+
+/* Controls the demonstration never touches. */
+.lp-workflow-chrome {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 0 10px;
+  color: var(--l-ink);
+  font: 650 var(--l-fs-app) / 1 var(--l-sans);
+  white-space: nowrap;
+}
+
+.lp-workflow-pagehead .lp-workflow-chrome {
+  border: 1px solid var(--l-rule);
+  border-radius: 10px;
+  background: var(--l-paper);
+}
+
+.lp-workflow-chrome .lp-icon {
+  width: 15px;
+  height: 15px;
+}
+
+/* Record tables at the app's density. */
+.lp-workflow .lp-workflow-table {
+  table-layout: fixed;
+  font-size: var(--l-fs-app);
+}
+
+.lp-workflow .lp-workflow-table :is(th, td) {
+  padding: 8px 12px;
+}
+
+.lp-workflow .lp-workflow-table thead th {
+  padding-block: 7px;
+  white-space: nowrap;
+}
+
+/* The selected row, a shade lighter than the app's so a pill still reads on it. */
+.lp-workflow .lp-workflow-table tbody tr[data-selected] > * {
+  background: color-mix(in srgb, var(--l-sage) 52%, var(--l-paper));
+}
+
+.lp-workflow .lp-workflow-table tfoot :is(th, td) {
+  padding-block: 9px;
+}
+
+.lp-workflow .lp-workflow-table th:nth-child(2):is([data-num]),
+.lp-workflow .lp-workflow-table th:nth-child(3):is([data-num]) {
+  width: 96px;
+}
+
+/* An account: the code, then a name that wraps within its own box. */
+.lp-workflow-acct {
+  display: flex;
+  align-items: baseline;
+}
+
+.lp-workflow-acct .lp-code {
+  flex: none;
+}
+
+/* A retained file: type chip, name, supplier. */
+.lp-workflow-file {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.lp-workflow-filekind {
+  flex: none;
+  padding: 2px 6px;
+  border-radius: var(--l-r-chip);
+  background: var(--l-warn-soft);
+  color: var(--l-warn);
+  font: 700 0.75rem / 1.4 var(--l-sans);
+}
+
+.lp-workflow-filename {
+  display: grid;
+  min-width: 0;
+}
+
+/* A long file name wraps; it is never cut short. */
+.lp-workflow-filename b {
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+
+.lp-workflow-filename span {
+  color: var(--l-muted);
+  font-size: 0.75rem;
+}
+
+/* Form fields, drawn: a label over a value in a hairline box. */
+.lp-workflow-fields {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 8px 10px;
+}
+
+.lp-workflow-field {
+  display: grid;
+  grid-column: span 2;
+  gap: 3px;
+  min-width: 0;
+}
+
+.lp-workflow-field[data-span="3"] {
+  grid-column: span 3;
+}
+
+.lp-workflow-field[data-span="6"] {
+  grid-column: span 6;
+}
+
+.lp-workflow-field dt {
+  overflow: hidden;
+  font-size: 0.75rem;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lp-workflow-field dd {
+  display: block;
+  min-height: 30px;
+  overflow: hidden;
+  padding: 5px 10px;
+  border: 1px solid var(--l-rule);
+  border-radius: 9px;
+  background: var(--l-paper);
+  font-variant-numeric: lining-nums tabular-nums;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---------- 1. Documents ---------- */
+
+.lp-workflow .lp-workflow-docs th:nth-child(3) {
+  width: 132px;
+}
+
+.lp-workflow-review {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.lp-workflow-source {
+  display: none;
+}
+
+.lp-workflow-check {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  min-width: 0;
+  padding: 12px 14px 14px;
+}
+
+.lp-workflow-sourcetext {
+  display: grid;
+  gap: 3px;
+  padding: 9px 10px;
+  border: 1px solid var(--l-rule);
+  border-radius: 9px;
+  background: var(--l-paper);
+  font-size: 0.75rem;
+  font-variant-numeric: lining-nums tabular-nums;
+  line-height: 1.5;
+}
+
+.lp-workflow-sourcetext p {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.lp-workflow-sourcetext p > span:not([class]) {
+  color: var(--l-muted);
+}
+
+@container lp-workflow-main (min-width: 480px) {
+  .lp-workflow-review {
+    grid-template-columns: minmax(0, 0.74fr) minmax(0, 1fr);
+  }
+
+  .lp-workflow-source {
+    display: grid;
+    align-content: start;
+    gap: 10px;
+    min-width: 0;
+    padding: 12px 14px 14px;
+    border-right: 1px solid var(--l-rule);
+    background: var(--l-canvas);
+  }
+
+  /* The butter trace. Point at a detail and its line in the source lights
+   * too; point at a posted amount and the allocation it came from does. */
+  .lp-workflow-traced:has([data-trace="supplier"]:hover) [data-trace="supplier"] .lp-trace-target,
+  .lp-workflow-traced:has([data-trace="reference"]:hover) [data-trace="reference"] .lp-trace-target,
+  .lp-workflow-traced:has([data-trace="date"]:hover) [data-trace="date"] .lp-trace-target,
+  .lp-workflow-traced:has([data-trace="subtotal"]:hover) [data-trace="subtotal"] .lp-trace-target,
+  .lp-workflow-traced:has([data-trace="gst"]:hover) [data-trace="gst"] .lp-trace-target,
+  .lp-workflow-traced:has([data-trace="total"]:hover) [data-trace="total"] .lp-trace-target,
+  .lp-workflow-traced:has([data-trace="gross"]:hover) [data-trace="gross"] .lp-trace-target {
+    --lit: 1;
+  }
+
+  @media screen and (prefers-reduced-motion: no-preference) {
+    /* During the demonstration each stroke is drawn at --at, when the step
+     * has just happened, and they clear together at --clear. */
+    .lp-workflow-figure[data-play="run"] .lp-workflow-traced .lp-trace-target {
+      animation:
+        lp-workflow-trace 240ms var(--l-ease) var(--at, 0ms) both,
+        lp-workflow-untrace 220ms ease var(--clear, 0ms) forwards;
+    }
+
+    /* A finished demonstration must not hold the stroke shut: pointing still lights the pair. */
+    .lp-workflow-figure[data-play="run"] .lp-workflow-traced:has([data-trace="supplier"]:hover) [data-trace="supplier"] .lp-trace-target,
+    .lp-workflow-figure[data-play="run"] .lp-workflow-traced:has([data-trace="reference"]:hover) [data-trace="reference"] .lp-trace-target,
+    .lp-workflow-figure[data-play="run"] .lp-workflow-traced:has([data-trace="date"]:hover) [data-trace="date"] .lp-trace-target,
+    .lp-workflow-figure[data-play="run"] .lp-workflow-traced:has([data-trace="subtotal"]:hover) [data-trace="subtotal"] .lp-trace-target,
+    .lp-workflow-figure[data-play="run"] .lp-workflow-traced:has([data-trace="gst"]:hover) [data-trace="gst"] .lp-trace-target,
+    .lp-workflow-figure[data-play="run"] .lp-workflow-traced:has([data-trace="total"]:hover) [data-trace="total"] .lp-trace-target,
+    .lp-workflow-figure[data-play="run"] .lp-workflow-traced:has([data-trace="gross"]:hover) [data-trace="gross"] .lp-trace-target {
+      background-size: 100% 0.62em !important;
+    }
+  }
+}
+
+/* ---------- 2. Purchases ---------- */
+
+.lp-workflow-docrow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 12px;
+}
+
+.lp-workflow-alloc {
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr) minmax(0, 1fr);
+}
+
+.lp-workflow-alloc .lp-workflow-field {
+  grid-column: auto;
+}
+
+.lp-workflow-ask {
+  display: grid;
+  align-content: start;
+  justify-items: start;
+  gap: 10px;
+}
+
+.lp-workflow-confirm {
+  display: grid;
+  justify-self: stretch;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--l-warn-edge);
+  border-radius: 10px;
+  background: var(--l-warn-soft);
+  line-height: 1.4;
+}
+
+.lp-workflow .lp-workflow-ledger {
+  align-self: start;
+  border: 1px solid var(--l-rule);
+  border-radius: 10px;
+  border-collapse: separate;
+  border-spacing: 0;
+  overflow: clip;
+}
+
+.lp-workflow .lp-workflow-ledger thead th {
+  background: var(--l-canvas);
+}
+
+/* ---------- 3. Journals ---------- */
+
+.lp-workflow-entry {
+  gap: 0;
+  padding: 0;
+}
+
+.lp-workflow-entry > * {
+  padding: 11px 14px;
+}
+
+.lp-workflow-entry > .lp-workflow-panelhead {
+  border-bottom: 1px solid var(--l-rule);
+}
+
+.lp-workflow-entry > table {
+  padding: 0;
+  border-top: 1px solid var(--l-rule);
+}
+
+.lp-workflow-entryfields {
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 2fr) minmax(0, 0.9fr);
+}
+
+.lp-workflow-entryfields .lp-workflow-field {
+  grid-column: auto;
+}
+
+.lp-workflow-select {
+  position: relative;
+  display: block;
+  min-height: 30px;
+  overflow: hidden;
+  padding: 5px 26px 5px 10px;
+  border: 1px solid var(--l-rule);
+  border-radius: 9px;
+  background: var(--l-paper);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lp-workflow-select::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: 11px;
+  width: 6px;
+  height: 6px;
+  border: solid var(--l-muted);
+  border-width: 0 1.5px 1.5px 0;
+  translate: 0 -70%;
+  rotate: 45deg;
+}
+
+/* The app's total strip: a pale-sage band with semibold figures. */
+.lp-workflow-strip {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  border-top: 1px solid var(--l-sage-edge);
+  border-bottom: 1px solid var(--l-sage-edge);
+}
+
+.lp-workflow-strip::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--l-sage);
+}
+
+.lp-workflow-strip > div {
+  position: relative;
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.lp-workflow-strip dt,
+.lp-workflow-metrics dt {
+  color: var(--l-muted);
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+
+.lp-workflow-strip dd,
+.lp-workflow-metrics dd {
+  font: 650 1.125rem / 1.25 var(--l-sans);
+  font-variant-numeric: lining-nums tabular-nums;
+}
+
+/* ---------- 4. Banking ---------- */
+
+.lp-workflow-bank {
+  gap: 0;
+  padding: 0;
+}
+
+.lp-workflow-bank > .lp-workflow-panelhead {
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--l-rule);
+}
+
+.lp-workflow .lp-workflow-lines th:nth-child(1) {
+  width: 98px;
+}
+
+.lp-workflow .lp-workflow-lines th:nth-child(4) {
+  width: 116px;
+}
+
+.lp-workflow .lp-workflow-lines th:nth-child(5) {
+  width: 84px;
+}
+
+.lp-workflow-line {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+  text-wrap: balance;
+}
+
+.lp-workflow-line b {
+  font-weight: 650;
+}
+
+.lp-workflow-line .lp-workflow-swap {
+  color: var(--l-muted);
+  font-size: 0.75rem;
+}
+
+.lp-workflow-action {
+  justify-items: end;
+}
+
+.lp-workflow-action .lp-tick {
+  width: 16px;
+  height: 16px;
+  margin-right: 6px;
+}
+
+.lp-workflow-action .lp-workflow-btn {
+  min-height: 30px;
+  padding: 0 12px;
+}
+
+.lp-workflow-summary {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  padding: 12px 14px 14px;
+  border-top: 1px solid var(--l-sage-edge);
+  background: var(--l-sage);
+}
+
+.lp-workflow-metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 24px;
+}
+
+.lp-workflow-metrics > div {
+  display: grid;
+  gap: 2px;
+}
+
+.lp-workflow-summary .lp-workflow-sub {
+  color: var(--l-forest);
+}
+
+.lp-workflow-summary .lp-workflow-sub b {
+  display: block;
+  font-weight: 650;
+}
+
+/* The match panel, open only while a person is making a match. */
+.lp-workflow-sheet {
+  display: flex;
+  flex-wrap: wrap;
+  align-content: center;
+  align-items: flex-end;
+  gap: 10px 12px;
+  padding: 12px 14px 14px;
+  border-top: 1px solid var(--l-rule);
+  background: var(--l-paper);
+}
+
+.lp-workflow-sheetfield {
+  display: grid;
+  flex: 1 1 180px;
+  gap: 4px;
+  min-width: 0;
+}
+
+.lp-workflow-sheetlabel {
+  display: grid;
+  font-size: 0.75rem;
+  font-weight: 650;
+}
+
+.lp-workflow-sheetlabel b {
+  color: var(--l-forest);
+  font-weight: 650;
+}
+
+.lp-workflow-input {
+  display: flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 0 10px;
+  border: 1.5px solid var(--l-forest);
+  border-radius: 9px;
+  background: var(--l-paper);
+  font-weight: 500;
+}
+
+/* ---------- 5. Trial balance ---------- */
+
+.lp-workflow-asat {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--l-muted);
+  font-size: 0.75rem;
+  text-align: right;
+}
+
+.lp-workflow-asat b {
+  display: block;
+  color: var(--l-ink);
+  font-size: var(--l-fs-app);
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.lp-workflow .lp-workflow-tb :is(th, td) {
+  padding-block: 7px;
+}
+
+.lp-workflow .lp-workflow-tb [data-zero] {
+  color: var(--l-muted);
+}
+
+.lp-workflow .lp-workflow-tb tbody td:not([data-zero]) {
+  font-weight: 600;
+}
+
+.lp-workflow .lp-workflow-ledger caption {
+  caption-side: top;
+  padding: 8px 12px;
+  text-align: left;
+  font-size: var(--l-fs-app);
+  font-weight: 600;
+  color: var(--l-text-muted);
+}
+
+.lp-workflow-agree {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-left: 10px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.lp-workflow-agree .lp-tick {
+  width: 13px;
+  height: 13px;
+}
+
+/* ---------- A narrow figure (a phone): one compact card ---------- */
+
+@container lp-workflow-fig (max-width: 519px) {
+  .lp-workflow-main {
+    gap: 8px;
+    padding: 10px;
+  }
+}
+
+@container lp-workflow-main (max-width: 439px) {
+  .lp-workflow-main .lp-workflow-roomy,
+  .lp-workflow-main .lp-workflow-spare {
+    display: none;
+  }
+
+  .lp-workflow .lp-workflow-table :is(th, td) {
+    padding-inline: 6px;
+  }
+
+  .lp-workflow .lp-workflow-table :is(th, td):first-child {
+    padding-left: 12px;
+  }
+
+  .lp-workflow .lp-workflow-table :is(th, td):last-child {
+    padding-right: 12px;
+  }
+
+  .lp-workflow .lp-workflow-table th:nth-child(2):is([data-num]),
+  .lp-workflow .lp-workflow-table th:nth-child(3):is([data-num]) {
+    width: 74px;
+  }
+
+  .lp-workflow .lp-workflow-table .lp-code {
+    margin-right: 6px;
+  }
+
+  .lp-workflow-panel:not(.lp-workflow-entry, .lp-workflow-bank) {
+    padding-inline: 10px;
+  }
+
+  .lp-workflow-panelhead .lp-workflow-swap {
+    justify-items: start;
+  }
+
+  /* Documents: file and status; the button moves up beside the panel title. */
+  .lp-workflow .lp-workflow-docs :is(th, td):nth-child(2) {
+    display: none;
+  }
+
+  .lp-workflow .lp-workflow-docs th:nth-child(3) {
+    width: 128px;
+  }
+
+  .lp-workflow-check {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+  }
+
+  .lp-workflow-check .lp-workflow-fields {
+    grid-row: 2;
+    grid-column: 1 / -1;
+  }
+
+  /* Journals: the two accounts, the strip and the button. */
+  .lp-workflow-entry > .lp-workflow-panelfoot {
+    justify-content: flex-end;
+  }
+
+  .lp-workflow-select {
+    white-space: normal;
+  }
+
+  /* Banking: description, amount and state; the match panel in one row. */
+  .lp-workflow .lp-workflow-lines :is(th, td):nth-child(5) {
+    display: none;
+  }
+
+  .lp-workflow .lp-workflow-lines th:nth-child(3) {
+    width: 76px;
+  }
+
+  .lp-workflow .lp-workflow-lines th:nth-child(4) {
+    width: 106px;
+  }
+
+  .lp-workflow-summary .lp-workflow-panelfoot {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+
+  .lp-workflow-sheet {
+    flex-wrap: nowrap;
+  }
+
+  .lp-workflow-sheetfield {
+    flex-basis: 110px;
+  }
+
+  /* Trial balance: the agreement sits under the word Total. */
+  .lp-workflow-agree {
+    display: flex;
+    margin-left: 0;
+    white-space: normal;
+  }
+}
+
+/* The narrowest phones: names before codes, pills before amounts. */
+@container lp-workflow-main (max-width: 319px) {
+  .lp-workflow .lp-workflow-table .lp-code,
+  .lp-workflow-filekind {
+    display: none;
+  }
+
+  .lp-workflow .lp-workflow-docs th:nth-child(3) {
+    width: 118px;
+  }
+
+  /* A long state is allowed a second line. */
+  .lp-workflow-panelhead .lp-pill {
+    border-radius: 12px;
+    white-space: normal;
+  }
+
+  .lp-workflow-select {
+    min-height: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    overflow-wrap: anywhere;
+  }
+
+  .lp-workflow-select::after {
+    display: none;
+  }
+
+  .lp-workflow-strip {
+    gap: 6px;
+  }
+
+  .lp-workflow-strip dd {
+    font-size: 1rem;
+  }
+
+  .lp-workflow .lp-workflow-lines :is(th, td):nth-child(3) {
+    display: none;
+  }
+}
+
+/* ============================================================
+ * The demonstration. Everything below is keyed off data-play,
+ * which only workflow-figure.tsx sets.
+ *   [data-was]   exists only before the step: leaves at --until
+ *   [data-now]   arrives at --at (fade, rise, row, land, draw)
+ *   [data-mid]   a passing state: arrives at --at, leaves at --until
+ *   [data-press] the app button is pressed at --at
+ * ============================================================ */
+
+.lp-workflow-figure :is([data-was], [data-mid]),
+.lp-workflow-sheet {
+  visibility: hidden;
+}
+
+.lp-workflow-figure :is([data-now="land"], [data-mid="land"]) {
+  display: inline-flex;
+}
+
+@keyframes lp-workflow-leave {
+  from {
+    opacity: 1;
+    visibility: visible;
+  }
+  to {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+
+@keyframes lp-workflow-row {
+  from {
+    opacity: 0;
+    translate: 0 6px;
+  }
+}
+
+@keyframes lp-workflow-press {
+  0%,
+  100% {
+    scale: 1;
+  }
+  42% {
+    scale: 0.93;
+  }
+}
+
+@keyframes lp-workflow-press-ink {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  42% {
+    opacity: 0.26;
+  }
+}
+
+@keyframes lp-workflow-press-ring {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  24%,
+  68% {
+    opacity: 1;
+  }
+}
+
+@keyframes lp-workflow-spend {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0.5;
+  }
+}
+
+@keyframes lp-workflow-open {
+  from {
+    opacity: 0.5;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes lp-workflow-sheet-in {
+  from {
+    opacity: 0;
+    translate: 0 10px;
+    visibility: visible;
+  }
+  30% {
+    opacity: 1;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+    visibility: visible;
+  }
+}
+
+@keyframes lp-workflow-trace {
+  from {
+    background-size: 0% 0.62em;
+  }
+  to {
+    background-size: 100% 0.62em;
+  }
+}
+
+@keyframes lp-workflow-untrace {
+  from {
+    background-size: 100% 0.62em;
+  }
+  to {
+    background-size: 100% 0;
+  }
+}
+
+@media screen and (prefers-reduced-motion: no-preference) {
+  .lp-workflow-figure[data-live] [data-press] {
+    cursor: pointer;
+  }
+
+  /* Armed: the "before" state, set only while the figure cannot be seen. */
+  .lp-workflow-figure[data-play="armed"] [data-was] {
+    visibility: visible;
+  }
+
+  .lp-workflow-figure[data-play="armed"] [data-now]:not([data-now="draw"]) {
+    opacity: 0;
+  }
+
+  .lp-workflow-figure[data-play="armed"] [data-now="draw"] path {
+    stroke-dashoffset: 1;
+  }
+
+  .lp-workflow-figure[data-play="armed"] [data-state="spent"] {
+    opacity: 1;
+  }
+
+  .lp-workflow-figure[data-play="armed"] .lp-workflow-strip::before {
+    clip-path: inset(0 100% 0 0);
+  }
+
+  /* Run: before, the button pressed, the result. Amounts arrive whole. */
+  .lp-workflow-figure[data-play="run"] [data-was] {
+    animation: lp-workflow-leave 150ms ease var(--until, 0ms) both;
+  }
+
+  .lp-workflow-figure[data-play="run"] [data-now="fade"] {
+    animation: lp-fade 200ms ease var(--at, 0ms) both;
+  }
+
+  .lp-workflow-figure[data-play="run"] [data-now="rise"] {
+    animation: lp-rise 440ms var(--l-settle) var(--at, 0ms) both;
+  }
+
+  .lp-workflow-figure[data-play="run"] [data-now="row"] {
+    animation: lp-workflow-row 380ms var(--l-settle) var(--at, 0ms) both;
+  }
+
+  .lp-workflow-figure[data-play="run"] [data-now="land"] {
+    animation: lp-land 640ms var(--l-bounce) var(--at, 0ms) both;
+  }
+
+  .lp-workflow-figure[data-play="run"] [data-now="draw"] path {
+    animation: lp-draw 420ms var(--l-ease) var(--at, 0ms) both;
+  }
+
+  .lp-workflow-figure[data-play="run"] [data-mid] {
+    visibility: visible;
+  }
+
+  .lp-workflow-figure[data-play="run"] [data-mid="fade"] {
+    animation:
+      lp-fade 200ms ease var(--at, 0ms) both,
+      lp-workflow-leave 150ms ease var(--until, 0ms) forwards;
+  }
+
+  .lp-workflow-figure[data-play="run"] [data-mid="land"] {
+    animation:
+      lp-land 640ms var(--l-bounce) var(--at, 0ms) both,
+      lp-workflow-leave 150ms ease var(--until, 0ms) forwards;
+  }
+
+  /* A reference being typed: a stepped wipe over a few characters. */
+  .lp-workflow-figure[data-play="run"] [data-mid="type"] {
+    animation:
+      lp-wipe 380ms steps(7, end) var(--at, 0ms) both,
+      lp-workflow-leave 150ms ease var(--until, 0ms) forwards;
+  }
+
+  .lp-workflow-figure[data-play="run"] [data-press] {
+    animation: lp-workflow-press 340ms var(--l-ease) var(--at, 0ms);
+  }
+
+  .lp-workflow-figure[data-play="run"] [data-press]::after {
+    animation: lp-workflow-press-ink 340ms var(--l-ease) var(--at, 0ms);
+  }
+
+  .lp-workflow-figure[data-play="run"] [data-press]::before {
+    animation: lp-workflow-press-ring 460ms ease calc(var(--at, 0ms) - 90ms);
+  }
+
+  .lp-workflow-figure[data-play="run"] [data-press][data-was] {
+    animation:
+      lp-workflow-press 340ms var(--l-ease) var(--at, 0ms),
+      lp-workflow-leave 150ms ease var(--until, 0ms) both;
+  }
+
+  .lp-workflow-figure[data-play="run"] [data-press][data-state="spent"] {
+    animation:
+      lp-workflow-press 340ms var(--l-ease) var(--at, 0ms),
+      lp-workflow-spend 220ms ease calc(var(--at, 0ms) + 320ms) both;
+  }
+
+  .lp-workflow-figure[data-play="run"] [data-press][data-state="gated"] {
+    animation:
+      lp-workflow-press 340ms var(--l-ease) var(--at, 0ms),
+      lp-workflow-open 220ms ease var(--open, 0ms) forwards,
+      lp-workflow-spend 220ms ease calc(var(--at, 0ms) + 320ms) forwards;
+  }
+
+  /* The journal's total strip fills as both sides are chosen. */
+  .lp-workflow-figure[data-play="run"] .lp-workflow-strip::before {
+    animation: lp-wipe 520ms var(--l-ease) var(--at, 0ms) both;
+  }
+
+  /* The match panel opens once per match, and its button is pressed twice. */
+  .lp-workflow-figure[data-play="run"] .lp-workflow-sheet {
+    visibility: visible;
+    animation:
+      lp-workflow-sheet-in 260ms var(--l-settle) var(--in-1) both,
+      lp-workflow-leave 80ms ease var(--out-1) forwards,
+      lp-workflow-sheet-in 260ms var(--l-settle) var(--in-2) forwards,
+      lp-workflow-leave 80ms ease var(--out-2) forwards;
+  }
+
+  .lp-workflow-figure[data-play="run"] .lp-workflow-sheet .lp-workflow-btn[data-press] {
+    animation:
+      lp-workflow-press 340ms var(--l-ease) var(--press-1),
+      lp-workflow-press 340ms var(--l-ease) var(--press-2);
+  }
+
+  .lp-workflow-figure[data-play="run"] .lp-workflow-sheet .lp-workflow-btn[data-press]::after {
+    animation:
+      lp-workflow-press-ink 340ms var(--l-ease) var(--press-1),
+      lp-workflow-press-ink 340ms var(--l-ease) var(--press-2);
+  }
+
+  .lp-workflow-figure[data-play="run"] .lp-workflow-sheet .lp-workflow-btn[data-press]::before {
+    animation:
+      lp-workflow-press-ring 460ms ease calc(var(--press-1) - 90ms),
+      lp-workflow-press-ring 460ms ease calc(var(--press-2) - 90ms);
+  }
+}

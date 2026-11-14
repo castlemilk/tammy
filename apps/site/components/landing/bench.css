@@ -1,0 +1,1353 @@
+/*
+ * Tammy landing: bench. Three working instruments inside the Free tools band,
+ * imported by app/page.tsx.
+ *
+ * Layout: one wide instrument (margin) over an unequal pair (ABN, break-even).
+ * Each card is a size container, so its inner layout follows the card's width
+ * and not the viewport's.
+ *
+ * Colour: apricot marks the one part being taught. Butter flashes on a figure
+ * that has just been replaced, and only after the visitor touched something.
+ */
+
+.lp-bench {
+  display: grid;
+  gap: clamp(20px, 2.6vw, 36px);
+}
+
+.lp-bench-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px 48px;
+}
+
+.lp-bench-head .lp-body {
+  max-width: none;
+}
+
+.lp-bench-grid {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: clamp(14px, 1.8vw, 24px);
+}
+
+/* Phones: one instrument at a time behind a three-way picker. */
+.lp-bench-pick { display: none; }
+@supports selector(:has(*)) {
+  @media (max-width: 759px) {
+    .lp-bench-pick { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); min-width: 0; margin: 0; padding: 3px; border: 0; border-radius: var(--l-r-control); background: color-mix(in srgb, var(--l-ink) 8%, transparent); }
+    .lp-bench-pick label { position: relative; display: grid; place-items: center; min-height: 44px; padding-inline: 6px; border-radius: calc(var(--l-r-control) - 3px); color: var(--l-text-muted); font: 650 var(--l-fs-micro)/1.2 var(--l-sans); text-align: center; cursor: pointer; }
+    .lp-bench-pick input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+    .lp-bench-pick label:has(input:checked) { background: var(--l-paper); color: var(--l-ink); box-shadow: inset 0 0 0 1.5px var(--l-forest), var(--l-shadow-sheet); }
+    .lp-bench-pick label:has(input:focus-visible) { outline: 3px solid var(--l-focus); outline-offset: 2px; }
+    .lp-bench:has(.lp-bench-pick input[value="margin"]:checked) .lp-bench-grid > :not(.lp-bench-margin),
+    .lp-bench:has(.lp-bench-pick input[value="abn"]:checked) .lp-bench-grid > :not(.lp-bench-abn),
+    .lp-bench:has(.lp-bench-pick input[value="even"]:checked) .lp-bench-grid > :not(.lp-bench-even) { display: none; }
+  }
+}
+
+/* ---------- The card every instrument sits on ---------- */
+
+.lp-bench-card {
+  --l-text: var(--l-ink);
+  --l-text-muted: var(--l-muted);
+  --l-hairline: var(--l-rule);
+  --l-accent: var(--l-forest);
+  --l-focus: var(--l-forest);
+  grid-column: 1 / -1;
+  display: grid;
+  min-width: 0;
+  container: lp-bench-card / inline-size;
+}
+
+@media (min-width: 1180px) {
+  .lp-bench-abn {
+    grid-column: span 5;
+  }
+
+  .lp-bench-even {
+    grid-column: span 7;
+  }
+}
+
+.lp-bench-body {
+  display: grid;
+  align-content: start;
+  gap: clamp(18px, 2vw, 26px);
+  min-width: 0;
+  padding: clamp(18px, 2.6vw, 36px);
+}
+
+.lp-bench-intro {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+}
+
+.lp-bench-title {
+  font-size: clamp(1.375rem, 1.14rem + 0.72vw, 1.8rem);
+  line-height: 1.14;
+  letter-spacing: -0.018em;
+}
+
+.lp-bench-intro .lp-small {
+  max-width: 34em;
+  text-wrap: pretty;
+}
+
+.lp-bench-note {
+  max-width: 52ch;
+}
+
+.lp-bench-note cite {
+  font-style: italic;
+}
+
+/* ---------- Controls ---------- */
+
+.lp-bench-controls {
+  display: grid;
+  align-content: start;
+  gap: 14px;
+  min-width: 0;
+}
+
+.lp-bench-field {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  min-width: 0;
+}
+
+.lp-bench-label {
+  color: var(--l-text);
+  font: 650 var(--l-fs-micro) / 1.3 var(--l-sans);
+}
+
+.lp-bench-label span {
+  margin-left: 4px;
+  color: var(--l-text-muted);
+  font-weight: 500;
+}
+
+.lp-bench-input {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  height: 48px;
+  padding: 0 12px;
+  border: 1px solid var(--l-line);
+  border-radius: var(--l-r-control);
+  background: var(--l-canvas);
+  transition: border-color 160ms ease;
+}
+
+.lp-bench-input:focus-within {
+  border-color: var(--l-forest);
+  outline: 3px solid var(--l-focus);
+  outline-offset: 2px;
+}
+
+.lp-bench-input[data-state="bad"] {
+  border-color: var(--l-danger);
+}
+
+.lp-bench-input-prefix {
+  color: var(--l-text-muted);
+  font: 600 1.0625rem / 1 var(--l-sans);
+}
+
+.lp-bench-input input {
+  flex: 1 1 auto;
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--l-text);
+  font: 600 1.0625rem / 1 var(--l-sans);
+  font-variant-numeric: lining-nums tabular-nums;
+}
+
+.lp-bench-input input:focus-visible {
+  outline: none;
+}
+
+.lp-bench-error {
+  grid-column: 1 / -1;
+  color: var(--l-danger);
+  font: 600 var(--l-fs-micro) / 1.4 var(--l-sans);
+}
+
+/* A text box for exactness with a slider beside it for play. */
+.lp-bench-slide {
+  display: grid;
+  grid-template-columns: minmax(0, 8.75rem) minmax(0, 1fr);
+  align-items: center;
+  gap: 6px 16px;
+}
+
+.lp-bench-slide .lp-bench-field {
+  display: contents;
+}
+
+.lp-bench-slide .lp-bench-label {
+  grid-column: 1 / -1;
+}
+
+.lp-bench-range {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  min-width: 0;
+  height: 48px;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+  touch-action: pan-y;
+}
+
+.lp-bench-range::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(to right, var(--l-forest) 0 var(--p, 50%), var(--l-line) var(--p, 50%) 100%);
+}
+
+.lp-bench-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 22px;
+  height: 22px;
+  margin-top: -9px;
+  border: 3px solid var(--l-paper);
+  border-radius: 50%;
+  background: var(--l-forest);
+  box-shadow:
+    0 0 0 1px var(--l-forest),
+    0 2px 5px color-mix(in srgb, var(--l-ink) 28%, transparent);
+  transition: scale 160ms var(--l-ease);
+}
+
+.lp-bench-range::-moz-range-track {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--l-line);
+}
+
+.lp-bench-range::-moz-range-progress {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--l-forest);
+}
+
+.lp-bench-range::-moz-range-thumb {
+  box-sizing: border-box;
+  width: 22px;
+  height: 22px;
+  border: 3px solid var(--l-paper);
+  border-radius: 50%;
+  background: var(--l-forest);
+  box-shadow:
+    0 0 0 1px var(--l-forest),
+    0 2px 5px color-mix(in srgb, var(--l-ink) 28%, transparent);
+}
+
+.lp-bench-range:hover::-webkit-slider-thumb,
+.lp-bench-range:active::-webkit-slider-thumb {
+  scale: 1.12;
+}
+
+/* The focus ring goes on the thumb, the part that moves. */
+.lp-bench-range:focus-visible {
+  outline: none;
+}
+
+.lp-bench-range:focus-visible::-webkit-slider-thumb {
+  outline: 3px solid var(--l-focus);
+  outline-offset: 3px;
+}
+
+/* Firefox keeps the ring on the control itself. */
+@supports (-moz-appearance: none) {
+  .lp-bench-range:focus-visible {
+    outline: 3px solid var(--l-focus);
+    outline-offset: 0;
+    border-radius: 8px;
+  }
+}
+
+/* ---------- Shared figure vocabulary ---------- */
+
+/* A working line of arithmetic. */
+.lp-bench-working {
+  color: var(--l-text);
+  font: 500 clamp(0.75rem, 4.3cqi, 0.875rem) / 1.6 var(--l-mono);
+  font-variant-numeric: lining-nums tabular-nums;
+}
+
+/* Apricot: the one part being taught. */
+.lp-bench-mark {
+  padding: 2px 5px;
+  border-radius: 4px;
+  background: var(--l-apricot);
+  color: var(--l-ink);
+  white-space: nowrap;
+}
+
+/* The answer. Sans, semibold, tabular. Replaced whole, never tweened. */
+.lp-bench-big {
+  font: 600 clamp(2rem, 10cqi, 2.875rem) / 1 var(--l-sans);
+  font-variant-numeric: lining-nums tabular-nums;
+  letter-spacing: -0.025em;
+  white-space: nowrap;
+}
+
+.lp-bench-flash {
+  position: relative;
+  display: inline-block;
+  isolation: isolate;
+}
+
+.lp-bench-flash::before {
+  content: "";
+  position: absolute;
+  inset: -2px -5px;
+  z-index: -1;
+  border-radius: 4px;
+  background: var(--l-butter);
+  opacity: 0;
+}
+
+/* ---------- 1. Margin is not markup ---------- */
+
+.lp-bench-margin-figure {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  min-width: 0;
+}
+
+.lp-bench-margin-reading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 2px 16px;
+}
+
+.lp-bench-margin-reading .lp-bench-label {
+  color: var(--l-text-muted);
+}
+
+.lp-bench-margin-measure {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.lp-bench-ruler {
+  display: grid;
+  gap: 3px;
+}
+
+.lp-bench-ruler-scale {
+  position: relative;
+  height: 18px;
+  color: var(--l-text-muted);
+  font: 600 0.8125rem / 18px var(--l-sans);
+  font-variant-numeric: lining-nums tabular-nums;
+}
+
+.lp-bench-ruler[data-side="cost"] .lp-bench-ruler-scale {
+  order: 2;
+}
+
+.lp-bench-ruler-scale span {
+  position: absolute;
+  top: 0;
+  white-space: nowrap;
+}
+
+.lp-bench-ruler-scale [data-at="start"] {
+  left: 0;
+}
+
+.lp-bench-ruler-scale [data-at="mid"] {
+  translate: -50% 0;
+}
+
+/* Where each ruler reaches 100%: the end of the price, or the end of the cost. */
+.lp-bench-ruler-scale [data-whole] {
+  color: var(--l-text);
+}
+
+.lp-bench-ruler-scale [data-at="end"] {
+  right: 0;
+}
+
+.lp-bench-ruler-band {
+  position: relative;
+  height: 16px;
+}
+
+.lp-bench-ruler[data-side="price"] .lp-bench-ruler-band {
+  border-bottom: 1px solid var(--l-text);
+}
+
+.lp-bench-ruler[data-side="cost"] .lp-bench-ruler-band {
+  border-top: 1px solid var(--l-text);
+}
+
+/* The stretch of each ruler that lies against the profit. */
+.lp-bench-ruler-span {
+  position: absolute;
+  inset-block: 0;
+  right: 0;
+  background: color-mix(in srgb, var(--l-apricot) 58%, var(--l-paper));
+}
+
+.lp-bench-ruler svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.lp-bench-ruler line {
+  stroke: var(--l-text);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+  shape-rendering: crispEdges;
+}
+
+.lp-bench-ruler line[data-rank="0"] {
+  stroke: color-mix(in srgb, var(--l-ink) 52%, transparent);
+}
+
+.lp-bench-bar {
+  display: flex;
+  height: 60px;
+  overflow: hidden;
+  border-radius: 8px;
+}
+
+.lp-bench-bar[data-empty] {
+  border: 1px dashed var(--l-line);
+}
+
+.lp-bench-bar-seg {
+  display: grid;
+  align-content: center;
+  gap: 2px;
+  min-width: 0;
+  padding: 0 clamp(8px, 3cqi, 12px);
+  overflow: hidden;
+  white-space: nowrap;
+  container-type: inline-size;
+}
+
+.lp-bench-bar-seg[data-seg="base"] {
+  border: 1px solid var(--l-rule);
+  background: var(--l-oat);
+}
+
+.lp-bench-bar-seg[data-seg="base"]:not(:last-child) {
+  border-right: 0;
+}
+
+.lp-bench-bar-seg[data-seg="profit"] {
+  background: var(--l-apricot);
+}
+
+.lp-bench-bar-seg[data-seg="loss"] {
+  border: 1.5px dashed var(--l-danger);
+  border-radius: 0 8px 8px 0;
+  color: var(--l-danger);
+}
+
+.lp-bench-bar-name {
+  color: color-mix(in srgb, currentColor 72%, transparent);
+  font: 600 0.8125rem / 1.2 var(--l-sans);
+}
+
+.lp-bench-bar-amount {
+  font: 600 1.0625rem / 1.2 var(--l-sans);
+  font-variant-numeric: lining-nums tabular-nums;
+}
+
+/* A sliver too narrow for its figure goes unlabelled; the answers carry it. */
+@container (max-width: 54px) {
+  .lp-bench-bar-name,
+  .lp-bench-bar-amount {
+    display: none;
+  }
+}
+
+/* Its own size container: the three figures scale with the row they share. */
+.lp-bench-answers {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-content: start;
+  padding-top: clamp(14px, 1.6vw, 20px);
+  border-top: 1px solid var(--l-hairline);
+  container-type: inline-size;
+}
+
+.lp-bench-answers > div {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  min-width: 0;
+  padding-inline: clamp(8px, 3.6cqi, 24px);
+  border-left: 1px solid var(--l-hairline);
+}
+
+.lp-bench-answers > div:first-child {
+  padding-left: 0;
+  border-left: 0;
+}
+
+.lp-bench-answers dt {
+  color: var(--l-text-muted);
+  font: 650 var(--l-fs-micro) / 1.3 var(--l-sans);
+}
+
+.lp-bench-answers dd {
+  font: 600 clamp(1.125rem, 7cqi, 2.75rem) / 1.05 var(--l-sans);
+  font-variant-numeric: lining-nums tabular-nums;
+  letter-spacing: -0.025em;
+  white-space: nowrap;
+}
+
+/* "Not defined" and very large amounts step down so they stay in their column. */
+.lp-bench-answers dd[data-long] {
+  font-size: clamp(1rem, 3.6cqi, 1.5rem);
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.lp-bench-margin[data-invalid] .lp-bench-margin-measure {
+  opacity: 0.4;
+}
+
+/* A middling card sets the two controls side by side. */
+@container lp-bench-card (min-width: 620px) and (max-width: 879.98px) {
+  .lp-bench-margin .lp-bench-controls {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: clamp(24px, 5cqi, 44px);
+  }
+}
+
+@container lp-bench-card (min-width: 880px) {
+  .lp-bench-margin .lp-bench-body {
+    grid-template-columns: minmax(300px, 0.5fr) minmax(0, 1fr);
+    grid-template-rows: auto 1fr auto;
+    grid-template-areas:
+      "intro figure"
+      "controls figure"
+      "note answers";
+    column-gap: clamp(40px, 5.5cqi, 80px);
+  }
+
+  .lp-bench-margin .lp-bench-intro {
+    grid-area: intro;
+  }
+
+  .lp-bench-margin .lp-bench-controls {
+    position: relative;
+    grid-area: controls;
+  }
+
+  /* Beside the figure there is room under the sliders, so the message does not push the card taller. */
+  .lp-bench-margin .lp-bench-error {
+    position: absolute;
+    top: calc(100% + 12px);
+    left: 0;
+  }
+
+  .lp-bench-margin .lp-bench-margin-figure {
+    grid-area: figure;
+    align-self: center;
+  }
+
+  .lp-bench-margin .lp-bench-answers {
+    grid-area: answers;
+  }
+
+  .lp-bench-margin .lp-bench-note {
+    grid-area: note;
+    align-self: end;
+  }
+
+  .lp-bench-bar {
+    height: 72px;
+  }
+}
+
+/* ---------- 2. Every ABN carries its own check ---------- */
+
+.lp-bench-abn-controls {
+  display: flex;
+  align-items: end;
+  gap: 8px;
+}
+
+.lp-bench-abn-controls .lp-bench-field {
+  flex: 1 1 auto;
+  max-width: 17rem;
+}
+
+.lp-bench-replay {
+  height: 48px;
+  margin-left: auto;
+}
+
+.lp-bench-abn-figure {
+  display: grid;
+  align-content: start;
+  gap: clamp(16px, 2vw, 22px);
+  min-width: 0;
+}
+
+/*
+ * Eleven little sums and their total: twelve cells. Six to a row by default,
+ * so the tiles stay large on a phone and in the narrow desktop card; one row
+ * of twelve when the card is wide.
+ */
+.lp-bench-abn-cols {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 16px 5px;
+  max-width: 31rem;
+  --bench-digit: clamp(1.25rem, 6.4cqi, 2.125rem);
+}
+
+.lp-bench-abn-col {
+  display: grid;
+  grid-template-rows: auto auto 1fr;
+  justify-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.lp-bench-abn-tile {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border: 1px solid var(--l-rule);
+  border-radius: 10px;
+  background: var(--l-canvas);
+}
+
+.lp-bench-abn-col[data-empty] .lp-bench-abn-tile {
+  border-style: dashed;
+  border-color: var(--l-line);
+  background: transparent;
+}
+
+.lp-bench-abn-digit {
+  font: 600 var(--bench-digit) / 1 var(--l-sans);
+  font-variant-numeric: lining-nums tabular-nums;
+}
+
+/* The first digit as typed, struck out: it steps down by one. */
+.lp-bench-abn-was {
+  position: absolute;
+  top: 9%;
+  left: 12%;
+  color: var(--l-text-muted);
+  font: 600 clamp(0.75rem, 2.6cqi, 0.875rem) / 1 var(--l-sans);
+  font-variant-numeric: lining-nums tabular-nums;
+  text-decoration: line-through;
+}
+
+.lp-bench-abn-weight {
+  color: var(--l-text-muted);
+  font: 500 var(--l-fs-micro) / 1.1 var(--l-mono);
+  white-space: nowrap;
+}
+
+.lp-bench-abn-product {
+  align-self: end;
+  width: 100%;
+  min-height: calc(1.25em + 6px);
+  padding-top: 5px;
+  border-top: 1px solid var(--l-text);
+  font: 600 clamp(0.9375rem, 3.4cqi, 1.0625rem) / 1.25 var(--l-sans);
+  font-variant-numeric: lining-nums tabular-nums;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.lp-bench-abn-col[data-empty] .lp-bench-abn-product {
+  border-top-color: var(--l-hairline);
+}
+
+/* The twelfth cell: the products added up. It is the instrument's answer. */
+.lp-bench-abn-total {
+  grid-template-rows: 1fr auto;
+}
+
+.lp-bench-abn-total-label {
+  align-self: end;
+  color: var(--l-text-muted);
+  font: 650 var(--l-fs-micro) / 1.1 var(--l-sans);
+}
+
+.lp-bench-abn-total .lp-bench-abn-product {
+  min-height: 0;
+  padding-top: 6px;
+  border-top-width: 2px;
+  font-size: var(--bench-digit);
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+.lp-bench-abn-result {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 20px;
+  padding-top: clamp(14px, 1.6vw, 18px);
+  border-top: 1px solid var(--l-hairline);
+}
+
+.lp-bench-abn-division {
+  font-size: clamp(0.875rem, 4.6cqi, 1rem);
+}
+
+.lp-bench-abn-message {
+  color: var(--l-text);
+  font: 600 var(--l-fs-small) / 1.6 var(--l-sans);
+}
+
+.lp-bench-abn-verdict {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+}
+
+.lp-bench-abn-verdict .lp-pill {
+  padding: 5px 13px;
+  font-size: var(--l-fs-micro);
+}
+
+.lp-bench-abn-verdict .lp-pill svg {
+  width: 14px;
+  height: 14px;
+}
+
+.lp-bench-abn-number {
+  color: var(--l-text-muted);
+  font: 600 var(--l-fs-micro) / 1.3 var(--l-sans);
+}
+
+/* A wide card sets the twelve cells in one row, grouped 2-3-3-3 like the printed number. */
+@container lp-bench-card (min-width: 680px) {
+  .lp-bench-abn-cols {
+    display: flex;
+    gap: 5px;
+    max-width: none;
+    --bench-digit: clamp(1.25rem, 3.1cqi, 2.125rem);
+  }
+
+  .lp-bench-abn-col {
+    flex: 1 1 0;
+  }
+
+  .lp-bench-abn-col:is(:nth-child(3), :nth-child(6), :nth-child(9)) {
+    margin-left: 8px;
+  }
+
+  .lp-bench-abn-total {
+    margin-left: 14px;
+  }
+
+  .lp-bench-abn-was {
+    font-size: clamp(0.75rem, 1.3cqi, 0.875rem);
+  }
+}
+
+/* ---------- 3. Break-even ---------- */
+
+.lp-bench-even-controls {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 12px;
+}
+
+.lp-bench-even-stepper {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: end;
+  gap: 6px 8px;
+}
+
+.lp-bench-even-stepper .lp-bench-field {
+  display: contents;
+}
+
+.lp-bench-even-stepper .lp-bench-label {
+  grid-column: 1 / -1;
+}
+
+.lp-bench-step {
+  gap: 3px;
+  min-width: 60px;
+  min-height: 48px;
+  padding: 0 10px;
+  font-variant-numeric: lining-nums tabular-nums;
+}
+
+.lp-bench-even-hint {
+  grid-column: 1 / -1;
+}
+
+.lp-bench-even-figure {
+  display: grid;
+  align-content: start;
+  min-width: 0;
+}
+
+.lp-bench-even-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 18px;
+  margin-bottom: 10px;
+  color: var(--l-text-muted);
+  font: 600 0.8125rem / 1.3 var(--l-sans);
+}
+
+.lp-bench-even-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  white-space: nowrap;
+}
+
+.lp-bench-even-legend span::before {
+  content: "";
+  width: 18px;
+  border-top: 2.5px solid var(--l-forest);
+}
+
+.lp-bench-even-legend [data-line="cost"]::before {
+  border-top: 2px solid var(--l-ink);
+}
+
+.lp-bench-even-legend [data-line="ghost"]::before {
+  border-top: 1.5px dashed var(--l-muted);
+}
+
+.lp-bench-even-plot {
+  position: relative;
+  height: clamp(156px, 34cqi, 232px);
+  border-bottom: 1px solid var(--l-text);
+  border-left: 1px solid var(--l-text);
+}
+
+.lp-bench-even-plot svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.lp-bench-even-plot line {
+  fill: none;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.lp-bench-even-plot line[data-line="sales"] {
+  stroke: var(--l-forest);
+  stroke-width: 2.5;
+}
+
+.lp-bench-even-plot line[data-line="cost"] {
+  stroke: var(--l-ink);
+  stroke-width: 2;
+}
+
+.lp-bench-even-plot line[data-line="ghost"] {
+  stroke: var(--l-muted);
+  stroke-width: 1.5;
+  stroke-dasharray: 5 4;
+  stroke-linecap: butt;
+}
+
+/* Where the lines cross: the one apricot mark on this chart. */
+.lp-bench-even-dot {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  margin: -7px 0 0 -7px;
+  border: 2px solid var(--l-ink);
+  border-radius: 50%;
+  background: var(--l-apricot);
+}
+
+.lp-bench-even-dot[data-ghost] {
+  width: 10px;
+  height: 10px;
+  margin: -5px 0 0 -5px;
+  border: 1.5px solid var(--l-muted);
+  background: var(--l-paper);
+}
+
+.lp-bench-even-drop {
+  position: absolute;
+  bottom: 0;
+  width: 0;
+  border-left: 1.5px dashed var(--l-ink);
+  translate: -0.75px 0;
+}
+
+.lp-bench-even-drop[data-ghost] {
+  border-left: 1px dashed var(--l-muted);
+  translate: -0.5px 0;
+}
+
+.lp-bench-even-was {
+  position: absolute;
+  bottom: 5px;
+  color: var(--l-text-muted);
+  font: 600 0.8125rem / 1 var(--l-sans);
+  font-variant-numeric: lining-nums tabular-nums;
+  translate: calc(-100% - 6px) 0;
+}
+
+.lp-bench-even-axis {
+  position: relative;
+  height: 28px;
+  margin-top: 7px;
+  color: var(--l-text-muted);
+  font: 600 0.8125rem / 22px var(--l-sans);
+  font-variant-numeric: lining-nums tabular-nums;
+}
+
+.lp-bench-even-axis > span {
+  position: absolute;
+  top: 0;
+  white-space: nowrap;
+}
+
+.lp-bench-even-axis [data-at="start"] {
+  left: 0;
+}
+
+.lp-bench-even-axis [data-at="end"] {
+  right: 0;
+}
+
+.lp-bench-even-axis [data-at="crossing"] {
+  padding: 0 8px;
+  border-radius: 6px;
+  background: var(--l-apricot);
+  color: var(--l-ink);
+  font-weight: 650;
+  translate: -50% 0;
+}
+
+/* From 500 units the end label takes its own row, clear of the crossing label. */
+.lp-bench-even-axis[data-stack] {
+  height: 50px;
+}
+
+.lp-bench-even-axis[data-stack] [data-at="end"] {
+  top: 24px;
+}
+
+.lp-bench-even-result {
+  display: grid;
+  align-content: start;
+  gap: 14px 32px;
+  padding-top: clamp(14px, 1.6vw, 20px);
+  border-top: 1px solid var(--l-hairline);
+}
+
+.lp-bench-even-units {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+}
+
+.lp-bench-even-units .lp-bench-label {
+  color: var(--l-text-muted);
+}
+
+.lp-bench-even-unit {
+  margin-left: 0.18em;
+  color: var(--l-text-muted);
+  font-size: 0.46em;
+  letter-spacing: 0;
+}
+
+.lp-bench-big[data-words] {
+  font-size: clamp(1.375rem, 5cqi, 1.875rem);
+  letter-spacing: -0.02em;
+}
+
+.lp-bench-big[data-long] {
+  font-size: clamp(1.25rem, 5cqi, 1.75rem);
+  letter-spacing: -0.01em;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+/* The unit word keeps a readable size when the figure steps down. */
+.lp-bench-big[data-long] .lp-bench-even-unit {
+  font-size: var(--l-fs-micro);
+}
+
+.lp-bench-even-delta {
+  min-height: 1.45em;
+  color: var(--l-text-muted);
+  font-size: var(--l-fs-micro);
+  line-height: 1.45;
+}
+
+.lp-bench-even-delta strong {
+  color: var(--l-text);
+  font-weight: 650;
+}
+
+.lp-bench-even-facts {
+  display: grid;
+  align-content: start;
+}
+
+.lp-bench-even-facts > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  padding-block: 8px;
+  border-top: 1px solid var(--l-hairline);
+}
+
+.lp-bench-even-facts > div:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.lp-bench-even-facts dt {
+  color: var(--l-text-muted);
+  font-size: var(--l-fs-micro);
+}
+
+.lp-bench-even-facts dd {
+  font: 600 1.0625rem / 1.3 var(--l-sans);
+  font-variant-numeric: lining-nums tabular-nums;
+  white-space: nowrap;
+}
+
+.lp-bench-even[data-invalid] .lp-bench-even-plot {
+  opacity: 0.4;
+}
+
+/* The pointer to the Journal waits for a card with room for it. */
+@container lp-bench-card (max-width: 479.98px) {
+  .lp-bench-even-story {
+    display: none;
+  }
+}
+
+@container lp-bench-card (min-width: 600px) {
+  .lp-bench-even .lp-bench-body {
+    grid-template-columns: minmax(248px, 0.5fr) minmax(0, 1fr);
+    grid-template-areas:
+      "intro intro"
+      "controls figure"
+      "result result"
+      "note note";
+    column-gap: clamp(28px, 5cqi, 48px);
+  }
+
+  .lp-bench-even .lp-bench-intro {
+    grid-area: intro;
+  }
+
+  .lp-bench-even .lp-bench-controls {
+    grid-area: controls;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .lp-bench-even .lp-bench-even-figure {
+    grid-area: figure;
+  }
+
+  .lp-bench-even .lp-bench-even-result {
+    grid-area: result;
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1fr);
+    align-items: end;
+  }
+
+  .lp-bench-even .lp-bench-even-result .lp-bench-working {
+    grid-column: 1 / -1;
+  }
+
+  .lp-bench-even .lp-bench-note {
+    grid-area: note;
+  }
+}
+
+/* ---------- Without script: the worked examples, read-only ---------- */
+
+@media (scripting: none) {
+  .lp-bench-range,
+  .lp-bench-step,
+  .lp-bench-replay,
+  .lp-bench-even-hint {
+    display: none;
+  }
+
+  .lp-bench-input {
+    padding-inline: 0;
+    border-color: transparent;
+    background: transparent;
+  }
+
+  .lp-bench-slide {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ---------- Motion ---------- */
+
+@keyframes lp-bench-flash {
+  0%,
+  22% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes lp-bench-drop {
+  from {
+    opacity: 0;
+    translate: 0 -9px;
+  }
+}
+
+@keyframes lp-bench-roll-out {
+  to {
+    opacity: 0;
+    translate: 0 70%;
+  }
+}
+
+@keyframes lp-bench-roll-in {
+  from {
+    opacity: 0;
+    translate: 0 -70%;
+  }
+}
+
+/* Wipes left to right, with room for strokes that overhang the box. */
+@keyframes lp-bench-reveal {
+  from {
+    clip-path: inset(-8px 100% -8px -8px);
+  }
+
+  to {
+    clip-path: inset(-8px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* Nothing would play, so there is nothing to replay. */
+  .lp-bench-replay {
+    display: none;
+  }
+}
+
+@media screen and (prefers-reduced-motion: no-preference) {
+  /* Butter on what just changed. */
+  .lp-bench-flash[data-fresh]::before {
+    animation: lp-bench-flash 900ms var(--l-ease) both;
+  }
+
+  /* 1. The two rulers are laid against the bar, price first. */
+  .lp-bench-margin[data-play="armed"] .lp-bench-ruler {
+    clip-path: inset(-8px 100% -8px -8px);
+  }
+
+  .lp-bench-margin[data-play="in"] .lp-bench-ruler {
+    animation: lp-bench-reveal 620ms var(--l-ease) backwards;
+  }
+
+  .lp-bench-margin[data-play="in"] .lp-bench-ruler[data-side="cost"] {
+    animation-delay: 260ms;
+  }
+
+  /*
+   * 2. The check, worked row by row: the first digit steps down, the weights
+   * drop under the digits, the products appear, the sum, the division, and the
+   * pill lands last. Under two seconds end to end.
+   */
+  .lp-bench-abn[data-play="armed"] :is(.lp-bench-abn-weight, .lp-bench-abn-product, .lp-bench-abn-total-label, .lp-bench-abn-division, .lp-bench-abn-verdict > *),
+  .lp-bench-abn[data-play="armed"] .lp-bench-abn-tile[data-was] :is(.lp-bench-abn-was, .lp-bench-abn-digit) {
+    opacity: 0;
+  }
+
+  .lp-bench-abn:is([data-play="armed"], [data-play="in"]) .lp-bench-abn-tile[data-was]::after {
+    content: attr(data-was);
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    font: 600 var(--bench-digit) / 1 var(--l-sans);
+    font-variant-numeric: lining-nums tabular-nums;
+  }
+
+  .lp-bench-abn[data-play="in"] .lp-bench-abn-tile[data-was]::after {
+    animation: lp-bench-roll-out 240ms var(--l-ease) 120ms both;
+  }
+
+  .lp-bench-abn[data-play="in"] .lp-bench-abn-tile[data-was] .lp-bench-abn-digit {
+    animation: lp-bench-roll-in 280ms var(--l-settle) 160ms both;
+  }
+
+  .lp-bench-abn[data-play="in"] .lp-bench-abn-was {
+    animation: lp-fade 200ms ease 300ms both;
+  }
+
+  .lp-bench-abn[data-play="in"] .lp-bench-abn-weight {
+    animation: lp-bench-drop 280ms var(--l-settle) both;
+    animation-delay: calc(340ms + var(--i, 0) * 22ms);
+  }
+
+  .lp-bench-abn[data-play="in"] .lp-bench-abn-product {
+    animation: lp-fade 240ms ease both;
+    animation-delay: calc(700ms + var(--i, 0) * 22ms);
+  }
+
+  .lp-bench-abn[data-play="in"] .lp-bench-abn-total :is(.lp-bench-abn-total-label, .lp-bench-abn-product) {
+    animation: lp-bench-drop 280ms var(--l-settle) 1020ms both;
+  }
+
+  .lp-bench-abn[data-play="in"] .lp-bench-abn-division {
+    animation: lp-wipe 260ms var(--l-ease) 1180ms backwards;
+  }
+
+  .lp-bench-abn[data-play="in"] .lp-bench-abn-verdict .lp-pill {
+    animation: lp-land 600ms var(--l-bounce) 1340ms both;
+  }
+
+  .lp-bench-abn[data-play="in"] .lp-bench-abn-number {
+    animation: lp-fade 240ms ease 1340ms both;
+  }
+
+  /* 3. The two lines are drawn, then the crossing is marked. */
+  .lp-bench-even[data-play="armed"] .lp-bench-even-plot svg {
+    clip-path: inset(-8px 100% -8px -8px);
+  }
+
+  .lp-bench-even[data-play="armed"] :is(.lp-bench-even-dot, .lp-bench-even-drop, .lp-bench-even-axis [data-at="crossing"]) {
+    opacity: 0;
+  }
+
+  .lp-bench-even[data-play="in"] .lp-bench-even-plot svg {
+    animation: lp-bench-reveal 700ms var(--l-ease) backwards;
+  }
+
+  .lp-bench-even[data-play="in"] .lp-bench-even-drop {
+    animation: lp-fade 260ms ease 520ms both;
+  }
+
+  .lp-bench-even[data-play="in"] .lp-bench-even-dot {
+    animation: lp-pop 460ms var(--l-snap) 560ms both;
+  }
+
+  .lp-bench-even[data-play="in"] .lp-bench-even-axis [data-at="crossing"] {
+    animation: lp-fade 260ms ease 640ms both;
+  }
+
+  /* After a nudge the crossing settles in its new place. */
+  .lp-bench-even[data-touched] .lp-bench-even-dot:not([data-ghost]) {
+    animation: lp-pop 380ms var(--l-snap) both;
+  }
+}
+
+@media (forced-colors: active) {
+  .lp-bench-mark,
+  .lp-bench-ruler-span,
+  .lp-bench-bar-seg,
+  .lp-bench-even-axis [data-at="crossing"] {
+    border: 1px solid CanvasText;
+  }
+
+  .lp-bench-range::-webkit-slider-runnable-track {
+    background: CanvasText;
+  }
+
+  .lp-bench-range::-moz-range-track {
+    background: CanvasText;
+  }
+
+  .lp-bench-range::-webkit-slider-thumb {
+    background: Highlight;
+    border-color: Canvas;
+    box-shadow: none;
+    forced-color-adjust: none;
+  }
+
+  .lp-bench-range::-moz-range-thumb {
+    background: Highlight;
+    border-color: Canvas;
+    box-shadow: none;
+    forced-color-adjust: none;
+  }
+
+  /* forced-color-adjust: none on the thumb also frees its focus ring from the system colours. */
+  .lp-bench-range:focus-visible::-webkit-slider-thumb {
+    outline-color: CanvasText;
+  }
+
+  .lp-bench-pick {
+    border: 1px solid CanvasText;
+  }
+
+  .lp-bench-pick label:has(input:checked) {
+    border: 2px solid Highlight;
+  }
+
+  /* SVG strokes are not forced, so the chart lines take system colours here. */
+  .lp-bench-even-plot line[data-line="sales"] {
+    stroke: Highlight;
+  }
+
+  .lp-bench-even-plot line[data-line="cost"] {
+    stroke: CanvasText;
+  }
+
+  .lp-bench-even-plot line[data-line="ghost"] {
+    stroke: GrayText;
+  }
+
+  .lp-bench-even-legend [data-line="sales"]::before {
+    border-top-color: Highlight;
+  }
+
+  .lp-bench-even-legend [data-line="ghost"]::before {
+    border-top-color: GrayText;
+  }
+}

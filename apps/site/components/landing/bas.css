@@ -1,0 +1,1001 @@
+/*
+ * Tammy landing: bas. "Prepared is not lodged."
+ *
+ * One sheet of ivory paper on draft stock, and the edge of the Mac workspace
+ * to its right. Two native controls drive every state, read here with :has():
+ *   #bas-basis-cash:checked   the same quarter on the cash basis
+ *   #bas-stale:checked        a source changed after the workpaper was saved
+ */
+
+.lp-bas {
+  --bas-pad: clamp(18px, 2.1vw, 28px);
+  --bas-gap: clamp(28px, 4vw, 44px);
+  /* The gap the export path crosses, and the empty ground beyond the line. */
+  --bas-run: clamp(56px, 6.4vw, 96px);
+  --bas-beyond: clamp(100px, 22vw - 180px, 148px);
+  /* Where the path leaves the sheet: the middle of the export chips. */
+  --bas-chip: 40px;
+  --bas-foot: 18px;
+  --bas-exit: calc(1px + var(--bas-foot) + var(--bas-chip) / 2);
+}
+
+/* ---------- State: which variant is on the page ---------- */
+
+.lp-bas:not(:has(#bas-basis-cash:checked)) [data-basis="cash"],
+.lp-bas:has(#bas-basis-cash:checked) [data-basis="noncash"],
+.lp-bas:not(:has(#bas-stale:checked)) [data-when="stale"],
+.lp-bas:has(#bas-stale:checked) [data-when="fresh"] {
+  display: none;
+}
+
+/* The captions beside the controls swap in place: both keep their room, so
+ * nothing below them moves when the visitor presses something. */
+.lp-bas-captions {
+  display: grid;
+}
+
+.lp-bas-captions > * {
+  grid-area: 1 / 1;
+}
+
+.lp-bas:not(:has(#bas-basis-cash:checked)) [data-basis-note="cash"],
+.lp-bas:has(#bas-basis-cash:checked) [data-basis-note="noncash"],
+.lp-bas:not(:has(#bas-stale:checked)) [data-when-note="stale"],
+.lp-bas:has(#bas-stale:checked) [data-when-note="fresh"] {
+  visibility: hidden;
+}
+
+/* Without :has() the controls cannot reach the sheet: show the saved,
+ * non-cash workpaper and leave the controls out. */
+@supports not selector(:has(*)) {
+  .lp-bas [data-basis="cash"],
+  .lp-bas [data-when="stale"],
+  .lp-bas .lp-bas-handle {
+    display: none;
+  }
+}
+
+/* ---------- Frame ---------- */
+
+.lp-bas-frame {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  row-gap: var(--bas-gap);
+}
+
+.lp-bas-head {
+  display: grid;
+  justify-items: start;
+  gap: 18px;
+}
+
+.lp-bas-boundary {
+  max-width: 30em;
+  color: var(--l-text);
+  font-weight: 600;
+  text-wrap: balance;
+}
+
+/* A quiet way out to the detail, not a call to action. */
+.lp-bas-head .lp-link {
+  margin-top: -14px;
+  font-size: var(--l-fs-small);
+  font-weight: 600;
+}
+
+/* ---------- The visitor's handles ---------- */
+
+.lp-bas-handles {
+  display: grid;
+  align-items: start;
+  gap: 24px clamp(24px, 4vw, 56px);
+}
+
+.lp-bas-handle {
+  display: grid;
+  justify-items: start;
+  gap: 10px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.lp-bas-handle legend {
+  margin-bottom: 10px;
+  padding: 0;
+}
+
+.lp-bas-handle .lp-micro {
+  max-width: 34em;
+}
+
+.lp-bas-seg {
+  position: relative;
+  display: inline-grid;
+  grid-template-columns: 1fr 1fr;
+  padding: 4px;
+  border: 1px solid var(--l-hairline);
+  border-radius: calc(var(--l-r-control) + 4px);
+  background: color-mix(in srgb, var(--l-paper) 52%, var(--l-ground));
+}
+
+/* The thumb: one slip of paper that sits under the chosen basis. */
+.lp-bas-seg::before {
+  content: "";
+  position: absolute;
+  inset: 4px auto 4px 4px;
+  width: calc(50% - 4px);
+  border-radius: var(--l-r-control);
+  background: var(--l-paper);
+  box-shadow: inset 0 0 0 1.5px var(--l-forest), var(--l-shadow-sheet);
+}
+
+.lp-bas-seg:has(#bas-basis-cash:checked)::before {
+  translate: 100% 0;
+}
+
+.lp-bas-seg label {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 44px;
+  padding: 0 clamp(10px, 3vw, 18px);
+  border-radius: var(--l-r-control);
+  color: var(--l-text-muted);
+  font: 650 var(--l-fs-micro) / 1 var(--l-sans);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color 160ms ease;
+}
+
+.lp-bas-seg label:hover {
+  color: var(--l-text);
+}
+
+.lp-bas-seg input:checked + label {
+  color: var(--l-forest);
+}
+
+.lp-bas-seg input:focus-visible + label,
+#bas-stale:focus-visible + .lp-bas-change {
+  outline: 3px solid var(--l-focus);
+  outline-offset: 2px;
+}
+
+/* Once a source has changed, the control has done its work. */
+.lp-bas:has(#bas-stale:checked) .lp-bas-change {
+  border-color: transparent;
+  background: color-mix(in srgb, var(--l-warn) 11%, transparent);
+  color: var(--l-warn);
+  pointer-events: none;
+}
+
+.lp-bas-note {
+  max-width: 34ch;
+}
+
+@media (min-width: 600px) and (max-width: 1279px) {
+  .lp-bas-handles {
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  }
+
+  .lp-bas-note {
+    grid-column: 1 / -1;
+    max-width: none;
+  }
+}
+
+@media (min-width: 760px) and (max-width: 1279px) {
+  .lp-bas-handles {
+    grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr) minmax(0, 0.9fr);
+  }
+
+  .lp-bas-note {
+    grid-column: auto;
+    max-width: 34ch;
+  }
+}
+
+/* ---------- The workpaper ---------- */
+
+.lp-bas-paper {
+  display: grid;
+  min-width: 0;
+}
+
+.lp-bas-sheet {
+  --l-text: var(--l-ink);
+  --l-text-muted: var(--l-muted);
+  --l-hairline: var(--l-rule);
+  --l-accent: var(--l-forest);
+  --l-focus: var(--l-forest);
+  container-type: inline-size;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  font-size: var(--l-fs-small);
+  line-height: 1.45;
+}
+
+.lp-bas-sheet-head,
+.lp-bas-review,
+.lp-bas-hint,
+.lp-bas-sources,
+.lp-bas-foot {
+  padding-inline: var(--bas-pad);
+}
+
+.lp-bas-sheet-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px 24px;
+  padding-block: var(--bas-pad) 22px;
+}
+
+.lp-bas-sheet-title {
+  flex: 1 1 15em;
+  min-width: 0;
+}
+
+.lp-bas-flag {
+  margin-bottom: 12px;
+}
+
+/* One label for the sheet, where a window would carry it in its bar. */
+.lp-bas-flag span {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: var(--l-r-chip);
+  background: var(--l-oat);
+  color: var(--l-ink);
+  font: 600 var(--l-fs-app) / 1.5 var(--l-sans);
+}
+
+.lp-bas-sub {
+  max-width: 30em;
+  margin-top: 4px;
+  color: var(--l-muted);
+  font-size: var(--l-fs-micro);
+  text-wrap: balance;
+}
+
+/* The app's own status box: amber, never a pill. */
+.lp-bas-status {
+  padding: 8px 16px;
+  border: 1px solid var(--l-warn-edge);
+  border-radius: var(--l-r-control);
+  background: var(--l-warn-soft);
+}
+
+.lp-bas-status-title {
+  color: var(--l-warn);
+  font-size: var(--l-fs-micro);
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.lp-bas-status-sub {
+  margin-top: 2px;
+  color: var(--l-muted);
+  font-size: var(--l-fs-app);
+}
+
+.lp-bas-review {
+  display: grid;
+  gap: 2px;
+  padding-block: 18px 20px;
+  border-top: 1px solid var(--l-hairline);
+}
+
+.lp-bas-basis-line {
+  font-weight: 600;
+}
+
+.lp-bas-period {
+  color: var(--l-muted);
+  font-size: var(--l-fs-app);
+}
+
+.lp-bas-stale {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 20px;
+  margin-top: 12px;
+  padding: 12px 12px 12px 14px;
+  border: 1px solid var(--l-warn-edge);
+  border-radius: var(--l-r-control);
+  background: var(--l-warn-soft);
+}
+
+.lp-bas-stale p {
+  flex: 1 1 18em;
+  color: var(--l-warn);
+  font-size: var(--l-fs-micro);
+  line-height: 1.5;
+  text-wrap: pretty;
+}
+
+/* Four figures in one ruled strip; the net sits on the pale-sage band. */
+.lp-bas-figures {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-inline: var(--bas-pad);
+  border: 1px solid var(--l-hairline);
+  border-radius: var(--l-r-control);
+  overflow: clip;
+}
+
+.lp-bas-fig {
+  position: relative;
+  display: grid;
+  align-content: space-between;
+  gap: 14px;
+  min-width: 0;
+  padding: 15px 14px 18px;
+  border-left: 1px solid var(--l-hairline);
+}
+
+.lp-bas-fig:first-child {
+  border-left: 0;
+}
+
+.lp-bas-fig dt {
+  color: var(--l-muted);
+  font: 600 var(--l-fs-app) / 1.3 var(--l-sans);
+}
+
+.lp-bas-fig dd {
+  font-size: 1.5rem;
+  font-size: clamp(1.25rem, 3.7cqi, 1.75rem);
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.lp-bas-fig--net {
+  border-left-color: var(--l-sage-edge);
+  background: var(--l-sage);
+  color: var(--l-forest);
+}
+
+.lp-bas-fig--net dt {
+  color: var(--l-forest);
+}
+
+.lp-bas-hint {
+  margin-top: 10px;
+  color: var(--l-muted);
+  font-size: var(--l-fs-micro);
+}
+
+.lp-bas-sources {
+  /* Any spare height on the sheet is shared under the two tables. */
+  flex: 1 0 auto;
+  padding-block: 26px 0;
+}
+
+.lp-bas-sources + .lp-bas-sources {
+  margin-top: 22px;
+  border-top: 1px solid var(--l-hairline);
+}
+
+.lp-bas-sources-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+
+.lp-bas-sources h4 {
+  font: 650 var(--l-fs-micro) / 1.35 var(--l-sans);
+  letter-spacing: 0;
+}
+
+.lp-bas-sources-head p {
+  margin-top: 2px;
+  color: var(--l-muted);
+  font-size: var(--l-fs-app);
+  text-wrap: pretty;
+}
+
+.lp-bas-table {
+  font-size: var(--l-fs-app);
+}
+
+.lp-bas-table :is(th, td) {
+  padding: 12px 10px;
+}
+
+.lp-bas-table :is(th, td):first-child {
+  padding-left: 0;
+}
+
+.lp-bas-table :is(th, td):last-child {
+  padding-right: 0;
+}
+
+.lp-bas-table tbody td {
+  white-space: nowrap;
+}
+
+.lp-bas-table td[data-num] {
+  font-weight: 600;
+}
+
+.lp-bas-table .lp-trace-target {
+  padding: 0 0.14em;
+  margin: 0 -0.14em;
+}
+
+.lp-bas-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  margin-top: auto;
+  padding-block: var(--bas-foot);
+  border-top: 1px solid var(--l-hairline);
+}
+
+/* The sources sit a measured distance above the footer rule. */
+.lp-bas-sources:has(+ .lp-bas-foot) {
+  padding-bottom: 22px;
+}
+
+.lp-bas-owner {
+  color: var(--l-muted);
+  font-size: var(--l-fs-app);
+}
+
+.lp-bas-exports {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+
+/* The app's export buttons, drawn as chips: nothing here can be pressed. */
+.lp-bas-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: var(--bas-chip);
+  padding: 0 12px;
+  border: 1px solid var(--l-hairline);
+  border-radius: var(--l-r-control);
+  color: var(--l-ink);
+  font: 650 var(--l-fs-app) / 1 var(--l-sans);
+  white-space: nowrap;
+  cursor: default;
+}
+
+.lp-bas-chip .lp-icon {
+  width: 15px;
+  height: 15px;
+  color: var(--l-muted);
+}
+
+/* ---------- The butter trace ---------- */
+
+/* At rest the sheet shows one trace: 1A and the cell it came from. */
+.lp-bas-sheet :is(.lp-trace, .lp-trace-target)[data-trace~="a1"] {
+  --lit: 1;
+}
+
+/* A figure under the pointer or the keyboard takes over. */
+.lp-bas-sheet:has(.lp-trace:is(:hover, :focus-visible)) :is(.lp-trace, .lp-trace-target) {
+  --lit: 0;
+}
+
+.lp-bas-sheet:has(.lp-trace[data-key="g1"]:is(:hover, :focus-visible)) [data-trace~="g1"],
+.lp-bas-sheet:has(.lp-trace[data-key="a1"]:is(:hover, :focus-visible)) [data-trace~="a1"],
+.lp-bas-sheet:has(.lp-trace[data-key="b1"]:is(:hover, :focus-visible)) [data-trace~="b1"],
+.lp-bas-sheet:has(.lp-trace[data-key="net"]:is(:hover, :focus-visible)) [data-trace~="net"] {
+  --lit: 1;
+}
+
+/* Touch screens without a sticky hover: a tapped figure keeps its trace. */
+@media (hover: none) {
+  .lp-bas-sheet:has(.lp-trace:focus) :is(.lp-trace, .lp-trace-target) {
+    --lit: 0;
+  }
+
+  .lp-bas-sheet:has(.lp-trace[data-key="g1"]:focus) [data-trace~="g1"],
+  .lp-bas-sheet:has(.lp-trace[data-key="a1"]:focus) [data-trace~="a1"],
+  .lp-bas-sheet:has(.lp-trace[data-key="b1"]:focus) [data-trace~="b1"],
+  .lp-bas-sheet:has(.lp-trace[data-key="net"]:focus) [data-trace~="net"] {
+    --lit: 1;
+  }
+}
+
+.lp-bas-sheet .lp-trace {
+  text-decoration-color: color-mix(in srgb, currentColor 36%, transparent);
+}
+
+/* The whole cell answers for its figure: an easy target for a finger. */
+.lp-bas-fig .lp-trace::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+}
+
+/* Keeps a scrolled-to figure, or its source row, clear of the viewport edge. */
+.lp-bas-figures,
+.lp-bas-stale,
+.lp-bas-sheet .lp-trace-target {
+  scroll-margin-block: 20px;
+}
+
+/* ---------- The line: the edge of the Mac workspace ---------- */
+
+.lp-bas-rule {
+  position: absolute;
+  overflow: visible;
+}
+
+/* A plain rule, not a drawn path: no dash pattern to normalise. */
+.lp-bas .lp-bas-rule .lp-line {
+  stroke-dasharray: none;
+}
+
+.lp-bas-way-clip {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.lp-bas-way svg {
+  position: absolute;
+}
+
+/*
+ * Below 960px the line lies under the sheet as a rule across the page. The
+ * path drops from the export chips, through the sheet's edge, and stops on it.
+ * (The 960px block further down stands the same parts upright.)
+ */
+.lp-bas-edge {
+  --bas-drop: 76px;
+  position: relative;
+  height: calc(var(--bas-drop) + 96px);
+  margin-top: calc(-1 * var(--bas-gap));
+}
+
+.lp-bas .lp-bas-rule--v,
+.lp-bas .lp-bas-way-x {
+  display: none;
+}
+
+.lp-bas-rule--h {
+  top: calc(var(--bas-drop) - 1px);
+  left: calc(-1 * var(--l-gutter));
+  width: calc(100% + 2 * var(--l-gutter));
+  height: 2px;
+}
+
+.lp-bas-way {
+  position: absolute;
+  top: calc(-1px - var(--bas-foot));
+  right: calc(var(--bas-pad) + 42px);
+  width: 24px;
+  height: calc(var(--bas-drop) + var(--bas-foot) + 1px);
+}
+
+.lp-bas-way-y {
+  bottom: 0;
+  left: 0;
+}
+
+/* The stop: a short bar across the end of the path, lying on the line. */
+.lp-bas-stop {
+  position: absolute;
+  bottom: -2.5px;
+  left: 0;
+  width: 24px;
+  height: 5px;
+  border-radius: 2px;
+  background: var(--l-accent);
+}
+
+/* The line's one label. */
+.lp-bas-edge-label {
+  position: absolute;
+  top: calc(var(--bas-drop) - 1.3em - 10px);
+  left: 0;
+  color: var(--l-accent);
+  font: 650 var(--l-fs-micro) / 1.3 var(--l-sans);
+  white-space: nowrap;
+}
+
+/* Beyond the line: ground, and the place the path does not reach. */
+.lp-bas-ato {
+  position: absolute;
+  top: calc(var(--bas-drop) + 44px);
+  right: calc(var(--bas-pad) + 54px);
+  translate: 50% 0;
+  color: var(--l-text-muted);
+  font: 500 1.25rem / 1.2 var(--l-serif);
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+
+/* ---------- Phones: the sheet tightens and source rows restack ---------- */
+
+@media (max-width: 599px) {
+  /* The limit goes up beside the claim, so the two controls sit as close to
+   * the sheet they change as a phone allows. */
+  .lp-bas-handles {
+    gap: 20px;
+  }
+
+  .lp-bas-note {
+    order: -1;
+  }
+
+  .lp-bas-edge {
+    --bas-drop: 68px;
+    height: calc(var(--bas-drop) + 84px);
+  }
+
+  .lp-bas-ato {
+    top: calc(var(--bas-drop) + 36px);
+  }
+
+  .lp-bas-sheet-head {
+    align-items: center;
+    gap: 10px 12px;
+    padding-bottom: 16px;
+  }
+
+  .lp-bas-status {
+    padding: 6px 12px;
+  }
+
+  /* The label takes the first line; title and status share the second. */
+  .lp-bas-sheet-title {
+    display: contents;
+  }
+
+  .lp-bas-sheet-title .lp-bas-flag {
+    flex: 0 0 100%;
+    margin: 0;
+  }
+
+  .lp-bas-sheet-title .lp-app-title {
+    flex: 1 1 auto;
+  }
+
+  /* The deck above has already said this. */
+  .lp-bas-sub {
+    display: none;
+  }
+
+  .lp-bas-review {
+    padding-block: 14px 16px;
+  }
+
+  .lp-bas-figures {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .lp-bas-fig {
+    gap: 8px;
+    padding: 12px 14px 14px;
+  }
+
+  .lp-bas-fig:nth-child(odd) {
+    border-left: 0;
+  }
+
+  .lp-bas-fig:nth-child(n + 3) {
+    border-top: 1px solid var(--l-hairline);
+  }
+
+  .lp-bas-fig--net {
+    border-top-color: var(--l-sage-edge);
+  }
+
+  .lp-bas-fig dd {
+    font-size: clamp(1.25rem, 7cqi, 1.5rem);
+  }
+
+  .lp-bas-sources {
+    padding-top: 20px;
+  }
+
+  .lp-bas-sources + .lp-bas-sources {
+    margin-top: 14px;
+  }
+
+  .lp-bas-sources:has(+ .lp-bas-foot) {
+    padding-bottom: 14px;
+  }
+
+  /* Each source row becomes labelled values: three across, amounts last. */
+  .lp-bas-table,
+  .lp-bas-table tbody {
+    display: block;
+  }
+
+  .lp-bas-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .lp-bas-table tbody tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1.12fr) minmax(0, 1fr) minmax(0, 0.88fr);
+    column-gap: 12px;
+    padding-block: 4px;
+    border-top: 1px solid var(--l-hairline);
+  }
+
+  .lp-bas-table tbody td,
+  .lp-bas-table tbody td:first-child,
+  .lp-bas-table tbody td:last-child {
+    display: grid;
+    align-content: start;
+    gap: 1px;
+    padding: 6px 0;
+    border-top: 0;
+    text-align: left;
+    white-space: normal;
+  }
+
+  .lp-bas-table tbody td::before {
+    content: attr(data-label);
+    color: var(--l-muted);
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+
+  .lp-bas-table tbody td[data-num] {
+    justify-items: start;
+  }
+
+  /* The supplier's name needs two columns; the amounts then share a line. */
+  .lp-bas-table td[data-label="Supplier"] {
+    grid-column: span 2;
+  }
+
+  .lp-bas-owner {
+    display: none;
+  }
+}
+
+/* The narrowest phones: two values across. */
+@media (max-width: 359px) {
+  .lp-bas-table tbody tr {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .lp-bas-table td[data-label="Supplier"] {
+    grid-column: auto;
+  }
+
+  .lp-bas-docs td[data-label="Invoice"] {
+    grid-column: span 2;
+  }
+}
+
+/* ---------- From 960px: the line stands to the right of the sheet ---------- */
+
+@media (min-width: 960px) {
+  .lp-bas-frame {
+    grid-template-columns: minmax(0, 1fr) var(--bas-run) var(--bas-beyond);
+  }
+
+  .lp-bas-head,
+  .lp-bas-handles,
+  .lp-bas-paper {
+    grid-column: 1;
+  }
+
+  .lp-bas-edge {
+    grid-column: 2 / 4;
+    grid-row: 1 / 4;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    height: auto;
+    margin-block: calc(-1 * var(--l-section-y));
+    padding-block: var(--l-section-y);
+  }
+
+  .lp-bas .lp-bas-rule--h,
+  .lp-bas .lp-bas-way-y {
+    display: none;
+  }
+
+  .lp-bas .lp-bas-rule--v {
+    display: block;
+    top: 0;
+    left: calc(var(--bas-run) - 1px);
+    width: 2px;
+    height: 100%;
+  }
+
+  /* From the last export chip, across the sheet's edge, to the line. */
+  .lp-bas-way {
+    top: auto;
+    right: auto;
+    bottom: calc(var(--l-section-y) + var(--bas-exit) - 12px);
+    left: calc(-1px - var(--bas-pad));
+    width: calc(var(--bas-pad) + 1px + var(--bas-run));
+    height: 24px;
+  }
+
+  .lp-bas .lp-bas-way-x {
+    display: block;
+    top: 0;
+    right: 0;
+  }
+
+  .lp-bas-stop {
+    top: 0;
+    right: -2.5px;
+    bottom: auto;
+    left: auto;
+    width: 5px;
+    height: 24px;
+  }
+
+  /* The label rides the line: it stays in view while the band scrolls, then
+   * comes to rest just above the point where the path halts. */
+  .lp-bas-edge-label {
+    position: sticky;
+    top: auto;
+    bottom: 28px;
+    left: auto;
+    align-self: flex-start;
+    margin: 0 0 calc(var(--bas-exit) + 22px) calc(var(--bas-run) - 1.3em - 11px);
+    writing-mode: vertical-rl;
+    rotate: 180deg;
+  }
+
+  .lp-bas-ato {
+    top: auto;
+    right: auto;
+    bottom: calc(var(--l-section-y) + var(--bas-exit) - 0.6em);
+    /* Centred in the empty ground between the line and the page edge. */
+    left: calc(var(--bas-run) + (var(--bas-beyond) + var(--l-gutter)) / 2);
+    translate: -50% 0;
+  }
+}
+
+/* ---------- From 1280px: statement, sheet and edge side by side ---------- */
+
+@media (min-width: 1280px) {
+  .lp-bas-frame {
+    grid-template-columns: clamp(336px, 50vw - 288px, 428px) minmax(0, 1fr) var(--bas-run) var(--bas-beyond);
+    grid-template-rows: auto 1fr;
+  }
+
+  .lp-bas-head,
+  .lp-bas-handles {
+    grid-column: 1;
+    padding-right: clamp(32px, 3.2vw, 52px);
+  }
+
+  .lp-bas-handles {
+    grid-row: 2;
+    grid-template-columns: minmax(0, 1fr);
+    align-self: start;
+  }
+
+  .lp-bas-paper {
+    grid-column: 2;
+    grid-row: 1 / 3;
+  }
+
+  .lp-bas-edge {
+    grid-column: 3 / 5;
+    grid-row: 1 / 3;
+  }
+}
+
+/* ---------- Motion ---------- */
+
+@keyframes lp-bas-swap {
+  from {
+    opacity: 0;
+    translate: 0 6px;
+  }
+}
+
+/* The same arrival under two more names: an animation only restarts when its
+ * name changes, and a draft can be regenerated more than once. */
+@keyframes lp-bas-regen-a {
+  from {
+    opacity: 0;
+    translate: 0 6px;
+  }
+}
+
+@keyframes lp-bas-regen-b {
+  from {
+    opacity: 0;
+    translate: 0 6px;
+  }
+}
+
+@keyframes lp-bas-notice {
+  from {
+    opacity: 0;
+    translate: 0 -6px;
+  }
+}
+
+@keyframes lp-bas-mark {
+  from {
+    background-size: 0% 0.62em;
+  }
+}
+
+@media screen and (prefers-reduced-motion: no-preference) {
+  .lp-bas-seg::before {
+    transition: translate 320ms var(--l-settle);
+  }
+
+  /* Figures are replaced whole. They arrive with a small movement only when
+   * the visitor has replaced them: by switching the basis (data-touched) or
+   * by regenerating the draft (data-regen). bas-live sets both. */
+  .lp-bas[data-touched] :is(.lp-bas-figures, .lp-bas-basis-line, .lp-bas-table tr[data-basis]) {
+    animation: lp-bas-swap 280ms var(--l-settle) both;
+  }
+
+  .lp-bas.lp-section[data-regen="a"] .lp-bas-sheet .lp-bas-figures {
+    animation-name: lp-bas-regen-a;
+  }
+
+  .lp-bas.lp-section[data-regen="b"] .lp-bas-sheet .lp-bas-figures {
+    animation-name: lp-bas-regen-b;
+  }
+
+  .lp-bas[data-regen] .lp-bas-figures {
+    animation-duration: 280ms;
+    animation-timing-function: var(--l-settle);
+    animation-fill-mode: both;
+  }
+
+  .lp-bas-stale {
+    animation: lp-bas-notice 320ms var(--l-settle) both;
+  }
+
+  /* Entering view: the resting trace is drawn once, figure first, then source.
+   * Before that the stroke is withheld by removing its image, not its size, so
+   * arriving never starts the hover transition underneath the animation. */
+  .lp-bas-sheet:has(.lp-bas-sales[data-scene="armed"]) :is(.lp-trace, .lp-trace-target) {
+    background-image: none;
+  }
+
+  .lp-bas-sheet:has(.lp-bas-sales[data-scene="in"]) .lp-trace[data-trace~="a1"] {
+    animation: lp-bas-mark 460ms var(--l-ease) 320ms backwards;
+  }
+
+  .lp-bas-sheet:has(.lp-bas-sales[data-scene="in"]) .lp-trace-target[data-trace~="a1"] {
+    animation: lp-bas-mark 460ms var(--l-ease) 700ms backwards;
+  }
+
+  /* The export path takes its time to reach the line; the stop lands as it arrives. */
+  .lp-bas .lp-bas-way[data-scene="in"] path[data-enter="draw"] {
+    animation-duration: 760ms;
+  }
+}
+
+@media (forced-colors: active) {
+  .lp-bas-stop {
+    background: CanvasText;
+  }
+
+  .lp-bas-seg input:checked + label {
+    outline: 2px solid Highlight;
+    outline-offset: -2px;
+  }
+}

@@ -1,0 +1,1833 @@
+/*
+ * Tammy landing: hero. Section styles, imported by app/page.tsx.
+ *
+ * The finished page is the default: every panel readable, the window unlocked.
+ * Three things are layered on top, all without script:
+ *   1. The rail is one radio group; :has(input:checked) shows its panel and note.
+ *   2. The lock control is a checkbox; :has(:checked) covers every record with
+ *      its "as stored" overlay (.lp-hero-enc).
+ *   3. The load moment is keyframes inside (prefers-reduced-motion:
+ *      no-preference): the overlays hold for a beat, then clear top to bottom.
+ */
+
+.lp-hero {
+  padding-block: clamp(16px, 2vw, 28px) clamp(56px, 7vw, 104px);
+}
+
+/* ---------- Row 1: the statement and the introduction ---------- */
+
+.lp-hero-top {
+  row-gap: 18px;
+  align-items: end;
+}
+
+/* The h1 is sized from its own column, so it holds two lines at any width. */
+.lp-hero-statement {
+  grid-column: 1 / -1;
+  container-type: inline-size;
+}
+
+@supports (font-size: 1cqi) {
+  .lp-hero .lp-h1 {
+    font-size: clamp(2.75rem, 16.5cqi, 7.75rem);
+  }
+}
+
+.lp-hero .lp-h1 > span {
+  color: var(--l-forest);
+}
+
+.lp-hero-intro {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 16px;
+  justify-items: start;
+}
+
+.lp-hero-lede {
+  max-width: 34em;
+  color: var(--l-text-muted);
+  font-size: var(--l-fs-body);
+  line-height: 1.5;
+  text-wrap: pretty;
+}
+
+.lp-hero-lede strong {
+  color: var(--l-text);
+  font-weight: 600;
+}
+
+.lp-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  width: 100%;
+}
+
+.lp-hero-actions .lp-btn {
+  padding-inline: 18px;
+}
+
+/* "See how it works" scrolls down this page, so its arrow points down. */
+.lp-hero-actions .lp-arrow {
+  rotate: 135deg;
+}
+
+.lp-hero-actions .lp-btn:hover .lp-arrow {
+  translate: 0 2px;
+}
+
+/* On a phone the two buttons share one row, and stack at 320px. */
+@media (max-width: 479px) {
+  .lp-hero-actions .lp-btn {
+    flex: 1 1 auto;
+  }
+}
+
+.lp-hero-status {
+  display: grid;
+  gap: 3px;
+}
+
+.lp-hero-platform {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--l-text-muted);
+  font-size: var(--l-fs-micro);
+  line-height: 1.45;
+}
+
+.lp-hero-platform .lp-icon {
+  width: 16px;
+  height: 16px;
+}
+
+/* Availability: its own line, ink, with the amber "not yet" dot. */
+.lp-hero-availability {
+  position: relative;
+  padding-left: 24px;
+  color: var(--l-ink);
+  font-size: var(--l-fs-micro);
+  font-weight: 500;
+  line-height: 1.45;
+}
+
+.lp-hero-availability::before {
+  content: "";
+  position: absolute;
+  top: 0.48em;
+  left: 4px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--l-warn);
+}
+
+.lp-hero-availability a {
+  /* No block padding with a mouse, so the focus ring stays under the line above. Touch screens add it back below. */
+  padding-block: 0;
+  color: var(--l-forest);
+  font-weight: 650;
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, currentColor 36%, transparent);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.3em;
+  white-space: nowrap;
+  transition: text-decoration-color 160ms ease;
+}
+
+/* Touch screens keep the 44px target; a mouse or keyboard focus ring stays clear of the line above. */
+@media (pointer: coarse) {
+  .lp-hero-availability a {
+    padding-block: 12px;
+  }
+
+  /* A keyboard on a touch device: no padding while the ring shows, so it hugs
+   * the link. A tap never shows this ring, so the 44px target stays. */
+  .lp-hero-availability a:focus-visible {
+    padding-block: 0;
+  }
+}
+
+/* Keyboard focus: the ring hugs the link, so its top edge stays under the line above. */
+.lp-hero-availability a:focus-visible {
+  outline-offset: 1px;
+}
+
+.lp-hero-availability a:hover {
+  text-decoration-color: currentColor;
+}
+
+/* ---------- Row 2: the stage ---------- */
+
+.lp-hero-stage {
+  margin-top: clamp(20px, 2.4vw, 32px);
+  row-gap: 16px;
+}
+
+.lp-hero-window,
+.lp-hero-notes,
+.lp-hero-caption {
+  grid-column: 1 / -1;
+  min-width: 0;
+}
+
+/* Below 1100px the caption stays with the window and the note follows it. */
+.lp-hero-caption {
+  order: 2;
+  margin-top: 0;
+}
+
+.lp-hero-notes {
+  order: 3;
+}
+
+/* The bar: title, the window's one label, the Local data lock, the lock control. */
+.lp-hero-window .lp-window-bar {
+  flex-wrap: wrap;
+  gap: 0 10px;
+  padding-block: 6px;
+}
+
+.lp-hero-window .lp-window-title {
+  order: 1;
+  /* A zero basis keeps the lock control on the title's row at any width. */
+  flex: 1 1 0;
+  color: var(--l-ink);
+  font-weight: 600;
+}
+
+.lp-hero-lock {
+  order: 2;
+}
+
+/* A zero-height item that forces the second row of the bar on small screens. */
+.lp-hero-window .lp-window-bar::after {
+  content: "";
+  order: 3;
+  flex: 0 0 100%;
+  height: 0;
+}
+
+.lp-hero-window .lp-window-label {
+  order: 4;
+  margin-block: 6px 2px;
+  font-size: 0.8125rem;
+}
+
+.lp-hero-window .lp-window-local {
+  order: 5;
+  margin-block: 6px 2px;
+  margin-left: auto;
+}
+
+@media (max-width: 439px) {
+  .lp-hero-window .lp-window-local {
+    display: none;
+  }
+}
+
+
+/* Lock the example / Unlock the example: a checkbox drawn as a small button. */
+.lp-hero-lock {
+  position: relative;
+  display: inline-grid;
+  flex: 0 0 auto;
+  place-items: center;
+  min-height: 30px;
+  padding: 0 11px;
+  border: 1px solid var(--l-line);
+  border-radius: 9px;
+  background: var(--l-paper);
+  color: var(--l-ink);
+  font: 650 0.8125rem/1 var(--l-sans);
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease,
+    translate 160ms ease;
+}
+
+/* A 44px target around the small button. */
+.lp-hero-lock::after {
+  content: "";
+  position: absolute;
+  inset: -8px -4px;
+}
+
+.lp-hero-lock:hover {
+  border-color: var(--l-ink);
+}
+
+.lp-hero-lock:active {
+  translate: 0 1px;
+}
+
+.lp-hero-lock-input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  appearance: none;
+  cursor: pointer;
+}
+
+.lp-hero-lock:has(.lp-hero-lock-input:focus-visible) {
+  outline: 3px solid var(--l-focus);
+  outline-offset: 3px;
+}
+
+/* Both labels share one cell, so the button keeps its width when it flips. */
+.lp-hero-lock-off,
+.lp-hero-lock-on {
+  grid-area: 1 / 1;
+}
+
+.lp-hero-lock-on {
+  visibility: hidden;
+}
+
+.lp-hero-lock:has(.lp-hero-lock-input:checked) {
+  border-color: var(--l-forest);
+  background: var(--l-forest);
+  color: var(--l-paper);
+}
+
+.lp-hero-lock:has(.lp-hero-lock-input:checked):hover {
+  border-color: var(--l-deep);
+  background: var(--l-deep);
+}
+
+.lp-hero-lock:has(.lp-hero-lock-input:checked) .lp-hero-lock-off {
+  visibility: hidden;
+}
+
+.lp-hero-lock:has(.lp-hero-lock-input:checked) .lp-hero-lock-on {
+  visibility: visible;
+}
+
+/* At 320px the control is a little smaller so the business name stays whole. */
+@media (max-width: 359px) {
+  .lp-hero-lock {
+    padding: 0 8px;
+    font-size: 0.75rem;
+  }
+
+  .lp-hero-lock .lp-hero-lock-on,
+  .lp-hero-lock:has(.lp-hero-lock-input:checked) .lp-hero-lock-off {
+    display: none;
+  }
+
+  .lp-hero-lock:has(.lp-hero-lock-input:checked) .lp-hero-lock-on {
+    display: inline;
+  }
+}
+
+/* ---------- The rail: one radio group ---------- */
+
+.lp-hero-app {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.lp-hero-rail {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-bottom: 1px solid var(--l-rule);
+  background: var(--l-paper);
+}
+
+/* Below 900px: a horizontally scrolling row of 44px chips. */
+.lp-hero-rail-track {
+  position: relative;
+  display: flex;
+  gap: 4px;
+  padding: 8px 10px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
+
+.lp-hero-rail-track::-webkit-scrollbar {
+  display: none;
+}
+
+.lp-hero-rail-group {
+  display: contents;
+}
+
+.lp-hero-rail-label {
+  display: none;
+}
+
+.lp-hero-rail-item {
+  position: relative;
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 13px;
+  border-radius: 12px;
+  color: var(--l-muted);
+  font: 500 0.875rem/1 var(--l-sans);
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color 140ms ease,
+    color 140ms ease;
+}
+
+.lp-hero-rail-item:hover {
+  background: color-mix(in srgb, var(--l-oat) 62%, var(--l-paper));
+  color: var(--l-ink);
+}
+
+.lp-hero-rail-input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  appearance: none;
+  cursor: pointer;
+}
+
+.lp-hero-rail-item:has(.lp-hero-rail-input:checked) {
+  background: var(--l-sage);
+  color: var(--l-forest);
+  font-weight: 600;
+}
+
+.lp-hero-rail-item:has(.lp-hero-rail-input:focus-visible) {
+  outline: 3px solid var(--l-focus);
+  outline-offset: -3px;
+}
+
+/* ---------- Panels: nine siblings stacked in one cell ---------- */
+
+.lp-hero-panels {
+  display: grid;
+  min-width: 0;
+  container: lp-hero-panels / inline-size;
+}
+
+.lp-hero-panel {
+  grid-area: 1 / 1;
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  min-width: 0;
+  padding: 12px 12px 14px;
+  visibility: hidden;
+  opacity: 0;
+}
+
+/* Without :has() the default screen simply stays up. */
+.lp-hero-panel[data-panel="trial-balance"] {
+  visibility: visible;
+  opacity: 1;
+}
+
+@supports selector(:has(a)) {
+  .lp-hero-stage:has(.lp-hero-rail-input:checked) .lp-hero-panel {
+    visibility: hidden;
+    opacity: 0;
+  }
+
+  .lp-hero-stage:has([value="overview"]:checked) [data-panel="overview"],
+  .lp-hero-stage:has([value="documents"]:checked) [data-panel="documents"],
+  .lp-hero-stage:has([value="invoices"]:checked) [data-panel="invoices"],
+  .lp-hero-stage:has([value="banking"]:checked) [data-panel="banking"],
+  .lp-hero-stage:has([value="chart"]:checked) [data-panel="chart"],
+  .lp-hero-stage:has([value="journals"]:checked) [data-panel="journals"],
+  .lp-hero-stage:has([value="trial-balance"]:checked) [data-panel="trial-balance"],
+  .lp-hero-stage:has([value="gst"]:checked) [data-panel="gst"],
+  .lp-hero-stage:has([value="audit"]:checked) [data-panel="audit"] {
+    visibility: visible;
+    opacity: 1;
+  }
+}
+
+.lp-hero-panel-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 46px;
+}
+
+.lp-hero-panel-head .lp-app-eyebrow {
+  font-size: 0.6875rem;
+}
+
+.lp-hero-panel-title {
+  margin-top: 2px;
+  font-size: 1.375rem;
+}
+
+.lp-hero-asat {
+  flex: 0 0 auto;
+  color: var(--l-ink);
+  font-size: var(--l-fs-app);
+  font-weight: 600;
+  line-height: 1.3;
+  text-align: right;
+}
+
+.lp-hero-asat span {
+  display: block;
+  color: var(--l-muted);
+  font-size: 0.75rem;
+  font-weight: 400;
+}
+
+/* A paper card on the window's canvas, as the app sets its work surfaces. */
+.lp-hero-card {
+  min-width: 0;
+  overflow: clip;
+  border: 1px solid var(--l-rule);
+  border-radius: 14px;
+  background: var(--l-paper);
+}
+
+.lp-hero-card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 2px 12px;
+  padding: 10px 14px 9px;
+}
+
+.lp-hero-card-head--ruled {
+  border-top: 1px solid var(--l-rule);
+}
+
+.lp-hero-card-title {
+  color: var(--l-ink);
+  font: 650 0.875rem/1.3 var(--l-sans);
+  letter-spacing: 0;
+}
+
+.lp-hero-card-title--serif {
+  font: 500 1.125rem/1.2 var(--l-serif);
+  letter-spacing: -0.015em;
+}
+
+.lp-hero-card-meta {
+  color: var(--l-muted);
+  font-size: 0.75rem;
+  line-height: 1.4;
+}
+
+.lp-hero-card-foot {
+  padding: 8px 14px 10px;
+  border-top: 1px solid var(--l-rule);
+  color: var(--l-muted);
+  font-size: 0.75rem;
+  line-height: 1.45;
+}
+
+.lp-hero-sub {
+  display: block;
+  color: var(--l-muted);
+  font-size: 0.75rem;
+  font-weight: 400;
+  line-height: 1.35;
+}
+
+.lp-hero-strong {
+  font-weight: 600;
+}
+
+/* ---------- Tables ---------- */
+
+.lp-hero-table {
+  font-size: var(--l-fs-app);
+  line-height: 1.45;
+}
+
+.lp-hero-table :is(th, td) {
+  position: relative;
+  padding: 9px 12px;
+}
+
+.lp-hero-table thead th {
+  padding-block: 8px;
+  white-space: nowrap;
+}
+
+.lp-hero-card-head + .lp-hero-table thead th {
+  border-top: 1px solid var(--l-rule);
+}
+
+.lp-hero-table tbody th {
+  color: var(--l-ink);
+}
+
+.lp-hero-table .lp-pill {
+  padding-block: 1px;
+}
+
+/* Trial balance. */
+.lp-hero-acct {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: 10px;
+  align-items: baseline;
+}
+
+.lp-hero-acct .lp-code {
+  margin-right: 0;
+  font-size: 0.78125rem;
+}
+
+.lp-hero-tb td .lp-num {
+  font-weight: 600;
+}
+
+.lp-hero-tb td .lp-hero-zero {
+  color: var(--l-muted);
+  font-weight: 400;
+}
+
+.lp-hero-total :is(th, td) {
+  padding-block: 11px;
+  font-size: 0.875rem;
+}
+
+.lp-hero-total-label {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 12px;
+}
+
+.lp-hero-equal {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* Documents. */
+.lp-hero-docs [data-col="doc"] {
+  width: 100%;
+  max-width: 0;
+}
+
+.lp-hero-doc {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+}
+
+.lp-hero-doc-file {
+  display: block;
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lp-hero-doc-text {
+  min-width: 0;
+}
+
+.lp-hero-doc-text .lp-hero-sub {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lp-hero-filekind {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 40px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: var(--l-r-chip);
+  background: var(--l-sage);
+  color: var(--l-forest);
+  font: 700 0.625rem/1 var(--l-sans);
+  letter-spacing: 0.04em;
+}
+
+.lp-hero-filekind[data-kind="PDF"] {
+  background: var(--l-warn-soft);
+  color: var(--l-warn);
+}
+
+.lp-hero-table :where([data-col="date"], [data-col="ref"], [data-col="number"], [data-col="code"]) {
+  white-space: nowrap;
+}
+
+.lp-hero-table [data-col="number"] {
+  font-weight: 600;
+}
+
+/* Banking. */
+.lp-hero-bank [data-col="desc"] {
+  width: 100%;
+}
+
+.lp-hero-bank-summary {
+  padding-block: 10px 12px;
+  border-top: 1px solid var(--l-sage-edge);
+  background: var(--l-sage);
+}
+
+.lp-hero-bank-summary .lp-hero-card-title {
+  padding-inline: 14px;
+  color: var(--l-forest);
+}
+
+.lp-hero-bank-summary .lp-hero-metric {
+  border-top: 0;
+  padding-block: 6px 4px;
+}
+
+.lp-hero-bank-next {
+  padding: 4px 14px 0;
+  color: var(--l-muted);
+  font-size: 0.75rem;
+  line-height: 1.45;
+}
+
+/* Chart of accounts. */
+.lp-hero-chart tbody :is(th, td) {
+  height: 38px;
+  padding-block: 0;
+}
+
+.lp-hero-chart th[scope="row"] {
+  width: 100%;
+}
+
+.lp-hero-chart [data-col="code"] .lp-code {
+  margin-right: 0;
+  color: var(--l-ink);
+}
+
+.lp-hero-chart [data-col="type"],
+.lp-hero-chart [data-col="protection"] {
+  color: var(--l-muted);
+  white-space: nowrap;
+}
+
+.lp-hero-protected {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 8px 1px 6px;
+  border: 1px solid var(--l-warn-edge);
+  border-radius: 999px;
+  background: var(--l-warn-soft);
+  color: var(--l-warn);
+  font: 650 0.6875rem/1.5 var(--l-sans);
+  white-space: nowrap;
+}
+
+.lp-hero-protected .lp-icon {
+  width: 11px;
+  height: 11px;
+  stroke-width: 2.2;
+}
+
+/* Journals. */
+.lp-hero-journals [data-col="memo"] {
+  width: 100%;
+}
+
+/* ---------- Metric tiles ---------- */
+
+.lp-hero-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.lp-hero-metric {
+  min-width: 0;
+  padding: 9px 14px 11px;
+  border-top: 1px solid var(--l-rule);
+}
+
+.lp-hero-metric dt {
+  color: var(--l-muted);
+  font-size: 0.75rem;
+  line-height: 1.35;
+}
+
+.lp-hero-metric dd {
+  position: relative;
+  margin-top: 3px;
+  font: 600 1.0625rem/1.25 var(--l-sans);
+  font-variant-numeric: lining-nums tabular-nums;
+}
+
+/* An odd tile out takes the full row, so nothing is left hanging. */
+.lp-hero-metrics--row > :first-child:nth-last-child(odd) {
+  grid-column: 1 / -1;
+}
+
+.lp-hero-metric[data-owing] dd {
+  font-weight: 700;
+}
+
+.lp-hero-metric[data-net] {
+  background: var(--l-sage);
+  color: var(--l-forest);
+}
+
+.lp-hero-metric[data-net] dt {
+  color: var(--l-forest);
+}
+
+/* Overview. */
+.lp-hero-ov {
+  display: grid;
+  gap: 10px;
+  align-items: start;
+}
+
+.lp-hero-ov-metrics {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.lp-hero-ov-metrics .lp-hero-metric[data-lead] dd {
+  font-size: 1.625rem;
+  letter-spacing: -0.01em;
+}
+
+.lp-hero-ov-metrics .lp-hero-metric:not([data-lead]) {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding-block: 8px;
+}
+
+.lp-hero-ov-metrics .lp-hero-metric:not([data-lead]) dd {
+  margin-top: 0;
+  font-size: 0.875rem;
+}
+
+.lp-hero-review li {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  border-top: 1px solid var(--l-rule);
+  font-size: var(--l-fs-app);
+  line-height: 1.35;
+}
+
+.lp-hero-review .lp-icon {
+  width: 16px;
+  height: 16px;
+  color: var(--l-muted);
+}
+
+.lp-hero-review strong {
+  display: block;
+  font-weight: 600;
+}
+
+.lp-hero-count {
+  min-width: 30px;
+  padding: 2px 8px;
+  border-radius: var(--l-r-chip);
+  background: var(--l-oat);
+  font: 650 0.8125rem/1.5 var(--l-sans);
+  font-variant-numeric: lining-nums tabular-nums;
+  text-align: center;
+}
+
+/* GST & BAS. */
+.lp-hero-gst-status {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  padding: 12px 14px 6px;
+  color: var(--l-muted);
+  font-size: var(--l-fs-app);
+}
+
+.lp-hero-gst-basis {
+  padding: 0 14px 12px;
+  color: var(--l-muted);
+  font-size: 0.75rem;
+  line-height: 1.45;
+}
+
+.lp-hero-sources [data-col="party"] {
+  width: 100%;
+}
+
+/* Audit trail. */
+.lp-hero-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid var(--l-warn-edge);
+  border-radius: 12px;
+  background: var(--l-warn-soft);
+  color: var(--l-ink);
+  font-size: var(--l-fs-app);
+  line-height: 1.45;
+}
+
+.lp-hero-notice .lp-icon {
+  width: 16px;
+  height: 16px;
+  margin-top: 1px;
+  color: var(--l-warn);
+}
+
+.lp-hero-notice strong {
+  font-weight: 650;
+}
+
+.lp-hero-audit li {
+  position: relative;
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  grid-template-areas:
+    "date date status"
+    "icon text text";
+  align-items: center;
+  gap: 4px 10px;
+  padding: 8px 14px 9px;
+  border-top: 1px solid var(--l-rule);
+  font-size: var(--l-fs-app);
+  line-height: 1.35;
+}
+
+.lp-hero-audit-date {
+  grid-area: date;
+  color: var(--l-muted);
+  font-size: 0.75rem;
+  font-variant-numeric: lining-nums tabular-nums;
+  white-space: nowrap;
+}
+
+.lp-hero-audit-icon {
+  grid-area: icon;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: var(--l-sage);
+  color: var(--l-forest);
+}
+
+.lp-hero-audit-icon .lp-icon {
+  width: 15px;
+  height: 15px;
+}
+
+.lp-hero-audit-text {
+  grid-area: text;
+  min-width: 0;
+}
+
+.lp-hero-audit-text strong {
+  display: block;
+  font-weight: 600;
+}
+
+.lp-hero-audit-status {
+  grid-area: status;
+  justify-self: end;
+  color: var(--l-warn);
+  font-size: 0.75rem;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.lp-hero-audit-status[data-settled] {
+  color: var(--l-forest);
+}
+
+/*
+ * Documents: below a full-width window its long file names need a line to
+ * themselves, so each row stacks (the file, then reference, date, total and
+ * status) the way .lp-hero-rows tables do on a phone.
+ */
+@container lp-hero-panels (max-width: 599px) {
+  .lp-hero-docs thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .lp-hero-docs,
+  .lp-hero-docs tbody {
+    display: block;
+  }
+
+  .lp-hero-docs tr {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto auto;
+    align-items: center;
+    gap: 3px 14px;
+    padding: 9px 14px;
+    border-top: 1px solid var(--l-rule);
+  }
+
+  .lp-hero-docs tbody tr:first-child {
+    border-top: 0;
+  }
+
+  .lp-hero-panel .lp-hero-table.lp-hero-docs :is(th, td) {
+    position: static;
+    display: block;
+    width: auto;
+    max-width: none;
+    padding: 0;
+    border: 0;
+  }
+
+  .lp-hero-docs td > .lp-hero-enc {
+    display: none;
+  }
+
+  .lp-hero-docs th > .lp-hero-enc {
+    inset: 0;
+    padding-inline: 14px;
+  }
+
+  .lp-hero-docs [data-col="doc"] {
+    grid-area: 1 / 1 / 2 / -1;
+  }
+
+  .lp-hero-panel .lp-hero-table.lp-hero-docs [data-col="ref"] {
+    grid-area: 2 / 1;
+    padding-left: 48px;
+  }
+
+  .lp-hero-docs [data-col="date"] {
+    grid-area: 2 / 2;
+  }
+
+  .lp-hero-docs :is([data-col="ref"], [data-col="date"]) {
+    color: var(--l-muted);
+    font-size: 0.75rem;
+  }
+
+  .lp-hero-docs [data-col="total"] {
+    grid-area: 2 / 3;
+  }
+
+  .lp-hero-docs [data-col="status"] {
+    grid-area: 2 / 4;
+  }
+}
+
+/* ---------- Narrow panels (a phone): rows restack, nothing scrolls sideways ---------- */
+
+@container lp-hero-panels (max-width: 479px) {
+  /* The column heads stay for assistive technology only. */
+  .lp-hero-rows thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .lp-hero-rows,
+  .lp-hero-rows tbody {
+    display: block;
+  }
+
+  .lp-hero-rows tr {
+    position: relative;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 3px 10px;
+    min-height: 56px;
+    padding: 9px 12px;
+    border-top: 1px solid var(--l-rule);
+  }
+
+  .lp-hero-card > .lp-hero-rows:first-child tbody tr:first-child {
+    border-top: 0;
+  }
+
+  .lp-hero-rows :is(th, td) {
+    position: static;
+    display: block;
+    width: auto;
+    max-width: none;
+    padding: 0;
+    border: 0;
+  }
+
+  /* One cover per row instead of one per cell. */
+  .lp-hero-rows td > .lp-hero-enc {
+    display: none;
+  }
+
+  .lp-hero-rows th > .lp-hero-enc,
+  .lp-hero-docs th > .lp-hero-enc {
+    inset: 0;
+    padding-inline: 12px;
+  }
+
+  .lp-hero-rows [data-num] {
+    text-align: right;
+  }
+
+  /* Documents (already stacked, see above) drops its date on a phone. */
+  .lp-hero-table.lp-hero-docs tr {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    gap: 3px 10px;
+    padding-inline: 12px;
+  }
+
+  .lp-hero-panel .lp-hero-table.lp-hero-docs [data-col="date"] {
+    display: none;
+  }
+
+  .lp-hero-table.lp-hero-docs [data-col="total"] {
+    grid-area: 2 / 2;
+  }
+
+  .lp-hero-table.lp-hero-docs [data-col="status"] {
+    grid-area: 2 / 3;
+  }
+
+  .lp-hero-rows :is([data-col="date"], [data-col="customer"]) {
+    color: var(--l-muted);
+    font-size: 0.75rem;
+  }
+
+  /* Overview keeps to its figures. */
+  .lp-hero-ov .lp-hero-card-foot {
+    display: none;
+  }
+
+  .lp-hero-invoices [data-col="number"] {
+    grid-area: 1 / 1 / 2 / 3;
+  }
+
+  .lp-hero-invoices [data-col="total"] {
+    grid-area: 1 / 3;
+  }
+
+  .lp-hero-invoices [data-col="customer"] {
+    grid-area: 2 / 1 / 3 / 3;
+  }
+
+  .lp-hero-invoices [data-col="status"] {
+    grid-area: 2 / 3;
+    justify-self: end;
+  }
+
+  .lp-hero-bank [data-col="desc"],
+  .lp-hero-journals [data-col="memo"] {
+    grid-area: 1 / 1 / 2 / 3;
+    width: auto;
+  }
+
+  .lp-hero-journals [data-col="memo"] {
+    font-weight: 600;
+  }
+
+  .lp-hero-bank [data-col="amount"],
+  .lp-hero-journals [data-col="amount"] {
+    grid-area: 1 / 3;
+    align-self: start;
+  }
+
+  .lp-hero-bank [data-col="date"],
+  .lp-hero-journals [data-col="date"] {
+    grid-area: 2 / 1 / 3 / 3;
+  }
+
+  .lp-hero-bank [data-col="state"],
+  .lp-hero-journals [data-col="state"] {
+    grid-area: 2 / 3;
+    justify-self: end;
+  }
+
+  .lp-hero-sources [data-col="party"] {
+    grid-area: 1 / 1 / 2 / 3;
+    width: auto;
+    font-weight: 600;
+  }
+
+  .lp-hero-sources [data-col="gross"] {
+    grid-area: 1 / 3;
+  }
+
+  .lp-hero-sources [data-col="date"] {
+    grid-area: 2 / 1;
+  }
+
+  .lp-hero-sources [data-col="ref"] {
+    grid-area: 2 / 2;
+    color: var(--l-muted);
+    font-size: 0.75rem;
+  }
+
+  .lp-hero-sources [data-col="gst"] {
+    grid-area: 2 / 3;
+  }
+
+  /* The heads are hidden here, so each figure carries its own label. */
+  .lp-hero-sources [data-label]::before {
+    content: attr(data-label) "\00a0";
+    color: var(--l-muted);
+    font-size: 0.6875rem;
+    font-weight: 500;
+  }
+
+  /* Chart of accounts drops its Type column and shortens the protection chip. */
+  .lp-hero-chart [data-col="type"],
+  .lp-hero-protected-word {
+    display: none;
+  }
+
+  .lp-hero-chart :is(th, td) {
+    padding-inline: 10px;
+  }
+
+  /* Trial balance keeps all three columns; the unit moves out of the heads. */
+  .lp-hero-unit {
+    display: none;
+  }
+
+  .lp-hero-tb :is(th, td) {
+    padding-inline: 10px 8px;
+  }
+
+  .lp-hero-tb :is(th, td) + td {
+    padding-left: 0;
+  }
+
+  .lp-hero-tb td:last-child {
+    padding-right: 10px;
+  }
+
+  .lp-hero-acct {
+    column-gap: 7px;
+  }
+
+  .lp-hero-total :is(th, td) {
+    font-size: var(--l-fs-app);
+  }
+}
+
+/* The narrowest phones: the account code sits above its name. */
+@container lp-hero-panels (max-width: 319px) {
+  .lp-hero-acct {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .lp-hero-acct .lp-code {
+    font-size: 0.6875rem;
+    line-height: 1.2;
+  }
+
+  .lp-hero-total-label,
+  .lp-hero-equal {
+    display: block;
+    white-space: normal;
+  }
+
+  .lp-hero-equal .lp-tick {
+    margin-right: 4px;
+  }
+
+  /* Documents keeps the total and the status; the reference is in the card below. */
+  .lp-hero-panel .lp-hero-table.lp-hero-docs [data-col="ref"] {
+    display: none;
+  }
+
+  .lp-hero-table.lp-hero-docs [data-col="total"] {
+    grid-area: 2 / 1;
+    text-align: left;
+  }
+
+  .lp-hero-panel-head {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+  }
+
+  .lp-hero-asat {
+    text-align: left;
+  }
+
+  .lp-hero-asat span {
+    display: inline;
+  }
+}
+
+/* ---------- Roomy panels (tablet and desktop) ---------- */
+
+@container lp-hero-panels (min-width: 480px) {
+  .lp-hero-panel {
+    gap: 12px;
+    padding: 16px 18px 18px;
+  }
+
+  .lp-hero-panel-head {
+    min-height: 50px;
+  }
+
+  .lp-hero-panel-head .lp-app-eyebrow {
+    font-size: 0.75rem;
+  }
+
+  .lp-hero-panel-title {
+    font-size: 1.5rem;
+  }
+
+  .lp-hero-table :is(th, td) {
+    padding-inline: 14px;
+  }
+
+  /* Tight inner columns leave the file name room to be read whole. */
+  .lp-hero-docs :is(th, td):not(:first-child) {
+    padding-left: 6px;
+  }
+
+  .lp-hero-docs :is(th, td):not(:last-child) {
+    padding-right: 8px;
+  }
+
+  /* The same in the GST sources tables, so a supplier's name stays on one line. */
+  .lp-hero-sources :is(th, td):not(:first-child) {
+    padding-left: 6px;
+  }
+
+  .lp-hero-sources :is(th, td):not(:last-child) {
+    padding-right: 8px;
+  }
+
+  .lp-hero-metrics--row {
+    grid-auto-columns: minmax(0, 1fr);
+    grid-auto-flow: column;
+    grid-template-columns: none;
+  }
+
+  .lp-hero-metrics--row > :first-child:nth-last-child(odd) {
+    grid-column: auto;
+  }
+
+  .lp-hero-gst-metrics {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .lp-hero-audit li {
+    grid-template-columns: 82px 28px minmax(0, 1fr) auto;
+    grid-template-areas: "date icon text status";
+    gap: 12px;
+  }
+
+  .lp-hero-audit-date {
+    font-size: var(--l-fs-app);
+  }
+}
+
+@container lp-hero-panels (min-width: 460px) {
+  .lp-hero-ov {
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  }
+}
+
+/* ---------- The record as stored ---------- */
+
+/*
+ * An aria-hidden cover over a real cell, row or figure: authored mono glyphs
+ * in muted sage on forest-deep, amounts as solid bars. It is transparent in
+ * the finished page and opaque while the example is locked.
+ */
+.lp-hero-stored {
+  position: relative;
+}
+
+.lp-hero-enc {
+  --g: "";
+  position: absolute;
+  inset: -1px 0 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  /* The cover takes its host's own inset, so glyphs and bars sit where the value does. */
+  padding-inline: 14px;
+  padding-inline: inherit;
+  overflow: hidden;
+  background: var(--l-deep);
+  box-shadow: inset 0 1px 0 var(--l-on-deep-rule);
+  color: color-mix(in srgb, var(--l-sage) 58%, var(--l-deep));
+  font: 400 0.6875rem/1 var(--l-mono);
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* The glyphs stop at a whole group of four, so no column ends mid-character. */
+.lp-hero-enc::before {
+  content: var(--g);
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 100%;
+  max-width: round(down, 100%, calc(5ch + 0.4em));
+  overflow: hidden;
+}
+
+/* Authored strings: fixed, not generated, and never shaped like an amount. */
+.lp-hero-enc[data-g="0"] { --g: "vK3q Zr8m Tb1x Hd6w Ny0c Lf4s Pg9j Ue2a Wo7i Xt5k Bm3n Qc8z Jy1r Sd6v Fh0p Ga4l"; }
+.lp-hero-enc[data-g="1"] { --g: "e9Rw Ub2t Ks7y Mz4o Cx1d Vn6g Ah0f Lq8j Tp3i Ws5c Yd2b Ef9m Go7k Hr1x Ju4a Nl6s"; }
+.lp-hero-enc[data-g="2"] { --g: "Zm1p Qo5x Ir8c Dt2v Wb7n Fy3k Sa9h Lu0e Xg4j Kc6r Pw2z Mh8d Bv5t Ne1q Oj7f Ys3l"; }
+.lp-hero-enc[data-g="3"] { --g: "h4Tc Nw9a Rb2k Gx6m Ed0s Vo3j Ml7q Pz1y Fu8i Kt5w Sc2n Ja9g Xr4b Qy6d Li0v Ho3e"; }
+.lp-hero-enc[data-g="4"] { --g: "Bq7z Ws2e Yk5n Od1t Ua8r Cm4h Fj0x Ig6p Lv3c Tn9b Ex2s Pr7k Zh1w Md5o Gy8a Kf4j"; }
+.lp-hero-enc[data-g="5"] { --g: "t2Lg Vy6k Ec9p Sw1n Jq4d Ao8x Rm3b Hu7f Nz0i Xb5t Dk2r Wl6c Pf9s Ge1j Tv4y Mi8h"; }
+.lp-hero-enc[data-g="6"] { --g: "Xa5n Lo1r Tk8e Zc3w Bg7m Qi2v Fd6y Up0j Hs9x Nm4b Er1k Wy5t Ov8c Ja2g Ph6q Cl3d"; }
+.lp-hero-enc[data-g="7"] { --g: "m8Sd Fk3u Pb6q Yi0g Ce4w Lt9n Ax2j Wr7o Hv1c Ng5z Qd8m Ub3s Ko6f Zj0e Ty4p Ib7x"; }
+
+/* An amount as stored: a solid bar, right-aligned like the figure it covers. */
+.lp-hero-enc[data-bar] {
+  justify-content: flex-end;
+}
+
+.lp-hero-enc[data-bar]::before {
+  content: "";
+  flex: 0 0 auto;
+  max-width: none;
+  width: 54px;
+  height: 7px;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--l-sage) 40%, var(--l-deep));
+}
+
+.lp-hero-enc[data-bar="2"]::before { width: 44px; }
+.lp-hero-enc[data-bar="3"]::before { width: 62px; }
+.lp-hero-enc[data-bar="4"]::before { width: 48px; }
+
+/* A figure in a tile: only the value is covered, the label stays. */
+.lp-hero-metric .lp-hero-enc {
+  inset: -3px -6px;
+  padding-inline: 6px;
+  border-radius: 5px;
+  box-shadow: none;
+}
+
+.lp-hero-stored > .lp-hero-enc {
+  inset: 0;
+}
+
+/* A line of meta text: covered like a figure, with a little room around it. */
+.lp-hero-card-meta > .lp-hero-enc {
+  inset: -2px -6px;
+  padding-inline: 6px;
+  border-radius: 5px;
+  box-shadow: none;
+}
+
+/* Locked: every record is shown as stored, and the computed total is gone. */
+.lp-hero-stage:has(.lp-hero-lock-input:checked) .lp-hero-enc {
+  opacity: 1;
+}
+
+.lp-hero-stage:has(.lp-hero-lock-input:checked) .lp-hero-total > * {
+  opacity: 0;
+}
+
+/* ---------- The margin note ---------- */
+
+.lp-hero-notes {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.lp-hero-note {
+  grid-area: 2 / 1;
+  display: grid;
+  align-content: start;
+  justify-items: start;
+  gap: 10px;
+  visibility: hidden;
+  opacity: 0;
+}
+
+.lp-hero-note[data-note="trial-balance"] {
+  visibility: visible;
+  opacity: 1;
+}
+
+@supports selector(:has(a)) {
+  .lp-hero-stage:has(.lp-hero-rail-input:checked) .lp-hero-note {
+    visibility: hidden;
+    opacity: 0;
+  }
+
+  .lp-hero-stage:has([value="overview"]:checked) [data-note="overview"],
+  .lp-hero-stage:has([value="documents"]:checked) [data-note="documents"],
+  .lp-hero-stage:has([value="invoices"]:checked) [data-note="invoices"],
+  .lp-hero-stage:has([value="banking"]:checked) [data-note="banking"],
+  .lp-hero-stage:has([value="chart"]:checked) [data-note="chart"],
+  .lp-hero-stage:has([value="journals"]:checked) [data-note="journals"],
+  .lp-hero-stage:has([value="trial-balance"]:checked) [data-note="trial-balance"],
+  .lp-hero-stage:has([value="gst"]:checked) [data-note="gst"],
+  .lp-hero-stage:has([value="audit"]:checked) [data-note="audit"] {
+    visibility: visible;
+    opacity: 1;
+  }
+
+  /* While locked, the note explains what the visitor is looking at. */
+  .lp-hero-stage:has(.lp-hero-lock-input:checked) .lp-hero-note:not([data-note="locked"]) {
+    visibility: hidden;
+    opacity: 0;
+  }
+
+  .lp-hero-stage:has(.lp-hero-lock-input:checked) [data-note="locked"] {
+    visibility: visible;
+    opacity: 1;
+  }
+}
+
+.lp-hero-hint {
+  display: none;
+  color: var(--l-text-muted);
+  font-size: var(--l-fs-micro);
+  line-height: 1.45;
+}
+
+.lp-hero-note-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--l-forest);
+  font: 650 var(--l-fs-micro)/1.3 var(--l-sans);
+}
+
+.lp-hero-note-label .lp-icon {
+  width: 16px;
+  height: 16px;
+}
+
+.lp-hero-note-claim {
+  max-width: 22em;
+  color: var(--l-ink);
+  font: 500 clamp(1.3125rem, 1.1rem + 0.9vw, 1.75rem)/1.16 var(--l-serif);
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+
+.lp-hero-note .lp-note {
+  max-width: 36ch;
+}
+
+.lp-hero-note-link {
+  margin-top: -4px;
+  font-size: var(--l-fs-small);
+}
+
+/* ---------- Layout from 900px: the rail stands beside the panels ---------- */
+
+@media (min-width: 900px) {
+  .lp-hero-statement {
+    grid-column: 1 / span 7;
+  }
+
+  .lp-hero-intro {
+    grid-column: 8 / -1;
+    padding-bottom: 0.4rem;
+  }
+
+  .lp-hero-lede {
+    font-size: 1rem;
+  }
+
+  .lp-hero-window .lp-window-bar {
+    flex-wrap: nowrap;
+    gap: 10px;
+    padding-block: 0;
+  }
+
+  .lp-hero-window .lp-window-bar::after {
+    display: none;
+  }
+
+  .lp-hero-window .lp-window-label,
+  .lp-hero-window .lp-window-local {
+    order: 2;
+    margin: 0;
+  }
+
+  .lp-hero-lock {
+    order: 6;
+    min-height: 28px;
+  }
+
+  .lp-hero-app {
+    grid-template-columns: 200px minmax(0, 1fr);
+  }
+
+  .lp-hero-rail {
+    border-right: 1px solid var(--l-rule);
+    border-bottom: 0;
+  }
+
+  .lp-hero-rail-track {
+    flex-direction: column;
+    gap: 10px;
+    padding: 14px 10px 16px;
+    overflow: visible;
+  }
+
+  .lp-hero-rail-group {
+    display: grid;
+    gap: 2px;
+  }
+
+  .lp-hero-rail-label {
+    display: block;
+    padding: 2px 12px 5px;
+  }
+
+  .lp-hero-rail-item {
+    min-height: 36px;
+    padding: 0 12px;
+  }
+
+  .lp-hero-hint {
+    display: block;
+    margin-bottom: 10px;
+  }
+}
+
+/* 900 to 1099px: under a full-width window the claim and its limit sit side by side. */
+@media (min-width: 900px) and (max-width: 1099px) {
+  /* Five narrow columns: the two buttons tighten so they still share a row. */
+  .lp-hero-actions {
+    gap: 8px;
+  }
+
+  .lp-hero-actions .lp-btn {
+    padding-inline: 14px;
+  }
+
+  .lp-hero-note {
+    grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+    column-gap: 32px;
+  }
+
+  .lp-hero-note-label,
+  .lp-hero-note-claim {
+    grid-column: 1;
+  }
+
+  .lp-hero-note .lp-note {
+    grid-area: 2 / 2;
+    align-self: start;
+    margin-top: 6px;
+  }
+
+  .lp-hero-note-link {
+    grid-area: 3 / 2;
+  }
+}
+
+@media (min-width: 900px) and (pointer: coarse) {
+  .lp-hero-rail-item {
+    min-height: 44px;
+  }
+}
+
+/* ---------- Layout from 1100px: the window in eight columns, the note beside it ---------- */
+
+@media (min-width: 1100px) {
+  .lp-hero-window {
+    grid-column: 1 / span 8;
+  }
+
+  /* The caption moves into the margin, level with the foot of the window. */
+  .lp-hero-caption {
+    grid-column: 9 / -1;
+    grid-row: 1;
+    align-self: end;
+    max-width: 34ch;
+    padding-bottom: 4px;
+  }
+
+  .lp-hero-notes {
+    grid-column: 9 / -1;
+    grid-row: 1;
+    align-content: start;
+    padding-top: 10px;
+  }
+
+  /* The hint sits level with the window bar; the note's label with the panel's eyebrow. */
+  .lp-hero-hint {
+    min-height: 20px;
+    margin-bottom: 28px;
+  }
+
+  .lp-hero-app {
+    grid-template-columns: 176px minmax(0, 1fr);
+  }
+
+  /* A narrow eight-column window keeps the lock icon and drops its words. */
+  .lp-hero-window .lp-window-local {
+    font-size: 0;
+  }
+}
+
+@media (min-width: 1240px) {
+  .lp-hero-statement {
+    grid-column: 1 / span 8;
+  }
+
+  .lp-hero-intro {
+    grid-column: 9 / -1;
+  }
+
+  .lp-hero-window .lp-window-local {
+    font-size: inherit;
+  }
+}
+
+@media (min-width: 1280px) {
+  .lp-hero-app {
+    grid-template-columns: 200px minmax(0, 1fr);
+  }
+}
+
+/* Short laptop viewports: keep the trial balance's Total band above the fold. */
+@media (min-width: 1100px) and (max-height: 850px) {
+  .lp-hero { padding-top: 8px; }
+  .lp-hero .lp-h1 { font-size: clamp(2.75rem, 14cqi, 6.5rem); }
+  .lp-hero-statement { grid-column: 1 / span 7; }
+  .lp-hero-intro { grid-column: 8 / -1; gap: 12px; }
+  .lp-hero-stage { margin-top: 22px; }
+  .lp-hero-tb tbody :is(th, td) { padding-block: 7px; }
+}
+
+/* ---------- Motion: an upgrade over the finished page ---------- */
+
+@keyframes lp-hero-held {
+  from,
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes lp-hero-land {
+  from {
+    translate: 0 -12px;
+  }
+}
+
+@media screen and (prefers-reduced-motion: no-preference) {
+  /*
+   * The load moment. Each cover holds (backwards fill) until its turn, then
+   * drops away in one step; the row beneath is already whole.
+   * Unlocking replays it through the transition below.
+   */
+  .lp-hero-enc {
+    animation: lp-hero-held 1ms steps(1, end) calc(900ms + var(--r, 0) * 150ms) 1 backwards;
+    transition: opacity 0s linear calc(160ms + var(--r, 0) * 90ms);
+  }
+
+  /* Locking is a quick cascade the other way. */
+  .lp-hero-stage:has(.lp-hero-lock-input:checked) .lp-hero-enc {
+    transition-delay: calc(var(--r, 0) * 28ms);
+  }
+
+  /* The total is computed, not stored: it lands once the rows are readable. */
+  .lp-hero-total > * {
+    /* The overshoot is on the drop only; the fade (lp-fade, landing.css) is plain. */
+    animation:
+      lp-hero-land 480ms var(--l-snap) 2400ms 1 backwards,
+      lp-fade 180ms ease 2400ms 1 backwards;
+    transition:
+      opacity 180ms ease 880ms,
+      translate 480ms var(--l-snap) 880ms;
+  }
+
+  .lp-hero-stage:has(.lp-hero-lock-input:checked) .lp-hero-total > * {
+    translate: 0 -12px;
+    transition: none;
+  }
+
+  .lp-hero-total .lp-tick path {
+    animation: lp-draw 380ms var(--l-ease) 2500ms 1 backwards;
+    transition: stroke-dashoffset 380ms var(--l-ease) 1000ms;
+  }
+
+  .lp-hero-stage:has(.lp-hero-lock-input:checked) .lp-hero-total .lp-tick path {
+    stroke-dashoffset: 1;
+    transition: none;
+  }
+
+  /* Changing screen: the new panel and its note settle in; the old ones go at once. */
+  @supports selector(:has(a)) {
+    .lp-hero-stage:has([value="overview"]:checked) :is([data-panel="overview"], [data-note="overview"]),
+    .lp-hero-stage:has([value="documents"]:checked) :is([data-panel="documents"], [data-note="documents"]),
+    .lp-hero-stage:has([value="invoices"]:checked) :is([data-panel="invoices"], [data-note="invoices"]),
+    .lp-hero-stage:has([value="banking"]:checked) :is([data-panel="banking"], [data-note="banking"]),
+    .lp-hero-stage:has([value="chart"]:checked) :is([data-panel="chart"], [data-note="chart"]),
+    .lp-hero-stage:has([value="journals"]:checked) :is([data-panel="journals"], [data-note="journals"]),
+    .lp-hero-stage:has([value="trial-balance"]:checked) :is([data-panel="trial-balance"], [data-note="trial-balance"]),
+    .lp-hero-stage:has([value="gst"]:checked) :is([data-panel="gst"], [data-note="gst"]),
+    .lp-hero-stage:has([value="audit"]:checked) :is([data-panel="audit"], [data-note="audit"]),
+    .lp-hero-stage:has(.lp-hero-lock-input:checked) [data-note="locked"] {
+      transition: opacity 200ms ease;
+    }
+  }
+}
+
+/* Without script the window is simply open, and the lock swaps state at once. */
+@media (scripting: none) {
+  .lp-hero-enc,
+  .lp-hero-total > *,
+  .lp-hero-total .lp-tick path {
+    animation: none;
+    transition: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .lp-hero-rail-item:has(.lp-hero-rail-input:checked),
+  .lp-hero-lock {
+    outline: 1px solid CanvasText;
+  }
+
+  .lp-hero-enc {
+    forced-color-adjust: none;
+  }
+}

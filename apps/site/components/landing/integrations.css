@@ -1,0 +1,1123 @@
+/*
+ * Tammy landing: integrations (Local API and MCP). Imported by app/page.tsx.
+ *
+ * One composite figure on cocoa ink. Left of the line is the visitor's own MCP
+ * client: mono, dark, and without a single control. Right of the line is
+ * Tammy: paper, and every button. The figure carries data-state
+ * (off, enabling, reading, staged, saved), set by integrations-gate.tsx; the
+ * choreography below is keyed off it. The default, unscripted state is
+ * "staged": everything visible, nothing saved.
+ */
+
+.lp-integrations {
+  --integrations-raised: color-mix(in srgb, var(--l-paper) 6%, var(--l-ink));
+}
+
+/* ---------- Head: the claim, and the counts as a column of figures ---------- */
+
+.lp-integrations-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 40px clamp(40px, 7vw, 112px);
+  margin-bottom: clamp(32px, 4vw, 56px);
+}
+
+.lp-integrations-headline {
+  display: grid;
+  gap: 22px;
+  max-width: 54rem;
+}
+
+.lp-integrations-headline .lp-h2 > span {
+  display: block;
+}
+
+.lp-integrations-headline .lp-deck {
+  text-wrap: balance;
+}
+
+.lp-integrations-tally {
+  display: grid;
+  min-width: 21.5rem;
+}
+
+.lp-integrations-tally > li {
+  display: grid;
+  grid-template-columns: 2ch minmax(0, 1fr);
+  align-items: baseline;
+  column-gap: 18px;
+  padding-block: 7px;
+  border-top: 1px solid var(--l-hairline);
+  font-size: clamp(2.5rem, 1.6rem + 2vw, 3.5rem);
+}
+
+.lp-integrations-count {
+  font: 600 1em/1.05 var(--l-sans);
+  font-variant-numeric: lining-nums tabular-nums;
+  letter-spacing: -0.03em;
+  text-align: right;
+}
+
+.lp-integrations-unit {
+  color: var(--l-text-muted);
+  font-size: var(--l-fs-small);
+  line-height: 1.3;
+}
+
+/* The row that matters most is the one that counts nothing. */
+.lp-integrations-tally > li[data-none] {
+  border-top-color: var(--l-text);
+}
+
+.lp-integrations-tally > li[data-none] .lp-integrations-unit {
+  color: var(--l-text);
+  font-weight: 650;
+}
+
+/* ---------- The scene ---------- */
+
+.lp-integrations-scene {
+  --integrations-gutter: clamp(64px, 6.2vw, 88px);
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) var(--integrations-gutter) minmax(0, 7fr);
+  grid-template-areas:
+    "readout rule access"
+    "client gateway window"
+    "note note note";
+}
+
+.lp-integrations-fignote {
+  grid-area: note;
+  margin-top: 16px;
+}
+
+.lp-integrations-readout {
+  grid-area: readout;
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  padding-bottom: 28px;
+}
+
+.lp-integrations-readout-title {
+  font: 500 var(--l-fs-h3)/1.14 var(--l-serif);
+  letter-spacing: -0.02em;
+}
+
+.lp-integrations-readout .lp-small {
+  max-width: 30em;
+}
+
+.lp-integrations-access {
+  grid-area: access;
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  padding-bottom: 28px;
+  container-type: inline-size;
+}
+
+.lp-integrations-access-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 14px 28px;
+}
+
+.lp-integrations-access-title {
+  margin-bottom: 4px;
+  font: 650 1.0625rem/1.3 var(--l-sans);
+}
+
+.lp-integrations-terms {
+  display: grid;
+  max-width: 34em;
+}
+
+.lp-integrations-terms > p {
+  grid-area: 1 / 1;
+}
+
+.lp-integrations-terms > p[data-spent] {
+  visibility: hidden;
+}
+
+/* As wide as its widest button, so swapping one for another reflows nothing. */
+.lp-integrations-access-action {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  min-width: 9.25rem;
+  min-height: 48px;
+}
+
+@container (max-width: 560px) {
+  .lp-integrations-access-body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .lp-integrations-access-action {
+    justify-content: flex-start;
+    min-width: 0;
+  }
+}
+
+/* The line: the edge of the workspace. It runs the height of the figure. */
+.lp-integrations-rule,
+.lp-integrations-seg {
+  background: var(--l-accent);
+}
+
+.lp-integrations-rule {
+  grid-area: rule;
+  justify-self: center;
+  width: 1.5px;
+  border-radius: 1px 1px 0 0;
+}
+
+.lp-integrations-gateway {
+  grid-area: gateway;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.lp-integrations-seg {
+  flex: 1 1 auto;
+  width: 1.5px;
+}
+
+.lp-integrations-seg:first-child {
+  flex: 0 0 52px;
+}
+
+.lp-integrations-seg:last-child {
+  border-radius: 0 0 1px 1px;
+}
+
+.lp-integrations-gate {
+  position: relative;
+  flex: 0 0 auto;
+  width: var(--integrations-gutter);
+  aspect-ratio: 88 / 72;
+}
+
+.lp-integrations-gate svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+/* The gate: two tick posts and a leaf. Solid strokes, not the dasharray the shared line uses. */
+.lp-integrations-gate .lp-line {
+  stroke-dasharray: none;
+}
+
+/* The gate leaf: in line with the edge when shut, swung into Tammy's side when open. */
+.lp-integrations-gate .lp-integrations-leaf {
+  transform-box: view-box;
+  transform-origin: 44px 12px;
+  rotate: -50deg;
+  stroke-width: 5;
+  stroke-linecap: butt;
+}
+
+.lp-integrations-scene[data-state="off"] .lp-integrations-leaf {
+  rotate: 0deg;
+}
+
+/* The gate's word, set on the edge above the gate, so the state reads without the drawing. */
+.lp-integrations-gate-word {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  translate: -50% 0;
+  padding: 4px 0;
+  background: var(--l-ground);
+  color: var(--l-accent);
+  font: 650 var(--l-fs-micro)/1 var(--l-sans);
+  white-space: nowrap;
+}
+
+/* A mark crossing the gate with each call and each answer. Seen only while reading. */
+.lp-integrations-dash {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 16px;
+  height: 2px;
+  margin: -1px 0 0 -8px;
+  border-radius: 2px;
+  background: var(--l-accent);
+  opacity: 0;
+}
+
+/* ---------- Left of the line: the client ---------- */
+
+.lp-integrations-client {
+  grid-area: client;
+  container-type: inline-size;
+  border: 1px solid var(--l-hairline);
+  border-radius: var(--l-r-surface);
+  background: var(--integrations-raised);
+}
+
+.lp-integrations-client-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0 16px;
+  min-height: 40px;
+  padding: 6px 18px;
+  border-bottom: 1px solid var(--l-hairline);
+  color: var(--l-text-muted);
+  font-size: var(--l-fs-micro);
+  line-height: 1.4;
+}
+
+.lp-integrations-client-bar strong {
+  color: var(--l-text);
+  font-weight: 650;
+}
+
+.lp-integrations-log {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+  padding: 20px 18px 24px;
+  font: 400 0.9375rem/1.6 var(--l-mono);
+}
+
+.lp-integrations-log > li {
+  display: grid;
+  grid-template-columns: 4.9rem minmax(0, 1fr);
+  column-gap: 14px;
+  grid-column: 1;
+}
+
+@container (max-width: 430px) {
+  .lp-integrations-log > li {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 2px;
+  }
+}
+
+.lp-integrations-who {
+  color: var(--l-text-muted);
+  font: 650 var(--l-fs-micro)/1.6 var(--l-sans);
+  white-space: nowrap;
+}
+
+.lp-integrations-said {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.lp-integrations-said b {
+  font-weight: 600;
+}
+
+.lp-integrations-log > li[data-who="tammy"] .lp-integrations-said,
+.lp-integrations-args {
+  color: var(--l-text-muted);
+}
+
+.lp-integrations-log > li[data-who="tammy"] .lp-integrations-who {
+  color: var(--l-text);
+}
+
+.lp-integrations-log > .lp-integrations-idle {
+  display: block;
+  color: var(--l-text-muted);
+}
+
+/* On ink the lit figure sits on a full block of butter, and takes ink. */
+.lp-integrations-log .lp-trace {
+  background-position: 0 0;
+  background-size: calc(var(--lit) * 100%) 100%;
+  color: var(--l-text);
+  transition:
+    background-size 180ms var(--l-ease),
+    color 180ms ease;
+}
+
+.lp-integrations-scene:has(.lp-trace[data-trace="cost"]:is(:hover, :focus)) [data-trace="cost"],
+.lp-integrations-scene:has(.lp-trace[data-trace="price"]:is(:hover, :focus)) [data-trace="price"],
+.lp-integrations-scene:has(.lp-trace[data-trace="total"]:is(:hover, :focus)) [data-trace="total"] {
+  --lit: 1;
+}
+
+.lp-integrations-scene:has(.lp-trace[data-trace="cost"]:is(:hover, :focus)) .lp-trace[data-trace="cost"],
+.lp-integrations-scene:has(.lp-trace[data-trace="price"]:is(:hover, :focus)) .lp-trace[data-trace="price"],
+.lp-integrations-scene:has(.lp-trace[data-trace="total"]:is(:hover, :focus)) .lp-trace[data-trace="total"] {
+  color: var(--l-ink);
+}
+
+.lp-integrations-window .lp-trace-target {
+  padding: 0 0.2em;
+  margin: 0 -0.2em;
+  border-radius: 3px;
+}
+
+/*
+ * While access is off the client has nothing to show, and nothing is reserved:
+ * the scene opens to its full size the moment access is enabled, then holds it.
+ */
+.lp-integrations-scene[data-state="off"] .lp-integrations-log > li[data-arrives],
+.lp-integrations-scene[data-state="off"] .lp-integrations-editor {
+  display: none;
+}
+
+.lp-integrations-scene[data-state="enabling"] .lp-integrations-log > li[data-arrives] {
+  visibility: hidden;
+}
+
+/* ---------- Right of the line: Tammy ---------- */
+
+.lp-integrations-window {
+  grid-area: window;
+  container-type: inline-size;
+}
+
+.lp-integrations-views {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  padding: 22px 22px 24px;
+}
+
+.lp-integrations-views > * {
+  grid-area: 1 / 1;
+  min-width: 0;
+}
+
+.lp-integrations-list,
+.lp-integrations-editor {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+  gap: 14px;
+}
+
+.lp-integrations-scene:is([data-state="reading"], [data-state="staged"], [data-state="saved"]) .lp-integrations-list {
+  display: none;
+}
+
+.lp-integrations-scene[data-state="enabling"] .lp-integrations-editor {
+  visibility: hidden;
+}
+
+.lp-integrations-viewhead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px 16px;
+}
+
+.lp-integrations-edhead {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 16px;
+}
+
+.lp-integrations-edhead .lp-integrations-sub {
+  grid-column: 1 / -1;
+}
+
+.lp-integrations-sub {
+  margin-top: 2px;
+  color: var(--l-muted);
+  font-size: var(--l-fs-app);
+}
+
+.lp-integrations-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* A control the scene does not let the visitor press: drawn, not a button. */
+.lp-integrations-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 0 14px;
+  border: 1px solid var(--l-rule);
+  border-radius: var(--l-r-control);
+  background: var(--l-paper);
+  color: var(--l-muted);
+  font: 650 var(--l-fs-app)/1 var(--l-sans);
+  white-space: nowrap;
+  user-select: none;
+}
+
+.lp-integrations-card {
+  overflow: clip;
+  border: 1px solid var(--l-rule);
+  border-radius: 14px;
+  background: var(--l-paper);
+}
+
+.lp-integrations-card .lp-table {
+  font-size: var(--l-fs-app);
+}
+
+.lp-integrations-card .lp-table :where(th, td) {
+  padding: 11px 14px;
+}
+
+.lp-integrations-card .lp-table thead th {
+  vertical-align: bottom;
+  line-height: 1.3;
+}
+
+.lp-integrations-card .lp-table thead small {
+  display: block;
+  font-size: 1em;
+  font-weight: 500;
+}
+
+.lp-integrations-card .lp-table tbody th {
+  font-weight: 600;
+}
+
+.lp-integrations-notice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid var(--l-warn-edge);
+  border-radius: var(--l-r-control);
+  background: var(--l-warn-soft);
+  color: var(--l-warn);
+  font-size: var(--l-fs-micro);
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.lp-integrations-notice[data-tone="ok"] {
+  border-color: var(--l-sage-edge);
+  background: var(--l-sage);
+  color: var(--l-forest);
+}
+
+.lp-integrations-fields {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px 12px;
+}
+
+.lp-integrations-fields dt {
+  margin-bottom: 4px;
+  color: var(--l-muted);
+  font: 600 0.75rem/1.3 var(--l-sans);
+}
+
+.lp-integrations-fields dd {
+  overflow: hidden;
+  padding: 8px 11px;
+  border: 1px solid var(--l-rule);
+  border-radius: 10px;
+  background: var(--l-paper);
+  font-size: var(--l-fs-app);
+  font-weight: 500;
+  font-variant-numeric: lining-nums tabular-nums;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lp-integrations-sums {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 17rem);
+  align-items: end;
+  gap: 14px 24px;
+}
+
+.lp-integrations-private {
+  display: grid;
+  gap: 6px;
+  justify-self: start;
+  padding: 10px 14px 12px;
+  border: 1px dashed var(--l-line);
+  border-radius: var(--l-r-control);
+  font-size: var(--l-fs-app);
+}
+
+.lp-integrations-private > p {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--l-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.lp-integrations-private .lp-icon {
+  width: 14px;
+  height: 14px;
+}
+
+.lp-integrations-private dl {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 22px;
+}
+
+.lp-integrations-private dl > div {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.lp-integrations-private dt {
+  color: var(--l-muted);
+}
+
+.lp-integrations-private dd {
+  font-weight: 600;
+}
+
+.lp-integrations-totals {
+  display: grid;
+  font-size: var(--l-fs-app);
+}
+
+.lp-integrations-totals > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 6px 14px;
+}
+
+.lp-integrations-totals dt {
+  color: var(--l-muted);
+}
+
+.lp-integrations-totals dd {
+  font-weight: 600;
+}
+
+.lp-integrations-totals > .lp-total-band {
+  margin-top: 4px;
+  padding-block: 10px;
+  border: 1px solid var(--l-sage-edge);
+  border-radius: 10px;
+  font-size: var(--l-fs-small);
+}
+
+.lp-integrations-totals > .lp-total-band dt {
+  color: inherit;
+}
+
+.lp-integrations-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 12px;
+  padding-top: 16px;
+  border-top: 1px solid var(--l-rule);
+}
+
+.lp-integrations-foot .lp-integrations-chip {
+  min-height: 44px;
+  opacity: 0.62;
+}
+
+.lp-integrations-save {
+  transition:
+    background-color 160ms ease,
+    opacity 200ms ease,
+    translate 160ms ease;
+}
+
+.lp-integrations-footnote {
+  flex: 1 1 13rem;
+  color: var(--l-muted);
+  font-size: var(--l-fs-app);
+  line-height: 1.4;
+}
+
+/* Narrow windows: the line becomes a short form, the four fields two by two. */
+@container (max-width: 620px) {
+  .lp-integrations-views {
+    padding: 18px 16px 20px;
+  }
+
+  .lp-integrations-fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .lp-integrations-lines,
+  .lp-integrations-lines tbody,
+  .lp-integrations-lines tr {
+    display: block;
+  }
+
+  .lp-integrations-lines thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .lp-integrations-lines tbody tr {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .lp-integrations-card .lp-integrations-lines tbody :where(th, td) {
+    display: grid;
+    gap: 2px;
+    padding: 9px 14px;
+    border-top: 1px solid var(--l-rule);
+    text-align: left;
+    white-space: normal;
+  }
+
+  .lp-integrations-card .lp-integrations-lines tbody th {
+    grid-column: 1 / -1;
+    border-top: 0;
+  }
+
+  .lp-integrations-lines tbody td[data-label="Quantity"] {
+    display: none;
+  }
+
+  .lp-integrations-lines tbody :where(th, td)::before {
+    content: attr(data-label);
+    color: var(--l-muted);
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+
+  .lp-integrations-card .lp-table [data-wide] {
+    display: none;
+  }
+
+  .lp-integrations-card .lp-table :where(th, td) {
+    padding-inline: 10px;
+  }
+
+  .lp-integrations-card .lp-table thead th {
+    white-space: normal;
+  }
+
+  .lp-integrations-card .lp-table tbody th {
+    white-space: nowrap;
+  }
+
+  /* The issue and due dates give way; the number and the customer stay. */
+  .lp-integrations-fields > div:nth-child(n + 3) {
+    display: none;
+  }
+
+  /* The shared title bar cannot hold its three parts on one line here:
+   * the breadcrumb and the lock share the first, the label takes the second. */
+  .lp-integrations-window .lp-window-bar {
+    flex-wrap: wrap;
+    gap: 4px 12px;
+    padding-block: 9px;
+  }
+
+  .lp-integrations-window .lp-window-title {
+    flex-basis: 40%;
+  }
+
+  .lp-integrations-window .lp-window-label {
+    order: 1;
+    white-space: normal;
+  }
+
+  .lp-integrations-sums {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .lp-integrations-private {
+    justify-self: stretch;
+  }
+}
+
+/* 620 to 660px (a 1280px screen): the desktop editor still fits with tighter cells. */
+@container (min-width: 620.02px) and (max-width: 660px) {
+  .lp-integrations-views {
+    padding: 18px 18px 20px;
+  }
+
+  .lp-integrations-card .lp-integrations-lines :where(th, td) {
+    padding-inline: 10px;
+  }
+
+  .lp-integrations-lines td[data-label="GST treatment"] {
+    white-space: nowrap;
+  }
+}
+
+@container (max-width: 330px) {
+  .lp-integrations-card .lp-table [data-mid] {
+    display: none;
+  }
+
+  .lp-integrations-fields dd {
+    padding-inline: 8px;
+  }
+}
+
+/* ---------- What it can and cannot do ---------- */
+
+.lp-integrations-facts {
+  display: grid;
+  grid-template-columns: minmax(0, 8fr) minmax(0, 4fr);
+  align-items: start;
+  gap: 28px clamp(40px, 7vw, 112px);
+  margin-top: clamp(32px, 4vw, 56px);
+}
+
+.lp-integrations-statement {
+  display: grid;
+  gap: 18px;
+}
+
+.lp-integrations-statement .lp-body {
+  max-width: 40em;
+}
+
+/* Phones: the paragraph above the disclosure repeats the fourteen tools it names. */
+@media (max-width: 699px) {
+  .lp-integrations-statement > .lp-body {
+    display: none;
+  }
+}
+
+.lp-integrations-cannot {
+  max-width: 24em;
+  font: 500 var(--l-fs-h3)/1.18 var(--l-serif);
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+
+.lp-integrations-limit {
+  margin-top: 4px;
+}
+
+.lp-integrations-tools {
+  grid-column: 1 / -1;
+  border-top: 1px solid var(--l-hairline);
+}
+
+.lp-integrations-tools summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: fit-content;
+  min-height: 52px;
+  color: var(--l-text);
+  font: 650 var(--l-fs-small)/1.3 var(--l-sans);
+  list-style: none;
+  cursor: pointer;
+}
+
+.lp-integrations-tools summary::-webkit-details-marker {
+  display: none;
+}
+
+.lp-integrations-tools summary .lp-icon {
+  width: 16px;
+  height: 16px;
+  color: var(--l-text-muted);
+}
+
+.lp-integrations-tools[open] summary .lp-icon {
+  rotate: 45deg;
+}
+
+.lp-integrations-tools ul {
+  columns: 3 17rem;
+  column-gap: 32px;
+  padding-bottom: 6px;
+  color: var(--l-text-muted);
+  font: 400 var(--l-fs-micro)/2 var(--l-mono);
+}
+
+.lp-integrations-tools li {
+  break-inside: avoid;
+  overflow-wrap: anywhere;
+}
+
+.lp-integrations-tools .lp-micro {
+  padding-block: 8px 4px;
+}
+
+/* ---------- Without script the buttons could not do anything ---------- */
+
+.lp-integrations-unscripted {
+  display: none;
+}
+
+@media (scripting: none) {
+  .lp-integrations-scripted {
+    display: none;
+  }
+
+  .lp-integrations-unscripted {
+    display: inline-flex;
+  }
+}
+
+/* ---------- Stacked: transcript, the line as a rule with its gate, editor ---------- */
+
+@media (max-width: 959px) {
+  .lp-integrations-head {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .lp-integrations-tally {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    column-gap: 20px;
+    min-width: 0;
+  }
+
+  .lp-integrations-tally > li {
+    grid-template-columns: minmax(0, 1fr);
+    align-content: start;
+    row-gap: 4px;
+    padding-block: 12px 0;
+  }
+
+  .lp-integrations-count {
+    text-align: left;
+  }
+
+  .lp-integrations-scene {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "readout"
+      "access"
+      "client"
+      "gateway"
+      "window"
+      "note";
+  }
+
+  .lp-integrations-readout {
+    padding-bottom: 20px;
+  }
+
+  /* Two lines held for the caption, so a change of state moves nothing below. */
+  .lp-integrations-readout .lp-small {
+    min-height: 3em;
+  }
+
+  .lp-integrations-access {
+    padding-top: 18px;
+    border-top: 1px solid var(--l-hairline);
+  }
+
+  .lp-integrations-rule {
+    display: none;
+  }
+
+  .lp-integrations-gateway {
+    --integrations-gutter: 72px;
+    flex-direction: row;
+    height: 72px;
+  }
+
+  .lp-integrations-seg {
+    width: auto;
+    height: 1.5px;
+  }
+
+  .lp-integrations-seg:first-child {
+    flex: 1 1 auto;
+    border-radius: 1px 0 0 1px;
+  }
+
+  .lp-integrations-seg:last-child {
+    border-radius: 0 1px 1px 0;
+  }
+
+  /* Turned a quarter: the leaf now swings down, into Tammy's side. The
+   * margins take up the difference between the box and its turned outline. */
+  .lp-integrations-gate {
+    margin-inline: -6.5px;
+    rotate: 90deg;
+  }
+
+  .lp-integrations-facts {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .lp-integrations-limit {
+    max-width: 44ch;
+  }
+
+  .lp-integrations-gate-word {
+    display: none;
+  }
+}
+
+/* Below 360px the chapter size would break "Only you can save." in two. */
+@media (max-width: 359px) {
+  .lp-integrations-headline .lp-h2 {
+    font-size: 2rem;
+  }
+}
+
+@media (max-width: 520px) {
+  .lp-integrations-tally {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  /* The menu path keeps to one line; the deck above has already named Tammy. */
+  .lp-integrations-owner {
+    display: none;
+  }
+
+  .lp-integrations-tally > li {
+    padding-bottom: 12px;
+  }
+}
+
+/* Backgrounds are dropped in forced colours; the line must not go with them. */
+@media (forced-colors: active) {
+  .lp-integrations-rule,
+  .lp-integrations-seg,
+  .lp-integrations-dash {
+    background: CanvasText;
+  }
+
+  .lp-integrations-client,
+  .lp-integrations-chip {
+    border-color: CanvasText;
+  }
+}
+
+/* ---------- Motion ---------- */
+
+@keyframes lp-integrations-gate-open {
+  from {
+    rotate: 0deg;
+  }
+}
+
+@keyframes lp-integrations-arrive {
+  from {
+    opacity: 0;
+    translate: 0 8px;
+    visibility: hidden;
+  }
+}
+
+/* Same motion, its own name: its end tells the island the draft is staged. */
+@keyframes lp-integrations-arrive-last {
+  from {
+    opacity: 0;
+    translate: 0 8px;
+    visibility: hidden;
+  }
+}
+
+@keyframes lp-integrations-leave {
+  to {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+
+@keyframes lp-integrations-cross-out {
+  0% {
+    opacity: 0;
+    translate: -22px 0;
+  }
+  25%,
+  75% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    translate: 22px 0;
+  }
+}
+
+@keyframes lp-integrations-cross-in {
+  0% {
+    opacity: 0;
+    translate: 22px 0;
+  }
+  25%,
+  75% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    translate: -22px 0;
+  }
+}
+
+/* "Use MCP draft" is pressed, visibly, and stays down until the list gives way. */
+@keyframes lp-integrations-press {
+  to {
+    border-color: var(--l-forest);
+    background-color: var(--l-sage);
+    color: var(--l-forest);
+    scale: 0.95;
+  }
+}
+
+@media screen and (prefers-reduced-motion: no-preference) {
+  .lp-integrations-scene[data-state="enabling"] .lp-integrations-leaf {
+    animation: lp-integrations-gate-open 460ms var(--l-settle) both;
+  }
+
+  .lp-integrations-scene[data-state="off"] .lp-integrations-leaf {
+    transition: rotate 320ms var(--l-ease);
+  }
+
+  .lp-integrations-scene[data-state="reading"] .lp-integrations-log > li[data-arrives] {
+    animation: lp-integrations-arrive 340ms var(--l-settle) var(--at, 0ms) both;
+  }
+
+  .lp-integrations-scene[data-state="reading"] .lp-integrations-dash {
+    animation: lp-integrations-cross-out 420ms var(--l-ease) var(--at, 0ms) both;
+  }
+
+  .lp-integrations-scene[data-state="reading"] .lp-integrations-dash[data-dir="in"] {
+    animation-name: lp-integrations-cross-in;
+  }
+
+  /* The list stays until "Use MCP draft" is pressed, then gives way to the editor. */
+  .lp-integrations-scene[data-state="reading"] .lp-integrations-list {
+    display: grid;
+    animation: lp-integrations-leave 160ms ease 3160ms both;
+  }
+
+  .lp-integrations-scene[data-state="reading"] .lp-integrations-chip[data-press] {
+    animation: lp-integrations-press 200ms var(--l-ease) 2920ms both;
+  }
+
+  .lp-integrations-scene[data-state="reading"] .lp-integrations-editor [data-part] {
+    animation: lp-integrations-arrive 320ms var(--l-settle) calc(3300ms + var(--p, 0) * 55ms) both;
+  }
+
+  .lp-integrations-scene[data-state="reading"] .lp-integrations-editor [data-part="last"] {
+    animation-name: lp-integrations-arrive-last;
+  }
+
+  .lp-integrations-tools summary .lp-icon {
+    transition: rotate 260ms var(--l-settle);
+  }
+
+  /* The pill landing: the one press the client could not make. */
+  .lp-integrations-scene[data-state="saved"] .lp-integrations-badge {
+    animation: lp-land 720ms var(--l-bounce) both;
+  }
+}

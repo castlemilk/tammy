@@ -1,9 +1,8 @@
 /* oxlint-disable next/no-html-link-for-pages -- Shared same-origin home link. */
-import { cn } from '../lib/utils';
 
 export function TammyMark({ className }: { className?: string }) {
   return (
-    <span className={cn('tammy-brand-mark', className)} aria-hidden="true">
+    <span className={['tammy-brand-mark', className].filter(Boolean).join(' ')} aria-hidden="true">
       <span />
       <span />
     </span>
@@ -15,7 +14,7 @@ export function SiteBrand({ className }: { className?: string }) {
   return (
     <a
       href="/"
-      className={cn('tammy-brand', className)}
+      className={['tammy-brand', className].filter(Boolean).join(' ')}
       aria-label="Tammy home"
     >
       <TammyMark />

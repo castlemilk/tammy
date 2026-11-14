@@ -1,0 +1,610 @@
+/* Tammy landing: tools. Section styles, imported by app/page.tsx.
+ *
+ * The band shell (head, bench slot, closing links) and the tray of twelve: a
+ * type-case drawer of unequal compartments, each holding one tool's name and
+ * a worked answer. The tray is static; only hover and focus change it.
+ */
+
+/* ---------- Head: the count, the heading, the deck and the one limit ---------- */
+
+.lp-tools-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 14px;
+  margin-bottom: clamp(36px, 5vw, 72px);
+}
+
+/* One of the few honest numbers on the page, set as type. */
+.lp-tools-twelve {
+  justify-self: start;
+  /* Tabular figures carry side bearings; pull the 1 back to the frame edge. */
+  margin-left: -0.07em;
+  color: var(--l-forest);
+  /* Sized so the figures run from the heading's ascenders to the deck's baseline. */
+  font: 600 calc(var(--l-fs-h2) * 2.1) / 0.74 var(--l-sans);
+  font-variant-numeric: lining-nums tabular-nums;
+  letter-spacing: -0.07em;
+  user-select: none;
+}
+
+.lp-tools-head .lp-deck {
+  color: var(--l-text);
+}
+
+.lp-tools-boundary {
+  max-width: 44ch;
+}
+
+@media (min-width: 600px) {
+  .lp-tools-head {
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas:
+      "twelve title"
+      "twelve deck"
+      ".      note";
+    column-gap: clamp(18px, 2.4vw, 36px);
+    row-gap: 12px;
+  }
+
+  .lp-tools-twelve {
+    grid-area: twelve;
+    align-self: end;
+    margin-bottom: 0.02em;
+  }
+
+  .lp-tools-head .lp-h2 {
+    grid-area: title;
+    align-self: end;
+  }
+
+  .lp-tools-head .lp-deck {
+    grid-area: deck;
+  }
+
+  .lp-tools-boundary {
+    grid-area: note;
+    margin-top: 10px;
+  }
+}
+
+/* Wide: the limit moves into the margin, beside the claim it qualifies. */
+@media (min-width: 1200px) {
+  .lp-tools-head {
+    grid-template-columns: auto minmax(0, 1fr) minmax(0, 31ch);
+    grid-template-areas:
+      "twelve title note"
+      "twelve deck  note";
+  }
+
+  .lp-tools-boundary {
+    align-self: end;
+    max-width: 31ch;
+    margin-top: 0;
+  }
+}
+
+/* ---------- The drawer: heading row and the tray ---------- */
+
+.lp-tools-drawer {
+  container: lp-tools-drawer / inline-size;
+  margin-top: clamp(40px, 4.4vw, 64px);
+}
+
+.lp-tools-drawer-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px 32px;
+  margin-bottom: 20px;
+}
+
+.lp-tools-tray {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1px;
+  overflow: clip;
+  border: 1px solid var(--l-rule);
+  border-radius: var(--l-r-surface);
+  /* The ground shows through the 1px gaps as the compartment walls. */
+  background: var(--l-rule);
+  box-shadow: var(--l-shadow-sheet);
+}
+
+/* The slot carries the same ground as its cell, so a focused cell can round
+ * its corners without the compartment wall showing through. */
+.lp-tools-slot {
+  display: grid;
+  min-width: 0;
+  background: var(--l-paper);
+}
+
+.lp-tools-slot[data-featured] {
+  background: var(--l-oat);
+}
+
+/* One compartment. The whole of it is the link. */
+.lp-tools-cell {
+  --cell-ground: var(--l-paper);
+  --cell-warm: color-mix(in srgb, var(--l-butter) 15%, var(--l-paper));
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  padding: 14px 16px 13px;
+  background: var(--cell-ground);
+  color: var(--l-ink);
+  text-decoration: none;
+}
+
+.lp-tools-name {
+  font: 500 1.1875rem/1.2 var(--l-serif);
+  letter-spacing: -0.015em;
+  text-wrap: balance;
+}
+
+/* Phones get compact rows: name, answer, tag. */
+.lp-tools-summary {
+  display: none;
+  max-width: 42ch;
+  color: var(--l-muted);
+  font-size: var(--l-fs-small);
+  line-height: 1.42;
+  text-wrap: balance;
+}
+
+.lp-tools-answer {
+  font: 500 1rem/1.4 var(--l-sans);
+  font-variant-numeric: lining-nums tabular-nums;
+  text-wrap: balance;
+}
+
+.lp-tools-fig {
+  font-weight: 650;
+}
+
+.lp-tools-pair {
+  white-space: nowrap;
+}
+
+/* A run of pairs fills each line in turn; balancing strands the first pair. */
+.lp-tools-answer:has(.lp-tools-pair) {
+  text-wrap: wrap;
+}
+
+/* The trace sits a touch lower than in running copy and follows a wrapped line. */
+.lp-tools-cell .lp-trace-target {
+  padding: 0 0.16em;
+  margin: 0 -0.16em;
+  border-radius: 2px;
+  background-position: 0 92%;
+  background-size: calc(var(--lit) * 100%) 0.56em;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+
+.lp-tools-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 12px;
+  margin-top: 4px;
+  color: var(--l-muted);
+  font-size: var(--l-fs-micro);
+  line-height: 1.45;
+}
+
+/* What the tool hands back, as a compartment label. */
+.lp-tools-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--l-ink);
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+/* Hollow: the answer stays in the tab. Solid: you leave with a file or a print. */
+.lp-tools-tag::before {
+  content: "";
+  flex: 0 0 auto;
+  width: 8px;
+  height: 8px;
+  border: 1.5px solid var(--l-forest);
+  border-radius: 2px;
+}
+
+.lp-tools-tag[data-keeps]::before {
+  background: var(--l-forest);
+}
+
+/* The 12-week forecast's closings, drawn from the same result, beside it. */
+.lp-tools-answer:has(> .lp-tools-figure) {
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+}
+
+.lp-tools-answer-text {
+  min-width: 0;
+}
+
+.lp-tools-figure {
+  flex: 0 0 auto;
+  padding-bottom: 0.3em;
+  line-height: 0;
+}
+
+.lp-tools-bars {
+  display: block;
+  width: 90px;
+  height: 23px;
+  overflow: visible;
+}
+
+.lp-tools-bar {
+  fill: var(--l-sage-edge);
+}
+
+/* Apricot marks the one thing the figure teaches: the lowest week. */
+.lp-tools-bar-low {
+  fill: var(--l-apricot);
+  stroke: color-mix(in srgb, var(--l-warn) 55%, var(--l-apricot));
+  stroke-width: 1;
+}
+
+/* ---------- The featured compartment: a slip of invoice arithmetic ---------- */
+
+.lp-tools-slot[data-featured] .lp-tools-cell {
+  --cell-ground: var(--l-oat);
+  --cell-warm: color-mix(in srgb, var(--l-butter) 20%, var(--l-oat));
+  gap: 6px;
+  padding-block: 18px 16px;
+}
+
+.lp-tools-slot[data-featured] .lp-tools-name {
+  font-size: 1.5rem;
+  letter-spacing: -0.02em;
+}
+
+.lp-tools-slot[data-featured] .lp-tools-summary {
+  display: block;
+}
+
+.lp-tools-sum {
+  display: grid;
+  margin-top: 8px;
+  padding: 4px 14px;
+  border: 1px solid var(--l-rule);
+  border-radius: var(--l-r-control);
+  background: var(--l-paper);
+  box-shadow: var(--l-shadow-sheet);
+  font-size: var(--l-fs-small);
+  font-weight: 500;
+}
+
+.lp-tools-sum-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 7px 0;
+  color: var(--l-muted);
+}
+
+.lp-tools-sum-row .lp-num {
+  color: var(--l-ink);
+  font-weight: 600;
+}
+
+.lp-tools-sum-row ~ .lp-tools-sum-row {
+  border-top: 1px solid var(--l-rule);
+}
+
+.lp-tools-sum-total {
+  padding: 9px 0 8px;
+  color: var(--l-ink);
+  font-weight: 650;
+}
+
+.lp-tools-sum-total .lp-num {
+  font-size: 1.5rem;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+.lp-tools-slot[data-featured] .lp-tools-meta {
+  margin-top: 8px;
+}
+
+/* ---------- Hover and focus: the ground warms, the answer is traced ---------- */
+
+.lp-tools .lp-tools-cell:focus-visible {
+  outline-offset: -6px;
+  border-radius: 10px;
+  background: var(--cell-warm);
+}
+
+/* A press answers the same way, so a tap gets its trace without any hover. */
+.lp-tools-cell:active {
+  background: var(--cell-warm);
+}
+
+.lp-tools-cell:focus-visible .lp-trace-target,
+.lp-tools-cell:active .lp-trace-target {
+  --lit: 1;
+}
+
+@media (hover: hover) {
+  .lp-tools-cell:hover {
+    background: var(--cell-warm);
+  }
+
+  .lp-tools-cell:hover .lp-trace-target {
+    --lit: 1;
+  }
+}
+
+/* The tray's answers take the butter stroke once, in turn, as the tray arrives. */
+@keyframes lp-tools-answer-sweep {
+  0% {
+    background-size: 0% 0.62em;
+  }
+
+  30%,
+  64% {
+    background-size: 100% 0.62em;
+  }
+
+  100% {
+    background-size: 100% 0;
+  }
+}
+
+@media screen and (prefers-reduced-motion: no-preference) {
+  .lp-tools-cell {
+    transition: background-color 180ms ease;
+  }
+
+  .lp-tools-cell .lp-trace-target {
+    transition: background-size 260ms var(--l-ease);
+  }
+
+  /* Backwards fill: the hover trace still works once the sweep has finished. */
+  .lp-tools-tray[data-scene="in"] .lp-trace-target {
+    animation: lp-tools-answer-sweep 1000ms var(--l-ease) calc(400ms + var(--i, 0) * 130ms) 1 backwards;
+  }
+}
+
+/* ---------- Tray layouts, by the drawer's own width ---------- */
+
+/* The narrowest phones: a little less padding and type so no answer breaks badly. */
+@container lp-tools-drawer (max-width: 339.98px) {
+  .lp-tools-cell {
+    padding-inline: 14px;
+  }
+
+  .lp-tools-answer {
+    font-size: 0.9375rem;
+  }
+
+  .lp-tools-bars {
+    width: 60px;
+    height: 15px;
+  }
+}
+
+/* Two columns: summaries return and the rows become compartments. */
+@container lp-tools-drawer (min-width: 600px) {
+  .lp-tools-tray {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .lp-tools-slot {
+    grid-column: span var(--c2, 1);
+  }
+
+  .lp-tools-cell {
+    gap: 6px;
+    padding: 20px 22px 18px;
+  }
+
+  .lp-tools-name {
+    font-size: 1.3125rem;
+  }
+
+  .lp-tools-summary {
+    display: block;
+  }
+
+  /* Answer and label sit on the floor of the compartment, so they line up
+   * along each row of the tray. */
+  .lp-tools-answer {
+    margin-top: auto;
+    padding-top: 14px;
+    font-size: 1.0625rem;
+  }
+
+  .lp-tools-meta {
+    justify-content: space-between;
+    margin-top: 6px;
+    padding-top: 10px;
+    border-top: 1px solid color-mix(in srgb, var(--l-rule) 60%, transparent);
+  }
+
+  .lp-tools-slot[data-featured] .lp-tools-cell {
+    padding: 24px 26px 20px;
+  }
+
+  .lp-tools-slot[data-featured] .lp-tools-name {
+    font-size: var(--l-fs-h3);
+    line-height: 1.1;
+  }
+
+  .lp-tools-slot[data-featured] .lp-tools-summary {
+    font-size: 1rem;
+  }
+
+  .lp-tools-sum {
+    margin-top: 0;
+    padding: 6px 18px;
+    font-size: 1rem;
+  }
+
+  .lp-tools-sum-row {
+    padding: 10px 0;
+  }
+
+  .lp-tools-sum-total {
+    padding: 14px 0 12px;
+  }
+
+  .lp-tools-sum-total .lp-num {
+    font-size: 2rem;
+  }
+}
+
+/* Two columns only: the featured cell lies across the tray, copy on the
+ * left and the slip on the right. */
+@container lp-tools-drawer (min-width: 600px) and (max-width: 879.98px) {
+  .lp-tools-slot[data-featured] .lp-tools-cell {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    gap: 8px clamp(20px, 4cqi, 40px);
+  }
+
+  .lp-tools-slot[data-featured] .lp-tools-cell > * {
+    grid-column: 1;
+  }
+
+  .lp-tools-slot[data-featured] .lp-tools-cell > .lp-tools-answer {
+    grid-column: 2;
+    grid-row: 1 / -1;
+    align-self: center;
+    margin: 0;
+    padding: 0;
+  }
+
+  .lp-tools-slot[data-featured] .lp-tools-meta {
+    align-self: end;
+    margin-top: 12px;
+  }
+
+  /* The forecast also lies across the tray here, so its closings get room. */
+  .lp-tools-answer:has(> .lp-tools-figure) {
+    justify-content: space-between;
+  }
+
+  .lp-tools-figure {
+    margin-top: -40px;
+  }
+
+  .lp-tools-bars {
+    width: 213px;
+    height: 54px;
+  }
+}
+
+/* Six columns: the featured cell stands two rows tall, slip on its floor. */
+@container lp-tools-drawer (min-width: 880px) {
+  .lp-tools-tray {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+
+  .lp-tools-slot {
+    grid-column: span var(--c6, 2);
+  }
+
+  .lp-tools-slot[data-featured] {
+    grid-row: span 2;
+  }
+
+  /* Narrow compartments again: the closings shrink so the answer keeps two lines. */
+  .lp-tools-bars {
+    width: 76px;
+    height: 19px;
+  }
+
+  .lp-tools-slot[data-featured] .lp-tools-cell {
+    gap: 10px;
+    padding: 28px 30px 22px;
+  }
+
+  .lp-tools-slot[data-featured] .lp-tools-summary {
+    max-width: 34ch;
+    font-size: 1.0625rem;
+  }
+
+  .lp-tools-slot[data-featured] .lp-tools-answer {
+    padding-top: 20px;
+  }
+
+  .lp-tools-slot[data-featured] .lp-tools-meta {
+    margin-top: 14px;
+  }
+
+  .lp-tools-sum {
+    padding: 8px 22px;
+  }
+
+  .lp-tools-sum-total .lp-num {
+    font-size: 2.5rem;
+  }
+}
+
+/* Twelve columns: the full type case. */
+@container lp-tools-drawer (min-width: 1240px) {
+  .lp-tools-tray {
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+  }
+
+  .lp-tools-slot {
+    grid-column: span var(--c12, 3);
+  }
+
+  .lp-tools-cell {
+    padding: 22px 24px 18px;
+  }
+
+  .lp-tools-answer {
+    font-size: 1.125rem;
+  }
+}
+
+/* ---------- Under the tray: two quiet links and what the guides cover ---------- */
+
+.lp-tools-more {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 40px;
+  margin-top: 22px;
+}
+
+.lp-tools-more-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 28px;
+}
+
+.lp-tools-more .lp-small {
+  max-width: 46ch;
+}
+
+@media (forced-colors: active) {
+  .lp-tools-tray {
+    background: CanvasText;
+  }
+
+  .lp-tools-cell {
+    background: Canvas;
+  }
+
+  .lp-tools-cell:focus-visible .lp-trace-target,
+  .lp-tools-cell:hover .lp-trace-target {
+    outline: 2px solid Highlight;
+  }
+}
