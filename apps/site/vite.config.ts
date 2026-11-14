@@ -37,9 +37,25 @@ const localBindingConfig = {
 
 export default defineConfig(async () => {
   const target = process.env.TAMMY_DEPLOY_TARGET ?? "sites";
-  if (!["sites", "cloudflare"].includes(target)) {
-    throw new Error("Unknown TAMMY_DEPLOY_TARGET; use sites or cloudflare.");
+  if (!["sites", "cloudflare", "vercel"].includes(target)) {
+    throw new Error("Unknown TAMMY_DEPLOY_TARGET; use sites, cloudflare or vercel.");
   }
+
+  // Vercel serves tammy.tax from a static export: every route is prerendered
+  // HTML and PDFs are generated in the browser, so no server code is deployed.
+  if (target === "vercel") {
+    return {
+      resolve: {
+        alias: [{ find: /^@formepdf\/core$/, replacement: "@formepdf/core/worker" }],
+      },
+      css: { postcss: { plugins: [tailwindcss()] } },
+      plugins: [
+        { enforce: "pre", ...mdx({ remarkPlugins: [remarkGfm] }) },
+        vinext({ nextConfig: { output: "export" } }),
+      ],
+    };
+  }
+
   // Keep Wrangler and Miniflare state project-local. These are non-secret tool
   // settings; application environment belongs in ignored `.env*` files.
   process.env.WRANGLER_WRITE_LOGS ??= "false";

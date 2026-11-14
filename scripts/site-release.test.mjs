@@ -26,10 +26,16 @@ import {
   cloudflareDryRun,
   cloudflareEnvironment,
   deployCloudflare,
+  deployVercel,
   PROJECT_ID,
   packageWorker,
   prepare,
   recordBuild,
+  VERCEL_CLI_VERSION,
+  VERCEL_ROUTES,
+  vercelDeploymentResult,
+  vercelEnvironment,
+  vercelOutput,
   verify,
   verifySource,
 } from "./site-release.mjs";
@@ -126,6 +132,19 @@ function prepared(t, target = "sites") {
 }
 
 function workerFixture(root, target = "sites") {
+  if (target === "vercel") {
+    // Static export: prerendered pages, RSC payloads, hashed assets and a hidden Vite manifest.
+    write(root, "dist/client/index.html", "<h1>Tammy</h1>\n");
+    write(root, "dist/client/index.rsc", "0:fixture\n");
+    write(root, "dist/client/404.html", "<h1>Not found</h1>\n");
+    write(root, "dist/client/tools.html", "<h1>Tools</h1>\n");
+    write(root, "dist/client/tools/gst-calculator.html", "<h1>GST</h1>\n");
+    write(root, "dist/client/_next/static/chunks/app.js", 'console.log("fixture");\n');
+    write(root, "dist/client/assets/pdf.wasm", "\0asm\x01\0\0\0");
+    write(root, "dist/client/.vite/manifest.json", "{}\n");
+    write(root, "dist/server/index.js", "export default {};\n");
+    return;
+  }
   if (target === "sites") write(root, "dist/.openai/hosting.json", hosting);
   write(
     root,
@@ -656,8 +675,8 @@ test("direct builds reject Sites metadata and incomplete Worker/PDF output", asy
   }
 });
 
-test("tracked Wrangler dev variables are rejected for both release targets", async (t) => {
-  for (const target of ["sites", "cloudflare"]) {
+test("tracked Wrangler dev variables are rejected for every release target", async (t) => {
+  for (const target of ["sites", "cloudflare", "vercel"]) {
     await t.test(target, (t) => {
       const { root, snapshot } = fixture(t);
       write(root, "apps/site/.dev.vars.production", "TEST_ONLY_SECRET=never-export\n");
@@ -668,8 +687,8 @@ test("tracked Wrangler dev variables are rejected for both release targets", asy
   }
 });
 
-test("credentials cannot enter either target's built inventory or retained artifact", async (t) => {
-  for (const target of ["sites", "cloudflare"]) {
+test("credentials cannot enter any target's built inventory or retained artifact", async (t) => {
+  for (const target of ["sites", "cloudflare", "vercel"]) {
     for (const filename of [
       "server/.dev.vars",
       "client/.dev.vars.preview",
@@ -1520,5 +1539,302 @@ test("readback refuses deployments that cannot prove this run", () => {
       "mismatch",
       label,
     );
+  }
+});
+
+const vercelIds = { VERCEL_ORG_ID: "team_fixture0org", VERCEL_PROJECT_ID: "prj_fixture0project" };
+
+function withEnv(t, values) {
+  const saved = Object.fromEntries(
+    Object.keys(process.env)
+      .filter((key) => /^(VERCEL_|GITHUB_ACTIONS$)/.test(key))
+      .map((key) => [key, process.env[key]]),
+  );
+  for (const key of Object.keys(saved)) delete process.env[key];
+  Object.assign(process.env, values);
+  t.after(() => {
+    for (const key of Object.keys(process.env))
+      if (/^(VERCEL_|GITHUB_ACTIONS$)/.test(key)) delete process.env[key];
+    Object.assign(process.env, saved);
+  });
+}
+
+function vercelBuilt(t) {
+  const state = built(t, "vercel");
+  state.output = path.join(state.base, "vercel-output");
+  state.manifest = vercelOutput(state.snapshot, state.output);
+  return state;
+}
+
+test("a Vercel static export becomes reviewed prebuilt output with clean URLs", (t) => {
+  const { base, snapshot, output, manifest, commitSha, build: record } = vercelBuilt(t);
+  assert.equal(record.target, "vercel");
+  assert.equal(manifest.github.commit_sha, commitSha);
+  assert.equal(manifest.build_sha256, record.build_sha256);
+  assert.equal(manifest.publication, "not-performed");
+  const staticRoot = path.join(output, ".vercel/output/static");
+  const listed = execFileSync("find", [".", "-type", "f"], { cwd: staticRoot, encoding: "utf8" })
+    .trim()
+    .split("\n")
+    .map((name) => name.slice(2))
+    .sort();
+  assert.deepEqual(listed, [
+    "404.html",
+    "_next/static/chunks/app.js",
+    "assets/pdf.wasm",
+    "index.html",
+    "index.rsc",
+    "tools.html",
+    "tools/gst-calculator.html",
+  ]);
+  assert.equal(manifest.files, listed.length);
+  for (const name of listed)
+    assert.equal(
+      sha256(readFileSync(path.join(staticRoot, name))),
+      sha256(readFileSync(path.join(snapshot, "dist/client", name))),
+    );
+  const config = readJson(path.join(output, ".vercel/output/config.json"));
+  assert.equal(config.version, 3);
+  assert.deepEqual(config.routes, VERCEL_ROUTES);
+  assert.deepEqual(config.overrides, {
+    "404.html": { path: "404" },
+    "index.html": { path: "index" },
+    "tools.html": { path: "tools" },
+    "tools/gst-calculator.html": { path: "tools/gst-calculator" },
+  });
+  assert.equal(
+    manifest.config_sha256,
+    sha256(readFileSync(path.join(output, ".vercel/output/config.json"))),
+  );
+  const bundled = bundle(snapshot, path.join(base, "vercel-bundle"));
+  assert.equal(bundled.kind, "vercel-static-build");
+  assert.equal(bundled.vercel.project, "tammy-site");
+});
+
+test("Vercel builds reject Sites metadata, Worker configuration and incomplete exports", async (t) => {
+  await t.test("Sites hosting metadata", (t) => {
+    const { snapshot } = prepared(t, "vercel");
+    workerFixture(snapshot, "vercel");
+    write(snapshot, "dist/.openai/hosting.json", hosting);
+    assert.throws(() => recordBuild(snapshot, runtime), /Sites deployment metadata/);
+  });
+  await t.test("Worker configuration", (t) => {
+    const { snapshot } = prepared(t, "vercel");
+    workerFixture(snapshot, "vercel");
+    write(snapshot, "dist/server/wrangler.json", cloudflareConfig());
+    assert.throws(() => recordBuild(snapshot, runtime), /Worker configuration/);
+  });
+  for (const filename of ["client/index.html", "client/404.html", "client/assets/pdf.wasm"]) {
+    await t.test(`missing ${filename}`, (t) => {
+      const { snapshot } = prepared(t, "vercel");
+      workerFixture(snapshot, "vercel");
+      rmSync(path.join(snapshot, "dist", filename));
+      assert.throws(
+        () => recordBuild(snapshot, runtime),
+        /Missing static export output|Missing invoice PDF WASM/,
+      );
+      assert.equal(existsSync(path.join(snapshot, "build-provenance.json")), false);
+    });
+  }
+});
+
+test("Vercel output refuses other targets and tampered or extra deployment files", async (t) => {
+  await t.test("a direct Cloudflare build cannot become Vercel output", (t) => {
+    const { base, snapshot } = built(t, "cloudflare");
+    const output = path.join(base, "wrong-vercel");
+    assert.throws(() => vercelOutput(snapshot, output), /vercel target/);
+    assert.equal(existsSync(output), false);
+  });
+  const deployNever = () => assert.fail("The CLI must not run for rejected output");
+  for (const [name, tamper, message] of [
+    [
+      "changed page",
+      (o) => write(o, ".vercel/output/static/tools.html", "<h1>Edited</h1>\n"),
+      /differs from the verified build/,
+    ],
+    [
+      "extra static file",
+      (o) => write(o, ".vercel/output/static/extra.html", "x"),
+      /differs from the verified build/,
+    ],
+    [
+      "changed routing",
+      (o) => {
+        const c = readJson(path.join(o, ".vercel/output/config.json"));
+        c.routes = [];
+        write(o, ".vercel/output/config.json", c);
+      },
+      /routing configuration differs/,
+    ],
+    [
+      "extra output file",
+      (o) => write(o, ".vercel/output/functions/x.func/index.js", "x"),
+      /Unexpected Vercel output files/,
+    ],
+  ]) {
+    await t.test(name, (t) => {
+      withEnv(t, vercelIds);
+      const { snapshot, output } = vercelBuilt(t);
+      tamper(output);
+      assert.throws(() => deployVercel(snapshot, output, deployNever), message);
+      assert.equal(existsSync(path.join(output, "deployment-record.json")), false);
+    });
+  }
+});
+
+const readyDeployment = {
+  id: "dpl_fixture0deployment",
+  url: "https://tammy-site-abc123-gamma.vercel.app",
+  inspectorUrl: "https://vercel.com/gamma/tammy-site/fixture",
+  readyState: "READY",
+  target: "production",
+  deploymentApiUrl: "https://api.vercel.com/v13/deployments/dpl_fixture0deployment",
+};
+
+test("only a READY production deployment counts as published", () => {
+  const expected = {
+    deployment_id: readyDeployment.id,
+    url: readyDeployment.url,
+    ready_state: "READY",
+    deployment_target: "production",
+  };
+  // `--format=json` from a plain shell prints the deployment object.
+  assert.deepEqual(
+    vercelDeploymentResult(`${JSON.stringify(readyDeployment, null, 2)}\n`),
+    expected,
+  );
+  // Under an AI agent the CLI wraps it, and may print notices first.
+  assert.deepEqual(
+    vercelDeploymentResult(
+      `Vercel CLI 56.4.1\n${JSON.stringify({ status: "ok", deployment: readyDeployment, next: [] }, null, 2)}\n`,
+    ),
+    expected,
+  );
+  for (const stdout of [
+    "https://tammy-site-abc123-gamma.vercel.app\n",
+    "not json {",
+    JSON.stringify({ status: "error", reason: "upload_failed", deployment: readyDeployment }),
+    JSON.stringify({ ...readyDeployment, readyState: "ERROR" }),
+    JSON.stringify({ ...readyDeployment, target: null }),
+    JSON.stringify({ ...readyDeployment, url: "https://evil.example.com" }),
+    JSON.stringify({ ...readyDeployment, id: "not-a-deployment" }),
+  ])
+    assert.equal(vercelDeploymentResult(stdout), null, stdout);
+});
+
+test("the Vercel CLI environment is an allowlist", (t) => {
+  withEnv(t, { ...vercelIds, VERCEL_TOKEN: testToken, VERCEL_SCOPE_EXTRA: "dropped" });
+  const saved = {};
+  for (const key of ["CLAUDECODE", "CODEX_THREAD_ID", "AI_AGENT", "GITHUB_TOKEN", "NPM_TOKEN"]) {
+    saved[key] = process.env[key];
+    process.env[key] = "must-not-reach-the-cli";
+  }
+  t.after(() => {
+    for (const [key, value] of Object.entries(saved))
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+  });
+  const env = vercelEnvironment();
+  for (const key of Object.keys(saved)) assert.equal(env[key], undefined, key);
+  assert.equal(env.VERCEL_SCOPE_EXTRA, undefined);
+  assert.equal(env.PATH, process.env.PATH);
+  assert.equal(env.VERCEL_TOKEN, testToken);
+  assert.equal(env.VERCEL_ORG_ID, vercelIds.VERCEL_ORG_ID);
+  assert.equal(env.VERCEL_PROJECT_ID, vercelIds.VERCEL_PROJECT_ID);
+  assert.equal(env.VERCEL_TELEMETRY_DISABLED, "1");
+});
+
+test("Vercel deployment takes credentials only from the environment and records the result", async (t) => {
+  await t.test("missing project identity stops before the CLI", (t) => {
+    withEnv(t, { VERCEL_TOKEN: testToken });
+    const { snapshot, output } = vercelBuilt(t);
+    assert.throws(
+      () => deployVercel(snapshot, output, () => assert.fail("CLI must not run")),
+      /VERCEL_ORG_ID and VERCEL_PROJECT_ID/,
+    );
+    assert.equal(existsSync(path.join(output, "deployment-record.json")), false);
+  });
+  await t.test("GitHub Actions requires a token", (t) => {
+    withEnv(t, { ...vercelIds, GITHUB_ACTIONS: "true" });
+    assert.throws(() => vercelEnvironment(), /VERCEL_TOKEN/);
+  });
+  await t.test("a stray vercel.json beside the output stops before the CLI", (t) => {
+    withEnv(t, { ...vercelIds, VERCEL_TOKEN: testToken });
+    const { snapshot, output } = vercelBuilt(t);
+    write(output, "vercel.json", { cleanUrls: false });
+    assert.throws(
+      () => deployVercel(snapshot, output, () => assert.fail("CLI must not run")),
+      /Unexpected files beside the Vercel output: vercel\.json/,
+    );
+    assert.equal(existsSync(path.join(output, "deployment-record.json")), false);
+  });
+  await t.test("published deployment", (t) => {
+    withEnv(t, { ...vercelIds, VERCEL_TOKEN: testToken });
+    const { snapshot, output, manifest, commitSha } = vercelBuilt(t);
+    const calls = [];
+    const record = deployVercel(snapshot, output, (command, args, cwd, env) => {
+      calls.push({ command, args, cwd, env });
+      return `${JSON.stringify({ status: "ok", deployment: readyDeployment }, null, 2)}\n`;
+    });
+    assert.equal(calls.length, 1);
+    const [call] = calls;
+    assert.equal(call.command, "npx");
+    assert.deepEqual(call.args, [
+      "--yes",
+      `vercel@${VERCEL_CLI_VERSION}`,
+      "deploy",
+      "--prebuilt",
+      "--prod",
+      "--yes",
+      "--format=json",
+    ]);
+    assert.equal(call.cwd, realpathSync(output));
+    assert.ok(!call.args.join(" ").includes(testToken), "token must not be a CLI argument");
+    assert.equal(call.env.VERCEL_TOKEN, testToken);
+    assert.equal(record.status, "published");
+    assert.equal(record.url, readyDeployment.url);
+    assert.equal(record.deployment_id, readyDeployment.id);
+    assert.equal(record.deployment_target, "production");
+    assert.equal(record.github.commit_sha, commitSha);
+    assert.equal(record.static_sha256, manifest.static_sha256);
+    const saved = readJson(path.join(output, "deployment-record.json"));
+    assert.deepEqual(saved, record);
+    assert.ok(!JSON.stringify(saved).includes(testToken));
+    assert.throws(
+      () => deployVercel(snapshot, output, () => assert.fail("no second deploy")),
+      /already exists/,
+    );
+  });
+  for (const [name, cli, kept] of [
+    [
+      "CLI failure keeps its output",
+      () => {
+        const error = new Error("fixture CLI failure");
+        error.stdout = `{"status":"error","reason":"upload_failed","token":"${testToken}"}`;
+        throw error;
+      },
+      /upload_failed/,
+    ],
+    [
+      "a preview deployment is not published",
+      () => JSON.stringify({ ...readyDeployment, target: null }),
+      /dpl_fixture0deployment/,
+    ],
+    [
+      "bare URL output is not trusted",
+      () => "https://tammy-site-abc123-gamma.vercel.app\n",
+      /tammy-site-abc123/,
+    ],
+  ]) {
+    await t.test(name, (t) => {
+      withEnv(t, { ...vercelIds, VERCEL_TOKEN: testToken });
+      const { snapshot, output } = vercelBuilt(t);
+      assert.throws(() => deployVercel(snapshot, output, cli));
+      const saved = readJson(path.join(output, "deployment-record.json"));
+      assert.equal(saved.status, "outcome-uncertain");
+      assert.equal(saved.url, null);
+      assert.match(saved.cli_output, kept);
+      assert.ok(!JSON.stringify(saved).includes(testToken), "token must be redacted");
+    });
   }
 });

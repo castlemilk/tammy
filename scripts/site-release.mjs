@@ -20,6 +20,25 @@ import { isDeepStrictEqual } from "node:util";
 
 export const PROJECT_ID = "appgprj_6a93f33631748191b7c064c033f72b53";
 export const CLOUDFLARE_WORKER_NAME = "tammy-site-direct";
+export const TARGETS = ["sites", "cloudflare", "vercel"];
+export const VERCEL_PROJECT_NAME = "tammy-site";
+export const VERCEL_CLI_VERSION = "56.4.1";
+// Routing that Vercel CLI 56.4.1 `vercel build` generates for a static folder with
+// cleanUrls: true, trailingSlash: false and the two header rules below. Emitting it
+// here keeps the deployed bytes exactly the verified build output.
+export const VERCEL_ROUTES = [
+  { src: "^/(?:(.+)/)?index(?:\\.html)?/?$", headers: { Location: "/$1" }, status: 308 },
+  { src: "^/(.*)\\.html/?$", headers: { Location: "/$1" }, status: 308 },
+  { src: "^/(.*)/$", headers: { Location: "/$1" }, status: 308 },
+  { src: "^(?:/(.*))\\.rsc$", headers: { "Content-Type": "text/x-component" }, continue: true },
+  {
+    src: "^/_next/static(?:/(.*))$",
+    headers: { "Cache-Control": "public, max-age=31536000, immutable" },
+    continue: true,
+  },
+  { handle: "error" },
+  { status: 404, src: "^(?!/api).*$", dest: "/404" },
+];
 export const SOURCE_PATHS = [
   "apps/site",
   "packages/invoices",
@@ -115,7 +134,7 @@ function safeSourcePath(name) {
     fail(`Unexpected generated or sensitive source path: ${name}`);
 }
 export function prepare(root, output, target = "sites") {
-  if (!["sites", "cloudflare"].includes(target)) fail("Unknown release target.");
+  if (!TARGETS.includes(target)) fail("Unknown release target.");
   root = realpathSync(root);
   if (capture("git", ["rev-parse", "--show-toplevel"], root).trim() !== root)
     fail("Prepare from the GitHub repository root.");
@@ -217,7 +236,7 @@ export function verifySource(root) {
   )
     fail("Invalid source provenance.");
   if (
-    !["sites", "cloudflare"].includes(source.target) ||
+    !TARGETS.includes(source.target) ||
     json(path.join(root, ".release-target.json")).target !== source.target
   )
     fail("Release target differs from the prepared source.");
@@ -416,16 +435,28 @@ function workerFiles(root, target = "sites") {
   const dist = path.join(root, "dist");
   const files = inventory(dist);
   rejectSecrets(files.map((entry) => entry.path));
-  for (const required of [
-    "server/index.js",
-    "server/wrangler.json",
-    ...(target === "sites" ? [".openai/hosting.json"] : []),
-  ])
-    if (!files.some((entry) => entry.path === required)) fail(`Missing Worker output: ${required}`);
+  if (target === "vercel") {
+    // Static export: every route is prerendered HTML served from dist/client.
+    for (const required of ["client/index.html", "client/404.html"])
+      if (!files.some((entry) => entry.path === required))
+        fail(`Missing static export output: ${required}`);
+  } else
+    for (const required of [
+      "server/index.js",
+      "server/wrangler.json",
+      ...(target === "sites" ? [".openai/hosting.json"] : []),
+    ])
+      if (!files.some((entry) => entry.path === required))
+        fail(`Missing Worker output: ${required}`);
   if (!files.some((entry) => entry.path.startsWith("client/") && entry.path.endsWith(".wasm")))
     fail("Missing invoice PDF WASM asset in client output.");
   if (target === "sites") assertHosting(json(path.join(dist, ".openai/hosting.json")));
-  else {
+  else if (target === "vercel") {
+    if (existsSync(path.join(dist, ".openai")))
+      fail("Vercel output must not contain Sites deployment metadata.");
+    if (existsSync(path.join(dist, "server/wrangler.json")))
+      fail("Vercel static output must not contain a Worker configuration.");
+  } else {
     if (existsSync(path.join(dist, ".openai")))
       fail("Direct Cloudflare output must not contain Sites deployment metadata.");
     assertCloudflareConfig(json(path.join(dist, "server/wrangler.json")));
@@ -510,7 +541,14 @@ export function bundle(root, output) {
     schema_version: 1,
     target: source.target,
     kind:
-      source.target === "cloudflare" ? "cloudflare-worker-build" : "github-source-and-worker-build",
+      source.target === "cloudflare"
+        ? "cloudflare-worker-build"
+        : source.target === "vercel"
+          ? "vercel-static-build"
+          : "github-source-and-worker-build",
+    ...(source.target === "vercel"
+      ? { vercel: { project: VERCEL_PROJECT_NAME, static_directory: "dist/client", url: null } }
+      : {}),
     ...(source.target === "cloudflare"
       ? {
           cloudflare: {
@@ -885,6 +923,233 @@ export async function deployCloudflare(root, output, options = {}) {
     throw error;
   }
 }
+function staticFiles(built) {
+  // Hidden build metadata such as client/.vite stays out of the public deployment.
+  return built.files
+    .filter((entry) => entry.path.startsWith("client/"))
+    .map((entry) => ({ ...entry, path: entry.path.slice("client/".length) }))
+    .filter((entry) => !entry.path.split("/").some((part) => part.startsWith(".")));
+}
+function vercelConfig(files) {
+  const overrides = {};
+  for (const entry of files)
+    if (entry.path.endsWith(".html")) overrides[entry.path] = { path: entry.path.slice(0, -5) };
+  return { version: 3, routes: VERCEL_ROUTES, overrides };
+}
+function assertVercelOutput(out, expected) {
+  const staticRoot = path.join(out, ".vercel/output/static");
+  const deployed = inventory(staticRoot);
+  if (digest(deployed) !== digest(expected))
+    fail("Vercel static output differs from the verified build; regenerate it.");
+  const configFile = path.join(out, ".vercel/output/config.json");
+  if (!isDeepStrictEqual(json(configFile), vercelConfig(expected)))
+    fail("Vercel routing configuration differs from the reviewed routes; regenerate it.");
+  const extra = regularFiles(path.join(out, ".vercel/output")).filter(
+    (name) => name !== "config.json" && !name.startsWith("static/"),
+  );
+  if (extra.length) fail(`Unexpected Vercel output files: ${extra.join(", ")}`);
+  return { static_sha256: digest(deployed), config_sha256: hash(readFileSync(configFile)) };
+}
+export function vercelOutput(root, output) {
+  const { source, built } = verify(root);
+  if (source.target !== "vercel")
+    fail("Vercel output requires a vercel target; prepare the source with --target vercel.");
+  const files = staticFiles(built);
+  const out = newOutput(root, output);
+  const staticRoot = path.join(out, ".vercel/output/static");
+  for (const entry of files) {
+    const target = path.join(staticRoot, entry.path);
+    mkdirSync(path.dirname(target), { recursive: true });
+    cpSync(path.join(root, "dist/client", entry.path), target);
+  }
+  writeJson(path.join(out, ".vercel/output/config.json"), vercelConfig(files));
+  const hashes = assertVercelOutput(out, files);
+  const manifest = {
+    schema_version: 1,
+    target: "vercel",
+    kind: "vercel-prebuilt-output",
+    project: VERCEL_PROJECT_NAME,
+    github: source.github,
+    source_sha256: source.source_sha256,
+    build_sha256: built.build_sha256,
+    ...hashes,
+    files: files.length,
+    publication: "not-performed",
+  };
+  writeJson(path.join(out, "vercel-output-manifest.json"), manifest);
+  return manifest;
+}
+// The Vercel CLI gets only what it needs to run npx, find its signed-in session or
+// reach the network. Everything else, including other tokens and the variables it
+// uses to detect AI agents, stays out of its environment.
+const VERCEL_CLI_ENV = new Set([
+  "PATH",
+  "HOME",
+  "USER",
+  "LOGNAME",
+  "USERPROFILE",
+  "APPDATA",
+  "LOCALAPPDATA",
+  "SYSTEMROOT",
+  "COMSPEC",
+  "TMPDIR",
+  "TMP",
+  "TEMP",
+  "LANG",
+  "LC_ALL",
+  "LC_CTYPE",
+  "XDG_CACHE_HOME",
+  "XDG_CONFIG_HOME",
+  "XDG_DATA_HOME",
+  "NODE_EXTRA_CA_CERTS",
+  "HTTPS_PROXY",
+  "HTTP_PROXY",
+  "NO_PROXY",
+  "https_proxy",
+  "http_proxy",
+  "no_proxy",
+  "npm_config_cache",
+  "npm_config_registry",
+]);
+export function vercelEnvironment() {
+  const env = Object.fromEntries(
+    Object.entries(process.env).filter(([key]) => VERCEL_CLI_ENV.has(key)),
+  );
+  const { VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID } = process.env;
+  if (
+    !/^team_[A-Za-z0-9]+$/.test(VERCEL_ORG_ID ?? "") ||
+    !/^prj_[A-Za-z0-9]+$/.test(VERCEL_PROJECT_ID ?? "") ||
+    (process.env.GITHUB_ACTIONS === "true" && !VERCEL_TOKEN)
+  )
+    fail(
+      "Vercel deployment requires VERCEL_ORG_ID and VERCEL_PROJECT_ID, and existing authorized authentication; GitHub Actions also requires VERCEL_TOKEN. No login or credential creation is performed.",
+    );
+  Object.assign(env, {
+    VERCEL_ORG_ID,
+    VERCEL_PROJECT_ID,
+    VERCEL_TELEMETRY_DISABLED: "1",
+    CI: "true",
+  });
+  if (VERCEL_TOKEN) env.VERCEL_TOKEN = VERCEL_TOKEN;
+  return env;
+}
+// `deploy --format=json` prints the deployment object; when the CLI decides it is
+// running under an agent it wraps it as { status: "ok", deployment }. Accept either,
+// and only a production deployment that is READY.
+export function vercelDeploymentResult(stdout) {
+  const text = String(stdout ?? "");
+  const start = text.indexOf("{");
+  const end = text.lastIndexOf("}");
+  if (start < 0 || end < start) return null;
+  let parsed;
+  try {
+    parsed = JSON.parse(text.slice(start, end + 1));
+  } catch {
+    return null;
+  }
+  if (parsed?.status !== undefined && parsed.status !== "ok") return null;
+  const deployment = parsed?.deployment ?? parsed;
+  if (
+    !/^dpl_[A-Za-z0-9]+$/.test(deployment?.id ?? "") ||
+    !/^https:\/\/[a-z0-9.-]+\.vercel\.app$/.test(deployment?.url ?? "") ||
+    deployment.readyState !== "READY" ||
+    deployment.target !== "production"
+  )
+    return null;
+  return {
+    deployment_id: deployment.id,
+    url: deployment.url,
+    ready_state: deployment.readyState,
+    deployment_target: deployment.target,
+  };
+}
+function outputTail(value, token) {
+  const text = String(value ?? "").slice(-4000);
+  return token ? text.split(token).join("[redacted]") : text;
+}
+export function deployVercel(root, output, runCli = capture) {
+  const { source, built } = verify(root);
+  if (source.target !== "vercel")
+    fail("Vercel deployment requires a vercel target, not a Sites or Worker artifact.");
+  if (
+    !output ||
+    !path.isAbsolute(output) ||
+    !existsSync(path.join(output, "vercel-output-manifest.json"))
+  )
+    fail("Pass --output with the absolute directory written by vercel-output.");
+  const out = realpathSync(output);
+  if (inside(realpathSync(root), out)) fail("Vercel output must be outside the source checkout.");
+  // The CLI reads local configuration such as vercel.json from its working directory.
+  const unexpected = [
+    ...readdirSync(out).filter(
+      (name) =>
+        ![".vercel", "vercel-output-manifest.json", "deployment-record.json"].includes(name),
+    ),
+    ...readdirSync(path.join(out, ".vercel"))
+      .filter((name) => name !== "output")
+      .map((name) => `.vercel/${name}`),
+  ];
+  if (unexpected.length)
+    fail(`Unexpected files beside the Vercel output: ${unexpected.join(", ")}`);
+  const manifest = json(path.join(out, "vercel-output-manifest.json"));
+  const hashes = assertVercelOutput(out, staticFiles(built));
+  if (
+    manifest.github?.commit_sha !== source.github.commit_sha ||
+    manifest.build_sha256 !== built.build_sha256 ||
+    manifest.static_sha256 !== hashes.static_sha256 ||
+    manifest.config_sha256 !== hashes.config_sha256
+  )
+    fail("Vercel output manifest does not match this verified build.");
+  const recordPath = path.join(out, "deployment-record.json");
+  if (existsSync(recordPath))
+    fail("A deployment record already exists; inspect it before retrying.");
+  const env = vercelEnvironment();
+  const record = {
+    schema_version: 1,
+    target: "vercel",
+    project: VERCEL_PROJECT_NAME,
+    vercel: { org_id: env.VERCEL_ORG_ID, project_id: env.VERCEL_PROJECT_ID },
+    cli: `vercel@${VERCEL_CLI_VERSION}`,
+    github: source.github,
+    source_sha256: source.source_sha256,
+    build_sha256: built.build_sha256,
+    ...hashes,
+    status: "deploying",
+    url: null,
+    live_verification: "pending",
+  };
+  writeJson(recordPath, record);
+  let stdout = "";
+  try {
+    stdout = runCli(
+      "npx",
+      [
+        "--yes",
+        `vercel@${VERCEL_CLI_VERSION}`,
+        "deploy",
+        "--prebuilt",
+        "--prod",
+        "--yes",
+        "--format=json",
+      ],
+      out,
+      env,
+    );
+    const result = vercelDeploymentResult(stdout);
+    if (!result)
+      throw new Error(
+        "Vercel CLI did not report a READY production deployment; inspect the project.",
+      );
+    Object.assign(record, { status: "published", ...result });
+    writeJson(recordPath, record);
+    return record;
+  } catch (error) {
+    record.status = "outcome-uncertain";
+    record.cli_output = outputTail(stdout || error?.stdout, env.VERCEL_TOKEN);
+    writeJson(recordPath, record);
+    throw error;
+  }
+}
 async function main() {
   const [command, ...args] = process.argv.slice(2);
   const options = {};
@@ -892,7 +1157,7 @@ async function main() {
     const key = args.shift();
     if (!["--output", "--sites-plugin", "--target"].includes(key) || !args[0] || options[key])
       fail(
-        "Usage: site-release.mjs prepare|build|verify|bundle|package|cloudflare-dry-run|cloudflare-deploy [--target sites|cloudflare] [--output ABS_DIR] [--sites-plugin ABS_PLUGIN_ROOT]",
+        "Usage: site-release.mjs prepare|build|verify|bundle|package|cloudflare-dry-run|cloudflare-deploy|vercel-output|vercel-deploy [--target sites|cloudflare|vercel] [--output ABS_DIR] [--sites-plugin ABS_PLUGIN_ROOT]",
       );
     options[key] = args.shift();
   }
@@ -917,9 +1182,11 @@ async function main() {
   else if (command === "cloudflare-dry-run") result = cloudflareDryRun(root, options["--output"]);
   else if (command === "cloudflare-deploy")
     result = await deployCloudflare(root, options["--output"]);
+  else if (command === "vercel-output") result = vercelOutput(root, options["--output"]);
+  else if (command === "vercel-deploy") result = deployVercel(root, options["--output"]);
   else
     fail(
-      "Expected prepare, build, verify, bundle, package, cloudflare-dry-run or cloudflare-deploy.",
+      "Expected prepare, build, verify, bundle, package, cloudflare-dry-run, cloudflare-deploy, vercel-output or vercel-deploy.",
     );
   console.log(
     JSON.stringify(
