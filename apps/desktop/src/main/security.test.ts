@@ -1133,8 +1133,8 @@ describe("Electron boundary installation", () => {
     const openExternal = vi.fn(async () => undefined);
     const recordHandoff = vi.fn();
     const now = vi.fn(() => new Date("2026-08-31T03:14:15.926Z"));
-    const privacyUrl = "https://tammy-accounting.castlemilk.chatgpt.site/privacy";
-    const supportUrl = "https://tammy-accounting.castlemilk.chatgpt.site/support";
+    const privacyUrl = "https://tammy.tax/privacy";
+    const supportUrl = "https://tammy.tax/support";
     const webContents = {
       getURL: vi.fn(() => PRODUCTION_APP_URL),
       on: vi.fn(),

@@ -1140,7 +1140,11 @@ export function deployVercel(root, output, runCli = capture) {
       throw new Error(
         "Vercel CLI did not report a READY production deployment; inspect the project.",
       );
-    Object.assign(record, { status: "published", ...result });
+    Object.assign(record, {
+      status: "published",
+      deployed_at: new Date().toISOString(),
+      ...result,
+    });
     writeJson(recordPath, record);
     return record;
   } catch (error) {

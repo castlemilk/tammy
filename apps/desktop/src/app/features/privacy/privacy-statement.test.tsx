@@ -43,10 +43,10 @@ describe("PrivacyStatement", () => {
 
     expect(
       screen.getByRole("link", { name: "Read the published privacy policy" }).getAttribute("href"),
-    ).toBe("https://tammy-accounting.castlemilk.chatgpt.site/privacy");
+    ).toBe("https://tammy.tax/privacy");
     expect(
       screen.getByRole("link", { name: "Support and privacy requests" }).getAttribute("href"),
-    ).toBe("https://tammy-accounting.castlemilk.chatgpt.site/support");
+    ).toBe("https://tammy.tax/support");
   });
 });
 

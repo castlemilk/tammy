@@ -16,8 +16,8 @@ const execFile = promisify(nodeExecFile);
 const SHA256 = /^[0-9a-f]{64}$/u;
 const SHA40 = /^[0-9a-f]{40}$/u;
 const VERSION = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/u;
-const PRIVACY_URL = "https://tammy-accounting.castlemilk.chatgpt.site/privacy";
-const SUPPORT_URL = "https://tammy-accounting.castlemilk.chatgpt.site/support";
+const PRIVACY_URL = "https://tammy.tax/privacy";
+const SUPPORT_URL = "https://tammy.tax/support";
 const HELPERS = [
   "com.tammy.desktop.helper",
   "com.tammy.desktop.helper.GPU",

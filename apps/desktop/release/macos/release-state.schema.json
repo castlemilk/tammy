@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://tammy-accounting.castlemilk.chatgpt.site/schemas/macos-release-state-v1.json",
+  "$id": "https://tammy.tax/schemas/macos-release-state-v1.json",
   "title": "Tammy macOS release state and redacted evidence contract",
   "oneOf": [
     { "$ref": "#/$defs/releaseStateRecord" },

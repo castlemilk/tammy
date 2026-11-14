@@ -245,7 +245,7 @@ function validateMetadataSnapshot(value) {
     !SHA256.test(value.metadataSha256) ||
     !SHA256.test(value.policySha256) ||
     value.exportCompliance !== "exempt" ||
-    value.publicSiteOrigin !== "https://tammy-accounting.castlemilk.chatgpt.site" ||
+    value.publicSiteOrigin !== "https://tammy.tax" ||
     !/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/u.test(value.publicSiteDeploymentId) ||
     !/^[1-9]\d*$/u.test(value.publicSiteVersion)
   ) {

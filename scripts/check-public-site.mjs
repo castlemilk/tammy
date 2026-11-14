@@ -1,5 +1,5 @@
-import { spawn } from "node:child_process";
-import { randomUUID } from "node:crypto";
+import { execFileSync, spawn } from "node:child_process";
+import { createHash, randomUUID } from "node:crypto";
 import { lstat, mkdir, readFile, realpath, rename, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -25,7 +25,8 @@ const DEPLOYMENT_KEYS = [
 ];
 const ROUTE_KEYS = ["check", "contentType", "path", "status"];
 const SAFE_IDENTIFIER = /^[A-Za-z0-9][A-Za-z0-9._~-]{0,255}$/;
-const TRUSTED_PUBLIC_ORIGIN = "https://tammy-accounting.castlemilk.chatgpt.site";
+const TRUSTED_PUBLIC_ORIGIN = "https://tammy.tax";
+const PROVIDERS = ["OpenAI Sites", "Vercel"];
 
 function validateOrigin(origin, mode) {
   let parsed;
@@ -312,7 +313,8 @@ function assertIdentifier(value, label) {
 
 export function validatePublicSiteDeployment(record, { expectedProjectId } = {}) {
   assertExactKeys(record, DEPLOYMENT_KEYS, "record");
-  if (record.schemaVersion !== 1 || record.provider !== "OpenAI Sites") {
+  // Records for the former Sites host stay valid as history; tammy.tax is on Vercel.
+  if (record.schemaVersion !== 1 || !PROVIDERS.includes(record.provider)) {
     throw new Error("Public site deployment provider/schema is invalid");
   }
   if (record.access !== "public") {
@@ -320,6 +322,17 @@ export function validatePublicSiteDeployment(record, { expectedProjectId } = {})
   }
   for (const field of ["projectId", "versionId", "deploymentId"]) {
     assertIdentifier(record[field], field);
+  }
+  if (
+    record.provider === "Vercel" &&
+    (!/^prj_[A-Za-z0-9]+$/.test(record.projectId) ||
+      !/^dpl_[A-Za-z0-9]+$/.test(record.deploymentId) ||
+      record.versionId !== record.deploymentId)
+  ) {
+    // A Vercel deployment is an immutable build, so it is also the served version.
+    throw new Error(
+      "Vercel deployment evidence needs a prj_ project and a dpl_ deployment as its version",
+    );
   }
   if (expectedProjectId !== undefined && record.projectId !== expectedProjectId) {
     throw new Error("Public site deployment project ID does not match");
@@ -567,6 +580,67 @@ export async function createRollbackEvent({
   return { event, eventPath };
 }
 
+/**
+ * Records a production deployment made by the Cuttlefish CI Vercel job as the current
+ * public-site evidence. The live three-route check must pass, and the policy hash is
+ * taken from PRIVACY.md at the deployed commit, which must equal the working tree's.
+ */
+export async function recordVercelDeployment({
+  origin,
+  deploymentRecordPath,
+  recordsRoot = "docs/release/public-site",
+  repositoryRoot = process.cwd(),
+  fetchImpl = fetch,
+  readPolicyAtCommit = (commit) =>
+    execFileSync("git", ["show", `${commit}:PRIVACY.md`], {
+      cwd: repositoryRoot,
+      maxBuffer: 4 * 1024 * 1024,
+    }),
+}) {
+  if (origin !== TRUSTED_PUBLIC_ORIGIN) {
+    throw new Error(`Vercel deployments are recorded only for ${TRUSTED_PUBLIC_ORIGIN}`);
+  }
+  const vercel = JSON.parse(await readFile(deploymentRecordPath, "utf8"));
+  const deployedAt = vercel?.deployed_at;
+  if (
+    vercel?.target !== "vercel" ||
+    vercel.status !== "published" ||
+    vercel.deployment_target !== "production" ||
+    !/^dpl_[A-Za-z0-9]+$/.test(vercel.deployment_id ?? "") ||
+    !/^prj_[A-Za-z0-9]+$/.test(vercel.vercel?.project_id ?? "") ||
+    !/^[0-9a-f]{40}$/.test(vercel.github?.commit_sha ?? "") ||
+    typeof deployedAt !== "string"
+  ) {
+    throw new Error(
+      "Expected a published production record from site-release.mjs vercel-deploy, with deployed_at",
+    );
+  }
+  const deployedPolicy = Buffer.from(readPolicyAtCommit(vercel.github.commit_sha));
+  const currentPolicy = await readFile(path.join(repositoryRoot, "PRIVACY.md"));
+  if (!deployedPolicy.equals(currentPolicy)) {
+    throw new Error(
+      "PRIVACY.md differs from the deployed commit; record a deployment of the current policy",
+    );
+  }
+  const result = await checkPublicSite({ origin, mode: "deployed", fetchImpl });
+  const record = {
+    schemaVersion: 1,
+    provider: "Vercel",
+    access: "public",
+    projectId: vercel.vercel.project_id,
+    versionId: vercel.deployment_id,
+    deploymentId: vercel.deployment_id,
+    origin: result.origin,
+    deployedAt,
+    sourceCommit: vercel.github.commit_sha,
+    policySha256: createHash("sha256").update(deployedPolicy).digest("hex"),
+    routes: result.routes,
+  };
+  const evidencePath = await writePublicSiteDeployment({ record, recordsRoot });
+  const pointerPath = await writeCurrentPublicSitePointer({ record, evidencePath, recordsRoot });
+  return { record, evidencePath, pointerPath };
+}
+
 function waitForExit(child) {
   return new Promise((resolve) => child.once("exit", resolve));
 }
@@ -643,8 +717,24 @@ async function main(argv) {
   const originIndex = argv.indexOf("--origin");
   const wantsEvidence = argv.includes("--write-evidence");
   const readOnly = argv.includes("--read-only");
+  const recordIndex = argv.indexOf("--record-vercel-deployment");
   if (builtPreviewIndex >= 0 === originIndex >= 0 || (wantsEvidence && readOnly)) {
     throw new Error("Choose exactly one of --built-preview <directory> or --origin <https-url>");
+  }
+  if (recordIndex >= 0) {
+    if (originIndex < 0 || wantsEvidence || readOnly || !argv[recordIndex + 1]) {
+      throw new Error(
+        "Use --origin https://tammy.tax --record-vercel-deployment <deployment-record.json>",
+      );
+    }
+    const recorded = await recordVercelDeployment({
+      origin: argv[originIndex + 1],
+      deploymentRecordPath: path.resolve(argv[recordIndex + 1]),
+    });
+    process.stdout.write(
+      `${JSON.stringify({ evidencePath: recorded.evidencePath, pointerPath: recorded.pointerPath, deploymentId: recorded.record.deploymentId })}\n`,
+    );
+    return;
   }
 
   let preview;

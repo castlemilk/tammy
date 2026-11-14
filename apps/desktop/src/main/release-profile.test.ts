@@ -26,8 +26,8 @@ const releaseFacts: MacOSReleaseFacts = {
   },
   marketingVersion: "0.1.0",
   publicLinks: {
-    privacyPolicy: "https://tammy-accounting.castlemilk.chatgpt.site/privacy",
-    support: "https://tammy-accounting.castlemilk.chatgpt.site/support",
+    privacyPolicy: "https://tammy.tax/privacy",
+    support: "https://tammy.tax/support",
   },
   target: "mas/arm64",
 };
@@ -38,10 +38,10 @@ function distributionEnvironment(): NodeJS.ProcessEnv {
     TAMMY_MACOS_EXPORT_COMPLIANCE: "exempt",
     TAMMY_MACOS_INSTALLER_IDENTITY: "Mac Installer Distribution: Tammy Pty Ltd (ABCDE12345)",
     TAMMY_MACOS_PROVISIONING_PROFILE: provisioningProfile,
-    TAMMY_MACOS_PRIVACY_POLICY_URL: "https://tammy-accounting.castlemilk.chatgpt.site/privacy",
+    TAMMY_MACOS_PRIVACY_POLICY_URL: "https://tammy.tax/privacy",
     TAMMY_MACOS_SIGNING_IDENTITY: "Apple Distribution: Tammy Pty Ltd (ABCDE12345)",
     TAMMY_MACOS_SIGNING_MODE: "distribution",
-    TAMMY_MACOS_SUPPORT_URL: "https://tammy-accounting.castlemilk.chatgpt.site/support",
+    TAMMY_MACOS_SUPPORT_URL: "https://tammy.tax/support",
     TAMMY_MACOS_TARGET: "mas/arm64",
     TAMMY_MACOS_TEAM_ID: "ABCDE12345",
     TAMMY_RELEASE_PROFILE: "mas",
@@ -112,13 +112,13 @@ describe("createMacOSReleaseProfile", () => {
       ITSAppUsesNonExemptEncryption: false,
       LSMinimumSystemVersion: "14.0",
       NSHumanReadableCopyright: "© 2026 Gamma Systems Pty Ltd",
-      TammyPrivacyPolicyURL: "https://tammy-accounting.castlemilk.chatgpt.site/privacy",
-      TammySupportURL: "https://tammy-accounting.castlemilk.chatgpt.site/support",
+      TammyPrivacyPolicyURL: "https://tammy.tax/privacy",
+      TammySupportURL: "https://tammy.tax/support",
     });
     expect(Object.isExtensible(profile.info)).toBe(true);
     expect(profile.publicLinks).toEqual({
-      privacyPolicy: "https://tammy-accounting.castlemilk.chatgpt.site/privacy",
-      support: "https://tammy-accounting.castlemilk.chatgpt.site/support",
+      privacyPolicy: "https://tammy.tax/privacy",
+      support: "https://tammy.tax/support",
     });
     expect(profile.sign.type).toBe("distribution");
     expect(profile.sign.provisioningProfile).toBe(provisioningProfile);

@@ -1796,6 +1796,8 @@ test("Vercel deployment takes credentials only from the environment and records 
     assert.equal(record.url, readyDeployment.url);
     assert.equal(record.deployment_id, readyDeployment.id);
     assert.equal(record.deployment_target, "production");
+    // The public-site evidence record takes its deployedAt from this field.
+    assert.match(record.deployed_at, /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
     assert.equal(record.github.commit_sha, commitSha);
     assert.equal(record.static_sha256, manifest.static_sha256);
     const saved = readJson(path.join(output, "deployment-record.json"));

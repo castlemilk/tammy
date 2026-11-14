@@ -69,8 +69,8 @@ ${
   helper
     ? ""
     : `<key>CFBundleIconFile</key><string>icon.icns</string>
-<key>TammyPrivacyPolicyURL</key><string>https://tammy-accounting.castlemilk.chatgpt.site/privacy</string>
-<key>TammySupportURL</key><string>https://tammy-accounting.castlemilk.chatgpt.site/support</string>`
+<key>TammyPrivacyPolicyURL</key><string>https://tammy.tax/privacy</string>
+<key>TammySupportURL</key><string>https://tammy.tax/support</string>`
 }
 </dict></plist>\n`;
 }
@@ -91,8 +91,8 @@ function manifestInput(stagingRoot) {
     productSourceCommit: sourceCommit,
     productSourceTree: sourceTree,
     publicLinks: {
-      privacyPolicy: "https://tammy-accounting.castlemilk.chatgpt.site/privacy",
-      support: "https://tammy-accounting.castlemilk.chatgpt.site/support",
+      privacyPolicy: "https://tammy.tax/privacy",
+      support: "https://tammy.tax/support",
     },
     stagingRoot,
   };

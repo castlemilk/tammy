@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { mkdtemp, readdir, readFile, realpath, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -7,12 +8,13 @@ import test from "node:test";
 import {
   checkPublicSite,
   createRollbackEvent,
+  recordVercelDeployment,
   validatePublicSiteDeployment,
   writeCurrentPublicSitePointer,
   writePublicSiteDeployment,
 } from "./check-public-site.mjs";
 
-const origin = "https://tammy-accounting.castlemilk.chatgpt.site";
+const origin = "https://tammy.tax";
 
 const pages = {
   "/": `<!doctype html><html><head>
@@ -528,4 +530,146 @@ test("rollback evidence rejects a symlinked events directory", async (context) =
     /symbolic link|symlink/i,
   );
   assert.deepEqual(await readdir(outside), []);
+});
+
+function vercelDeployment(overrides = {}) {
+  return deployment({
+    provider: "Vercel",
+    projectId: "prj_fixture",
+    versionId: "dpl_fixture",
+    deploymentId: "dpl_fixture",
+    ...overrides,
+  });
+}
+
+test("validates Vercel deployment records, where the deployment is the version", () => {
+  assert.deepEqual(validatePublicSiteDeployment(vercelDeployment()), vercelDeployment());
+  for (const invalid of [
+    vercelDeployment({ versionId: "dpl_other" }),
+    vercelDeployment({ projectId: "project-1" }),
+    vercelDeployment({ deploymentId: "deployment-1", versionId: "deployment-1" }),
+  ])
+    assert.throws(() => validatePublicSiteDeployment(invalid), /Vercel deployment evidence/);
+});
+
+async function vercelRecordFixture(context, overrides = {}) {
+  const base = await mkdtemp(
+    path.join(await realpath(process.env.TMPDIR ?? os.tmpdir()), "tammy-public-site-vercel-"),
+  );
+  context.after(() => rm(base, { recursive: true, force: true }));
+  const policy = Buffer.from("# Tammy privacy policy\n\nEffective 1 January 2027.\n");
+  await writeFile(path.join(base, "PRIVACY.md"), policy);
+  const record = {
+    schemaVersion: 1,
+    target: "vercel",
+    project: "tammy-site",
+    vercel: { org_id: "team_fixture", project_id: "prj_fixture" },
+    github: { repository: "castlemilk/tammy", commit_sha: "c".repeat(40) },
+    status: "published",
+    deployment_id: "dpl_fixture",
+    deployment_target: "production",
+    url: "https://tammy-site-fixture.vercel.app",
+    deployed_at: "2026-11-14T12:00:00.000Z",
+    ...overrides,
+  };
+  const recordPath = path.join(base, "deployment-record.json");
+  await writeFile(recordPath, JSON.stringify(record));
+  return { base, policy, recordPath, recordsRoot: path.join(base, "records") };
+}
+
+test("records a CI Vercel deployment of tammy.tax as current public-site evidence", async (context) => {
+  const { base, policy, recordPath, recordsRoot } = await vercelRecordFixture(context);
+  const commits = [];
+  const { fetchImpl, calls } = mockFetch();
+  const result = await recordVercelDeployment({
+    origin,
+    deploymentRecordPath: recordPath,
+    recordsRoot,
+    repositoryRoot: base,
+    fetchImpl,
+    readPolicyAtCommit: (commit) => {
+      commits.push(commit);
+      return policy;
+    },
+  });
+  assert.deepEqual(commits, ["c".repeat(40)]);
+  assert.deepEqual(calls, [`${origin}/`, `${origin}/privacy`, `${origin}/support`]);
+  assert.deepEqual(result.record, {
+    schemaVersion: 1,
+    provider: "Vercel",
+    access: "public",
+    projectId: "prj_fixture",
+    versionId: "dpl_fixture",
+    deploymentId: "dpl_fixture",
+    origin,
+    deployedAt: "2026-11-14T12:00:00.000Z",
+    sourceCommit: "c".repeat(40),
+    policySha256: createHash("sha256").update(policy).digest("hex"),
+    routes: deployment().routes,
+  });
+  assert.deepEqual(JSON.parse(await readFile(path.join(recordsRoot, "current.json"), "utf8")), {
+    schemaVersion: 1,
+    deploymentEvidence: "deployments/dpl_fixture.json",
+  });
+  assert.deepEqual(
+    JSON.parse(await readFile(path.join(recordsRoot, "deployments/dpl_fixture.json"), "utf8")),
+    result.record,
+  );
+  await assert.rejects(
+    recordVercelDeployment({
+      origin,
+      deploymentRecordPath: recordPath,
+      recordsRoot,
+      repositoryRoot: base,
+      fetchImpl,
+      readPolicyAtCommit: () => policy,
+    }),
+    /exist/i,
+  );
+});
+
+test("refuses to record anything but a passing production deployment of the current policy", async (context) => {
+  const cases = [
+    [
+      "another origin",
+      {},
+      { origin: "https://tammy-accounting.castlemilk.chatgpt.site" },
+      /recorded only for/,
+    ],
+    ["a preview deployment", { deployment_target: "preview" }, {}, /published production record/],
+    ["an uncertain outcome", { status: "outcome-uncertain" }, {}, /published production record/],
+    ["a record without its time", { deployed_at: undefined }, {}, /published production record/],
+    ["a Worker record", { target: "cloudflare" }, {}, /published production record/],
+    [
+      "a different policy at the deployed commit",
+      {},
+      { policy: Buffer.from("older policy\n") },
+      /PRIVACY\.md differs/,
+    ],
+    [
+      "a failing live page",
+      {},
+      { fetchOverrides: { "/support": { status: 500 } } },
+      /unexpected status 500/,
+    ],
+  ];
+  for (const [label, recordOverrides, options, expected] of cases) {
+    const { base, policy, recordPath, recordsRoot } = await vercelRecordFixture(
+      context,
+      recordOverrides,
+    );
+    await assert.rejects(
+      recordVercelDeployment({
+        origin: options.origin ?? origin,
+        deploymentRecordPath: recordPath,
+        recordsRoot,
+        repositoryRoot: base,
+        fetchImpl: mockFetch(options.fetchOverrides).fetchImpl,
+        readPolicyAtCommit: () => options.policy ?? policy,
+      }),
+      expected,
+      label,
+    );
+    await assert.rejects(readdir(recordsRoot), { code: "ENOENT" }, `${label} writes nothing`);
+  }
 });

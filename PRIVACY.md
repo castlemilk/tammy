@@ -50,7 +50,7 @@ The app does not include Gamma-owned analytics, advertising, or tracking. If you
 
 Workspace records remain on your Mac until you remove them. Tammy does not provide an online backup service. If you make copies using macOS or other software, those copies are outside Tammy's control and may remain after you remove a local workspace.
 
-Important accounting, approval, and audit records are retained as linked history. Some records cannot be edited or deleted in place; a correction may be recorded as a new linked entry so the earlier decision remains visible. Removing the Tammy app alone does not remove its encrypted workspace or Keychain items. The [support page](https://tammy-accounting.castlemilk.chatgpt.site/support) describes tested local cleanup steps.
+Important accounting, approval, and audit records are retained as linked history. Some records cannot be edited or deleted in place; a correction may be recorded as a new linked entry so the earlier decision remains visible. Removing the Tammy app alone does not remove its encrypted workspace or Keychain items. The [support page](https://tammy.tax/support) describes tested local cleanup steps.
 
 During workspace setup Tammy may display a one-time recovery code. Store it somewhere secure and separate from your Mac. Support cannot use it to access your workspace, and Gamma Systems cannot recover local records remotely if your access information or workspace is lost.
 

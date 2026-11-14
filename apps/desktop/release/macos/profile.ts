@@ -68,7 +68,7 @@ export interface MacOSReleaseFacts {
   readonly target: string;
 }
 
-const PUBLIC_ORIGIN = "https://tammy-accounting.castlemilk.chatgpt.site";
+const PUBLIC_ORIGIN = "https://tammy.tax";
 
 function exactKeys(value: unknown, expected: readonly string[]): value is Record<string, unknown> {
   return (
