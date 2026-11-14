@@ -53,6 +53,9 @@ Validation: `pnpm --filter sites-project typecheck`, `pnpm --filter sites-projec
 - Site-level `SITE_ORIGIN` now owns canonical URL configuration in shared layout, tools and homepage JSON-LD; the sitemap and llms.txt remain materialized public files.
 - `pnpm --dir apps/site seo:check` scans routes for metadata/canonicals and compares their URLs against the sitemap and llms.txt. CI runs this audit before the production build.
 
+### App Store public-site facts
+The home page must state what `scripts/check-public-site.mjs` requires for App Store evidence: the app name (from the page title), Gamma Systems Pty Ltd, macOS 14, arm64, "preparation-only" and "not lodged". The availability band's version line carries the reporting boundary from `identity.capabilityBoundary`; `tests/landing-app-store-facts.test.tsx` fails if any of these drift.
+
 ### Domain transition (completed 14 November 2026)
 `tammy.tax` is served from Vercel and is the canonical origin: `SITE_ORIGIN`, sitemap, robots.txt, llms.txt and the RSS item links moved together. RSS GUIDs keep their former URLs as non-permalink identifiers so subscribers do not see every post again. The former Sites host stays published with its older build; the desktop app's privacy and support links moved to tammy.tax on the same day.
 
