@@ -979,11 +979,41 @@ export function vercelOutput(root, output) {
   writeJson(path.join(out, "vercel-output-manifest.json"), manifest);
   return manifest;
 }
+// The Vercel CLI gets only what it needs to run npx, find its signed-in session or
+// reach the network. Everything else, including other tokens and the variables it
+// uses to detect AI agents, stays out of its environment.
+const VERCEL_CLI_ENV = new Set([
+  "PATH",
+  "HOME",
+  "USER",
+  "LOGNAME",
+  "USERPROFILE",
+  "APPDATA",
+  "LOCALAPPDATA",
+  "SYSTEMROOT",
+  "COMSPEC",
+  "TMPDIR",
+  "TMP",
+  "TEMP",
+  "LANG",
+  "LC_ALL",
+  "LC_CTYPE",
+  "XDG_CACHE_HOME",
+  "XDG_CONFIG_HOME",
+  "XDG_DATA_HOME",
+  "NODE_EXTRA_CA_CERTS",
+  "HTTPS_PROXY",
+  "HTTP_PROXY",
+  "NO_PROXY",
+  "https_proxy",
+  "http_proxy",
+  "no_proxy",
+  "npm_config_cache",
+  "npm_config_registry",
+]);
 export function vercelEnvironment() {
   const env = Object.fromEntries(
-    Object.entries(process.env).filter(
-      ([key]) => !/^(VERCEL_|CLOUDFLARE_|CF_|WRANGLER_|TAMMY_DEPLOY_TARGET$)/.test(key),
-    ),
+    Object.entries(process.env).filter(([key]) => VERCEL_CLI_ENV.has(key)),
   );
   const { VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID } = process.env;
   if (
@@ -1003,6 +1033,40 @@ export function vercelEnvironment() {
   if (VERCEL_TOKEN) env.VERCEL_TOKEN = VERCEL_TOKEN;
   return env;
 }
+// `deploy --format=json` prints the deployment object; when the CLI decides it is
+// running under an agent it wraps it as { status: "ok", deployment }. Accept either,
+// and only a production deployment that is READY.
+export function vercelDeploymentResult(stdout) {
+  const text = String(stdout ?? "");
+  const start = text.indexOf("{");
+  const end = text.lastIndexOf("}");
+  if (start < 0 || end < start) return null;
+  let parsed;
+  try {
+    parsed = JSON.parse(text.slice(start, end + 1));
+  } catch {
+    return null;
+  }
+  if (parsed?.status !== undefined && parsed.status !== "ok") return null;
+  const deployment = parsed?.deployment ?? parsed;
+  if (
+    !/^dpl_[A-Za-z0-9]+$/.test(deployment?.id ?? "") ||
+    !/^https:\/\/[a-z0-9.-]+\.vercel\.app$/.test(deployment?.url ?? "") ||
+    deployment.readyState !== "READY" ||
+    deployment.target !== "production"
+  )
+    return null;
+  return {
+    deployment_id: deployment.id,
+    url: deployment.url,
+    ready_state: deployment.readyState,
+    deployment_target: deployment.target,
+  };
+}
+function outputTail(value, token) {
+  const text = String(value ?? "").slice(-4000);
+  return token ? text.split(token).join("[redacted]") : text;
+}
 export function deployVercel(root, output, runCli = capture) {
   const { source, built } = verify(root);
   if (source.target !== "vercel")
@@ -1015,6 +1079,18 @@ export function deployVercel(root, output, runCli = capture) {
     fail("Pass --output with the absolute directory written by vercel-output.");
   const out = realpathSync(output);
   if (inside(realpathSync(root), out)) fail("Vercel output must be outside the source checkout.");
+  // The CLI reads local configuration such as vercel.json from its working directory.
+  const unexpected = [
+    ...readdirSync(out).filter(
+      (name) =>
+        ![".vercel", "vercel-output-manifest.json", "deployment-record.json"].includes(name),
+    ),
+    ...readdirSync(path.join(out, ".vercel"))
+      .filter((name) => name !== "output")
+      .map((name) => `.vercel/${name}`),
+  ];
+  if (unexpected.length)
+    fail(`Unexpected files beside the Vercel output: ${unexpected.join(", ")}`);
   const manifest = json(path.join(out, "vercel-output-manifest.json"));
   const hashes = assertVercelOutput(out, staticFiles(built));
   if (
@@ -1043,26 +1119,33 @@ export function deployVercel(root, output, runCli = capture) {
     live_verification: "pending",
   };
   writeJson(recordPath, record);
+  let stdout = "";
   try {
-    const stdout = runCli(
+    stdout = runCli(
       "npx",
-      ["--yes", `vercel@${VERCEL_CLI_VERSION}`, "deploy", "--prebuilt", "--prod", "--yes"],
+      [
+        "--yes",
+        `vercel@${VERCEL_CLI_VERSION}`,
+        "deploy",
+        "--prebuilt",
+        "--prod",
+        "--yes",
+        "--format=json",
+      ],
       out,
       env,
     );
-    const url = stdout
-      .trim()
-      .split("\n")
-      .map((line) => line.trim())
-      .filter((line) => /^https:\/\/[a-z0-9.-]+\.vercel\.app\/?$/.test(line))
-      .at(-1);
-    if (!url) throw new Error("Vercel CLI finished without reporting a deployment URL.");
-    record.status = "published";
-    record.url = url;
+    const result = vercelDeploymentResult(stdout);
+    if (!result)
+      throw new Error(
+        "Vercel CLI did not report a READY production deployment; inspect the project.",
+      );
+    Object.assign(record, { status: "published", ...result });
     writeJson(recordPath, record);
     return record;
   } catch (error) {
     record.status = "outcome-uncertain";
+    record.cli_output = outputTail(stdout || error?.stdout, env.VERCEL_TOKEN);
     writeJson(recordPath, record);
     throw error;
   }

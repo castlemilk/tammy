@@ -35,7 +35,9 @@ VERCEL_ORG_ID=team_xE5DMN3hIo8aPqyHNkBybg8r VERCEL_PROJECT_ID=prj_zlt5QLKUW3Qrdk
   node scripts/site-release.mjs vercel-deploy --output /abs/tammy-vercel-output
 ```
 
-`vercel-deploy` rechecks the static files and routing against the build record, then runs `vercel deploy --prebuilt --prod`. Locally it uses the signed-in Vercel CLI session; in GitHub Actions it requires `VERCEL_TOKEN`. It never takes a token as an argument and never logs in. It writes `deployment-record.json` beside the output: `published` with the deployment URL, or `outcome-uncertain` if the CLI failed or reported no URL. An existing record blocks a second attempt; inspect the project's deployments before retrying.
+`vercel-deploy` rechecks the static files and routing against the build record and refuses any other file beside the output (the CLI would read a stray `vercel.json`). It then runs `vercel deploy --prebuilt --prod --format=json`. Locally it uses the signed-in Vercel CLI session; in GitHub Actions it requires `VERCEL_TOKEN`. It never takes a token as an argument and never logs in, and the CLI receives only an allowlist of environment variables (path, home, temp, locale, proxy and npm settings, plus the three `VERCEL_` values), so other tokens and the variables the CLI uses to detect AI agents never reach it. `npx` fetches the exact `vercel@56.4.1` from npm; it is not in the lockfile.
+
+It writes `deployment-record.json` beside the output. The record is `published` only when the CLI's JSON reports a deployment ID, a `*.vercel.app` URL, `readyState: READY` and `target: production`. Anything else, including a CLI failure, is `outcome-uncertain` with the last 4,000 characters of CLI output kept (any token redacted). An existing record blocks a second attempt; inspect the project's deployments (`vercel ls tammy-site --scope document-analyser`) before retrying.
 
 A production deployment moves every production domain of the project, including tammy.tax, at once.
 

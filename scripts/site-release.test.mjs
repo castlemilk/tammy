@@ -33,6 +33,7 @@ import {
   recordBuild,
   VERCEL_CLI_VERSION,
   VERCEL_ROUTES,
+  vercelDeploymentResult,
   vercelEnvironment,
   vercelOutput,
   verify,
@@ -1681,7 +1682,69 @@ test("Vercel output refuses other targets and tampered or extra deployment files
   }
 });
 
-test("Vercel deployment takes credentials only from the environment and records the URL", async (t) => {
+const readyDeployment = {
+  id: "dpl_fixture0deployment",
+  url: "https://tammy-site-abc123-gamma.vercel.app",
+  inspectorUrl: "https://vercel.com/gamma/tammy-site/fixture",
+  readyState: "READY",
+  target: "production",
+  deploymentApiUrl: "https://api.vercel.com/v13/deployments/dpl_fixture0deployment",
+};
+
+test("only a READY production deployment counts as published", () => {
+  const expected = {
+    deployment_id: readyDeployment.id,
+    url: readyDeployment.url,
+    ready_state: "READY",
+    deployment_target: "production",
+  };
+  // `--format=json` from a plain shell prints the deployment object.
+  assert.deepEqual(
+    vercelDeploymentResult(`${JSON.stringify(readyDeployment, null, 2)}\n`),
+    expected,
+  );
+  // Under an AI agent the CLI wraps it, and may print notices first.
+  assert.deepEqual(
+    vercelDeploymentResult(
+      `Vercel CLI 56.4.1\n${JSON.stringify({ status: "ok", deployment: readyDeployment, next: [] }, null, 2)}\n`,
+    ),
+    expected,
+  );
+  for (const stdout of [
+    "https://tammy-site-abc123-gamma.vercel.app\n",
+    "not json {",
+    JSON.stringify({ status: "error", reason: "upload_failed", deployment: readyDeployment }),
+    JSON.stringify({ ...readyDeployment, readyState: "ERROR" }),
+    JSON.stringify({ ...readyDeployment, target: null }),
+    JSON.stringify({ ...readyDeployment, url: "https://evil.example.com" }),
+    JSON.stringify({ ...readyDeployment, id: "not-a-deployment" }),
+  ])
+    assert.equal(vercelDeploymentResult(stdout), null, stdout);
+});
+
+test("the Vercel CLI environment is an allowlist", (t) => {
+  withEnv(t, { ...vercelIds, VERCEL_TOKEN: testToken, VERCEL_SCOPE_EXTRA: "dropped" });
+  const saved = {};
+  for (const key of ["CLAUDECODE", "CODEX_THREAD_ID", "AI_AGENT", "GITHUB_TOKEN", "NPM_TOKEN"]) {
+    saved[key] = process.env[key];
+    process.env[key] = "must-not-reach-the-cli";
+  }
+  t.after(() => {
+    for (const [key, value] of Object.entries(saved))
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+  });
+  const env = vercelEnvironment();
+  for (const key of Object.keys(saved)) assert.equal(env[key], undefined, key);
+  assert.equal(env.VERCEL_SCOPE_EXTRA, undefined);
+  assert.equal(env.PATH, process.env.PATH);
+  assert.equal(env.VERCEL_TOKEN, testToken);
+  assert.equal(env.VERCEL_ORG_ID, vercelIds.VERCEL_ORG_ID);
+  assert.equal(env.VERCEL_PROJECT_ID, vercelIds.VERCEL_PROJECT_ID);
+  assert.equal(env.VERCEL_TELEMETRY_DISABLED, "1");
+});
+
+test("Vercel deployment takes credentials only from the environment and records the result", async (t) => {
   await t.test("missing project identity stops before the CLI", (t) => {
     withEnv(t, { VERCEL_TOKEN: testToken });
     const { snapshot, output } = vercelBuilt(t);
@@ -1695,13 +1758,23 @@ test("Vercel deployment takes credentials only from the environment and records 
     withEnv(t, { ...vercelIds, GITHUB_ACTIONS: "true" });
     assert.throws(() => vercelEnvironment(), /VERCEL_TOKEN/);
   });
+  await t.test("a stray vercel.json beside the output stops before the CLI", (t) => {
+    withEnv(t, { ...vercelIds, VERCEL_TOKEN: testToken });
+    const { snapshot, output } = vercelBuilt(t);
+    write(output, "vercel.json", { cleanUrls: false });
+    assert.throws(
+      () => deployVercel(snapshot, output, () => assert.fail("CLI must not run")),
+      /Unexpected files beside the Vercel output: vercel\.json/,
+    );
+    assert.equal(existsSync(path.join(output, "deployment-record.json")), false);
+  });
   await t.test("published deployment", (t) => {
-    withEnv(t, { ...vercelIds, VERCEL_TOKEN: testToken, VERCEL_SCOPE_EXTRA: "dropped" });
+    withEnv(t, { ...vercelIds, VERCEL_TOKEN: testToken });
     const { snapshot, output, manifest, commitSha } = vercelBuilt(t);
     const calls = [];
     const record = deployVercel(snapshot, output, (command, args, cwd, env) => {
       calls.push({ command, args, cwd, env });
-      return "Vercel CLI notice\nhttps://tammy-site-abc123-gamma.vercel.app\n";
+      return `${JSON.stringify({ status: "ok", deployment: readyDeployment }, null, 2)}\n`;
     });
     assert.equal(calls.length, 1);
     const [call] = calls;
@@ -1713,15 +1786,15 @@ test("Vercel deployment takes credentials only from the environment and records 
       "--prebuilt",
       "--prod",
       "--yes",
+      "--format=json",
     ]);
     assert.equal(call.cwd, realpathSync(output));
     assert.ok(!call.args.join(" ").includes(testToken), "token must not be a CLI argument");
     assert.equal(call.env.VERCEL_TOKEN, testToken);
-    assert.equal(call.env.VERCEL_ORG_ID, vercelIds.VERCEL_ORG_ID);
-    assert.equal(call.env.VERCEL_PROJECT_ID, vercelIds.VERCEL_PROJECT_ID);
-    assert.equal(call.env.VERCEL_SCOPE_EXTRA, undefined);
     assert.equal(record.status, "published");
-    assert.equal(record.url, "https://tammy-site-abc123-gamma.vercel.app");
+    assert.equal(record.url, readyDeployment.url);
+    assert.equal(record.deployment_id, readyDeployment.id);
+    assert.equal(record.deployment_target, "production");
     assert.equal(record.github.commit_sha, commitSha);
     assert.equal(record.static_sha256, manifest.static_sha256);
     const saved = readJson(path.join(output, "deployment-record.json"));
@@ -1732,23 +1805,36 @@ test("Vercel deployment takes credentials only from the environment and records 
       /already exists/,
     );
   });
-  for (const [name, cli] of [
+  for (const [name, cli, kept] of [
     [
-      "CLI failure",
+      "CLI failure keeps its output",
       () => {
-        throw new Error("fixture CLI failure");
+        const error = new Error("fixture CLI failure");
+        error.stdout = `{"status":"error","reason":"upload_failed","token":"${testToken}"}`;
+        throw error;
       },
+      /upload_failed/,
     ],
-    ["no deployment URL", () => "Error: something went wrong\n"],
+    [
+      "a preview deployment is not published",
+      () => JSON.stringify({ ...readyDeployment, target: null }),
+      /dpl_fixture0deployment/,
+    ],
+    [
+      "bare URL output is not trusted",
+      () => "https://tammy-site-abc123-gamma.vercel.app\n",
+      /tammy-site-abc123/,
+    ],
   ]) {
     await t.test(name, (t) => {
       withEnv(t, { ...vercelIds, VERCEL_TOKEN: testToken });
       const { snapshot, output } = vercelBuilt(t);
       assert.throws(() => deployVercel(snapshot, output, cli));
-      assert.equal(
-        readJson(path.join(output, "deployment-record.json")).status,
-        "outcome-uncertain",
-      );
+      const saved = readJson(path.join(output, "deployment-record.json"));
+      assert.equal(saved.status, "outcome-uncertain");
+      assert.equal(saved.url, null);
+      assert.match(saved.cli_output, kept);
+      assert.ok(!JSON.stringify(saved).includes(testToken), "token must be redacted");
     });
   }
 });
