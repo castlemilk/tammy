@@ -112,8 +112,8 @@ describe("new calculators and articles are usable and indexable", () => {
       "/tools/break-even-calculator", "/tools/cash-runway-calculator",
       "/blog", ...blogPosts.map(blogPath),
     ]) {
-      expect(sitemap).toContain("https://tammy-accounting.castlemilk.chatgpt.site" + path + "</loc>");
-      expect(llms).toContain("https://tammy-accounting.castlemilk.chatgpt.site" + path);
+      expect(sitemap).toContain("https://tammy.tax" + path + "</loc>");
+      expect(llms).toContain("https://tammy.tax" + path);
     }
     for (const post of blogPosts) expect(feed).toContain("<title>" + post.title + "</title>");
   });

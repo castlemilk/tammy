@@ -8,7 +8,7 @@ const readPublic = (name: string) =>
 
 describe("Tammy public SEO and assets", () => {
   it("keeps the canonical origin consistent across the site map and robots", () => {
-    const origin = "https://tammy-accounting.castlemilk.chatgpt.site";
+    const origin = "https://tammy.tax";
     const robots = readPublic("robots.txt");
     const sitemap = readPublic("sitemap.xml");
     expect(String(rootMetadata.metadataBase)).toBe(origin + "/");

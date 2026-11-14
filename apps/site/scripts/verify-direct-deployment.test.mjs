@@ -15,7 +15,7 @@ const receipt = {
 function fixture({ missing = false } = {}) {
   return (url) => {
     const route = new URL(url).pathname;
-    const origin = "https://tammy-accounting.castlemilk.chatgpt.site";
+    const origin = "https://tammy.tax";
     const body = route === "/robots.txt" ? "Sitemap: " + origin + "/sitemap.xml" :
       route === "/sitemap.xml" ? "<urlset>" + REQUIRED_ROUTES.filter((x) => !x.endsWith(".txt") && !x.endsWith(".xml")).map((x) => "<url><loc>" + origin + x + "</loc></url>").join("") + "</urlset>" :
       '<link rel="canonical" href="' + origin + route + '">';
@@ -27,7 +27,7 @@ void it("accepts the exact published receipt and keeps HTTP acceptance separate"
   const result = await verifyDirectDeployment({ deployment: receipt, expectedRevision: revision, fetcher: fixture() });
   assert.equal(result.ok, true, result.failures.join("; "));
   assert.equal(result.checked.length, REQUIRED_ROUTES.length);
-  assert.equal(result.canonicalOrigin, "https://tammy-accounting.castlemilk.chatgpt.site");
+  assert.equal(result.canonicalOrigin, "https://tammy.tax");
   assert.equal(result.version_id, receipt.version_id);
   assert.equal(JSON.stringify(receipt), original);
 });

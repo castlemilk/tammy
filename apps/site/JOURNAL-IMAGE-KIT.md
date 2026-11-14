@@ -30,5 +30,5 @@ Created 5 November 2026. This change extends the existing Soft Precision editori
 - Curated article metadata and image references live in `lib/blog/posts.ts`.
 - New static canonical routes, structured `BlogPosting` data, links from the journal index and homepage, RSS entries, sitemap URLs, and `llms.txt` additions are updated in this PR.
 - The existing SEO audit checks route coverage and public RSS consistency. Focused tests verify image assets, four article sections per post, source links, canonical metadata, publication date, BAS/workpaper arithmetic, and reconciliation arithmetic.
-- Preserve current canonical `tammy-accounting.castlemilk.chatgpt.site` until `tammy.tax` custom-domain certificate, hostname verification and actual production deployment are confirmed.
+- Canonical origin is `tammy.tax` (since 14 November 2026); image URLs in metadata derive from `SITE_ORIGIN`.
 - This source change does not itself publish to ChatGPT Sites. Browser viewport and actual production/page-load review remain independent gates.

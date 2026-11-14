@@ -2,9 +2,9 @@
 
 > Local-first accounting desktop software for Australian small businesses, published by Gamma Systems Pty Ltd.
 
-Official website: https://tammy-accounting.castlemilk.chatgpt.site/
-Privacy: https://tammy-accounting.castlemilk.chatgpt.site/privacy
-Support: https://tammy-accounting.castlemilk.chatgpt.site/support
+Official website: https://tammy.tax/
+Privacy: https://tammy.tax/privacy
+Support: https://tammy.tax/support
 
 ## Supported development capabilities
 
@@ -25,77 +25,77 @@ For access enquiries use the Support page. The public website contains no accoun
 
 ## Free tools (public website)
 
-- [All tools](https://tammy-accounting.castlemilk.chatgpt.site/tools) - Australian business utilities without signup.
-- [Invoice generator](https://tammy-accounting.castlemilk.chatgpt.site/tools/invoice-generator) - build a regular invoice or tax invoice and download a PDF locally in the browser; not a desktop-app issue action.
-- [GST calculator](https://tammy-accounting.castlemilk.chatgpt.site/tools/gst-calculator) - add or extract standard 10% Australian GST.
-- [Invoice due-date calculator](https://tammy-accounting.castlemilk.chatgpt.site/tools/invoice-due-date-calculator) - calendar-day terms.
+- [All tools](https://tammy.tax/tools) - Australian business utilities without signup.
+- [Invoice generator](https://tammy.tax/tools/invoice-generator) - build a regular invoice or tax invoice and download a PDF locally in the browser; not a desktop-app issue action.
+- [GST calculator](https://tammy.tax/tools/gst-calculator) - add or extract standard 10% Australian GST.
+- [Invoice due-date calculator](https://tammy.tax/tools/invoice-due-date-calculator) - calendar-day terms.
 
 These public tools do not upload customer records or modify local Tammy desktop data. PDF export uses Tammy's pdfcn/Forme adapted invoice renderer.
 
 ## Additional business tools
 
-- [ABN checker](https://tammy-accounting.castlemilk.chatgpt.site/tools/abn-checker) - check the 11-digit ABN checksum locally; this is not a live business-registration or GST-status lookup.
-- [Profit margin calculator](https://tammy-accounting.castlemilk.chatgpt.site/tools/profit-margin-calculator) - compare cost, selling price, gross profit, margin and markup in AUD.
+- [ABN checker](https://tammy.tax/tools/abn-checker) - check the 11-digit ABN checksum locally; this is not a live business-registration or GST-status lookup.
+- [Profit margin calculator](https://tammy.tax/tools/profit-margin-calculator) - compare cost, selling price, gross profit, margin and markup in AUD.
 
 ## Australian invoicing and GST guides
 
-- [All guides](https://tammy-accounting.castlemilk.chatgpt.site/guides)
-- [Australian tax invoice checklist](https://tammy-accounting.castlemilk.chatgpt.site/guides/australian-tax-invoice-checklist) - GST, ABN and recipient identification requirements, with an example.
-- [GST inclusive versus exclusive](https://tammy-accounting.castlemilk.chatgpt.site/guides/gst-inclusive-vs-exclusive) - 10% versus 1/11 GST formulas, rounding and exceptions.
+- [All guides](https://tammy.tax/guides)
+- [Australian tax invoice checklist](https://tammy.tax/guides/australian-tax-invoice-checklist) - GST, ABN and recipient identification requirements, with an example.
+- [GST inclusive versus exclusive](https://tammy.tax/guides/gst-inclusive-vs-exclusive) - 10% versus 1/11 GST formulas, rounding and exceptions.
 
 The guides cite ATO/ABR primary sources. Neither the calculator nor the guide certifies a supplier, tax registration or a lodged BAS.
 
 ## Break-even and cash flow
 
-- [Break-even calculator](https://tammy-accounting.castlemilk.chatgpt.site/tools/break-even-calculator) - calculate units and revenue needed to cover fixed costs under a single-product model.
-- [Cash runway calculator](https://tammy-accounting.castlemilk.chatgpt.site/tools/cash-runway-calculator) - estimate cash runway at a constant monthly net cash burn, excluding uneven payment timing.
+- [Break-even calculator](https://tammy.tax/tools/break-even-calculator) - calculate units and revenue needed to cover fixed costs under a single-product model.
+- [Cash runway calculator](https://tammy.tax/tools/cash-runway-calculator) - estimate cash runway at a constant monthly net cash burn, excluding uneven payment timing.
 
 ## Tammy Journal
 
-- [Journal index](https://tammy-accounting.castlemilk.chatgpt.site/blog) - Australian small-business editorial notes, worked examples and sources.
-- [Margin is not markup](https://tammy-accounting.castlemilk.chatgpt.site/blog/margin-is-not-markup) - the difference between margin and markup, with a break-even example.
-- [An invoice is not cash](https://tammy-accounting.castlemilk.chatgpt.site/blog/an-invoice-is-not-cash) - issue dates, payment terms, due dates and actual receipts.
-- [See the next twelve weeks](https://tammy-accounting.castlemilk.chatgpt.site/blog/the-12-week-cash-flow-view) - a rolling weekly cash forecast and a worked four-week example.
+- [Journal index](https://tammy.tax/blog) - Australian small-business editorial notes, worked examples and sources.
+- [Margin is not markup](https://tammy.tax/blog/margin-is-not-markup) - the difference between margin and markup, with a break-even example.
+- [An invoice is not cash](https://tammy.tax/blog/an-invoice-is-not-cash) - issue dates, payment terms, due dates and actual receipts.
+- [See the next twelve weeks](https://tammy.tax/blog/the-12-week-cash-flow-view) - a rolling weekly cash forecast and a worked four-week example.
 
 Posts are authored explanatory material, not tax filing services, consumer testimonials, or a claim that Tammy automatically sends invoices or collects payments.
 
 ## Journal additions (5 November 2026)
 
-- [When GST registration becomes necessary.](https://tammy-accounting.castlemilk.chatgpt.site/blog/when-to-register-for-gst-australia) - The Australian $75,000 GST turnover threshold, projected turnover, the 21-day rule and registration exceptions.
-- [Keep the evidence behind the entry.](https://tammy-accounting.castlemilk.chatgpt.site/blog/business-receipts-five-year-record-keeping) - Retaining business receipts and source records, five-year baseline, exceptions and digital record safeguards.
-- [Three BAS labels. One clear workpaper.](https://tammy-accounting.castlemilk.chatgpt.site/blog/simpler-bas-g1-1a-1b-explained) - Simpler BAS G1 total sales, 1A GST on sales and 1B eligible GST credits with a worked example.
-- [Make the bank and ledger agree.](https://tammy-accounting.castlemilk.chatgpt.site/blog/bank-statement-reconciliation-steps) - Trace statement rows, resolve unexplained differences, and retain a verifiable reconciliation.
+- [When GST registration becomes necessary.](https://tammy.tax/blog/when-to-register-for-gst-australia) - The Australian $75,000 GST turnover threshold, projected turnover, the 21-day rule and registration exceptions.
+- [Keep the evidence behind the entry.](https://tammy.tax/blog/business-receipts-five-year-record-keeping) - Retaining business receipts and source records, five-year baseline, exceptions and digital record safeguards.
+- [Three BAS labels. One clear workpaper.](https://tammy.tax/blog/simpler-bas-g1-1a-1b-explained) - Simpler BAS G1 total sales, 1A GST on sales and 1B eligible GST credits with a worked example.
+- [Make the bank and ledger agree.](https://tammy.tax/blog/bank-statement-reconciliation-steps) - Trace statement rows, resolve unexplained differences, and retain a verifiable reconciliation.
 
 Each article includes an original locally hosted illustration, an explicitly illustrative numerical example, and links to Australian government or ATO primary sources. These are educational articles, not evidence that Tammy offers ATO lodgement, cloud sync, bank feeds or customer payment collection.
 
 ## New MDX Journal features and stories (5 November 2026)
 
-- [The price rise that didn't fix the margin.](https://tammy-accounting.castlemilk.chatgpt.site/blog/the-price-rise-that-didnt-fix-margin) - Why a $10 rise in variable cost moves break-even volume from 75 to 100 units in a transparent pricing example.
-- [The ageing report is using the wrong clock.](https://tammy-accounting.castlemilk.chatgpt.site/blog/the-invoice-ageing-trap) - An overdue-invoice ageing example that distinguishes the due date from the issue date and groups $7,100 in receivables.
-- [When profit and cash part ways.](https://tammy-accounting.castlemilk.chatgpt.site/blog/when-profit-and-cash-part-ways) - An $8,000 accrual-profit and $5,000 net-cash example that reconciles unpaid invoices and bills.
+- [The price rise that didn't fix the margin.](https://tammy.tax/blog/the-price-rise-that-didnt-fix-margin) - Why a $10 rise in variable cost moves break-even volume from 75 to 100 units in a transparent pricing example.
+- [The ageing report is using the wrong clock.](https://tammy.tax/blog/the-invoice-ageing-trap) - An overdue-invoice ageing example that distinguishes the due date from the issue date and groups $7,100 in receivables.
+- [When profit and cash part ways.](https://tammy.tax/blog/when-profit-and-cash-part-ways) - An $8,000 accrual-profit and $5,000 net-cash example that reconciles unpaid invoices and bills.
 
 These stories are authored in .mdx, using registered local components for source notes, worked examples, readable financial tables, audited bars and links to available Tammy tools. Charts use explicitly illustrative figures and retain accessible data. All published metadata remains attached to the corresponding explicit route.
 
 ## Editorial lab expansion (5 November 2026)
 
-- [The BAS quarter has two clocks.](https://tammy-accounting.castlemilk.chatgpt.site/blog/which-quarter-gets-the-gst) - How an invoice dated in June and paid in July places $100 GST into different quarters under cash versus non-cash reporting.
-- [Not every bank deposit is sales.](https://tammy-accounting.castlemilk.chatgpt.site/blog/not-every-bank-deposit-is-sales) - A $8,700 receipt set is only $2,000 of taxable sales ex GST; the remainder is GST, a loan and owner capital.
-- [The month-end close that found $220.](https://tammy-accounting.castlemilk.chatgpt.site/blog/the-month-end-review-that-found-220) - A $220 duplicate payment explains a difference between the closing bank statement and ledger; includes a working review checklist.
+- [The BAS quarter has two clocks.](https://tammy.tax/blog/which-quarter-gets-the-gst) - How an invoice dated in June and paid in July places $100 GST into different quarters under cash versus non-cash reporting.
+- [Not every bank deposit is sales.](https://tammy.tax/blog/not-every-bank-deposit-is-sales) - A $8,700 receipt set is only $2,000 of taxable sales ex GST; the remainder is GST, a loan and owner capital.
+- [The month-end close that found $220.](https://tammy.tax/blog/the-month-end-review-that-found-220) - A $220 duplicate payment explains a difference between the closing bank statement and ledger; includes a working review checklist.
 
 These new MDX posts use an accessible scenario explorer, validated balanced journal entries, and/or a local-only reader checklist. Numbers are illustrative, source-backed and never taken from real business records.
 
-- [Quote generator](https://tammy-accounting.castlemilk.chatgpt.site/tools/quote-generator) - itemised quote with a downloadable PDF, a print fallback and an unencrypted draft file you can export and re-import; never issues invoices, collects payments, posts accounting or uploads customer details.
+- [Quote generator](https://tammy.tax/tools/quote-generator) - itemised quote with a downloadable PDF, a print fallback and an unencrypted draft file you can export and re-import; never issues invoices, collects payments, posts accounting or uploads customer details.
 
 ## Free self-lodgement preparation (5 November 2026)
 
-- [Simpler BAS GST workpaper](https://tammy-accounting.castlemilk.chatgpt.site/tools/bas-workpaper) - narrow G1 / 1A / 1B calculation from already classified ordinary taxable sales and fully creditable purchases; standard due-date reference only, not eligible-credit verification or lodging.
-- [Sole trader income-tax checklist](https://tammy-accounting.castlemilk.chatgpt.site/tools/sole-trader-tax-checklist) - client-only printable checklist for an individual business income tax return using ATO myTax; no personal details stored.
-- [Lodge your own BAS, without guessing.](https://tammy-accounting.castlemilk.chatgpt.site/blog/how-to-lodge-bas-yourself-australia) - Find the ATO activity statement, prepare reviewed G1/1A/1B figures and lodge online through an official ATO channel.
-- [Your sole-trader return goes through myTax.](https://tammy-accounting.castlemilk.chatgpt.site/blog/lodge-sole-trader-tax-return-mytax) - Sole trader income and deductions belong in the individual myTax return, not a separate company return.
-- [Four quarters. Check the actual BAS deadline.](https://tammy-accounting.castlemilk.chatgpt.site/blog/quarterly-bas-due-dates-australia) - Standard quarterly BAS reference dates with conditional extensions, weekends and the ATO-issued due date.
+- [Simpler BAS GST workpaper](https://tammy.tax/tools/bas-workpaper) - narrow G1 / 1A / 1B calculation from already classified ordinary taxable sales and fully creditable purchases; standard due-date reference only, not eligible-credit verification or lodging.
+- [Sole trader income-tax checklist](https://tammy.tax/tools/sole-trader-tax-checklist) - client-only printable checklist for an individual business income tax return using ATO myTax; no personal details stored.
+- [Lodge your own BAS, without guessing.](https://tammy.tax/blog/how-to-lodge-bas-yourself-australia) - Find the ATO activity statement, prepare reviewed G1/1A/1B figures and lodge online through an official ATO channel.
+- [Your sole-trader return goes through myTax.](https://tammy.tax/blog/lodge-sole-trader-tax-return-mytax) - Sole trader income and deductions belong in the individual myTax return, not a separate company return.
+- [Four quarters. Check the actual BAS deadline.](https://tammy.tax/blog/quarterly-bas-due-dates-australia) - Standard quarterly BAS reference dates with conditional extensions, weekends and the ATO-issued due date.
 
 The article sources are ATO and Australian Government official guidance. Tammy does not electronically lodge a BAS or income-tax return, determine actual filing deadlines, submit user data, or act as an agent.
 
-- [12-week cash flow forecast](https://tammy-accounting.castlemilk.chatgpt.site/tools/cash-flow-forecast) - date-based expected receipts and payments, low-cash detection and browser CSV export. Not bank-linked or predictive.
+- [12-week cash flow forecast](https://tammy.tax/tools/cash-flow-forecast) - date-based expected receipts and payments, low-cash detection and browser CSV export. Not bank-linked or predictive.
 
-- [Expense and receipt organiser](https://tammy-accounting.castlemilk.chatgpt.site/tools/expense-organiser) - local-only manual expense register, user-classified GST evidence, optional session receipt attachments, CSV and JSON exports. Does not lodge, determine deductions or upload records; exports do not include receipt binaries.
+- [Expense and receipt organiser](https://tammy.tax/tools/expense-organiser) - local-only manual expense register, user-classified GST evidence, optional session receipt attachments, CSV and JSON exports. Does not lodge, determine deductions or upload records; exports do not include receipt binaries.

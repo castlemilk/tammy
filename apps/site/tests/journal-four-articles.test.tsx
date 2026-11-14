@@ -91,7 +91,7 @@ describe("Tammy Journal source-backed article expansion", () => {
     const llms = readFileSync("public/llms.txt","utf8");
     expect((rss.match(/<item>/g) ?? []).length).toBe(blogPosts.length);
     for (const item of latestPosts) {
-      const url = "https://tammy-accounting.castlemilk.chatgpt.site" + item.path;
+      const url = "https://tammy.tax" + item.path;
       expect(sitemap).toContain("<loc>" + url + "</loc>");
       expect(rss).toContain("<link>" + url + "</link>");
       expect(llms).toContain(url);
