@@ -173,7 +173,10 @@ test("retains runner provisioning, evidence classification, and artifacts around
       workflow,
       /actions\/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16[\s\S]*go-version: 1\.26\.4/,
     );
-    assert.match(workflow, /npm install --global corepack@0\.36\.0\n {10}corepack enable pnpm\n {10}corepack prepare pnpm@11\.15\.0 --activate/);
+    assert.match(
+      workflow,
+      /npm install --global corepack@0\.36\.0\n {10}corepack enable pnpm\n {10}corepack prepare pnpm@11\.15\.0 --activate/,
+    );
     assert.match(workflow, /pnpm install --frozen-lockfile/);
   }
   assert.match(foundationWorkflow, /runs-on: ubuntu-24\.04[\s\S]*timeout-minutes: 30/);
