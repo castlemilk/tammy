@@ -28,6 +28,8 @@ const scenarioFiles = [
 ];
 const allowedExecutablePatterns = [
   /^mise install$/,
+  /^mise exec -- npm install --global corepack@0\.36\.0$/,
+  /^mise exec -- corepack enable pnpm$/,
   /^mise exec -- corepack prepare pnpm@11\.15\.0 --activate$/,
   /^mise exec -- pnpm (?:--version|install --frozen-lockfile|check:toolchain|check:macos-store|test|core:build|build:manifest|desktop:start|desktop:test|desktop:typecheck|contracts|contracts:production|lint|sqlcipher:test|sqlcipher:build|desktop:package|desktop:e2e|desktop:e2e:dev)$/,
   /^TAMMY_MACOS_SIGNING_MODE=(?:development|distribution) mise exec -- pnpm desktop:make:mas$/,
@@ -358,6 +360,8 @@ test("documentation presents Task scenarios as the local command front door", as
   }
 
   for (const command of [
+    "mise exec -- npm install --global corepack@0.36.0",
+    "mise exec -- corepack enable pnpm",
     "mise exec -- corepack prepare pnpm@11.15.0 --activate",
     "mise exec -- pnpm install --frozen-lockfile",
     "mise exec -- pnpm check:toolchain",
@@ -729,6 +733,8 @@ test("local Task front door preserves the safe development contract", async () =
   assert.deepEqual(shellCommands(setup.tasks.tools), ["mise install"]);
   assert.match(setup.tasks.tools.summary ?? "", /post-bootstrap.*repair\/update/i);
   assert.deepEqual(shellCommands(setup.tasks.deps), [
+    "mise exec -- npm install --global corepack@0.36.0",
+    "mise exec -- corepack enable pnpm",
     "mise exec -- corepack prepare pnpm@11.15.0 --activate",
     "mise exec -- pnpm install --frozen-lockfile",
   ]);

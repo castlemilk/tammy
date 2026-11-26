@@ -70,7 +70,7 @@ jobs:
       - name: Set up pinned Node.js
         uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
         with:
-          node-version: 24.18.0
+          node-version-file: .node-version
           package-manager-cache: false
 
       - name: Set up pinned Go
@@ -80,6 +80,7 @@ jobs:
 
       - name: Activate pinned pnpm
         run: |
+          npm install --global corepack@0.36.0
           corepack enable pnpm
           corepack prepare pnpm@11.15.0 --activate
 

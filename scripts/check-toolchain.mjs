@@ -3,6 +3,8 @@ import { statSync } from "node:fs";
 import { posix, win32 } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import packageManifest from "../package.json" with { type: "json" };
+
 function isJavaScriptEntry(candidate) {
   return /\.[cm]?js$/i.test(candidate);
 }
@@ -88,8 +90,9 @@ export function validateToolVersions(outputs) {
   const errors = [];
   const goVersion = outputs.go.trim().split(/\s+/)[2] ?? outputs.go.trim();
 
-  if (outputs.node !== "v24.18.0") {
-    errors.push(`Node must be v24.18.0 (received ${outputs.node})`);
+  const expectedNode = `v${packageManifest.engines.node}`;
+  if (outputs.node !== expectedNode) {
+    errors.push(`Node must be ${expectedNode} (received ${outputs.node})`);
   }
   if (outputs.pnpm !== "11.15.0") {
     errors.push(`pnpm must be 11.15.0 (received ${outputs.pnpm})`);

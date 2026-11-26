@@ -69,7 +69,7 @@ The release source is a self-contained workspace. Copying only `apps/site` is in
 
 ## 2. Validate the exported workspace
 
-Use the repository-pinned Node.js and pnpm versions: currently Node `24.18.0` and pnpm `11.15.0`. Install from the frozen lockfile in the exported workspace; do not regenerate it merely to make an export install.
+Use the repository-pinned Node.js and pnpm versions: currently Node `26.13.1` and pnpm `11.15.0`. Install from the frozen lockfile in the exported workspace; do not regenerate it merely to make an export install.
 
 ```sh
 pnpm install --frozen-lockfile --filter sites-project...
