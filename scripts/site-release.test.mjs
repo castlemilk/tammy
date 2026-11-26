@@ -43,7 +43,7 @@ import {
 } from "./site-release.mjs";
 
 const hosting = { project_id: PROJECT_ID, d1: null, r2: null };
-const runtime = { node: "24.18.0", pnpm: "11.15.0", platform: "fixture", arch: "fixture" };
+const runtime = { node: "26.13.1", pnpm: "11.15.0", platform: "fixture", arch: "fixture" };
 const sha256 = (value) => createHash("sha256").update(value).digest("hex");
 const readJson = (filename) => JSON.parse(readFileSync(filename, "utf8"));
 
@@ -92,7 +92,7 @@ function fixture(t) {
     private: true,
     type: "module",
     packageManager: "pnpm@11.15.0",
-    engines: { node: "24.18.0" },
+    engines: { node: "26.13.1" },
     scripts: { unrelated: "do-not-run" },
     devDependencies: { typescript: "7.0.2" },
   };

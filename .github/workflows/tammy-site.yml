@@ -81,10 +81,11 @@ jobs:
       - name: Use pinned Node.js
         uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
         with:
-          node-version: 24.18.0
+          node-version: 26.13.1
           package-manager-cache: false
       - name: Use pinned pnpm
         run: |
+          npm install --global corepack@0.36.0
           corepack enable pnpm
           corepack prepare pnpm@11.15.0 --activate
       - name: Release preparation and provenance tests
@@ -230,7 +231,7 @@ jobs:
       - name: Use pinned Node.js
         uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
         with:
-          node-version: 24.18.0
+          node-version: 26.13.1
           package-manager-cache: false
       - name: Verify the downloaded revision and source archive
         shell: bash
@@ -267,6 +268,7 @@ jobs:
           node scripts/site-release.mjs verify
       - name: Use pinned pnpm
         run: |
+          npm install --global corepack@0.36.0
           corepack enable pnpm
           corepack prepare pnpm@11.15.0 --activate
       - name: Install dependencies without deployment credentials
@@ -369,7 +371,7 @@ jobs:
       - name: Use pinned Node.js
         uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
         with:
-          node-version: 24.18.0
+          node-version: 26.13.1
           package-manager-cache: false
       - name: Verify the downloaded Vercel revision and source archive
         shell: bash

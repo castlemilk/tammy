@@ -108,7 +108,7 @@ function assertSharedCiProvisioning(job, shell) {
   const node = requiredStep(job, "Set up pinned Node.js");
   assert.equal(node.uses, NODE_ACTION, `${job.name}: Node action pin`);
   assert.deepEqual(node.with, {
-    "node-version": "24.18.0",
+    "node-version-file": ".node-version",
     "package-manager-cache": false,
   });
   const go = requiredStep(job, "Set up pinned Go");
@@ -116,7 +116,7 @@ function assertSharedCiProvisioning(job, shell) {
   assert.equal(go.with["go-version"], "1.26.4", `${job.name}: Go version`);
   assert.equal(
     requiredStep(job, "Activate pinned pnpm").run,
-    "corepack enable pnpm\ncorepack prepare pnpm@11.15.0 --activate\n",
+    "npm install --global corepack@0.36.0\ncorepack enable pnpm\ncorepack prepare pnpm@11.15.0 --activate\n",
   );
   assert.equal(
     requiredStep(job, "Install frozen dependencies").run,
@@ -167,13 +167,13 @@ test("retains runner provisioning, evidence classification, and artifacts around
     );
     assert.match(
       workflow,
-      /actions\/setup-node@a0853c24544627f65ddf259abe73b1d18a591444[\s\S]*node-version: 24\.18\.0/,
+      /actions\/setup-node@a0853c24544627f65ddf259abe73b1d18a591444[\s\S]*node-version-file: \.node-version/,
     );
     assert.match(
       workflow,
       /actions\/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16[\s\S]*go-version: 1\.26\.4/,
     );
-    assert.match(workflow, /corepack enable pnpm\n {10}corepack prepare pnpm@11\.15\.0 --activate/);
+    assert.match(workflow, /npm install --global corepack@0\.36\.0\n {10}corepack enable pnpm\n {10}corepack prepare pnpm@11\.15\.0 --activate/);
     assert.match(workflow, /pnpm install --frozen-lockfile/);
   }
   assert.match(foundationWorkflow, /runs-on: ubuntu-24\.04[\s\S]*timeout-minutes: 30/);

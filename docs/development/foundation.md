@@ -54,6 +54,8 @@ The isolated accounting root is retained and printed after exit and does not loa
 Task scenarios delegate to the pinned commands below; use these only when focusing on the named implementation boundary. For a post-bootstrap dependency repair, run the underlying setup sequence directly (rather than replacing the Task front door):
 
 ```sh
+mise exec -- npm install --global corepack@0.36.0
+mise exec -- corepack enable pnpm
 mise exec -- corepack prepare pnpm@11.15.0 --activate
 mise exec -- pnpm install --frozen-lockfile
 mise exec -- pnpm check:toolchain

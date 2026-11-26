@@ -11,6 +11,8 @@ tasks:
     desc: Activate pinned pnpm and install frozen workspace dependencies.
     summary: Activates pnpm 11.15.0 before the lockfile-respecting install.
     cmds:
+      - mise exec -- npm install --global corepack@0.36.0
+      - mise exec -- corepack enable pnpm
       - mise exec -- corepack prepare pnpm@11.15.0 --activate
       - mise exec -- pnpm install --frozen-lockfile
 

@@ -10,7 +10,7 @@ const root = path.resolve(import.meta.dirname, "..");
 test("mise pins Task 3.52.0 while preserving Node and Go pins", () => {
   const mise = readFileSync(path.join(root, "mise.toml"), "utf8");
 
-  assert.match(mise, /^node = "24\.18\.0"$/m);
+  assert.match(mise, /^node = "26\.13\.1"$/m);
   assert.match(mise, /^go = "1\.26\.4"$/m);
   assert.match(mise, /^task = "3\.52\.0"$/m);
 });

@@ -45,7 +45,7 @@ The Cloudflare plugin supports an explicit `configPath`; its generated configura
 
 ## 1. Commit, attest and export the exact source
 
-Use an isolated checkout and preserve concurrent work. Use root `package.json` toolchain pins, currently Node `24.18.0` and pnpm `11.15.0`; Wrangler is pinned at `4.92.0` in the site package.
+Use an isolated checkout and preserve concurrent work. Use root `package.json` toolchain pins, currently Node `26.13.1` and pnpm `11.15.0`; Wrangler is pinned at `4.92.0` in the site package.
 
 Finish all source/documentation edits and commit them before generating descriptor evidence. Run the normal [descriptor attestation sequence](SITE-RELEASE-RUNBOOK.md#1-select-an-exact-github-candidate): set `TAMMY_SOURCE_REVISION` to the clean source HEAD, generate evidence, preserve the expected `descriptors.pb` bytes/SHA-256 for site-only changes, and run `pnpm proto:descriptors:verify`. Commit only `compliance/contracts/descriptor-manifest.json` and `compliance/contracts/descriptors.pb` as its immediate child, then verify again at that final HEAD. The final candidate is this evidence commit. Do not weaken the verifier; any later source edit needs new attestation.
 

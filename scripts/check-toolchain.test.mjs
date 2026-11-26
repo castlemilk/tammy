@@ -120,7 +120,7 @@ test("runs the current platform CLI without shell shims", () => {
 test("accepts the exact pinned toolchain versions", () => {
   assert.deepEqual(
     validateToolVersions({
-      node: "v24.18.0",
+      node: "v26.13.1",
       pnpm: "11.15.0",
       go: "go version go1.26.4 darwin/arm64",
       buf: "1.72.0",
@@ -138,7 +138,7 @@ test("reports every mismatched toolchain version", () => {
       buf: "1.71.0",
     }),
     [
-      "Node must be v24.18.0 (received v22.20.0)",
+      "Node must be v26.13.1 (received v22.20.0)",
       "pnpm must be 11.15.0 (received 10.9.3)",
       "Go must be go1.26.4 (received go1.26.3)",
       "Buf must be 1.72.0 (received 1.71.0)",

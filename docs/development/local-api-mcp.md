@@ -30,7 +30,7 @@ Add a stdio server to your MCP client's configuration. This example uses the usu
 {
   "mcpServers": {
     "tammy": {
-      "command": "/Users/operator/.local/share/mise/installs/node/24.18.0/bin/node",
+      "command": "/Users/operator/.local/share/mise/installs/node/26.13.1/bin/node",
       "args": [
         "/Users/operator/projects/tammy/packages/local-api/src/cli.ts",
         "--connection",
